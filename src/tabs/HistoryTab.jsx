@@ -3,9 +3,9 @@ import { CalendarDays, Calendar, LayoutList, Flame } from 'lucide-react';
 import { formatAmount, groupByDay, groupByWeek, groupByMonth } from '../utils/dateHelpers';
 
 const FILTERS = [
-  { key: 'Day', label: 'Day', Icon: CalendarDays },
-  { key: 'Week', label: 'Week', Icon: Calendar },
-  { key: 'Month', label: 'Month', Icon: LayoutList },
+  { key: 'Day',   label: 'Day',   Icon: CalendarDays },
+  { key: 'Week',  label: 'Week',  Icon: Calendar     },
+  { key: 'Month', label: 'Month', Icon: LayoutList   },
 ];
 
 const TYPE_META = {
@@ -16,24 +16,20 @@ const TYPE_META = {
 };
 
 export default function HistoryTab({ transactions, onUpdateTransaction }) {
-  const [filter, setFilter] = useState('Day');
+  const [filter, setFilter]         = useState('Day');
   const [editingWaste, setEditingWaste] = useState(null);
   const [wasteInput, setWasteInput] = useState('');
-  const lastTapRef = useRef({});
+  const lastTapRef   = useRef({});
   const wasteInputRef = useRef(null);
 
-  const grouped = filter === 'Day'
-    ? groupByDay(transactions)
-    : filter === 'Week'
-    ? groupByWeek(transactions)
+  const grouped = filter === 'Day'   ? groupByDay(transactions)
+    : filter === 'Week'  ? groupByWeek(transactions)
     : groupByMonth(transactions);
 
   const handleTxnTap = useCallback((txn) => {
     if (txn.type !== 'expense') return;
-    const now = Date.now();
-    const last = lastTapRef.current[txn.id] || 0;
-    const DOUBLE_TAP = 400;
-    if (now - last < DOUBLE_TAP) {
+    const now = Date.now(), last = lastTapRef.current[txn.id] || 0, D = 400;
+    if (now - last < D) {
       lastTapRef.current[txn.id] = 0;
       setEditingWaste(txn.id);
       setWasteInput(txn.wasteAmount != null ? String(txn.wasteAmount) : '');
@@ -41,160 +37,160 @@ export default function HistoryTab({ transactions, onUpdateTransaction }) {
     } else {
       lastTapRef.current[txn.id] = now;
       setTimeout(() => {
-        const cur = lastTapRef.current[txn.id];
-        if (cur !== now) return;
-        onUpdateTransaction({
-          ...txn,
-          wasteAmount: txn.wasteAmount === txn.amount ? undefined : txn.amount,
-        });
-      }, DOUBLE_TAP);
+        if (lastTapRef.current[txn.id] !== now) return;
+        onUpdateTransaction({ ...txn, wasteAmount: txn.wasteAmount === txn.amount ? undefined : txn.amount });
+      }, D);
     }
   }, [onUpdateTransaction]);
 
   function saveWaste(txn) {
     const val = parseFloat(wasteInput);
-    onUpdateTransaction({
-      ...txn,
-      wasteAmount: (!isNaN(val) && val > 0 && val <= txn.amount) ? val : undefined,
-    });
-    setEditingWaste(null);
-    setWasteInput('');
+    onUpdateTransaction({ ...txn, wasteAmount: (!isNaN(val) && val > 0 && val <= txn.amount) ? val : undefined });
+    setEditingWaste(null); setWasteInput('');
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
+
       {/* Header */}
-      <div className="px-5 pt-6 pb-4">
-        <h1 className="text-2xl font-semibold mb-4" style={{ color: 'var(--text)' }}>History</h1>
-        {/* Filter Pills */}
-        <div className="flex gap-2">
-          {FILTERS.map(({ key, label, Icon }) => (
-            <button
-              key={key}
-              id={`history-filter-${key.toLowerCase()}`}
-              onClick={() => setFilter(key)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-150"
-              style={filter === key
-                ? { background: 'var(--accent)', color: '#fff', boxShadow: 'var(--shadow-sm)' }
-                : { background: 'var(--surface)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }
-              }
-            >
-              <Icon size={13} />
-              {label}
-            </button>
-          ))}
+      <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--text)', margin: 0 }}>History</h1>
+          {/* Filter Pills */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            {FILTERS.map(({ key, label, Icon }) => (
+              <button
+                key={key}
+                id={`history-filter-${key.toLowerCase()}`}
+                onClick={() => setFilter(key)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600,
+                  border: filter === key ? 'none' : '1px solid var(--border)',
+                  background: filter === key ? 'var(--accent)' : 'var(--surface)',
+                  color: filter === key ? '#fff' : 'var(--text-secondary)',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  boxShadow: filter === key ? 'var(--shadow-sm)' : 'none',
+                }}
+              >
+                <Icon size={13} />{label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto px-5 pb-5">
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 24px' }}>
         {grouped.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'var(--surface2)' }}>
-              <LayoutList size={28} style={{ color: 'var(--text-muted)' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', gap: 12 }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <LayoutList size={26} style={{ color: 'var(--text-muted)' }} />
             </div>
-            <div className="text-center">
-              <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>No transactions found</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Add entries from the Today tab</p>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>No transactions found</p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Add entries from the Today tab</p>
             </div>
           </div>
         )}
 
-        {grouped.map(group => {
-          const total = group.entries.reduce((s, t) => s + t.amount, 0);
-          const waste = group.entries.reduce((s, t) => s + (t.wasteAmount || 0), 0);
-          return (
-            <div key={group.label} className="mb-5">
-              {/* Date Header */}
-              <div className="flex items-center justify-between mb-2 px-1">
-                <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{group.label}</span>
-                <div className="flex items-center gap-2">
-                  {waste > 0 && (
-                    <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                      style={{ background: 'var(--expense-bg)', color: 'var(--expense)' }}>
-                      <Flame size={10} /> {formatAmount(waste)}
-                    </span>
-                  )}
-                  <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>{formatAmount(total)}</span>
+        <div className="history-grid">
+          {grouped.map(group => {
+            const total = group.entries.reduce((s, t) => s + t.amount, 0);
+            const waste = group.entries.reduce((s, t) => s + (t.wasteAmount || 0), 0);
+            return (
+              <div key={group.label} style={{ marginBottom: 20 }}>
+                {/* Date Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>{group.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {waste > 0 && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20, background: 'var(--expense-bg)', color: 'var(--expense)' }}>
+                        <Flame size={10} />{formatAmount(waste)}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{formatAmount(total)}</span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Group Card */}
-              <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                {group.entries.map((txn, i) => {
-                  const meta = TYPE_META[txn.type] || TYPE_META.expense;
-                  const isWasted = txn.wasteAmount != null && txn.wasteAmount > 0;
-                  const isEditing = editingWaste === txn.id;
-                  const isFullWaste = txn.wasteAmount === txn.amount;
+                {/* Group Card */}
+                <div style={{ background: 'var(--surface)', borderRadius: 20, border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
+                  {group.entries.map((txn, i) => {
+                    const meta = TYPE_META[txn.type] || TYPE_META.expense;
+                    const isWasted  = txn.wasteAmount != null && txn.wasteAmount > 0;
+                    const isEditing = editingWaste === txn.id;
+                    const isFullWaste = txn.wasteAmount === txn.amount;
 
-                  return (
-                    <div key={txn.id}>
-                      <div
-                        className="flex items-center justify-between px-4 py-3.5 cursor-pointer select-none"
-                        style={{
-                          borderBottom: i < group.entries.length - 1 ? '1px solid var(--border)' : 'none',
-                          background: isWasted ? 'var(--expense-bg)' : 'transparent',
-                          borderLeft: isWasted ? '3px solid var(--expense)' : '3px solid transparent',
-                        }}
-                        onClick={() => handleTxnTap(txn)}
-                        onDoubleClick={e => e.preventDefault()}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className="text-xs px-2 py-0.5 rounded-lg font-semibold shrink-0"
-                            style={{ background: meta.bg, color: meta.color }}>
-                            {meta.label}
-                          </span>
-                          <div className="min-w-0">
-                            <span className="text-sm font-medium block truncate" style={{ color: 'var(--text)' }}>{txn.name}</span>
-                            {isWasted && (
-                              <span className="text-xs" style={{ color: 'var(--expense)' }}>
-                                🔥 {isFullWaste ? 'Full waste' : `Waste: ${formatAmount(txn.wasteAmount)}`}
+                    return (
+                      <div key={txn.id}>
+                        <div
+                          onClick={() => handleTxnTap(txn)}
+                          onDoubleClick={e => e.preventDefault()}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '13px 16px', cursor: txn.type === 'expense' ? 'pointer' : 'default',
+                            background: isWasted ? 'var(--expense-bg)' : 'transparent',
+                            borderLeft: isWasted ? '3px solid var(--expense)' : '3px solid transparent',
+                            borderBottom: i < group.entries.length - 1 ? '1px solid var(--border)' : 'none',
+                            userSelect: 'none',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                            <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 8, fontWeight: 600, background: meta.bg, color: meta.color, flexShrink: 0 }}>
+                              {meta.label}
+                            </span>
+                            <div style={{ minWidth: 0 }}>
+                              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {txn.name}
                               </span>
-                            )}
+                              {isWasted && (
+                                <span style={{ fontSize: 11, color: 'var(--expense)' }}>
+                                  🔥 {isFullWaste ? 'Full waste' : `Waste: ${formatAmount(txn.wasteAmount)}`}
+                                </span>
+                              )}
+                            </div>
                           </div>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: meta.color, marginLeft: 12, flexShrink: 0 }}>
+                            {formatAmount(txn.amount)}
+                          </span>
                         </div>
-                        <span className="text-sm font-bold ml-3 shrink-0" style={{ color: meta.color }}>
-                          {formatAmount(txn.amount)}
-                        </span>
-                      </div>
 
-                      {/* Inline Waste Input */}
-                      {isEditing && txn.type === 'expense' && (
-                        <div className="px-4 py-3 flex gap-2 items-center"
-                          style={{ background: 'var(--expense-bg)', borderTop: '1px solid var(--expense-border)' }}>
-                          <input
-                            ref={wasteInputRef}
-                            type="number"
-                            placeholder="Waste amount"
-                            value={wasteInput}
-                            onChange={e => setWasteInput(e.target.value)}
-                            className="flex-1 px-3 py-2 rounded-xl text-sm outline-none font-medium"
-                            style={{ background: '#fff', border: '1.5px solid var(--expense)', color: 'var(--text)' }}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') saveWaste(txn);
-                              if (e.key === 'Escape') { setEditingWaste(null); setWasteInput(''); }
-                            }}
-                            inputMode="decimal"
-                          />
-                          <button onClick={() => saveWaste(txn)}
-                            className="px-3 py-2 rounded-xl text-xs font-semibold"
-                            style={{ background: 'var(--expense)', color: '#fff' }}>Save</button>
-                          <button onClick={() => { setEditingWaste(null); setWasteInput(''); }}
-                            className="px-3 py-2 rounded-xl text-xs font-semibold"
-                            style={{ background: 'var(--border)', color: 'var(--text-secondary)' }}>Cancel</button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        {/* Inline Waste Editor */}
+                        {isEditing && txn.type === 'expense' && (
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '10px 16px', background: 'var(--expense-bg)', borderTop: '1px solid var(--expense-border)' }}>
+                            <input
+                              ref={wasteInputRef}
+                              type="number"
+                              placeholder="Waste amount"
+                              value={wasteInput}
+                              onChange={e => setWasteInput(e.target.value)}
+                              inputMode="decimal"
+                              style={{ flex: 1, padding: '8px 12px', borderRadius: 10, fontSize: 13, fontWeight: 500, border: '1.5px solid var(--expense)', background: '#fff', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }}
+                              onKeyDown={e => { if (e.key === 'Enter') saveWaste(txn); if (e.key === 'Escape') { setEditingWaste(null); setWasteInput(''); } }}
+                            />
+                            <button onClick={() => saveWaste(txn)} style={{ padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, background: 'var(--expense)', color: '#fff', border: 'none', cursor: 'pointer' }}>Save</button>
+                            <button onClick={() => { setEditingWaste(null); setWasteInput(''); }} style={{ padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, background: 'var(--border)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer' }}>Cancel</button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <p style={{ fontSize: 11, marginTop: 6, paddingLeft: 2, color: 'var(--text-muted)' }}>
+                  Tap to mark waste · Double-tap for custom amount
+                </p>
               </div>
-              <p className="text-xs mt-1.5 px-1" style={{ color: 'var(--text-muted)' }}>
-                Tap expense to mark waste · Double-tap for custom amount
-              </p>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
+
+      {/* Desktop 2-col grid for history groups */}
+      <style>{`
+        @media (min-width: 1024px) {
+          .history-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; align-items: start; }
+        }
+      `}</style>
     </div>
   );
 }

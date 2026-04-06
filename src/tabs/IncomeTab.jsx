@@ -4,144 +4,142 @@ import { generateId } from '../utils/storage';
 import { formatAmount, groupByDay } from '../utils/dateHelpers';
 
 export default function IncomeTab({ income, onAddIncome }) {
-  const [name, setName] = useState('');
+  const [name, setName]     = useState('');
   const [amount, setAmount] = useState('');
-  const nameRef = useRef(null);
+  const nameRef   = useRef(null);
   const amountRef = useRef(null);
 
   const totalIncome = income.reduce((s, i) => s + i.amount, 0);
-  const grouped = groupByDay(income);
+  const grouped     = groupByDay(income);
 
-  function handleNameKey(e) {
-    if (e.key === 'Enter') { e.preventDefault(); amountRef.current?.focus(); }
-  }
-  function handleAmountKey(e) {
-    if (e.key === 'Enter') { e.preventDefault(); save(); }
-  }
-  function handleAmountInput(e) {
-    const val = e.target.value;
-    if (val === '' || /^\d*\.?\d*$/.test(val)) setAmount(val);
-  }
+  function handleNameKey(e)   { if (e.key === 'Enter') { e.preventDefault(); amountRef.current?.focus(); } }
+  function handleAmountKey(e) { if (e.key === 'Enter') { e.preventDefault(); save(); } }
+  function handleAmountInput(e) { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }
+
   function save() {
-    const trimName = name.trim();
-    const parsedAmount = parseFloat(amount);
-    if (!trimName || !amount || isNaN(parsedAmount) || parsedAmount <= 0) return;
-    onAddIncome({ id: generateId(), name: trimName, amount: parsedAmount, type: 'income', date: new Date().toISOString() });
-    setName('');
-    setAmount('');
+    const n = name.trim(), a = parseFloat(amount);
+    if (!n || !amount || isNaN(a) || a <= 0) return;
+    onAddIncome({ id: generateId(), name: n, amount: a, type: 'income', date: new Date().toISOString() });
+    setName(''); setAmount('');
     nameRef.current?.focus();
   }
 
-  const ACC = 'var(--income)';
-  const ACC_BG = 'var(--income-bg)';
-  const ACC_BORDER = 'var(--income-border)';
+  const G = 'var(--income)', GB = 'var(--income-bg)', GBR = 'var(--income-border)';
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
+
       {/* Header */}
-      <div className="px-5 pt-6 pb-4">
-        <h1 className="text-2xl font-semibold mb-0.5" style={{ color: 'var(--text)' }}>Income</h1>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Track all your income sources</p>
+      <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', flexShrink: 0 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--text)', margin: 0 }}>Income</h1>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>Track all your income sources</p>
       </div>
 
-      {/* Total Income Hero Card */}
-      <div className="mx-5 mb-4 rounded-2xl p-5" style={{ background: ACC, boxShadow: 'var(--shadow-md)' }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.75)' }}>Total Income</p>
-            <p className="text-3xl font-bold text-white">{formatAmount(totalIncome)}</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
-            <Wallet size={24} color="#fff" />
-          </div>
-        </div>
-      </div>
+      {/* Body */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div className="income-layout">
 
-      {/* Entry Form Card */}
-      <div className="mx-5 mb-4 rounded-2xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-        {/* Name */}
-        <div className="relative mb-3">
-          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }}>
-            <PenLine size={15} />
-          </div>
-          <input
-            id="income-input-name"
-            ref={nameRef}
-            type="text"
-            placeholder="Source (e.g. Salary, Freelance…)"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={handleNameKey}
-            autoComplete="off"
-            className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none transition-all duration-150"
-            style={{ background: '#fff', border: '1.5px solid var(--border)', color: 'var(--text)' }}
-            onFocus={e => (e.target.style.borderColor = ACC)}
-            onBlur={e  => (e.target.style.borderColor = 'var(--border)')}
-          />
-        </div>
-        {/* Amount */}
-        <div className="relative mb-5">
-          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }}>
-            <IndianRupee size={15} />
-          </div>
-          <input
-            id="income-input-amount"
-            ref={amountRef}
-            type="number"
-            placeholder="0.00"
-            value={amount}
-            onChange={handleAmountInput}
-            onKeyDown={handleAmountKey}
-            inputMode="decimal"
-            className="w-full pl-10 pr-4 py-3 rounded-xl text-sm font-semibold outline-none transition-all duration-150"
-            style={{ background: '#fff', border: '1.5px solid var(--border)', color: 'var(--text)' }}
-            onFocus={e => (e.target.style.borderColor = ACC)}
-            onBlur={e  => (e.target.style.borderColor = 'var(--border)')}
-          />
-        </div>
-        <button
-          id="btn-save-income"
-          onClick={save}
-          disabled={!name.trim() || !amount || parseFloat(amount) <= 0}
-          className="w-full py-3.5 rounded-xl text-sm font-semibold disabled:opacity-40"
-          style={{ background: ACC, color: '#fff', minHeight: 48 }}
-        >
-          Add Income
-        </button>
-      </div>
+          {/* LEFT: Hero + Form */}
+          <div className="income-left" style={{ padding: '20px 24px' }}>
 
-      {/* Income List */}
-      <div className="flex-1 overflow-y-auto px-5 pb-5">
-        {income.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 gap-2">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: ACC_BG }}>
-              <Wallet size={22} style={{ color: ACC }} />
+            {/* Total Hero */}
+            <div style={{ borderRadius: 20, padding: '20px 22px', background: G, boxShadow: 'var(--shadow-md)', marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>Total Income</p>
+                <p style={{ fontSize: 32, fontWeight: 800, color: '#fff', margin: 0 }}>{formatAmount(totalIncome)}</p>
+              </div>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Wallet size={22} color="#fff" />
+              </div>
             </div>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No income added yet.</p>
-          </div>
-        ) : grouped.map(group => (
-          <div key={group.label} className="mb-5">
-            <div className="flex items-center justify-between mb-2 px-1">
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{group.label}</span>
-              <span className="text-sm font-bold" style={{ color: ACC }}>
-                {formatAmount(group.entries.reduce((s, e) => s + e.amount, 0))}
-              </span>
+
+            {/* Form */}
+            <div style={{ background: 'var(--surface)', borderRadius: 20, border: '1px solid var(--border)', boxShadow: 'var(--shadow)', padding: 20 }}>
+              {/* Name */}
+              <div style={{ position: 'relative', marginBottom: 12 }}>
+                <PenLine size={15} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                <input
+                  id="income-input-name"
+                  ref={nameRef}
+                  type="text"
+                  placeholder="Source (e.g. Salary, Freelance…)"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  onKeyDown={handleNameKey}
+                  autoComplete="off"
+                  style={{ width: '100%', paddingLeft: 42, paddingRight: 16, paddingTop: 13, paddingBottom: 13, borderRadius: 12, fontSize: 14, border: '1.5px solid var(--border)', background: '#fff', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
+                  onFocus={e => (e.target.style.borderColor = G)}
+                  onBlur={e  => (e.target.style.borderColor = 'var(--border)')}
+                />
+              </div>
+              {/* Amount */}
+              <div style={{ position: 'relative', marginBottom: 18 }}>
+                <IndianRupee size={15} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                <input
+                  id="income-input-amount"
+                  ref={amountRef}
+                  type="number"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={handleAmountInput}
+                  onKeyDown={handleAmountKey}
+                  inputMode="decimal"
+                  style={{ width: '100%', paddingLeft: 42, paddingRight: 16, paddingTop: 13, paddingBottom: 13, borderRadius: 12, fontSize: 18, fontWeight: 700, border: '1.5px solid var(--border)', background: '#fff', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
+                  onFocus={e => (e.target.style.borderColor = G)}
+                  onBlur={e  => (e.target.style.borderColor = 'var(--border)')}
+                />
+              </div>
+              <button
+                id="btn-save-income"
+                onClick={save}
+                disabled={!name.trim() || !amount || parseFloat(amount) <= 0}
+                style={{ width: '100%', padding: 14, borderRadius: 14, fontSize: 14, fontWeight: 600, background: G, color: '#fff', border: 'none', cursor: 'pointer', opacity: (!name.trim() || !amount || parseFloat(amount) <= 0) ? 0.4 : 1, fontFamily: 'inherit' }}
+              >
+                Add Income
+              </button>
             </div>
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-              {group.entries.map((entry, i) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between px-4 py-3.5"
-                  style={{ borderBottom: i < group.entries.length - 1 ? '1px solid var(--border)' : 'none' }}
-                >
-                  <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{entry.name}</span>
-                  <span className="text-sm font-bold" style={{ color: ACC }}>{formatAmount(entry.amount)}</span>
+          </div>
+
+          {/* RIGHT: Income list */}
+          <div className="income-right" style={{ padding: '20px 24px', paddingLeft: 0 }}>
+            {income.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 160, gap: 12 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: GB, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Wallet size={22} style={{ color: G }} />
                 </div>
-              ))}
-            </div>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>No income added yet.</p>
+              </div>
+            ) : grouped.map(group => (
+              <div key={group.label} style={{ marginBottom: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>{group.label}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: G }}>{formatAmount(group.entries.reduce((s, e) => s + e.amount, 0))}</span>
+                </div>
+                <div style={{ background: 'var(--surface)', borderRadius: 18, border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
+                  {group.entries.map((entry, i) => (
+                    <div key={entry.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: i < group.entries.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                      <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>{entry.name}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: G }}>{formatAmount(entry.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
+
+      <style>{`
+        @media (min-width: 1024px) {
+          .income-layout { display: flex; align-items: flex-start; gap: 0; height: 100%; }
+          .income-left   { flex: 0 0 420px; }
+          .income-right  { flex: 1; padding: 20px 24px 24px 0 !important; overflow-y: auto; }
+        }
+        @media (max-width: 1023px) {
+          .income-layout { display: block; }
+          .income-right  { padding: 0 24px 24px !important; }
+        }
+      `}</style>
     </div>
   );
 }

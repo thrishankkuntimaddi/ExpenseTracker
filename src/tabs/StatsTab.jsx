@@ -2,123 +2,145 @@ import { useMemo } from 'react';
 import { TrendingUp, TrendingDown, PiggyBank, Users, Scale, Flame, CalendarDays } from 'lucide-react';
 import { formatAmount } from '../utils/dateHelpers';
 
-function MetricCard({ label, value, color, bg, border, Icon, large }) {
+function MetricCard({ label, value, color, bg, border, Icon }) {
   return (
-    <div className="rounded-2xl p-4" style={{ background: bg, border: `1.5px solid ${border}`, boxShadow: 'var(--shadow-sm)' }}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color }}>{label}</span>
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: color + '22' }}>
-          <Icon size={15} color={color} />
+    <div style={{ background: bg, border: `1.5px solid ${border}`, borderRadius: 18, padding: '16px', boxShadow: 'var(--shadow-sm)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color }}>{label}</span>
+        <div style={{ width: 30, height: 30, borderRadius: 8, background: color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={14} color={color} />
         </div>
       </div>
-      <div className={`font-bold ${large ? 'text-2xl' : 'text-xl'}`} style={{ color }}>
-        {formatAmount(value)}
-      </div>
+      <div style={{ fontSize: 20, fontWeight: 800, color }}>{formatAmount(value)}</div>
     </div>
   );
 }
 
-function AverageCard({ label, value, Icon }) {
+function AvgCard({ label, value, Icon }) {
   return (
-    <div className="rounded-xl p-3.5" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-      <div className="flex items-center gap-1.5 mb-2">
-        <Icon size={13} style={{ color: 'var(--text-muted)' }} />
-        <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px', boxShadow: 'var(--shadow-sm)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+        <Icon size={12} style={{ color: 'var(--text-muted)' }} />
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
       </div>
-      <div className="text-base font-bold" style={{ color: 'var(--text)' }}>{formatAmount(value)}</div>
+      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{formatAmount(value)}</div>
     </div>
   );
 }
 
 export default function StatsTab({ transactions, income }) {
   const stats = useMemo(() => {
-    const totalIncome   = income.reduce((s, i) => s + i.amount, 0);
-    const totalExpense  = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-    const totalSavings  = transactions.filter(t => t.type === 'savings').reduce((s, t) => s + t.amount, 0);
-    const totalPerson   = transactions.filter(t => t.type === 'person').reduce((s, t) => s + t.amount, 0);
-    const totalWaste    = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + (t.wasteAmount || 0), 0);
-    const balance       = totalIncome - totalExpense - totalSavings - totalPerson;
+    const totalIncome  = income.reduce((s, i) => s + i.amount, 0);
+    const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    const totalSavings = transactions.filter(t => t.type === 'savings').reduce((s, t) => s + t.amount, 0);
+    const totalPerson  = transactions.filter(t => t.type === 'person').reduce((s, t) => s + t.amount, 0);
+    const totalWaste   = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + (t.wasteAmount || 0), 0);
+    const balance      = totalIncome - totalExpense - totalSavings - totalPerson;
 
-    const allItems = [...transactions, ...income];
+    const all = [...transactions, ...income];
     const now = new Date();
-    const firstDate = allItems.reduce((min, t) => {
-      const d = new Date(t.date); return d < min ? d : min;
-    }, now);
-
-    const daysDiff   = Math.max(1, Math.ceil((now - firstDate) / 86400000) + 1);
-    const weeksDiff  = Math.max(1, daysDiff / 7);
-    const monthsDiff = Math.max(1, daysDiff / 30);
-
-    const totalSpend = totalExpense + totalPerson;
-    const wastePercent = totalExpense > 0 ? ((totalWaste / totalExpense) * 100).toFixed(1) : '0.0';
+    const firstDate = all.reduce((m, t) => { const d = new Date(t.date); return d < m ? d : m; }, now);
+    const days   = Math.max(1, Math.ceil((now - firstDate) / 86400000) + 1);
+    const weeks  = Math.max(1, days / 7);
+    const months = Math.max(1, days / 30);
+    const spend  = totalExpense + totalPerson;
 
     return {
       totalIncome, totalExpense, totalSavings, totalPerson, totalWaste, balance,
-      avgDay:   totalSpend / daysDiff,
-      avgWeek:  totalSpend / weeksDiff,
-      avgMonth: totalSpend / monthsDiff,
-      wastePercent,
+      avgDay: spend / days, avgWeek: spend / weeks, avgMonth: spend / months,
+      wastePercent: totalExpense > 0 ? ((totalWaste / totalExpense) * 100).toFixed(1) : '0.0',
     };
   }, [transactions, income]);
 
-  const isPositive = stats.balance >= 0;
+  const positive = stats.balance >= 0;
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto" style={{ background: 'var(--bg)' }}>
-      <div className="px-5 pt-6 pb-4">
-        <h1 className="text-2xl font-semibold mb-0.5" style={{ color: 'var(--text)' }}>Stats</h1>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your complete financial overview</p>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
+
+      {/* Header */}
+      <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', flexShrink: 0 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--text)', margin: 0 }}>Stats</h1>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>Your complete financial overview</p>
       </div>
 
-      <div className="px-5 pb-6 flex flex-col gap-4">
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 24px' }}>
 
-        {/* Balance Hero */}
-        <div className="rounded-2xl p-5" style={{
-          background: isPositive ? 'var(--income)' : 'var(--expense)',
-          boxShadow: 'var(--shadow-md)',
-        }}>
-          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.75)' }}>
-            Remaining Balance
-          </p>
-          <p className="text-4xl font-bold text-white mb-1">{formatAmount(stats.balance)}</p>
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>Income − Expense − Savings − Given</p>
-        </div>
+        {/* Desktop layout wrapper */}
+        <div className="stats-layout">
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <MetricCard label="Total Income"   value={stats.totalIncome}  color="var(--income)"  bg="var(--income-bg)"  border="var(--income-border)"  Icon={TrendingUp}   />
-          <MetricCard label="Total Expense"  value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={TrendingDown}  />
-          <MetricCard label="Savings"        value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" Icon={PiggyBank}     />
-          <MetricCard label="Given to People" value={stats.totalPerson} color="var(--person)"  bg="var(--person-bg)"  border="var(--person-border)"  Icon={Users}         />
-        </div>
+          {/* LEFT: Balance hero + averages */}
+          <div className="stats-left">
+            {/* Balance Hero */}
+            <div style={{
+              borderRadius: 20, padding: '22px 24px', marginBottom: 16,
+              background: positive ? 'var(--income)' : 'var(--expense)',
+              boxShadow: 'var(--shadow-md)',
+            }}>
+              <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.7)', marginBottom: 6 }}>
+                Remaining Balance
+              </p>
+              <p style={{ fontSize: 38, fontWeight: 800, color: '#fff', lineHeight: 1.1, marginBottom: 4 }}>
+                {formatAmount(stats.balance)}
+              </p>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Income − Expense − Savings − Given</p>
+            </div>
 
-        {/* Wastage Card */}
-        <div className="rounded-2xl p-4" style={{ background: 'var(--expense-bg)', border: '1.5px solid var(--expense-border)', boxShadow: 'var(--shadow-sm)' }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-1.5 mb-2">
-                <Flame size={14} style={{ color: 'var(--expense)' }} />
-                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--expense)' }}>Total Wastage</span>
+            {/* Wastage */}
+            <div style={{ borderRadius: 18, padding: 16, background: 'var(--expense-bg)', border: '1.5px solid var(--expense-border)', boxShadow: 'var(--shadow-sm)', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <Flame size={14} style={{ color: 'var(--expense)' }} />
+                    <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--expense)' }}>Total Wastage</span>
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--expense)' }}>{formatAmount(stats.totalWaste)}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--expense)' }}>{stats.wastePercent}%</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>of expenses</div>
+                </div>
               </div>
-              <div className="text-2xl font-bold" style={{ color: 'var(--expense)' }}>{formatAmount(stats.totalWaste)}</div>
             </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold" style={{ color: 'var(--expense)' }}>{stats.wastePercent}%</div>
-              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>of expenses</div>
-            </div>
-          </div>
-        </div>
 
-        {/* Averages */}
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest mb-2 px-1" style={{ color: 'var(--text-muted)' }}>Spending Averages</p>
-          <div className="grid grid-cols-3 gap-2">
-            <AverageCard label="Per Day"   value={stats.avgDay}   Icon={CalendarDays} />
-            <AverageCard label="Per Week"  value={stats.avgWeek}  Icon={CalendarDays} />
-            <AverageCard label="Per Month" value={stats.avgMonth} Icon={Scale} />
+            {/* Averages */}
+            <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 10 }}>
+              Spending Averages
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+              <AvgCard label="Per Day"   value={stats.avgDay}   Icon={CalendarDays} />
+              <AvgCard label="Per Week"  value={stats.avgWeek}  Icon={CalendarDays} />
+              <AvgCard label="Per Month" value={stats.avgMonth} Icon={Scale}        />
+            </div>
           </div>
+
+          {/* RIGHT: Metric cards */}
+          <div className="stats-right">
+            <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 10 }}>
+              Breakdown
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+              <MetricCard label="Total Income"    value={stats.totalIncome}  color="var(--income)"  bg="var(--income-bg)"  border="var(--income-border)"  Icon={TrendingUp}  />
+              <MetricCard label="Total Expense"   value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={TrendingDown} />
+              <MetricCard label="Savings"         value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" Icon={PiggyBank}    />
+              <MetricCard label="Given to People" value={stats.totalPerson}  color="var(--person)"  bg="var(--person-bg)"  border="var(--person-border)"  Icon={Users}        />
+            </div>
+          </div>
+
         </div>
       </div>
+
+      <style>{`
+        @media (min-width: 1024px) {
+          .stats-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+          .stats-left   {}
+          .stats-right  {}
+        }
+        @media (max-width: 1023px) {
+          .stats-layout { display: flex; flex-direction: column; gap: 16px; }
+          .stats-right  { padding-bottom: 0; }
+        }
+      `}</style>
     </div>
   );
 }
