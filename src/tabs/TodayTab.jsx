@@ -32,7 +32,7 @@ export default function TodayTab({ transactions, onAdd }) {
   function save() {
     const n = name.trim(), a = parseFloat(amount);
     if (!n || !amount || isNaN(a) || a <= 0) return;
-    onAdd({ id: generateId(), name: n, amount: a, type, date: new Date().toISOString(), wasteAmount: undefined });
+    onAdd({ id: generateId(), name: n, amount: a, type, date: new Date().toISOString(), month: new Date().toISOString().slice(0, 7), wasteAmount: undefined });
     setName(''); setAmount('');
     nameRef.current?.focus();
   }

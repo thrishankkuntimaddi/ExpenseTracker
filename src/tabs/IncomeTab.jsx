@@ -19,7 +19,7 @@ export default function IncomeTab({ income, onAddIncome }) {
   function save() {
     const n = name.trim(), a = parseFloat(amount);
     if (!n || !amount || isNaN(a) || a <= 0) return;
-    onAddIncome({ id: generateId(), name: n, amount: a, type: 'income', date: new Date().toISOString() });
+    onAddIncome({ id: generateId(), name: n, amount: a, type: 'income', date: new Date().toISOString(), month: new Date().toISOString().slice(0, 7) });
     setName(''); setAmount('');
     nameRef.current?.focus();
   }
