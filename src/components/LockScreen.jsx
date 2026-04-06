@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Lock } from 'lucide-react';
+import { Lock, Zap } from 'lucide-react';
 
 export default function LockScreen({ onUnlock, onWipe }) {
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError]       = useState('');
   const [attempts, setAttempts] = useState(0);
 
   function handleUnlock() {
@@ -13,8 +13,9 @@ export default function LockScreen({ onUnlock, onWipe }) {
       } else {
         const next = attempts + 1;
         setAttempts(next);
-        if (next >= 3) { onWipe(); }
-        else {
+        if (next >= 3) {
+          onWipe();
+        } else {
           setError(`Wrong password. ${3 - next} attempt${3 - next === 1 ? '' : 's'} remaining.`);
           setPassword('');
         }
@@ -23,19 +24,54 @@ export default function LockScreen({ onUnlock, onWipe }) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full px-8" style={{ background: 'var(--bg)' }}>
-      <div className="w-full max-w-sm">
-        {/* Icon */}
-        <div className="flex justify-center mb-8">
-          <div className="w-20 h-20 rounded-3xl flex items-center justify-center" style={{ background: 'var(--savings-bg)', boxShadow: 'var(--shadow-md)' }}>
-            <Lock size={36} style={{ color: 'var(--savings)' }} />
+    <div style={{
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      height: '100%', padding: '0 24px',
+      background: 'var(--bg)',
+    }}>
+      <div style={{ width: '100%', maxWidth: 360 }}>
+
+        {/* App identity */}
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', marginBottom: 32, gap: 12,
+        }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: 22,
+            background: 'var(--accent)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: 'var(--shadow-md)',
+          }}>
+            <Zap size={36} color="#fff" strokeWidth={2.5} />
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+              Expense Tracker
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 3 }}>
+              Enter your password to continue
+            </div>
           </div>
         </div>
 
-        <h1 className="text-2xl font-semibold text-center mb-1" style={{ color: 'var(--text)' }}>App Locked</h1>
-        <p className="text-sm text-center mb-8" style={{ color: 'var(--text-secondary)' }}>Enter your password to continue</p>
+        {/* Lock card */}
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 20, padding: 24,
+          boxShadow: 'var(--shadow)',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: 20, gap: 8,
+          }}>
+            <Lock size={16} style={{ color: 'var(--accent)' }} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              App Locked
+            </span>
+          </div>
 
-        <div className="rounded-2xl p-6" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
           <input
             id="lock-password-input"
             type="password"
@@ -44,29 +80,53 @@ export default function LockScreen({ onUnlock, onWipe }) {
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleUnlock()}
             autoFocus
-            className="w-full px-4 py-3 rounded-xl text-sm outline-none mb-3 text-center tracking-widest transition-all"
             style={{
-              background: 'var(--surface2)',
-              border: `1.5px solid ${error ? 'var(--expense)' : 'var(--border)'}`,
+              width: '100%',
+              padding: '13px 16px',
+              borderRadius: 12, fontSize: 16,
+              letterSpacing: '0.12em',
+              textAlign: 'center',
+              border: `1.5px solid ${error ? 'var(--expense)' : 'var(--input-border)'}`,
+              background: 'var(--input-bg)',
               color: 'var(--text)',
+              outline: 'none', fontFamily: 'inherit',
+              marginBottom: error ? 8 : 14,
+              transition: 'border-color 0.15s',
             }}
           />
+
           {error && (
-            <div className="text-xs text-center mb-3" style={{ color: 'var(--expense)' }}>{error}</div>
+            <div style={{
+              fontSize: 12, textAlign: 'center', marginBottom: 12,
+              color: 'var(--expense)', fontWeight: 500,
+            }}>
+              {error}
+            </div>
           )}
+
           <button
             id="btn-unlock"
             onClick={handleUnlock}
             disabled={!password}
-            className="w-full py-3.5 rounded-xl text-sm font-semibold disabled:opacity-40"
-            style={{ background: 'var(--accent)', color: '#fff', minHeight: 48 }}
+            style={{
+              width: '100%', padding: '14px',
+              borderRadius: 12, fontSize: 14, fontWeight: 700,
+              background: password ? 'var(--accent)' : 'var(--surface2)',
+              color: password ? '#fff' : 'var(--text-muted)',
+              border: 'none', cursor: password ? 'pointer' : 'not-allowed',
+              fontFamily: 'inherit',
+              transition: 'all 0.15s',
+            }}
           >
-            Unlock
+            Unlock App
           </button>
         </div>
 
-        <p className="text-xs text-center mt-4" style={{ color: 'var(--text-muted)' }}>
-          3 failed attempts permanently wipe all data.
+        <p style={{
+          fontSize: 11, textAlign: 'center', marginTop: 16,
+          color: 'var(--text-muted)',
+        }}>
+          3 failed attempts permanently wipe all data
         </p>
       </div>
     </div>

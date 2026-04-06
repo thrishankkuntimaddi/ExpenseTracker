@@ -1,70 +1,324 @@
-@import "tailwindcss";
+/* ══════════════════════════════════════════════════════════════════
+   EXPENSE TRACKER — GLOBAL STYLES & DUAL THEME ENGINE
+   Theme "light"    → clean white, vibrant category colors
+   Theme "monoflow" → dark monochrome, warm gold accent (#b8956a)
+══════════════════════════════════════════════════════════════════ */
 
-/* ─── Design Tokens ─── */
-:root {
-  --bg: #F8FAFC;
-  --surface: #FFFFFF;
-  --surface2: #F1F5F9;
-  --border: #E2E8F0;
+/* ── Google Font ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ══ LIGHT THEME (default) ══════════════════════════════════════ */
+:root,
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg:         #F8FAFC;
+  --surface:    #FFFFFF;
+  --surface2:   #F1F5F9;
+  --surface3:   #E8EEF6;
+
+  /* Borders */
+  --border:      #E2E8F0;
   --border-dark: #CBD5E1;
-  --text: #0F172A;
+
+  /* Text */
+  --text:           #0F172A;
   --text-secondary: #64748B;
-  --text-muted: #94A3B8;
+  --text-muted:     #94A3B8;
 
-  --income: #16A34A;
-  --income-bg: #DCFCE7;
-  --income-border: #BBF7D0;
+  /* Accent */
+  --accent:       #6366F1;
+  --accent-hover: #4F46E5;
+  --accent-bg:    #EEF2FF;
+  --accent-border:#C7D2FE;
 
-  --expense: #DC2626;
-  --expense-bg: #FEE2E2;
+  /* Category colors */
+  --income:         #16A34A;
+  --income-bg:      #DCFCE7;
+  --income-border:  #BBF7D0;
+
+  --expense:        #DC2626;
+  --expense-bg:     #FEE2E2;
   --expense-border: #FECACA;
 
-  --savings: #2563EB;
-  --savings-bg: #DBEAFE;
+  --savings:        #2563EB;
+  --savings-bg:     #DBEAFE;
   --savings-border: #BFDBFE;
 
-  --person: #D97706;
-  --person-bg: #FEF3C7;
-  --person-border: #FDE68A;
+  --person:         #D97706;
+  --person-bg:      #FEF3C7;
+  --person-border:  #FDE68A;
 
-  --accent: #2563EB;
+  /* Waste */
+  --waste:    #DC2626;
+  --waste-bg: #FEE2E2;
 
+  /* Navbar */
+  --nav-bg:     #FFFFFF;
+  --nav-border: #E2E8F0;
+
+  /* Shadows */
   --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
   --shadow:    0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
   --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
 
-  --sidebar-w: 240px;
+  /* Input */
+  --input-bg:     #FFFFFF;
+  --input-border: #E2E8F0;
+
+  /* Chart tooltip */
+  --tooltip-bg:     #FFFFFF;
+  --tooltip-border: #E2E8F0;
 }
 
-* { box-sizing: border-box; }
+/* ══ MONOFLOW THEME (dark) ══════════════════════════════════════ */
+[data-theme="monoflow"] {
+  /* Backgrounds */
+  --bg:       #0c0c0c;
+  --surface:  #111111;
+  --surface2: #161616;
+  --surface3: #1c1c1c;
+
+  /* Borders */
+  --border:      #222222;
+  --border-dark: #383838;
+
+  /* Text */
+  --text:           #e4e4e4;
+  --text-secondary: #7a7a7a;
+  --text-muted:     #404040;
+
+  /* Accent — warm gold */
+  --accent:       #b8956a;
+  --accent-hover: #c9a87c;
+  --accent-bg:    #1e1812;
+  --accent-border:#3a2e20;
+
+  /* Category colors — muted for dark theme */
+  --income:         #5aba8a;
+  --income-bg:      #0d1f16;
+  --income-border:  #163d28;
+
+  --expense:        #e05252;
+  --expense-bg:     #1f0d0d;
+  --expense-border: #3d1616;
+
+  --savings:        #6b8dd6;
+  --savings-bg:     #0d1326;
+  --savings-border: #1a2854;
+
+  --person:         #c9943a;
+  --person-bg:      #1f1608;
+  --person-border:  #3d2c10;
+
+  /* Waste */
+  --waste:    #e05252;
+  --waste-bg: #1f0d0d;
+
+  /* Navbar */
+  --nav-bg:     #111111;
+  --nav-border: #222222;
+
+  /* Shadows — invisible on dark */
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4);
+  --shadow:    0 4px 6px -1px rgb(0 0 0 / 0.5);
+  --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.6);
+
+  /* Input */
+  --input-bg:     #141414;
+  --input-border: #222222;
+
+  /* Chart tooltip */
+  --tooltip-bg:     #161616;
+  --tooltip-border: #383838;
+}
+
+/* ══ RESET & BASE ═══════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root {
   height: 100%;
-  margin: 0;
-  padding: 0;
   background-color: var(--bg);
   color: var(--text);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Mobile: fixed height, no scroll. Desktop: overridden inline by App.jsx */
+/* Theme transition — smooth switch */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 220ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* But NOT layout transitions */
+button, input, select, textarea {
+  transition-property: background-color, border-color, color, opacity, transform;
+}
+
 body { overflow: hidden; }
 #root { display: flex; flex-direction: column; overflow: hidden; }
 
-/* Desktop layout handled via JS conditional rendering in App.jsx */
+/* ── Scrollbar ── */
+::-webkit-scrollbar              { width: 4px; height: 4px; }
+::-webkit-scrollbar-track        { background: transparent; }
+::-webkit-scrollbar-thumb        { background: var(--border-dark); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover  { background: var(--text-muted); }
 
-/* scrollbar */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 99px; }
-
-/* number input no arrows */
+/* ── Number input ── */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type=number] { appearance: textfield; -moz-appearance: textfield; }
 
-/* button press */
-button:active:not(:disabled) { transform: scale(0.97); }
-button { transition: transform 0.1s ease, opacity 0.15s ease, background 0.15s ease; }
+/* ── Buttons ── */
+button:active:not(:disabled) { transform: scale(0.96); }
+button {
+  transition: transform 0.1s ease, opacity 0.15s ease,
+              background-color 150ms ease, color 150ms ease;
+  cursor: pointer;
+}
+button:disabled { cursor: not-allowed; }
+
+/* ── Focus ring ── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ══ TYPOGRAPHY UTILITIES ═══════════════════════════════════════ */
+.text-display  { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
+.text-title    { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+.text-section  { font-size: 18px; font-weight: 600; line-height: 1.25; }
+.text-body     { font-size: 14px; font-weight: 400; line-height: 1.6; }
+.text-row      { font-size: 14px; font-weight: 500; line-height: 1.5; }
+.text-support  { font-size: 13px; font-weight: 400; line-height: 1.75; }
+.text-meta     { font-size: 12px; font-weight: 400; line-height: 1.8; }
+.text-label    { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+
+/* ══ CHART OVERRIDES FOR MONOFLOW ════════════════════════════ */
+[data-theme="monoflow"] .recharts-cartesian-axis-tick text { fill: var(--text-muted) !important; }
+[data-theme="monoflow"] .recharts-cartesian-grid-horizontal line,
+[data-theme="monoflow"] .recharts-cartesian-grid-vertical line { stroke: var(--border) !important; }
+[data-theme="monoflow"] .recharts-tooltip-wrapper .custom-tooltip {
+  background: var(--tooltip-bg) !important;
+  border-color: var(--tooltip-border) !important;
+}
+
+/* ══ TAB CONTENT CONTAINERS ═════════════════════════════════ */
+.tab-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.tab-header {
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.tab-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px 24px;
+}
+
+/* ══ CARD ═══════════════════════════════════════════════════ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ══ INPUT BASE ════════════════════════════════════════════ */
+.input-base {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1.5px solid var(--input-border);
+  color: var(--text);
+  font-family: inherit;
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input-base::placeholder { color: var(--text-muted); }
+
+/* ══ TOGGLE SWITCH ════════════════════════════════════════ */
+.toggle-track {
+  width: 44px;
+  height: 24px;
+  border-radius: 99px;
+  position: relative;
+  background: var(--border-dark);
+  transition: background 0.2s ease;
+  cursor: pointer;
+  border: none;
+  flex-shrink: 0;
+}
+.toggle-track.on { background: var(--accent); }
+.toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform 0.2s cubic-bezier(0.16,1,0.3,1);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
+.toggle-track.on .toggle-thumb { transform: translateX(20px); }
+
+/* ══ CATEGORY CHIPS ══════════════════════════════════════ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  flex-shrink: 0;
+}
+.chip-expense { background: var(--expense-bg);  color: var(--expense); }
+.chip-income  { background: var(--income-bg);   color: var(--income);  }
+.chip-savings { background: var(--savings-bg);  color: var(--savings); }
+.chip-person  { background: var(--person-bg);   color: var(--person);  }
+
+/* ══ SECTION LABEL ══════════════════════════════════════ */
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+/* ══ PERIOD BADGE ══════════════════════════════════════ */
+.period-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: var(--accent-bg);
+  border: 1.5px solid var(--accent-border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ══ DESKTOP LAYOUT ══════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  body { overflow: auto; }
+  #root { overflow: auto; }
+}

@@ -1,55 +1,139 @@
-import { useMemo } from 'react';
-import { TrendingUp, TrendingDown, PiggyBank, Users, Scale, Flame, CalendarDays, ArrowDownToLine } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import {
+  TrendingUp, TrendingDown, PiggyBank, Users,
+  Scale, Flame, CalendarDays, ArrowDownToLine,
+  ChevronDown, ChevronUp,
+} from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, AreaChart, Area, CartesianGrid,
+} from 'recharts';
 import { formatAmount } from '../utils/dateHelpers';
 import { filterItemsByPeriod, getOpeningBalance } from '../utils/periodHelpers';
 import PeriodSelector from '../components/PeriodSelector';
 
+/* ── Chart hex colors — CSS vars don't work inside Recharts SVG ── */
+const C_LIGHT = {
+  expense: '#DC2626', savings: '#2563EB',
+  person:  '#D97706', income:  '#16A34A',
+};
+const C_DARK = {
+  expense: '#e05252', savings: '#6b8dd6',
+  person:  '#c9943a', income:  '#5aba8a',
+};
+
+/* ── Custom Tooltip ── */
+function ChartTip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: 'var(--tooltip-bg)',
+      border: '1px solid var(--tooltip-border)',
+      borderRadius: 10, padding: '8px 12px',
+      boxShadow: 'var(--shadow)', fontSize: 12,
+    }}>
+      {label && <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{label}</p>}
+      {payload.map((p, i) => (
+        <p key={i} style={{ color: p.color || p.fill || 'var(--expense)', fontWeight: 700, margin: 0 }}>
+          {p.name}: {formatAmount(p.value)}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/* ── Collapsible Section ── */
+function Section({ title, defaultOpen = true, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', padding: '8px 2px',
+          background: 'transparent', border: 'none',
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}
+      >
+        <span className="section-label" style={{ margin: 0 }}>{title}</span>
+        {open
+          ? <ChevronUp   size={14} style={{ color: 'var(--text-muted)' }} />
+          : <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />
+        }
+      </button>
+      {open && children}
+    </div>
+  );
+}
+
+/* ── Metric Card ── */
 function MetricCard({ label, value, color, bg, border, Icon, sub }) {
   return (
-    <div style={{ background: bg, border: `1.5px solid ${border}`, borderRadius: 18, padding: '16px', boxShadow: 'var(--shadow-sm)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color }}>{label}</span>
-        <div style={{ width: 30, height: 30, borderRadius: 8, background: color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={14} color={color} />
+    <div style={{
+      background: bg,
+      border: `1.5px solid ${border}`,
+      borderRadius: 14, padding: 14,
+      boxShadow: 'var(--shadow-sm)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <span style={{
+          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+          letterSpacing: '0.1em', color,
+        }}>
+          {label}
+        </span>
+        <div style={{
+          width: 28, height: 28, borderRadius: 8,
+          background: color + '22', display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Icon size={13} color={color} />
         </div>
       </div>
-      <div style={{ fontSize: 20, fontWeight: 800, color }}>{formatAmount(value)}</div>
-      {sub && <div style={{ fontSize: 11, color, opacity: 0.7, marginTop: 4 }}>{sub}</div>}
+      <div style={{ fontSize: 18, fontWeight: 800, color }}>{formatAmount(value)}</div>
+      {sub && <div style={{ fontSize: 10, color, opacity: 0.7, marginTop: 3 }}>{sub}</div>}
     </div>
   );
 }
 
+/* ── Avg Card ── */
 function AvgCard({ label, value, Icon }) {
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px', boxShadow: 'var(--shadow-sm)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-        <Icon size={12} style={{ color: 'var(--text-muted)' }} />
-        <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
+    <div style={{
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: 12, padding: 12,
+      boxShadow: 'var(--shadow-sm)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+        <Icon size={11} style={{ color: 'var(--text-muted)' }} />
+        <span style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
       </div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{formatAmount(value)}</div>
+      <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{formatAmount(value)}</div>
     </div>
   );
 }
 
-export default function StatsTab({ transactions, income, selectedPeriod, onPeriodChange }) {
-  /* ─ Filter data to selected period ─ */
+export default function StatsTab({ transactions, income, selectedPeriod, onPeriodChange, theme }) {
+  const C = theme === 'monoflow' ? C_DARK : C_LIGHT;
+
+  /* ─ Filter data ─ */
   const filtTxns = useMemo(() => filterItemsByPeriod(transactions, selectedPeriod), [transactions, selectedPeriod]);
   const filtInc  = useMemo(() => filterItemsByPeriod(income, selectedPeriod),       [income, selectedPeriod]);
 
-  /* ─ Compute stats ─ */
+  /* ─ Stats ─ */
   const stats = useMemo(() => {
     const openingBalance = getOpeningBalance(selectedPeriod, transactions, income);
-
     const totalIncome  = filtInc.reduce((s, i) => s + i.amount, 0);
     const totalExpense = filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
     const totalSavings = filtTxns.filter(t => t.type === 'savings').reduce((s, t) => s + t.amount, 0);
     const totalPerson  = filtTxns.filter(t => t.type === 'person').reduce((s, t) => s + t.amount, 0);
     const totalWaste   = filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + (t.wasteAmount || 0), 0);
+    const balance      = openingBalance + totalIncome - totalExpense - totalSavings - totalPerson;
 
-    const balance = openingBalance + totalIncome - totalExpense - totalSavings - totalPerson;
-
-    const now  = new Date();
-    const all  = [...filtTxns, ...filtInc];
+    const now = new Date();
+    const all = [...filtTxns, ...filtInc];
     const firstDate = all.reduce((min, t) => { const d = new Date(t.date); return d < min ? d : min; }, now);
     const days   = Math.max(1, Math.ceil((now - firstDate) / 86400000) + 1);
     const weeks  = Math.max(1, days / 7);
@@ -63,18 +147,55 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
     };
   }, [filtTxns, filtInc, selectedPeriod, transactions, income]);
 
-  const positive = stats.balance >= 0;
-  const hasData  = filtTxns.length > 0 || filtInc.length > 0;
+  /* ─ Donut / Pie data ─ */
+  const pieData = useMemo(() => [
+    { name: 'Expense', value: filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0), color: C.expense },
+    { name: 'Savings', value: filtTxns.filter(t => t.type === 'savings').reduce((s, t) => s + t.amount, 0), color: C.savings },
+    { name: 'Given',   value: filtTxns.filter(t => t.type === 'person').reduce((s, t) => s + t.amount, 0),  color: C.person  },
+  ].filter(d => d.value > 0), [filtTxns, C]);
+
+  /* ─ Bar chart: last 14 days spending ─ */
+  const barData = useMemo(() => Array.from({ length: 14 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (13 - i));
+    const key   = d.toDateString();
+    const exp   = transactions.filter(t => t.type === 'expense' && new Date(t.date).toDateString() === key).reduce((s, t) => s + t.amount, 0);
+    const sav   = transactions.filter(t => t.type === 'savings' && new Date(t.date).toDateString() === key).reduce((s, t) => s + t.amount, 0);
+    return {
+      day: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }).split(' ')[0],
+      Expense: exp,
+      Savings: sav,
+    };
+  }), [transactions]);
+
+  /* ─ Area chart: income vs expense by month (last 6 months) ─ */
+  const areaData = useMemo(() => Array.from({ length: 6 }, (_, i) => {
+    const now = new Date();
+    const d   = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('en-IN', { month: 'short' });
+    const inc = income.filter(it => it.date?.slice(0, 7) === month).reduce((s, it) => s + it.amount, 0);
+    const exp = transactions.filter(t => t.type === 'expense' && t.date?.slice(0, 7) === month).reduce((s, t) => s + t.amount, 0);
+    return { month: label, Income: inc, Expense: exp };
+  }), [transactions, income]);
+
+  const positive  = stats.balance >= 0;
+  const hasData   = filtTxns.length > 0 || filtInc.length > 0;
+  const hasPieData = pieData.length > 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
+    <div className="tab-root">
 
       {/* Header */}
-      <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
+      <div className="tab-header">
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
-            <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text)', margin: 0 }}>Stats</h1>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Financial overview for selected period</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
+              Stats
+            </h1>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+              Financial overview
+            </p>
           </div>
         </div>
         <PeriodSelector
@@ -86,90 +207,231 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 24px' }}>
+      <div className="tab-body">
 
         {!hasData ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', gap: 12 }}>
+          <div style={{
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            height: '60%', gap: 12,
+          }}>
             <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Scale size={26} style={{ color: 'var(--text-muted)' }} />
             </div>
             <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>No data for this period</p>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Add transactions to see your stats</p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Add transactions to see stats</p>
           </div>
         ) : (
           <div className="stats-layout">
 
-            {/* LEFT: Balance hero + carry-forward + averages */}
+            {/* ── LEFT COLUMN ── */}
             <div className="stats-left">
 
-              {/* Opening Balance (carry-forward) */}
+              {/* Opening balance carry-forward */}
               {stats.openingBalance !== 0 && (
-                <div style={{ borderRadius: 16, padding: '14px 18px', marginBottom: 14, background: stats.openingBalance >= 0 ? 'var(--income-bg)' : 'var(--expense-bg)', border: `1.5px solid ${stats.openingBalance >= 0 ? 'var(--income-border)' : 'var(--expense-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{
+                  borderRadius: 12, padding: '12px 16px', marginBottom: 14,
+                  background: stats.openingBalance >= 0 ? 'var(--income-bg)' : 'var(--expense-bg)',
+                  border: `1.5px solid ${stats.openingBalance >= 0 ? 'var(--income-border)' : 'var(--expense-border)'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <ArrowDownToLine size={15} style={{ color: stats.openingBalance >= 0 ? 'var(--income)' : 'var(--expense)' }} />
+                    <ArrowDownToLine size={14} style={{ color: stats.openingBalance >= 0 ? 'var(--income)' : 'var(--expense)' }} />
                     <div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: stats.openingBalance >= 0 ? 'var(--income)' : 'var(--expense)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Opening Balance</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>Carried forward from previous period</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: stats.openingBalance >= 0 ? 'var(--income)' : 'var(--expense)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        Opening Balance
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>
+                        Carried forward from previous period
+                      </div>
                     </div>
                   </div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: stats.openingBalance >= 0 ? 'var(--income)' : 'var(--expense)' }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: stats.openingBalance >= 0 ? 'var(--income)' : 'var(--expense)' }}>
                     {formatAmount(stats.openingBalance)}
                   </div>
                 </div>
               )}
 
-              {/* Remaining Balance Hero */}
-              <div style={{ borderRadius: 20, padding: '22px 24px', marginBottom: 16, background: positive ? 'var(--income)' : 'var(--expense)', boxShadow: 'var(--shadow-md)' }}>
-                <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.7)', marginBottom: 6 }}>
+              {/* Balance Hero */}
+              <div style={{
+                borderRadius: 16, padding: '20px 22px', marginBottom: 14,
+                background: positive ? 'var(--income)' : 'var(--expense)',
+                boxShadow: 'var(--shadow-md)',
+              }}>
+                <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.7)', marginBottom: 6 }}>
                   Remaining Balance
                 </p>
-                <p style={{ fontSize: 36, fontWeight: 800, color: '#fff', lineHeight: 1.1, marginBottom: 4 }}>
+                <p style={{ fontSize: 32, fontWeight: 800, color: '#fff', lineHeight: 1.1, marginBottom: 4 }}>
                   {formatAmount(stats.balance)}
                 </p>
-                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
                   {stats.openingBalance !== 0 ? 'Opening + Income − Expense − Savings − Given' : 'Income − Expense − Savings − Given'}
                 </p>
               </div>
 
-              {/* Wastage */}
-              <div style={{ borderRadius: 18, padding: 16, background: 'var(--expense-bg)', border: '1.5px solid var(--expense-border)', boxShadow: 'var(--shadow-sm)', marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {/* Waste block */}
+              <div style={{
+                borderRadius: 14, padding: 14,
+                background: 'var(--expense-bg)',
+                border: '1.5px solid var(--expense-border)',
+                boxShadow: 'var(--shadow-sm)',
+                marginBottom: 14,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                      <Flame size={14} style={{ color: 'var(--expense)' }} />
-                      <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--expense)' }}>Total Wastage</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+                      <Flame size={13} style={{ color: 'var(--expense)' }} />
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--expense)' }}>
+                        Total Wastage
+                      </span>
                     </div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--expense)' }}>{formatAmount(stats.totalWaste)}</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--expense)' }}>
+                      {formatAmount(stats.totalWaste)}
+                    </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--expense)' }}>{stats.wastePercent}%</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>of expenses</div>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--expense)' }}>
+                      {stats.wastePercent}%
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>of expenses</div>
                   </div>
+                </div>
+                {/* Waste progress bar */}
+                <div style={{ height: 6, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${Math.min(100, parseFloat(stats.wastePercent))}%`,
+                    background: 'linear-gradient(90deg, #F59E0B, var(--expense))',
+                    borderRadius: 99,
+                    transition: 'width 0.5s cubic-bezier(0.16,1,0.3,1)',
+                  }} />
                 </div>
               </div>
 
-              {/* Averages */}
-              <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 10 }}>
-                Spending Averages
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                <AvgCard label="Per Day"   value={stats.avgDay}   Icon={CalendarDays} />
-                <AvgCard label="Per Week"  value={stats.avgWeek}  Icon={CalendarDays} />
-                <AvgCard label="Per Month" value={stats.avgMonth} Icon={Scale}        />
-              </div>
+              {/* Spending Averages */}
+              <Section title="Spending Averages">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
+                  <AvgCard label="Per Day"   value={stats.avgDay}   Icon={CalendarDays} />
+                  <AvgCard label="Per Week"  value={stats.avgWeek}  Icon={CalendarDays} />
+                  <AvgCard label="Per Month" value={stats.avgMonth} Icon={Scale}        />
+                </div>
+              </Section>
             </div>
 
-            {/* RIGHT: Metric cards */}
+            {/* ── RIGHT COLUMN ── */}
             <div className="stats-right">
-              <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 10 }}>
-                Breakdown
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-                <MetricCard label="Total Income"    value={stats.totalIncome}  color="var(--income)"  bg="var(--income-bg)"  border="var(--income-border)"  Icon={TrendingUp}   />
-                <MetricCard label="Total Expense"   value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={TrendingDown}  />
-                <MetricCard label="Savings"         value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" Icon={PiggyBank}    />
-                <MetricCard label="Given to People" value={stats.totalPerson}  color="var(--person)"  bg="var(--person-bg)"  border="var(--person-border)"  Icon={Users}        />
-              </div>
+
+              {/* Breakdown Metric Cards */}
+              <Section title="Breakdown">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginTop: 8 }}>
+                  <MetricCard label="Total Income"   value={stats.totalIncome}  color="var(--income)"  bg="var(--income-bg)"  border="var(--income-border)"  Icon={TrendingUp}   />
+                  <MetricCard label="Total Expense"  value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={TrendingDown}  />
+                  <MetricCard label="Savings"        value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" Icon={PiggyBank}    />
+                  <MetricCard label="Given to People" value={stats.totalPerson} color="var(--person)"  bg="var(--person-bg)"  border="var(--person-border)"  Icon={Users}        />
+                </div>
+              </Section>
+
+              {/* Donut Chart */}
+              <Section title="Distribution (Donut)">
+                {hasPieData ? (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 16, marginTop: 8,
+                    background: 'var(--surface)', borderRadius: 14,
+                    border: '1px solid var(--border)', padding: 14,
+                  }}>
+                    <ResponsiveContainer width={120} height={120}>
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%" cy="50%"
+                          innerRadius={34} outerRadius={55}
+                          dataKey="value" paddingAngle={3}
+                        >
+                          {pieData.map((e, i) => (
+                            <Cell key={i} fill={
+                              e.name === 'Expense' ? C.expense :
+                              e.name === 'Savings' ? C.savings : C.person
+                            } />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<ChartTip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                      {pieData.map(d => (
+                        <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <div style={{
+                            width: 10, height: 10, borderRadius: 3,
+                            background: d.name === 'Expense' ? C.expense : d.name === 'Savings' ? C.savings : C.person,
+                            flexShrink: 0,
+                          }} />
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)' }}>{d.name}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatAmount(d.value)}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: 12 }}>
+                    No breakdown data
+                  </div>
+                )}
+              </Section>
+
+              {/* Daily Bar Chart */}
+              <Section title="Last 14 Days — Daily Spending">
+                <div style={{
+                  background: 'var(--surface)', borderRadius: 14,
+                  border: '1px solid var(--border)', padding: 14, marginTop: 8,
+                }}>
+                  <ResponsiveContainer width="100%" height={140}>
+                    <BarChart data={barData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis dataKey="day" tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<ChartTip />} cursor={{ fill: 'var(--surface2)' }} />
+                      <Bar dataKey="Expense" fill={C.expense} radius={[4, 4, 0, 0]} maxBarSize={20} />
+                      <Bar dataKey="Savings" fill={C.savings} radius={[4, 4, 0, 0]} maxBarSize={20} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Section>
+
+              {/* Area Chart: Income vs Expense last 6 months */}
+              <Section title="6-Month Trend — Income vs Expense">
+                <div style={{
+                  background: 'var(--surface)', borderRadius: 14,
+                  border: '1px solid var(--border)', padding: 14, marginTop: 8,
+                }}>
+                  <ResponsiveContainer width="100%" height={140}>
+                    <AreaChart data={areaData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="incGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor={C.income} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={C.income} stopOpacity={0}   />
+                        </linearGradient>
+                        <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor={C.expense} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={C.expense} stopOpacity={0}   />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<ChartTip />} />
+                      <Area type="monotone" dataKey="Income"  stroke={C.income}  strokeWidth={2} fill="url(#incGrad)" dot={{ r: 3, fill: C.income }}  />
+                      <Area type="monotone" dataKey="Expense" stroke={C.expense} strokeWidth={2} fill="url(#expGrad)" dot={{ r: 3, fill: C.expense }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 8 }}>
+                    <ChartLegend color={C.income}  label="Income"  />
+                    <ChartLegend color={C.expense} label="Expense" />
+                  </div>
+                </div>
+              </Section>
+
             </div>
           </div>
         )}
@@ -180,9 +442,18 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
           .stats-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
         }
         @media (max-width: 1023px) {
-          .stats-layout { display: flex; flex-direction: column; gap: 16px; }
+          .stats-layout { display: flex; flex-direction: column; gap: 0; }
         }
       `}</style>
+    </div>
+  );
+}
+
+function ChartLegend({ color, label }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      <div style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
+      <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{label}</span>
     </div>
   );
 }

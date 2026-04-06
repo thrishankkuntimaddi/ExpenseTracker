@@ -8,6 +8,7 @@ const defaultState = {
     password: null,
     failedAttempts: 0,
     locked: false,
+    theme: 'light',        // 'light' | 'monoflow'
   },
 };
 
