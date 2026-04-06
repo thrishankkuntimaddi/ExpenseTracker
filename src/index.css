@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+/* ─── Design Tokens ─── */
+:root {
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface2: #F1F5F9;
+  --border: #E2E8F0;
+  --border-dark: #CBD5E1;
+  --text: #0F172A;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+
+  --income: #16A34A;
+  --income-bg: #DCFCE7;
+  --income-border: #BBF7D0;
+
+  --expense: #DC2626;
+  --expense-bg: #FEE2E2;
+  --expense-border: #FECACA;
+
+  --savings: #2563EB;
+  --savings-bg: #DBEAFE;
+  --savings-border: #BFDBFE;
+
+  --person: #D97706;
+  --person-bg: #FEF3C7;
+  --person-border: #FDE68A;
+
+  --accent: #2563EB;
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.07);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+  --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+body { overflow: hidden; }
+
+#root {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: 540px;
+  margin: 0 auto;
+  /* Desktop centering effect */
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 99px; }
+
+/* number input no arrows */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
+
+/* active press scale for buttons */
+button:active:not(:disabled) { transform: scale(0.97); }
+button { transition: transform 0.1s ease, opacity 0.15s ease; }
