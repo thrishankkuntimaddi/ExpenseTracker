@@ -49,13 +49,11 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Mobile: fixed height, no scroll. Desktop: overridden inline by App.jsx */
 body { overflow: hidden; }
 #root { display: flex; flex-direction: column; overflow: hidden; }
 
-/* ─── Desktop root: no outer constraints ─── */
-@media (min-width: 1024px) {
-  #root { flex-direction: row; }
-}
+/* Desktop layout handled via JS conditional rendering in App.jsx */
 
 /* scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -65,7 +63,7 @@ body { overflow: hidden; }
 /* number input no arrows */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-input[type=number] { -moz-appearance: textfield; }
+input[type=number] { appearance: textfield; -moz-appearance: textfield; }
 
 /* button press */
 button:active:not(:disabled) { transform: scale(0.97); }
