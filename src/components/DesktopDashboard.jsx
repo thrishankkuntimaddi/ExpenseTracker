@@ -6,8 +6,9 @@ import {
 import {
   ShoppingCart, Users, PiggyBank, PenLine, IndianRupee,
   Wallet, TrendingUp, TrendingDown, Flame, ChevronDown,
-  ChevronRight, CreditCard, ArrowDownToLine,
+  ChevronRight, ArrowDownToLine,
 } from 'lucide-react';
+import AppIcon from './AppIcon';
 import { generateId } from '../utils/storage';
 import { formatAmount, formatDate, groupByDay, groupByWeek, groupByMonth } from '../utils/dateHelpers';
 import {
@@ -199,9 +200,7 @@ export default function DesktopDashboard({
       {/* ══ HEADER ══ */}
       <div style={{ background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50, boxShadow: '0 1px 0 #E2E8F0', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CreditCard size={17} color="#fff" />
-          </div>
+          <AppIcon size={38} />
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>Expense Tracker</div>
             <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 500 }}>Financial Command Center</div>
