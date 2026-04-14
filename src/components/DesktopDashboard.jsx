@@ -335,10 +335,10 @@ export default function DesktopDashboard({
         </div>
 
         {/* ── MAIN GRID ── */}
-        <div style={{ padding: '14px 28px 0', display: 'grid', gridTemplateColumns: '360px 1fr', gap: 14, alignItems: 'stretch', height: 'calc(100vh - 196px)' }}>
+        <div style={{ padding: '14px 28px 0', display: 'grid', gridTemplateColumns: '400px 1fr', gap: 14, alignItems: 'start' }}>
 
           {/* LEFT: Entry form + Today's entries */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, height: '100%', minHeight: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             {/* Entry Form */}
             <DCard style={{ flexShrink: 0 }}>
@@ -455,9 +455,9 @@ export default function DesktopDashboard({
             </DCard>
 
             {/* Today's Entries */}
-            <DCard style={{ flex: 1, minHeight: 0 }}>
+            <DCard>
               <CardHeader title="Today's Entries" sub={`${todayTxns.length} transactions`} />
-              <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+              <div style={{ maxHeight: 340, overflowY: 'auto' }}>
                 {todayTxns.length === 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 100, gap: 6 }}>
                     <ShoppingCart size={20} style={{ color: 'var(--text-muted)' }} />
@@ -544,7 +544,7 @@ export default function DesktopDashboard({
           </div>
 
           {/* RIGHT: Income + Analytics */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, height: '100%', alignItems: 'stretch' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'start' }}>
 
             {/* Income Panel */}
             <DCard>
@@ -585,7 +585,7 @@ export default function DesktopDashboard({
                   Add Income ↵
                 </button>
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, borderTop: '1px solid var(--border)' }}>
+              <div style={{ maxHeight: 280, overflowY: 'auto', borderTop: '1px solid var(--border)' }}>
                 {income.length === 0 ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 70 }}>
                     <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No income yet</p>
@@ -619,7 +619,7 @@ export default function DesktopDashboard({
             {/* Analytics Panel */}
             <DCard>
               <CardHeader title="Analytics" sub={getPeriodLabel(selectedPeriod)} />
-              <div style={{ padding: '12px 16px', overflowY: 'auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
                 {/* Donut */}
                 {pieData.length > 0 ? (
@@ -727,13 +727,13 @@ export default function DesktopDashboard({
               </div>
             </div>
 
-            <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+            <div style={{ maxHeight: 420, overflowY: 'auto' }}>
               {histGrouped.length === 0 ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 80 }}>
                   <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No transactions in this period</p>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))' }}>
                   {histGrouped.map(group => {
                     const total   = group.entries.reduce((s, t) => s + t.amount, 0);
                     const waste   = group.entries.reduce((s, t) => s + (t.wasteAmount || 0), 0);
