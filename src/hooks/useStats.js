@@ -31,9 +31,10 @@ export function useStats(transactions, income, selectedPeriod, theme) {
     const totalExpense = filtTxns.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
     const totalSavings = filtTxns.filter(t => t.type === "savings").reduce((s, t) => s + t.amount, 0);
     const totalPerson  = filtTxns.filter(t => t.type === "person").reduce((s, t) => s + t.amount, 0);
-    const totalWaste   = filtTxns.filter(t => t.type === "expense").reduce((s, t) => s + (t.wasteAmount || 0), 0);
+    const totalWaste   = filtTxns.reduce((s, t) => s + (t.wasteAmount || 0), 0);
     const balance      = openingBalance + totalIncome - totalExpense - totalSavings - totalPerson;
-    const wastePercent = totalExpense > 0 ? ((totalWaste / totalExpense) * 100).toFixed(1) : "0.0";
+    const totalSpend   = totalExpense + totalSavings + totalPerson;
+    const wastePercent = totalSpend > 0 ? ((totalWaste / totalSpend) * 100).toFixed(1) : "0.0";
 
     const now   = new Date();
     const all   = [...filtTxns, ...filtInc];

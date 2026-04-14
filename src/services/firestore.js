@@ -1,7 +1,7 @@
 // ─── Firestore CRUD Layer ────────────────────────────────────────
 import {
   doc, collection, updateDoc, deleteDoc,
-  onSnapshot, query, serverTimestamp, setDoc, getDoc,
+  onSnapshot, query, serverTimestamp, setDoc, getDoc, deleteField,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { loadState } from "../utils/storage";
@@ -93,8 +93,13 @@ export async function addTransaction(uid, txn) {
 }
 
 export async function updateTransaction(uid, txn) {
-  const { id, ...data } = txn;
-  await updateDoc(txnRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() });
+  const { id, wasteAmount, ...data } = txn;
+  // Use deleteField() when wasteAmount is undefined so Firestore removes the field (not just skips it)
+  await updateDoc(txnRef(uid, id), {
+    ...clean(data),
+    wasteAmount: wasteAmount === undefined ? deleteField() : wasteAmount,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function deleteTransaction(uid, txnId) {

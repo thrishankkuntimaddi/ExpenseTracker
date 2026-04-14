@@ -15,7 +15,6 @@ export function useWastage(onUpdateTransaction) {
 
   /** Single tap = toggle full waste; double-tap = open custom input */
   const handleTxnTap = useCallback((txn) => {
-    if (txn.type !== "expense") return;
     const now = Date.now();
     const last = lastTapRef.current[txn.id] || 0;
     const D = 400;
