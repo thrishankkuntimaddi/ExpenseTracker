@@ -87,11 +87,28 @@
     <script type="module" src="/src/main.jsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/ExpenseTracker/sw.js')
-            .then(r => console.log('[SW] Registered:', r.scope))
-            .catch(e => console.warn('[SW] Registration failed:', e));
-        });
+        var isDev = (
+          location.hostname === 'localhost' ||
+          location.hostname === '127.0.0.1' ||
+          location.port !== ''
+        );
+        if (isDev) {
+          // Dev mode: unregister any cached SW so it can't
+          // intercept Vite's HMR requests and cause blank screens
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            regs.forEach(function(r) {
+              r.unregister();
+              console.log('[SW] Unregistered dev SW:', r.scope);
+            });
+          });
+        } else {
+          // Production only: register the SW
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/ExpenseTracker/sw.js')
+              .then(function(r) { console.log('[SW] Registered:', r.scope); })
+              .catch(function(e) { console.warn('[SW] Registration failed:', e); });
+          });
+        }
       }
     </script>
   </body>
