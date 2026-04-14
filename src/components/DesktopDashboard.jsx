@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import {
   AreaChart, Area, PieChart, Pie, Cell, BarChart, Bar,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -6,16 +6,15 @@ import {
 import {
   ShoppingCart, Users, PiggyBank, PenLine, IndianRupee,
   Wallet, TrendingUp, TrendingDown, Flame, ChevronDown,
-  ChevronRight, ArrowDownToLine, Trash2, Zap, Moon, Sun,
+  ChevronRight, ArrowDownToLine, Trash2, Zap, Moon, Sun, LogOut,
 } from 'lucide-react';
 import { generateId } from '../utils/storage';
 import { formatAmount, formatDate, groupByDay, groupByWeek, groupByMonth } from '../utils/dateHelpers';
-import {
-  filterItemsByPeriod, getOpeningBalance, getSmartGrouping,
-  getPeriodLabel, getCurrentMonthValue,
-} from '../utils/periodHelpers';
+import { getSmartGrouping, getPeriodLabel, getCurrentMonthValue } from '../utils/periodHelpers';
 import PeriodSelector from './PeriodSelector';
-import SettingsTab from '../tabs/SettingsTab';
+import SettingsTab from '../features/settings/SettingsTab';
+import { useStats } from '../hooks/useStats';
+import { useWastage } from '../hooks/useWastage';
 
 /* ─── Color Constants (hex for Recharts SVG – CSS vars don't work in SVG) ─── */
 const C_LIGHT = {
@@ -101,13 +100,15 @@ export default function DesktopDashboard({
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
   onAddIncome, onDeleteIncome,
   onDataChange, onLockChange, onThemeChange,
-  theme,
+  onSignOut, theme, user,
 }) {
   const isMonoflow = theme === 'monoflow';
-  const C = isMonoflow ? C_DARK : C_LIGHT;
+  // Use shared hooks — no more duplicated logic
+  const { stats, filtTxns, pieData, barData, areaData, C } = useStats(transactions, income, selectedPeriod, theme);
+  const { editingWaste, wasteInput, wasteInputRef, handleTxnTap, saveWaste, cancelWaste, setWasteInput } = useWastage(onUpdateTransaction);
 
   /* ── UI state ── */
-  const [activeSection, setActiveSection] = useState('dashboard'); // 'dashboard' | 'settings'
+  const [activeSection, setActiveSection] = useState('dashboard');
   const [name, setName]     = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType]     = useState('expense');
@@ -119,29 +120,9 @@ export default function DesktopDashboard({
   const iNameRef   = useRef(null);
   const iAmountRef = useRef(null);
 
-  const [editingWaste, setEditingWaste] = useState(null);
-  const [wasteInput, setWasteInput]     = useState('');
-  const wasteInputRef = useRef(null);
-  const lastTapRef    = useRef({});
-
   const [expandedGroups, setExpandedGroups] = useState(() => new Set([TODAY_LABEL]));
 
-  /* ── Derived data ── */
-  const filtTxns = useMemo(() => filterItemsByPeriod(transactions, selectedPeriod), [transactions, selectedPeriod]);
-  const filtInc  = useMemo(() => filterItemsByPeriod(income, selectedPeriod),       [income, selectedPeriod]);
-
-  const stats = useMemo(() => {
-    const openingBalance = getOpeningBalance(selectedPeriod, transactions, income);
-    const totalIncome  = filtInc.reduce((s, i) => s + i.amount, 0);
-    const totalExpense = filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-    const totalSavings = filtTxns.filter(t => t.type === 'savings').reduce((s, t) => s + t.amount, 0);
-    const totalPerson  = filtTxns.filter(t => t.type === 'person').reduce((s, t) => s + t.amount, 0);
-    const totalWaste   = filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + (t.wasteAmount || 0), 0);
-    const balance      = openingBalance + totalIncome - totalExpense - totalSavings - totalPerson;
-    const wastePercent = totalExpense > 0 ? ((totalWaste / totalExpense) * 100).toFixed(1) : '0.0';
-    return { openingBalance, totalIncome, totalExpense, totalSavings, totalPerson, totalWaste, balance, wastePercent };
-  }, [filtTxns, filtInc, selectedPeriod, transactions, income]);
-
+  /* ── Today's entries (still needed locally) ── */
   const todayTxns = useMemo(() => {
     const now = new Date();
     return transactions.filter(t => {
@@ -150,35 +131,6 @@ export default function DesktopDashboard({
     });
   }, [transactions]);
   const todayTotal = todayTxns.reduce((s, t) => s + t.amount, 0);
-
-  /* ── Chart data ── */
-  const pieData = useMemo(() => [
-    { name: 'Expense', value: filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0), color: C.expense },
-    { name: 'Savings', value: filtTxns.filter(t => t.type === 'savings').reduce((s, t) => s + t.amount, 0), color: C.savings },
-    { name: 'Given',   value: filtTxns.filter(t => t.type === 'person').reduce((s, t) => s + t.amount, 0),  color: C.person  },
-  ].filter(d => d.value > 0), [filtTxns, C]);
-
-  const barData = useMemo(() => Array.from({ length: 14 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (13 - i));
-    const key = d.toDateString();
-    return {
-      day: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }).split(' ')[0],
-      Expense: transactions.filter(t => t.type === 'expense' && new Date(t.date).toDateString() === key).reduce((s, t) => s + t.amount, 0),
-      Savings: transactions.filter(t => t.type === 'savings' && new Date(t.date).toDateString() === key).reduce((s, t) => s + t.amount, 0),
-    };
-  }), [transactions]);
-
-  const areaData = useMemo(() => Array.from({ length: 6 }, (_, i) => {
-    const now = new Date();
-    const d   = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-    const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    return {
-      month: d.toLocaleDateString('en-IN', { month: 'short' }),
-      Income:  income.filter(it => it.date?.slice(0, 7) === month).reduce((s, it) => s + it.amount, 0),
-      Expense: transactions.filter(t => t.type === 'expense' && t.date?.slice(0, 7) === month).reduce((s, t) => s + t.amount, 0),
-    };
-  }), [transactions, income]);
 
   const histGrouping = getSmartGrouping(selectedPeriod);
   const histGrouped  = useMemo(() => {
@@ -202,29 +154,6 @@ export default function DesktopDashboard({
     onAddIncome({ id: generateId(), name: n, amount: a, type: 'income', date: new Date().toISOString(), month: getCurrentMonthValue() });
     setIName(''); setIAmount('');
     setTimeout(() => iNameRef.current?.focus(), 50);
-  }
-
-  const handleTxnTap = useCallback((txn) => {
-    if (txn.type !== 'expense') return;
-    const now = Date.now(), last = lastTapRef.current[txn.id] || 0, D = 400;
-    if (now - last < D) {
-      lastTapRef.current[txn.id] = 0;
-      setEditingWaste(txn.id);
-      setWasteInput(txn.wasteAmount != null ? String(txn.wasteAmount) : '');
-      setTimeout(() => wasteInputRef.current?.focus(), 80);
-    } else {
-      lastTapRef.current[txn.id] = now;
-      setTimeout(() => {
-        if (lastTapRef.current[txn.id] !== now) return;
-        onUpdateTransaction({ ...txn, wasteAmount: txn.wasteAmount === txn.amount ? undefined : txn.amount });
-      }, D);
-    }
-  }, [onUpdateTransaction]);
-
-  function saveWaste(txn) {
-    const val = parseFloat(wasteInput);
-    onUpdateTransaction({ ...txn, wasteAmount: (!isNaN(val) && val > 0 && val <= txn.amount) ? val : undefined });
-    setEditingWaste(null); setWasteInput('');
   }
 
   function toggleGroup(label) {
@@ -359,9 +288,11 @@ export default function DesktopDashboard({
           <SettingsTab
             settings={settings}
             theme={theme}
+            user={user}
             onDataChange={onDataChange}
             onLockChange={onLockChange}
             onThemeChange={onThemeChange}
+            onSignOut={onSignOut}
           />
         </div>
       )}

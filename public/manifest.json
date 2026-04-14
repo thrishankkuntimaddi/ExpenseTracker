@@ -1,22 +1,26 @@
 {
   "name": "Expense Tracker",
   "short_name": "Expenses",
-  "description": "Personal month-based expense tracker with carry-forward balance and analytics",
-  "start_url": ".",
+  "description": "Personal finance tracker with real-time cloud sync",
+  "start_url": "/ExpenseTracker/",
+  "scope": "/ExpenseTracker/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#F8FAFC",
-  "theme_color": "#2563EB",
+  "theme_color": "#6366F1",
   "icons": [
     {
-      "src": "icon-512.png",
+      "src": "/ExpenseTracker/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "favicon.svg",
+      "src": "/ExpenseTracker/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     }
-  ]
+  ],
+  "categories": ["finance", "productivity"],
+  "lang": "en-IN"
 }
