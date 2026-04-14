@@ -1,48 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6366F1"/>
-      <stop offset="100%" stop-color="#4338CA"/>
-    </linearGradient>
-    <linearGradient id="bar" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="rgba(255,255,255,0.95)"/>
-      <stop offset="100%" stop-color="rgba(255,255,255,0.55)"/>
-    </linearGradient>
-  </defs>
-
-  <!-- Rounded square background -->
-  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
-
-  <!-- Subtle inner glow -->
-  <rect width="64" height="64" rx="14" fill="rgba(255,255,255,0.06)"/>
-
-  <!-- Bar chart bars (4 bars, ascending) -->
-  <rect x="8"  y="46" width="9" height="11" rx="2.5" fill="url(#bar)" opacity="0.45"/>
-  <rect x="19" y="36" width="9" height="21" rx="2.5" fill="url(#bar)" opacity="0.60"/>
-  <rect x="30" y="26" width="9" height="31" rx="2.5" fill="url(#bar)" opacity="0.85"/>
-  <rect x="41" y="31" width="9" height="26" rx="2.5" fill="url(#bar)" opacity="0.70"/>
-
-  <!-- Trend line -->
-  <polyline
-    points="12.5,45 23.5,35 34.5,25 45.5,18"
-    stroke="white"
-    stroke-width="2.5"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    fill="none"
-    opacity="0.9"
-  />
-
-  <!-- Peak dot with ring -->
-  <circle cx="45.5" cy="18" r="5" fill="rgba(255,255,255,0.25)"/>
+  <rect width="64" height="64" rx="14" fill="#6366F1"/>
+  <rect x="8" y="46" width="9" height="11" rx="2" fill="white" opacity="0.45"/>
+  <rect x="19" y="36" width="9" height="21" rx="2" fill="white" opacity="0.60"/>
+  <rect x="30" y="26" width="9" height="31" rx="2" fill="white" opacity="0.87"/>
+  <rect x="41" y="31" width="9" height="26" rx="2" fill="white" opacity="0.70"/>
+  <polyline points="12.5,45 23.5,35 34.5,25 45.5,18" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
   <circle cx="45.5" cy="18" r="3" fill="white"/>
-
-  <!-- ₹ symbol top-left -->
-  <text
-    x="7" y="19"
-    font-family="system-ui,-apple-system,Arial,sans-serif"
-    font-size="13"
-    font-weight="800"
-    fill="rgba(255,255,255,0.92)"
-  >₹</text>
+  <text x="7" y="19" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="white">₹</text>
 </svg>
