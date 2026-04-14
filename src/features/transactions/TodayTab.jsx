@@ -216,12 +216,13 @@ export default function TodayTab({ transactions, onAdd }) {
               <input
                 id="input-amount"
                 ref={amountRef}
-                type="number"
+                type="text"
                 placeholder="0.00"
                 value={amount}
                 onChange={handleAmountInput}
                 onKeyDown={handleAmountKey}
                 inputMode="decimal"
+                autoComplete="off"
                 style={{
                   width: '100%', paddingLeft: 38, paddingRight: 14,
                   paddingTop: 12, paddingBottom: 12,

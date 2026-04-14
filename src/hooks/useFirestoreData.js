@@ -10,7 +10,6 @@ import {
   updateSettings as fsUpdateSettings,
 } from "../services/firestore";
 import { saveState, loadState } from "../utils/storage";
-import { getDefaultPeriod } from "../utils/periodHelpers";
 
 /**
  * Real-time Firestore data for the authenticated user.
@@ -28,6 +27,9 @@ export function useFirestoreData(uid) {
   const uidRef = useRef(uid);
   uidRef.current = uid;
 
+  // Internal ref for optimistic delete rollback
+  const deletedTxnRef = useRef(null);
+
   useEffect(() => {
     if (!uid) return;
 
@@ -35,7 +37,6 @@ export function useFirestoreData(uid) {
       setTransactions(t);
       setIncome(i);
       if (s && Object.keys(s).length) setSettings(prev => ({ ...prev, ...s }));
-
       // Keep localStorage as offline cache
       saveState({ transactions: t, income: i, settings: s });
     });
@@ -44,45 +45,80 @@ export function useFirestoreData(uid) {
   }, [uid]);
 
   /* ── Mutation handlers ── */
+
   const addTransaction = useCallback(async (txn) => {
-    setTransactions(prev => [...prev, txn]); // optimistic
-    try { await fsAddTxn(uidRef.current, txn); }
-    catch { setTransactions(prev => prev.filter(t => t.id !== txn.id)); }
+    if (!uidRef.current) {
+      console.error("[addTransaction] No UID — user not logged in?");
+      return;
+    }
+    // Optimistic update — shows immediately in UI
+    setTransactions(prev => [...prev, txn]);
+    try {
+      await fsAddTxn(uidRef.current, txn);
+    } catch (err) {
+      console.error("[addTransaction] Firestore write failed:", err?.code, err?.message, err);
+      // Revert optimistic update on hard failure
+      setTransactions(prev => prev.filter(t => t.id !== txn.id));
+    }
   }, []);
 
   const updateTransaction = useCallback(async (updated) => {
+    if (!uidRef.current) return;
     setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t));
-    try { await fsUpdateTxn(uidRef.current, updated); }
-    catch (e) { console.error("updateTransaction failed", e); }
+    try {
+      await fsUpdateTxn(uidRef.current, updated);
+    } catch (err) {
+      console.error("[updateTransaction] Firestore write failed:", err?.code, err?.message, err);
+    }
   }, []);
 
   const deleteTransaction = useCallback(async (id) => {
+    if (!uidRef.current) return;
     setTransactions(prev => {
-      const removed = prev.find(t => t.id === id);
-      _deletedRef.current = removed;
+      deletedTxnRef.current = prev.find(t => t.id === id) ?? null;
       return prev.filter(t => t.id !== id);
     });
-    try { await fsDeleteTxn(uidRef.current, id); }
-    catch { setTransactions(prev => _deletedRef.current ? [...prev, _deletedRef.current] : prev); }
+    try {
+      await fsDeleteTxn(uidRef.current, id);
+    } catch (err) {
+      console.error("[deleteTransaction] Firestore write failed:", err?.code, err?.message, err);
+      // Restore optimistic delete on failure
+      setTransactions(prev =>
+        deletedTxnRef.current ? [...prev, deletedTxnRef.current] : prev
+      );
+    }
   }, []);
 
   const addIncome = useCallback(async (entry) => {
+    if (!uidRef.current) return;
     setIncome(prev => [...prev, entry]);
-    try { await fsAddIncome(uidRef.current, entry); }
-    catch { setIncome(prev => prev.filter(i => i.id !== entry.id)); }
+    try {
+      await fsAddIncome(uidRef.current, entry);
+    } catch (err) {
+      console.error("[addIncome] Firestore write failed:", err?.code, err?.message, err);
+      setIncome(prev => prev.filter(i => i.id !== entry.id));
+    }
   }, []);
 
   const deleteIncome = useCallback(async (id) => {
+    if (!uidRef.current) return;
     setIncome(prev => prev.filter(i => i.id !== id));
-    try { await fsDeleteIncome(uidRef.current, id); }
-    catch (e) { console.error("deleteIncome failed", e); }
+    try {
+      await fsDeleteIncome(uidRef.current, id);
+    } catch (err) {
+      console.error("[deleteIncome] Firestore write failed:", err?.code, err?.message, err);
+    }
   }, []);
 
   const saveSettings = useCallback(async (newSettings) => {
+    if (!uidRef.current) return;
     setSettings(newSettings);
     saveState({ transactions, income, settings: newSettings });
-    try { await fsUpdateSettings(uidRef.current, newSettings); }
-    catch (e) { console.error("saveSettings failed", e); }
+    try {
+      await fsUpdateSettings(uidRef.current, newSettings);
+    } catch (err) {
+      console.error("[saveSettings] Firestore write failed:", err?.code, err?.message, err);
+    }
   }, [transactions, income]);
 
   // Batch update (used by import/reset)
@@ -98,6 +134,3 @@ export function useFirestoreData(uid) {
     saveSettings, handleDataChange,
   };
 }
-
-// Internal ref for optimistic delete rollback
-const _deletedRef = { current: null };

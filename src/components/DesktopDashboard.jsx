@@ -396,11 +396,11 @@ export default function DesktopDashboard({
                 <div style={{ position: 'relative', marginBottom: 12 }}>
                   <IndianRupee size={12} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                   <input
-                    id="desktop-input-amount" ref={amountRef} type="number"
+                    id="desktop-input-amount" ref={amountRef} type="text"
                     placeholder="0.00" value={amount}
                     onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }}
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveEntry())}
-                    inputMode="decimal"
+                    inputMode="decimal" autoComplete="off"
                     style={{ ...inputStyle, fontSize: 15, fontWeight: 700 }}
                     {...focusHandlers(sel.color)}
                   />
@@ -526,10 +526,10 @@ export default function DesktopDashboard({
                 </div>
                 <div style={{ position: 'relative', marginBottom: 10 }}>
                   <IndianRupee size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                  <input id="desktop-income-amount" ref={iAmountRef} type="number" placeholder="0.00" value={iAmount}
+                  <input id="desktop-income-amount" ref={iAmountRef} type="text" placeholder="0.00" value={iAmount}
                     onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setIAmount(v); }}
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveIncome())}
-                    inputMode="decimal" style={{ ...inputStyle, fontSize: 14, fontWeight: 700 }} {...focusHandlers('var(--income)')} />
+                    inputMode="decimal" autoComplete="off" style={{ ...inputStyle, fontSize: 14, fontWeight: 700 }} {...focusHandlers('var(--income)')} />
                 </div>
                 <button
                   id="desktop-btn-income" onClick={saveIncome}
