@@ -1,16 +1,17 @@
 // ─── Firestore CRUD Layer ────────────────────────────────────────
 import {
-  doc, collection, addDoc, updateDoc, deleteDoc,
+  doc, collection, updateDoc, deleteDoc,
   onSnapshot, query, serverTimestamp, setDoc, getDoc,
-  getDocs, where,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { loadState } from "../utils/storage";
 
-/* ── User document ref ── */
-const userRef = (uid) => doc(db, "users", uid);
-const txnsRef  = (uid) => collection(db, "users", uid, "transactions");
-const incRef   = (uid) => collection(db, "users", uid, "income");
+/* ── Document refs ── */
+const userRef = (uid)         => doc(db, "users", uid);
+const txnsRef = (uid)         => collection(db, "users", uid, "transactions");
+const txnRef  = (uid, id)     => doc(db, "users", uid, "transactions", id);
+const incRef  = (uid)         => collection(db, "users", uid, "income");
+const incDocRef = (uid, id)   => doc(db, "users", uid, "income", id);
 
 /* ── Real-time listener ───────────────────────────────────────────
    Fires onData({ transactions[], income[], settings{} }) on change.
@@ -25,11 +26,11 @@ export function subscribeToUserData(uid, onData) {
     onData({ transactions: txns, income: incomes, settings });
   }
 
-  // Transactions sub-collection
+  // Transactions sub-collection — include pending writes so optimistic updates show immediately
   const unsubTxns = onSnapshot(
     query(txnsRef(uid)),
+    { includeMetadataChanges: false },
     (snap) => {
-      if (snap.metadata.fromCache && !snap.metadata.hasPendingWrites) return;
       txns = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       emit();
     },
@@ -39,8 +40,8 @@ export function subscribeToUserData(uid, onData) {
   // Income sub-collection
   const unsubInc = onSnapshot(
     query(incRef(uid)),
+    { includeMetadataChanges: false },
     (snap) => {
-      if (snap.metadata.fromCache && !snap.metadata.hasPendingWrites) return;
       incomes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       emit();
     },
@@ -50,9 +51,9 @@ export function subscribeToUserData(uid, onData) {
   // User document (settings)
   const unsubUser = onSnapshot(
     userRef(uid),
+    { includeMetadataChanges: false },
     (snap) => {
       if (!snap.exists()) return;
-      if (snap.metadata.fromCache && !snap.metadata.hasPendingWrites) return;
       settings = snap.data()?.settings || {};
       emit();
     },
@@ -75,35 +76,32 @@ export async function ensureUserDoc(uid, email) {
   }
 }
 
-/* ── Transactions ── */
+/* ── Transactions ──
+   Client ID is used as the Firestore document ID so that
+   snapshot d.id === txn.id — no _clientId lookup needed.
+─────────────────────────────────────────────────────────────────── */
 export async function addTransaction(uid, txn) {
-  const { id: _id, ...data } = txn; // Firestore generates id
-  await addDoc(txnsRef(uid), { ...data, _clientId: txn.id, updatedAt: serverTimestamp() });
+  const { id, ...data } = txn;
+  await setDoc(txnRef(uid, id), { ...data, updatedAt: serverTimestamp() });
 }
 
 export async function updateTransaction(uid, txn) {
-  // Find doc by _clientId field
-  const snap = await _findDocByClientId(txnsRef(uid), txn.id);
-  if (!snap) return;
-  await updateDoc(snap.ref, { ...txn, updatedAt: serverTimestamp() });
+  const { id, ...data } = txn;
+  await updateDoc(txnRef(uid, id), { ...data, updatedAt: serverTimestamp() });
 }
 
 export async function deleteTransaction(uid, txnId) {
-  const snap = await _findDocByClientId(txnsRef(uid), txnId);
-  if (!snap) return;
-  await deleteDoc(snap.ref);
+  await deleteDoc(txnRef(uid, txnId));
 }
 
 /* ── Income ── */
 export async function addIncome(uid, entry) {
-  const { id: _id, ...data } = entry;
-  await addDoc(incRef(uid), { ...data, _clientId: entry.id, updatedAt: serverTimestamp() });
+  const { id, ...data } = entry;
+  await setDoc(incDocRef(uid, id), { ...data, updatedAt: serverTimestamp() });
 }
 
 export async function deleteIncome(uid, entryId) {
-  const snap = await _findDocByClientId(incRef(uid), entryId);
-  if (!snap) return;
-  await deleteDoc(snap.ref);
+  await deleteDoc(incDocRef(uid, entryId));
 }
 
 /* ── Settings ── */
@@ -117,12 +115,12 @@ export async function migrateFromLocalStorage(uid) {
   const batch = [];
 
   for (const txn of local.transactions) {
-    const { id: _id, ...data } = txn;
-    batch.push(addDoc(txnsRef(uid), { ...data, _clientId: txn.id, updatedAt: serverTimestamp() }));
+    const { id, ...data } = txn;
+    batch.push(setDoc(txnRef(uid, id), { ...data, updatedAt: serverTimestamp() }));
   }
   for (const entry of local.income) {
-    const { id: _id, ...data } = entry;
-    batch.push(addDoc(incRef(uid), { ...data, _clientId: entry.id, updatedAt: serverTimestamp() }));
+    const { id, ...data } = entry;
+    batch.push(setDoc(incDocRef(uid, id), { ...data, updatedAt: serverTimestamp() }));
   }
   if (local.settings) {
     batch.push(updateDoc(userRef(uid), { settings: { ...local.settings, password: null }, updatedAt: serverTimestamp() }));
@@ -132,9 +130,3 @@ export async function migrateFromLocalStorage(uid) {
   return { transactions: local.transactions.length, income: local.income.length };
 }
 
-/* ── Internal helper ── */
-async function _findDocByClientId(colRef, clientId) {
-  const q = query(colRef, where("_clientId", "==", clientId));
-  const snap = await getDocs(q);
-  return snap.empty ? null : snap.docs[0];
-}
