@@ -7,11 +7,18 @@ import { db } from "./firebase";
 import { loadState } from "../utils/storage";
 
 /* ── Document refs ── */
-const userRef = (uid)         => doc(db, "users", uid);
-const txnsRef = (uid)         => collection(db, "users", uid, "transactions");
-const txnRef  = (uid, id)     => doc(db, "users", uid, "transactions", id);
-const incRef  = (uid)         => collection(db, "users", uid, "income");
-const incDocRef = (uid, id)   => doc(db, "users", uid, "income", id);
+const userRef   = (uid)     => doc(db, "users", uid);
+const txnsRef   = (uid)     => collection(db, "users", uid, "transactions");
+const txnRef    = (uid, id) => doc(db, "users", uid, "transactions", id);
+const incRef    = (uid)     => collection(db, "users", uid, "income");
+const incDocRef = (uid, id) => doc(db, "users", uid, "income", id);
+
+/* ── Strip undefined values — Firestore rejects them ── */
+function clean(obj) {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  );
+}
 
 /* ── Real-time listener ───────────────────────────────────────────
    Fires onData({ transactions[], income[], settings{} }) on change.
@@ -82,12 +89,12 @@ export async function ensureUserDoc(uid, email) {
 ─────────────────────────────────────────────────────────────────── */
 export async function addTransaction(uid, txn) {
   const { id, ...data } = txn;
-  await setDoc(txnRef(uid, id), { ...data, updatedAt: serverTimestamp() });
+  await setDoc(txnRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() });
 }
 
 export async function updateTransaction(uid, txn) {
   const { id, ...data } = txn;
-  await updateDoc(txnRef(uid, id), { ...data, updatedAt: serverTimestamp() });
+  await updateDoc(txnRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() });
 }
 
 export async function deleteTransaction(uid, txnId) {
@@ -97,7 +104,7 @@ export async function deleteTransaction(uid, txnId) {
 /* ── Income ── */
 export async function addIncome(uid, entry) {
   const { id, ...data } = entry;
-  await setDoc(incDocRef(uid, id), { ...data, updatedAt: serverTimestamp() });
+  await setDoc(incDocRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() });
 }
 
 export async function deleteIncome(uid, entryId) {

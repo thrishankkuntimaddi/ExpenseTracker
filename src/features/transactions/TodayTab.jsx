@@ -73,7 +73,6 @@ export default function TodayTab({ transactions, onAdd }) {
       id: generateId(), name: n, amount: a, type,
       date: new Date().toISOString(),
       month: new Date().toISOString().slice(0, 7),
-      wasteAmount: undefined,
     });
     setName(''); setAmount('');
     nameRef.current?.focus();

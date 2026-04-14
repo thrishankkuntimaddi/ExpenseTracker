@@ -143,7 +143,7 @@ export default function DesktopDashboard({
   function saveEntry() {
     const n = name.trim(), a = parseFloat(amount);
     if (!n || isNaN(a) || a <= 0) return;
-    onAddTransaction({ id: generateId(), name: n, amount: a, type, date: new Date().toISOString(), month: getCurrentMonthValue(), wasteAmount: undefined });
+    onAddTransaction({ id: generateId(), name: n, amount: a, type, date: new Date().toISOString(), month: getCurrentMonthValue() });
     setName(''); setAmount('');
     setTimeout(() => nameRef.current?.focus(), 50);
   }
