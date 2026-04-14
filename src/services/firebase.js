@@ -1,6 +1,5 @@
 // ─── Firebase Initialisation ─────────────────────────────────────
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
 import {
   getAuth,
   browserLocalPersistence,
@@ -20,10 +19,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Analytics — safe to ignore in dev/offline
-let analytics = null;
-try { analytics = getAnalytics(app); } catch (_) {}
-
 // Auth with IndexedDB persistence (survives tab close + token refresh)
 export const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence).catch(() => {});
@@ -31,5 +26,4 @@ setPersistence(auth, browserLocalPersistence).catch(() => {});
 // Firestore
 export const db = getFirestore(app);
 
-export { analytics };
 export default app;

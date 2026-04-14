@@ -1,7 +1,7 @@
 // ─── Firestore CRUD Layer ────────────────────────────────────────
 import {
   doc, collection, updateDoc, deleteDoc,
-  onSnapshot, query, serverTimestamp, setDoc, getDoc, deleteField,
+  onSnapshot, query, serverTimestamp, setDoc, getDoc, deleteField, getDocs,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { loadState } from "../utils/storage";
@@ -140,5 +140,21 @@ export async function migrateFromLocalStorage(uid) {
 
   await Promise.all(batch);
   return { transactions: local.transactions.length, income: local.income.length };
+}
+
+/* ── Delete ALL documents for a user (Reset All Data) ──
+   Enumerates both subcollections and deletes every document.
+   Firestore client SDK does not support collection-level delete,
+   so we fetch all doc refs then delete them in parallel.
+─────────────────────────────────────────────────────────────────── */
+export async function deleteAllUserData(uid) {
+  const [txnSnap, incSnap] = await Promise.all([
+    getDocs(query(txnsRef(uid))),
+    getDocs(query(incRef(uid))),
+  ]);
+  await Promise.all([
+    ...txnSnap.docs.map((d) => deleteDoc(d.ref)),
+    ...incSnap.docs.map((d) => deleteDoc(d.ref)),
+  ]);
 }
 

@@ -5,12 +5,11 @@ const defaultState = {
   transactions: [],
   income: [],
   settings: {
-    password: null,
-    failedAttempts: 0,
-    locked: false,
     theme: 'light',        // 'light' | 'monoflow'
+    googleSheetUrl: '',   // persisted in Firestore, cached here for cold-start
   },
 };
+
 
 export function loadState() {
   try {

@@ -1,17 +1,11 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import { formatAmount, groupByDay, groupByWeek, groupByMonth } from '../../utils/dateHelpers';
-import { filterItemsByPeriod, getSmartGrouping } from '../../utils/periodHelpers';
+import { formatAmount } from '../../utils/dateHelpers';
 import PeriodSelector from '../../components/PeriodSelector';
 import { useWastage } from '../../hooks/useWastage';
-import { useState } from 'react';
+import { useTransactions } from '../../hooks/useTransactions';
+import { TYPE_META } from '../../utils/typeConfig';
 
-const TYPE_META = {
-  expense: { label: 'Expense', color: 'var(--expense)', bg: 'var(--expense-bg)' },
-  person:  { label: 'Person',  color: 'var(--person)',  bg: 'var(--person-bg)'  },
-  savings: { label: 'Savings', color: 'var(--savings)', bg: 'var(--savings-bg)' },
-  income:  { label: 'Income',  color: 'var(--income)',  bg: 'var(--income-bg)'  },
-};
 
 export default function HistoryTab({
   transactions, income = [], selectedPeriod, onPeriodChange,
@@ -20,17 +14,9 @@ export default function HistoryTab({
   const [collapsedGroups, setCollapsedGroups] = useState(new Set());
   const { editingWaste, wasteInput, wasteInputRef, handleTxnTap, saveWaste, cancelWaste, setWasteInput } = useWastage(onUpdateTransaction);
 
-  /* ─ Filter & group ─ */
-  const filtTxns = useMemo(() => filterItemsByPeriod(transactions, selectedPeriod), [transactions, selectedPeriod]);
-  const grouping  = getSmartGrouping(selectedPeriod);
+  /* ─ Filter & group — shared hook eliminates the duplicate useMemo blocks ─ */
+  const { filtTxns, grouped, grouping } = useTransactions(transactions, selectedPeriod);
 
-  const grouped = useMemo(() => {
-    if (grouping === 'month') return groupByMonth(filtTxns);
-    if (grouping === 'week')  return groupByWeek(filtTxns);
-    return groupByDay(filtTxns);
-  }, [filtTxns, grouping]);
-
-  /* ─ Group totals ─ */
   const periodTotals = useMemo(() => ({
     expense: filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
     savings: filtTxns.filter(t => t.type === 'savings').reduce((s, t) => s + t.amount, 0),
@@ -156,7 +142,7 @@ export default function HistoryTab({
                         return (
                           <div key={txn.id}>
                             <div
-                              onClick={() => handleTxnTap(txn)}
+                              onClick={txn.type === 'expense' ? () => handleTxnTap(txn) : undefined}
                               onDoubleClick={e => e.preventDefault()}
                               style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -183,18 +169,31 @@ export default function HistoryTab({
                                   }}>
                                     {txn.name}
                                   </span>
-                                  {isWasted && (
+                                  {txn.type === 'external' ? (
+                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                      {txn.externalSource ? `${txn.externalSource} · ` : ''}Paid {formatAmount(txn.amount)} · Rcvd {formatAmount(txn.settlement ?? 0)}
+                                    </span>
+                                  ) : isWasted ? (
                                     <span style={{ fontSize: 11, color: 'var(--expense)', display: 'flex', alignItems: 'center', gap: 3 }}>
                                       <Flame size={10} />
                                       {isFullWaste ? 'Full waste' : `Waste: ${formatAmount(txn.wasteAmount)}`}
                                     </span>
-                                  )}
+                                  ) : null}
                                 </div>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                                <span style={{ fontSize: 13, fontWeight: 700, color: meta.color, marginLeft: 8 }}>
-                                  {formatAmount(txn.amount)}
-                                </span>
+                                {txn.type === 'external' ? (() => {
+                                  const profit = (txn.settlement ?? txn.amount) - txn.amount;
+                                  return (
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: profit >= 0 ? '#16A34A' : '#DC2626', marginLeft: 8 }}>
+                                      {profit >= 0 ? '+' : ''}{formatAmount(profit)}
+                                    </span>
+                                  );
+                                })() : (
+                                  <span style={{ fontSize: 13, fontWeight: 700, color: meta.color, marginLeft: 8 }}>
+                                    {formatAmount(txn.amount)}
+                                  </span>
+                                )}
                                 {onDeleteTransaction && (
                                   <button
                                     onClick={e => { e.stopPropagation(); onDeleteTransaction(txn.id); }}

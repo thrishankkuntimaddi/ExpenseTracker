@@ -179,6 +179,12 @@ button {
 }
 button:disabled { cursor: not-allowed; }
 
+/* ── Spin animation — used by sync button in SettingsTab ── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 /* ── Focus ring ── */
 :focus-visible {
   outline: 2px solid var(--accent);

@@ -4,30 +4,20 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
 import {
-  ShoppingCart, Users, PiggyBank, PenLine, IndianRupee,
+  ShoppingCart, PenLine, IndianRupee, PiggyBank,
   Wallet, TrendingUp, TrendingDown, Flame, ChevronDown,
-  ChevronRight, ArrowDownToLine, Trash2, Zap, Moon, Sun, LogOut,
+  ChevronRight, ArrowDownToLine, Trash2, Zap, Moon, Sun, LogOut, Briefcase,
 } from 'lucide-react';
 import { generateId } from '../utils/storage';
-import { formatAmount, formatDate, groupByDay, groupByWeek, groupByMonth } from '../utils/dateHelpers';
-import { getSmartGrouping, getPeriodLabel, getCurrentMonthValue } from '../utils/periodHelpers';
+import { formatAmount, formatDate } from '../utils/dateHelpers';
+import { getPeriodLabel, getCurrentMonthValue } from '../utils/periodHelpers';
 import PeriodSelector from './PeriodSelector';
 import SettingsTab from '../features/settings/SettingsTab';
 import { useStats } from '../hooks/useStats';
 import { useWastage } from '../hooks/useWastage';
+import { useTransactions } from '../hooks/useTransactions';
+import { TYPE_META, TRANSACTION_TYPES } from '../utils/typeConfig';
 
-/* ─── Entry types ─── */
-const ENTRY_TYPES = [
-  { key: 'expense', label: 'Expense', color: 'var(--expense)', bg: 'var(--expense-bg)', border: 'var(--expense-border)', Icon: ShoppingCart },
-  { key: 'person',  label: 'Person',  color: 'var(--person)',  bg: 'var(--person-bg)',  border: 'var(--person-border)',  Icon: Users       },
-  { key: 'savings', label: 'Savings', color: 'var(--savings)', bg: 'var(--savings-bg)', border: 'var(--savings-border)', Icon: PiggyBank   },
-];
-const TYPE_META = {
-  expense: { label: 'Expense', color: 'var(--expense)', bg: 'var(--expense-bg)' },
-  person:  { label: 'Person',  color: 'var(--person)',  bg: 'var(--person-bg)'  },
-  savings: { label: 'Savings', color: 'var(--savings)', bg: 'var(--savings-bg)' },
-  income:  { label: 'Income',  color: 'var(--income)',  bg: 'var(--income-bg)'  },
-};
 
 const TODAY_LABEL = formatDate(new Date().toISOString());
 
@@ -91,7 +81,7 @@ export default function DesktopDashboard({
   selectedPeriod, onPeriodChange,
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
   onAddIncome, onDeleteIncome,
-  onDataChange, onLockChange, onThemeChange,
+  onDataChange, onThemeChange,
   onSignOut, theme, user,
 }) {
   const isMonoflow = theme === 'monoflow';
@@ -101,11 +91,15 @@ export default function DesktopDashboard({
 
   /* ── UI state ── */
   const [activeSection, setActiveSection] = useState('dashboard');
-  const [name, setName]     = useState('');
-  const [amount, setAmount] = useState('');
-  const [type, setType]     = useState('expense');
-  const nameRef   = useRef(null);
-  const amountRef = useRef(null);
+  const [name, setName]             = useState('');
+  const [amount, setAmount]         = useState('');
+  const [settlement, setSettlement] = useState('');
+  const [extSource, setExtSource]   = useState('');
+  const [type, setType]             = useState('expense');
+  const nameRef         = useRef(null);
+  const amountRef       = useRef(null);
+  const settlementRef   = useRef(null);
+  const extSourceRef    = useRef(null);
 
   const [iName, setIName]     = useState('');
   const [iAmount, setIAmount] = useState('');
@@ -124,19 +118,22 @@ export default function DesktopDashboard({
   }, [transactions]);
   const todayTotal = todayTxns.reduce((s, t) => s + t.amount, 0);
 
-  const histGrouping = getSmartGrouping(selectedPeriod);
-  const histGrouped  = useMemo(() => {
-    if (histGrouping === 'month') return groupByMonth(filtTxns);
-    if (histGrouping === 'week')  return groupByWeek(filtTxns);
-    return groupByDay(filtTxns);
-  }, [filtTxns, histGrouping]);
+  /* ── History — shared hook, no more duplicated groupBy* calls ── */
+  const { grouped: histGrouped } = useTransactions(transactions, selectedPeriod);
 
   /* ── Handlers ── */
   function saveEntry() {
     const n = name.trim(), a = parseFloat(amount);
     if (!n || isNaN(a) || a <= 0) return;
-    onAddTransaction({ id: generateId(), name: n, amount: a, type, date: new Date().toISOString(), month: getCurrentMonthValue() });
-    setName(''); setAmount('');
+    const entry = { id: generateId(), name: n, amount: a, type, date: new Date().toISOString(), month: getCurrentMonthValue() };
+    if (type === 'external') {
+      const s = parseFloat(settlement);
+      if (isNaN(s) || s < 0) return;
+      entry.settlement = s;
+      if (extSource.trim()) entry.externalSource = extSource.trim();
+    }
+    onAddTransaction(entry);
+    setName(''); setAmount(''); setSettlement(''); setExtSource('');
     setTimeout(() => nameRef.current?.focus(), 50);
   }
 
@@ -152,7 +149,7 @@ export default function DesktopDashboard({
     setExpandedGroups(prev => { const n = new Set(prev); n.has(label) ? n.delete(label) : n.add(label); return n; });
   }
 
-  const sel = ENTRY_TYPES.find(t => t.key === type);
+  const sel = TRANSACTION_TYPES.find(t => t.key === type);
   const positive = stats.balance >= 0;
 
   const inputStyle = {
@@ -281,8 +278,11 @@ export default function DesktopDashboard({
             settings={settings}
             theme={theme}
             user={user}
+            transactions={transactions}
+            income={income}
+            addTransaction={onAddTransaction}
+            addIncome={onAddIncome}
             onDataChange={onDataChange}
-            onLockChange={onLockChange}
             onThemeChange={onThemeChange}
             onSignOut={onSignOut}
           />
@@ -354,7 +354,7 @@ export default function DesktopDashboard({
                   border: '1px solid var(--border)',
                   position: 'relative', overflow: 'hidden',
                 }}>
-                  {ENTRY_TYPES.map(t => (
+                  {TRANSACTION_TYPES.map(t => (
                     <button
                       key={t.key}
                       id={`desktop-type-${t.key}`}
@@ -388,27 +388,63 @@ export default function DesktopDashboard({
                   />
                 </div>
                 {/* Amount */}
-                <div style={{ position: 'relative', marginBottom: 12 }}>
+                <div style={{ position: 'relative', marginBottom: type === 'external' ? 8 : 12 }}>
                   <IndianRupee size={12} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                   <input
                     id="desktop-input-amount" ref={amountRef} type="text"
-                    placeholder="0.00" value={amount}
+                    placeholder={type === 'external' ? 'Amount paid' : '0.00'} value={amount}
                     onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveEntry())}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), type === 'external' ? settlementRef.current?.focus() : saveEntry())}
                     inputMode="decimal" autoComplete="off"
                     style={{ ...inputStyle, fontSize: 15, fontWeight: 700 }}
                     {...focusHandlers(sel.color)}
                   />
                 </div>
+                {/* Settlement + Source — only when External is selected */}
+                {type === 'external' && (
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ position: 'relative', marginBottom: 6 }}>
+                      <IndianRupee size={12} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#7C3AED', pointerEvents: 'none' }} />
+                      <input
+                        id="desktop-input-settlement" ref={settlementRef} type="text"
+                        placeholder="Amount received" value={settlement}
+                        onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setSettlement(v); }}
+                        onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), extSourceRef.current?.focus())}
+                        inputMode="decimal" autoComplete="off"
+                        style={{ ...inputStyle, fontSize: 15, fontWeight: 700, borderColor: '#DDD6FE', background: '#F5F3FF', color: '#7C3AED' }}
+                        onFocus={e => (e.target.style.borderColor = '#7C3AED')}
+                        onBlur={e =>  (e.target.style.borderColor = '#DDD6FE')}
+                      />
+                    </div>
+                    <div style={{ position: 'relative', marginBottom: 4 }}>
+                      <Briefcase size={11} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#7C3AED', pointerEvents: 'none' }} />
+                      <input
+                        id="desktop-input-ext-source" ref={extSourceRef} type="text"
+                        placeholder="Source / Client (optional)" value={extSource}
+                        onChange={e => setExtSource(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveEntry())}
+                        autoComplete="off"
+                        style={{ ...inputStyle, borderColor: '#DDD6FE', background: '#F5F3FF', color: '#7C3AED' }}
+                        onFocus={e => (e.target.style.borderColor = '#7C3AED')}
+                        onBlur={e =>  (e.target.style.borderColor = '#DDD6FE')}
+                      />
+                    </div>
+                    {settlement && amount && parseFloat(settlement) >= 0 && parseFloat(amount) > 0 && (
+                      <p style={{ fontSize: 10, fontWeight: 700, color: (parseFloat(settlement) - parseFloat(amount)) >= 0 ? '#16A34A' : '#DC2626', margin: 0 }}>
+                        Net profit: {(parseFloat(settlement) - parseFloat(amount)) >= 0 ? '+' : ''}{formatAmount(parseFloat(settlement) - parseFloat(amount))}
+                      </p>
+                    )}
+                  </div>
+                )}
                 <button
                   id="desktop-btn-save"
                   onClick={saveEntry}
-                  disabled={!name.trim() || !amount || parseFloat(amount) <= 0}
+                  disabled={!name.trim() || !amount || parseFloat(amount) <= 0 || (type === 'external' && (settlement === '' || parseFloat(settlement) < 0))}
                   style={{
                     width: '100%', padding: '10px', borderRadius: 10,
                     fontSize: 12, fontWeight: 700,
-                    background: name.trim() && amount && parseFloat(amount) > 0 ? sel.color : 'var(--surface2)',
-                    color: name.trim() && amount && parseFloat(amount) > 0 ? '#fff' : 'var(--text-muted)',
+                    background: (name.trim() && amount && parseFloat(amount) > 0 && (type !== 'external' || settlement !== '')) ? sel.color : 'var(--surface2)',
+                    color: (name.trim() && amount && parseFloat(amount) > 0 && (type !== 'external' || settlement !== '')) ? '#fff' : 'var(--text-muted)',
                     border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                     transition: 'all 0.15s',
                   }}
@@ -428,18 +464,20 @@ export default function DesktopDashboard({
                     <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No entries yet today</p>
                   </div>
                 ) : todayTxns.slice().reverse().map((txn) => {
-                  const m = TYPE_META[txn.type];
+                  const m = TYPE_META[txn.type] || TYPE_META.expense;
+                  const isExternal = txn.type === 'external';
+                  const extProfit  = isExternal ? (txn.settlement ?? txn.amount) - txn.amount : 0;
                   const isWasted  = txn.wasteAmount != null && txn.wasteAmount > 0;
                   const isEditing = editingWaste === txn.id;
                   return (
                     <div key={txn.id}>
                       <div
-                        onClick={() => handleTxnTap(txn)}
+                        onClick={isExternal ? undefined : () => handleTxnTap(txn)}
                         style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                           padding: '9px 18px',
                           borderBottom: '1px solid var(--border)',
-                          cursor: 'pointer',
+                          cursor: isExternal ? 'default' : 'pointer',
                           background: isWasted ? m.bg : 'transparent',
                           borderLeft: isWasted ? `3px solid ${m.color}` : '3px solid transparent',
                         }}
@@ -448,14 +486,21 @@ export default function DesktopDashboard({
                           <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 5, fontWeight: 700, background: m.bg, color: m.color, flexShrink: 0 }}>
                             {m.label}
                           </span>
-                          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {txn.name}
-                          </span>
-                          {isWasted && <Flame size={10} style={{ color: m.color, flexShrink: 0 }} />}
+                          <div style={{ minWidth: 0 }}>
+                            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {txn.name}
+                            </span>
+                            {isExternal && (
+                              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                                {txn.externalSource ? `${txn.externalSource} · ` : ''}Paid {formatAmount(txn.amount)} · Rcvd {formatAmount(txn.settlement ?? 0)}
+                              </span>
+                            )}
+                            {!isExternal && isWasted && <Flame size={10} style={{ color: m.color, flexShrink: 0 }} />}
+                          </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: m.color, marginLeft: 8 }}>
-                            {formatAmount(txn.amount)}
+                          <span style={{ fontSize: 12, fontWeight: 700, color: isExternal ? (extProfit >= 0 ? '#16A34A' : '#DC2626') : m.color, marginLeft: 8 }}>
+                            {isExternal ? `${extProfit >= 0 ? '+' : ''}${formatAmount(extProfit)}` : formatAmount(txn.amount)}
                           </span>
                           {onDeleteTransaction && (
                             <button
@@ -474,7 +519,7 @@ export default function DesktopDashboard({
                           )}
                         </div>
                       </div>
-                      {isEditing && (
+                      {isEditing && !isExternal && (
                         <div style={{ display: 'flex', gap: 6, padding: '7px 14px', background: 'var(--expense-bg)', borderBottom: '1px solid var(--expense-border)' }}>
                           <input
                             ref={wasteInputRef} type="number" placeholder="Waste amount" value={wasteInput}

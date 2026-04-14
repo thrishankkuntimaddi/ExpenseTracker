@@ -1,23 +1,34 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Download, Upload, Trash2, Info,
   ChevronRight, Moon, Sun, FileSpreadsheet,
-  Database, Palette, LogOut, Link, RefreshCw, CloudUpload,
+  Database, Palette, LogOut, Link, RefreshCw, CloudUpload, ArrowDownToLine,
 } from 'lucide-react';
-import { loadState, saveState, clearState, generateId } from '../../utils/storage';
-import { migrateFromLocalStorage, updateSettings as fsUpdateSettings } from '../../services/firestore';
-import { pushToSheet } from '../../services/googleSheets';
+import { clearState, generateId } from '../../utils/storage';
+import { migrateFromLocalStorage, updateSettings as fsUpdateSettings, deleteAllUserData } from '../../services/firestore';
+import { pushToSheet, pullFromSheet, validateSheet, checkServerHealth } from '../../services/googleSheets';
 
 export default function SettingsTab({
-  onDataChange, onLockChange, onThemeChange, onSignOut,
+  onDataChange, onThemeChange, onSignOut,
   settings, theme, user,
+  transactions = [], income = [],
+  addTransaction, addIncome,
 }) {
   const [feedback, setFeedback]       = useState(null);
   const [sheetUrl, setSheetUrl]       = useState(settings?.googleSheetUrl || '');
   const [migrating, setMigrating]     = useState(false);
+  const [importing, setImporting]     = useState(false);
+  const [syncing, setSyncing]         = useState(false);
+  const [pulling, setPulling]         = useState(false);
+  const [serverOnline, setServerOnline] = useState(null); // null=unchecked, true, false
   const fileInputRef = useRef(null);
   const csvInputRef  = useRef(null);
   const isMonoflow   = theme === 'monoflow';
+
+  /* ── Check if the proxy server is reachable on mount ── */
+  useEffect(() => {
+    checkServerHealth().then(setServerOnline);
+  }, []);
 
   function showFeedback(msg, isError = false) {
     setFeedback({ msg, isError });
@@ -25,83 +36,114 @@ export default function SettingsTab({
   }
 
   /* ── Data ── */
-  function handleResetData() {
+  async function handleResetData() {
     if (!window.confirm('Reset ALL data? This cannot be undone.')) return;
-    clearState();
-    onDataChange({ transactions: [], income: [] });
-    showFeedback('All data cleared.');
+    if (!user?.uid) { showFeedback('You must be logged in to reset.', true); return; }
+    try {
+      // Delete every document from Firestore, then clear the local cache
+      await deleteAllUserData(user.uid);
+      clearState();
+      onDataChange({ transactions: [], income: [] });
+      showFeedback('All data deleted from cloud and local cache.');
+    } catch (err) {
+      showFeedback('Reset failed. See console.', true);
+      console.error('[Reset]', err);
+    }
   }
 
+  // FIX: reads from live React state (transactions / income props), NOT localStorage cache
   function handleExport() {
-    const state = loadState();
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const payload = { transactions, income, settings };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href = url;
     a.download = `expense-tracker-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showFeedback('Exported successfully.');
+    showFeedback(`Exported ${transactions.length} transactions & ${income.length} income entries.`);
   }
 
+  // FIX: calls addTransaction / addIncome so data goes straight to Firestore
   function handleImport(e) {
     const file = e.target.files?.[0]; if (!file) return;
+    if (!addTransaction || !addIncome) { showFeedback('Import unavailable — please reload.', true); return; }
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async (ev) => {
       try {
         const p = JSON.parse(ev.target.result);
         if (!Array.isArray(p.transactions) || !Array.isArray(p.income)) {
           showFeedback('Invalid JSON file.', true); return;
         }
-        saveState(p);
-        onDataChange({ transactions: p.transactions, income: p.income });
-        showFeedback(`Imported ${p.transactions.length} transactions & ${p.income.length} income entries!`);
-      } catch { showFeedback('Failed to parse JSON file.', true); }
+        setImporting(true);
+        // Write every record to Firestore via the hook (handles optimistic UI + real write)
+        await Promise.all([
+          ...p.transactions.map((txn) => addTransaction(txn)),
+          ...p.income.map((entry) => addIncome(entry)),
+        ]);
+        showFeedback(`Imported ${p.transactions.length} transactions & ${p.income.length} income entries to cloud!`);
+      } catch (err) {
+        showFeedback('Failed to parse or import JSON file.', true);
+        console.error('[Import JSON]', err);
+      } finally { setImporting(false); }
     };
     reader.readAsText(file);
     e.target.value = '';
   }
 
+  // FIX: calls addTransaction / addIncome so CSV data goes straight to Firestore
   function handleCSVImport(e) {
     const file = e.target.files?.[0]; if (!file) return;
+    if (!addTransaction || !addIncome) { showFeedback('Import unavailable — please reload.', true); return; }
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async (ev) => {
       try {
         const text  = ev.target.result;
         const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
         if (lines.length < 2) { showFeedback('CSV is empty.', true); return; }
         const header = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
-        const col = name => header.indexOf(name);
+        const col = (name) => header.indexOf(name);
         const dateCol = col('date') !== -1 ? col('date') : col('Date');
         const nameCol = col('name') !== -1 ? col('name') : col('description') !== -1 ? col('description') : col('Description');
         const amtCol  = col('amount') !== -1 ? col('amount') : col('Amount');
         const typeCol = col('type') !== -1 ? col('type') : col('Type');
-        if (amtCol === -1 || nameCol === -1) { showFeedback('CSV must have "name"/"description" and "amount" columns.', true); return; }
-        const state = loadState();
+        if (amtCol === -1 || nameCol === -1) {
+          showFeedback('CSV must have "name"/"description" and "amount" columns.', true); return;
+        }
         let added = 0;
         const newTxns = [], newInc = [];
         lines.slice(1).forEach(line => {
-          const cols = line.split(',').map(c => c.trim().replace(/"/g, ''));
-          const rawName = cols[nameCol] || '';
+          const cols     = line.split(',').map(c => c.trim().replace(/"/g, ''));
+          const rawName  = cols[nameCol] || '';
           const rawAmount = parseFloat(cols[amtCol] || '0');
-          const rawType = (cols[typeCol] || 'expense').toLowerCase();
-          const rawDate = dateCol !== -1 ? cols[dateCol] : new Date().toISOString().slice(0, 10);
+          const rawType  = (cols[typeCol] || 'expense').toLowerCase();
+          const rawDate  = dateCol !== -1 ? cols[dateCol] : new Date().toISOString().slice(0, 10);
           if (!rawName || isNaN(rawAmount) || rawAmount <= 0) return;
           let isoDate;
           try { const d = new Date(rawDate); isoDate = isNaN(d) ? new Date().toISOString() : d.toISOString(); }
           catch { isoDate = new Date().toISOString(); }
           const month = isoDate.slice(0, 7);
-          const id = generateId();
-          if (rawType === 'income') { newInc.push({ id, name: rawName, amount: rawAmount, type: 'income', date: isoDate, month }); }
-          else { const type = ['savings', 'person', 'expense'].includes(rawType) ? rawType : 'expense'; newTxns.push({ id, name: rawName, amount: rawAmount, type, date: isoDate, month, wasteAmount: undefined }); }
+          const id    = generateId();
+          if (rawType === 'income') {
+            newInc.push({ id, name: rawName, amount: rawAmount, type: 'income', date: isoDate, month });
+          } else {
+            const type = ['savings', 'person', 'expense'].includes(rawType) ? rawType : 'expense';
+            newTxns.push({ id, name: rawName, amount: rawAmount, type, date: isoDate, month });
+          }
           added++;
         });
-        const mergedTxns = [...state.transactions, ...newTxns];
-        const mergedInc  = [...state.income, ...newInc];
-        saveState({ ...state, transactions: mergedTxns, income: mergedInc });
-        onDataChange({ transactions: mergedTxns, income: mergedInc });
-        showFeedback(`Imported ${added} records from CSV!`);
-      } catch (err) { showFeedback('Failed to parse CSV.', true); console.error(err); }
+        if (added === 0) { showFeedback('No valid rows found in CSV.', true); return; }
+        setImporting(true);
+        // Write every parsed record to Firestore via the hook
+        await Promise.all([
+          ...newTxns.map((txn) => addTransaction(txn)),
+          ...newInc.map((entry) => addIncome(entry)),
+        ]);
+        showFeedback(`Imported ${added} records from CSV to cloud!`);
+      } catch (err) {
+        showFeedback('Failed to parse or import CSV.', true);
+        console.error('[Import CSV]', err);
+      } finally { setImporting(false); }
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -125,14 +167,47 @@ export default function SettingsTab({
   async function handleSaveSheetUrl() {
     if (!sheetUrl.trim()) { showFeedback('Please enter a sheet URL.', true); return; }
     try {
+      // Save URL to Firestore settings
       await fsUpdateSettings(user.uid, { ...settings, googleSheetUrl: sheetUrl.trim() });
-      showFeedback('Google Sheet linked!');
+      // Validate access (non-blocking)
+      const v = await validateSheet(sheetUrl.trim());
+      if (v.success) {
+        showFeedback(`✅ Linked to "${v.title}" — ${v.sheets.length} tab(s) found.`);
+      } else {
+        showFeedback('Sheet URL saved. Share the sheet with your service account email to enable sync.', false);
+      }
     } catch { showFeedback('Failed to save sheet URL.', true); }
   }
 
   async function handleSyncSheet() {
-    const result = await pushToSheet(sheetUrl, loadState());
-    showFeedback(result.message || 'Coming soon — Google Sheets sync will be enabled in the next update.');
+    if (!sheetUrl.trim()) { showFeedback('Enter your Google Sheet URL first.', true); return; }
+    setSyncing(true);
+    try {
+      const result = await pushToSheet(sheetUrl, { transactions, income });
+      showFeedback(result.message, !result.success);
+      if (result.success) setServerOnline(true);
+    } catch (err) {
+      showFeedback(`Push failed: ${err.message}`, true);
+    } finally { setSyncing(false); }
+  }
+
+  async function handlePullSheet() {
+    if (!sheetUrl.trim()) { showFeedback('Enter your Google Sheet URL first.', true); return; }
+    if (!addTransaction || !addIncome) { showFeedback('Please reload the app.', true); return; }
+    setPulling(true);
+    try {
+      const result = await pullFromSheet(sheetUrl);
+      if (!result.success) { showFeedback(result.message, true); return; }
+      // Write every pulled record to Firestore via the hook
+      await Promise.all([
+        ...result.transactions.map((t) => addTransaction(t)),
+        ...result.income.map((i) => addIncome(i)),
+      ]);
+      showFeedback(result.message);
+      setServerOnline(true);
+    } catch (err) {
+      showFeedback(`Pull failed: ${err.message}`, true);
+    } finally { setPulling(false); }
   }
 
   /* ── Theme ── */
@@ -183,11 +258,11 @@ export default function SettingsTab({
             {/* ── Data Management ── */}
             <SectionLabel Icon={Database}>Data Management</SectionLabel>
             <Card>
-              <ActionRow id="btn-export" Icon={Download} label="Export Data"    sub="Download JSON backup"                            iconColor="var(--savings)" onClick={handleExport} />
-              <ActionRow id="btn-import" Icon={Upload}   label="Import Data"    sub="Restore from JSON file"                          iconColor="var(--accent)"  onClick={() => fileInputRef.current?.click()} />
-              <ActionRow id="btn-csv"    Icon={FileSpreadsheet} label="Link Excel Sheet" sub="Import from .csv file (date,name,amount,type)" iconColor="var(--income)"  onClick={() => csvInputRef.current?.click()} />
+              <ActionRow id="btn-export" Icon={Download} label="Export Data"    sub={`Download JSON — ${transactions.length} txns, ${income.length} income`} iconColor="var(--savings)" onClick={handleExport} />
+              <ActionRow id="btn-import" Icon={Upload}   label={importing ? 'Importing…' : 'Import Data'}   sub="Restore from JSON backup file (writes to cloud)"          iconColor="var(--accent)"  onClick={() => !importing && fileInputRef.current?.click()} />
+              <ActionRow id="btn-csv"    Icon={FileSpreadsheet} label={importing ? 'Importing…' : 'Import CSV'}  sub="Import .csv file (date,name,amount,type) → cloud"    iconColor="var(--income)"  onClick={() => !importing && csvInputRef.current?.click()} />
               <ActionRow id="btn-migrate" Icon={CloudUpload} label={migrating ? 'Migrating…' : 'Import Local → Cloud'} sub="One-time: push localStorage data to your cloud account" iconColor="var(--accent)" onClick={handleMigrate} />
-              <ActionRow id="btn-reset"  Icon={Trash2}   label="Reset All Data" sub="Permanently clears everything"                  iconColor="var(--expense)" onClick={handleResetData} danger lastRow />
+              <ActionRow id="btn-reset"  Icon={Trash2}   label="Reset All Data" sub="Permanently deletes all cloud + local data"      iconColor="var(--expense)" onClick={handleResetData} danger lastRow />
               <input ref={fileInputRef} type="file" accept=".json"     style={{ display: 'none' }} onChange={handleImport}    />
               <input ref={csvInputRef}  type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={handleCSVImport} />
             </Card>
@@ -205,7 +280,22 @@ export default function SettingsTab({
             <SectionLabel Icon={FileSpreadsheet}>Google Sheets</SectionLabel>
             <Card>
               <div style={{ padding: 16 }}>
-                <p className="section-label" style={{ marginBottom: 10 }}>Link Your Google Sheet</p>
+
+                {/* Server status indicator */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14, padding: '7px 12px', borderRadius: 9, background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                    background: serverOnline === null ? '#94A3B8' : serverOnline ? '#22C55E' : '#EF4444',
+                    boxShadow:  serverOnline ? '0 0 6px #22C55E88' : 'none',
+                  }} />
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
+                    {serverOnline === null ? 'Checking proxy server…'
+                      : serverOnline ? 'Proxy server online'
+                      : 'Proxy server offline — run: cd server && npm start'}
+                  </span>
+                </div>
+
+                <p className="section-label" style={{ marginBottom: 10 }}>Your Google Sheet URL</p>
                 <div style={{ position: 'relative', marginBottom: 10 }}>
                   <Link size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                   <input
@@ -219,16 +309,41 @@ export default function SettingsTab({
                     onBlur={e  => (e.target.style.borderColor = 'var(--input-border)')}
                   />
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button id="btn-save-sheet" onClick={handleSaveSheetUrl} style={{ flex: 1, padding: '9px', borderRadius: 9, fontSize: 12, fontWeight: 700, background: 'var(--income)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                    Link Sheet
+
+                {/* Link + Sync Now row */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <button
+                    id="btn-save-sheet"
+                    onClick={handleSaveSheetUrl}
+                    style={{ flex: 1, padding: '9px', borderRadius: 9, fontSize: 12, fontWeight: 700, background: 'var(--income)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Save &amp; Validate
                   </button>
-                  <button id="btn-sync-sheet" onClick={handleSyncSheet} style={{ flex: 1, padding: '9px', borderRadius: 9, fontSize: 12, fontWeight: 600, background: 'var(--surface2)', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                    <RefreshCw size={12} /> Sync Now
+                  <button
+                    id="btn-sync-sheet"
+                    onClick={handleSyncSheet}
+                    disabled={syncing || !sheetUrl.trim()}
+                    style={{ flex: 1, padding: '9px', borderRadius: 9, fontSize: 12, fontWeight: 600, background: 'var(--surface2)', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                    <RefreshCw size={12} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
+                    {syncing ? 'Pushing…' : '↑ Push to Sheet'}
                   </button>
                 </div>
-                <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--surface2)', border: '1px solid var(--border)', fontSize: 11, color: 'var(--text-muted)' }}>
-                  🔜 Full Google Sheets sync coming soon. Link your sheet now to be ready.
+
+                {/* Pull row */}
+                <button
+                  id="btn-pull-sheet"
+                  onClick={handlePullSheet}
+                  disabled={pulling || !sheetUrl.trim()}
+                  style={{ width: '100%', padding: '9px', borderRadius: 9, fontSize: 12, fontWeight: 600, background: pulling ? 'var(--surface2)' : 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <ArrowDownToLine size={12} />
+                  {pulling ? 'Pulling from sheet…' : '↓ Pull from Sheet → Firestore'}
+                </button>
+
+                {/* Info box */}
+                <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 9, background: 'var(--surface2)', border: '1px solid var(--border)', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.65 }}>
+                  <strong style={{ color: 'var(--text)', display: 'block', marginBottom: 4 }}>How it works</strong>
+                  <span>↑ <strong>Push</strong> writes all your Firebase data to an <em>ExpenseTracker</em> tab (safe — never touches your existing data).</span><br />
+                  <span>↓ <strong>Pull</strong> reads columns A/B (income) + paired expense columns D/E, F/G … dynamically, and saves to Firestore.</span><br />
+                  <span style={{ marginTop: 4, display: 'block' }}>Share your sheet with the <strong>service account email</strong> in <code style={{ background: 'var(--border)', padding: '1px 4px', borderRadius: 3 }}>server/.env</code>.</span>
                 </div>
               </div>
             </Card>

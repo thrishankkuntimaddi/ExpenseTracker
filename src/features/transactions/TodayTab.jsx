@@ -1,16 +1,8 @@
 import { useRef, useState } from 'react';
-import {
-  PenLine, IndianRupee, ShoppingCart, Users, PiggyBank,
-  Zap, TrendingDown, Coins
-} from 'lucide-react';
+import { PenLine, IndianRupee, Zap, TrendingDown, Coins, Briefcase } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount } from '../../utils/dateHelpers';
-
-const TYPES = [
-  { key: 'expense', label: 'Expense', color: 'var(--expense)', bg: 'var(--expense-bg)', border: 'var(--expense-border)', Icon: ShoppingCart },
-  { key: 'person',  label: 'Person',  color: 'var(--person)',  bg: 'var(--person-bg)',  border: 'var(--person-border)',  Icon: Users       },
-  { key: 'savings', label: 'Savings', color: 'var(--savings)', bg: 'var(--savings-bg)', border: 'var(--savings-border)', Icon: PiggyBank   },
-];
+import { TRANSACTION_TYPES as TYPES } from '../../utils/typeConfig';
 
 function AppHeader() {
   return (
@@ -40,11 +32,15 @@ function AppHeader() {
 }
 
 export default function TodayTab({ transactions, onAdd }) {
-  const [name, setName]     = useState('');
-  const [amount, setAmount] = useState('');
-  const [type, setType]     = useState('expense');
-  const nameRef   = useRef(null);
-  const amountRef = useRef(null);
+  const [name, setName]                   = useState('');
+  const [amount, setAmount]               = useState('');
+  const [settlement, setSettlement]       = useState('');
+  const [externalSource, setExtSource]    = useState('');
+  const [type, setType]                   = useState('expense');
+  const nameRef         = useRef(null);
+  const amountRef       = useRef(null);
+  const settlementRef   = useRef(null);
+  const extSourceRef    = useRef(null);
 
   const now = new Date();
   const todayTxns = transactions.filter(t => {
@@ -60,7 +56,12 @@ export default function TodayTab({ transactions, onAdd }) {
   const todayTotal   = todayExpense + todaySavings + todayPerson;
 
   function handleNameKey(e)   { if (e.key === 'Enter') { e.preventDefault(); amountRef.current?.focus(); } }
-  function handleAmountKey(e) { if (e.key === 'Enter') { e.preventDefault(); save(); } }
+  function handleAmountKey(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      type === 'external' ? settlementRef.current?.focus() : save();
+    }
+  }
   function handleAmountInput(e) {
     const v = e.target.value;
     if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v);
@@ -69,17 +70,25 @@ export default function TodayTab({ transactions, onAdd }) {
   function save() {
     const n = name.trim(), a = parseFloat(amount);
     if (!n || !amount || isNaN(a) || a <= 0) return;
-    onAdd({
+    const entry = {
       id: generateId(), name: n, amount: a, type,
       date: new Date().toISOString(),
       month: new Date().toISOString().slice(0, 7),
-    });
-    setName(''); setAmount('');
+    };
+    if (type === 'external') {
+      const s = parseFloat(settlement);
+      if (!settlement || isNaN(s) || s < 0) return;
+      entry.settlement = s;
+      if (externalSource.trim()) entry.externalSource = externalSource.trim();
+    }
+    onAdd(entry);
+    setName(''); setAmount(''); setSettlement(''); setExtSource('');
     nameRef.current?.focus();
   }
 
   const sel = TYPES.find(t => t.key === type);
-  const canSave = !!name.trim() && !!amount && parseFloat(amount) > 0;
+  const canSave = !!name.trim() && !!amount && parseFloat(amount) > 0 &&
+    (type !== 'external' || (settlement !== '' && parseFloat(settlement) >= 0));
 
   return (
     <div className="tab-root">
@@ -236,6 +245,78 @@ export default function TodayTab({ transactions, onAdd }) {
               />
             </div>
 
+            {/* Settlement + Source — only shown when External is selected */}
+            {type === 'external' && (
+              <div style={{ marginBottom: 14 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: '#7C3AED', marginBottom: 6, marginTop: -6 }}>
+                  Amount Received / Settlement
+                </p>
+                <div style={{ position: 'relative', marginBottom: 8 }}>
+                  <IndianRupee size={14} style={{
+                    position: 'absolute', left: 12, top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: 'var(--text-muted)', pointerEvents: 'none',
+                  }} />
+                  <input
+                    id="input-settlement"
+                    ref={settlementRef}
+                    type="text"
+                    placeholder="Amount you received"
+                    value={settlement}
+                    onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setSettlement(v); }}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), extSourceRef.current?.focus())}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    style={{
+                      width: '100%', paddingLeft: 38, paddingRight: 14,
+                      paddingTop: 12, paddingBottom: 12,
+                      borderRadius: 10, fontSize: 22, fontWeight: 700,
+                      border: '1.5px solid #DDD6FE',
+                      background: '#F5F3FF',
+                      color: '#7C3AED', outline: 'none',
+                      fontFamily: 'inherit', transition: 'border-color 0.15s',
+                    }}
+                    onFocus={e => (e.target.style.borderColor = '#7C3AED')}
+                    onBlur={e =>  (e.target.style.borderColor = '#DDD6FE')}
+                  />
+                </div>
+                {/* External Source — optional label (client/project name) */}
+                <div style={{ position: 'relative', marginBottom: 4 }}>
+                  <Briefcase size={13} style={{
+                    position: 'absolute', left: 12, top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#7C3AED', pointerEvents: 'none',
+                  }} />
+                  <input
+                    id="input-external-source"
+                    ref={extSourceRef}
+                    type="text"
+                    placeholder="Source / Client (optional)"
+                    value={externalSource}
+                    onChange={e => setExtSource(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), save())}
+                    autoComplete="off"
+                    style={{
+                      width: '100%', paddingLeft: 38, paddingRight: 14,
+                      paddingTop: 10, paddingBottom: 10,
+                      borderRadius: 10, fontSize: 13,
+                      border: '1.5px solid #DDD6FE',
+                      background: '#F5F3FF',
+                      color: '#7C3AED', outline: 'none',
+                      fontFamily: 'inherit', transition: 'border-color 0.15s',
+                    }}
+                    onFocus={e => (e.target.style.borderColor = '#7C3AED')}
+                    onBlur={e =>  (e.target.style.borderColor = '#DDD6FE')}
+                  />
+                </div>
+                {settlement && amount && parseFloat(settlement) >= 0 && parseFloat(amount) > 0 && (
+                  <p style={{ fontSize: 11, color: (parseFloat(settlement) - parseFloat(amount)) >= 0 ? '#16A34A' : '#DC2626', marginTop: 5, fontWeight: 600 }}>
+                    Net profit: {(parseFloat(settlement) - parseFloat(amount)) >= 0 ? '+' : ''}{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(parseFloat(settlement) - parseFloat(amount))}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Save Button */}
             <button
               id="btn-save-entry"
@@ -266,7 +347,9 @@ export default function TodayTab({ transactions, onAdd }) {
               </p>
               <div className="card">
                 {todayTxns.slice().reverse().map((txn, i) => {
-                  const t = TYPES.find(x => x.key === txn.type);
+                  const t = TYPES.find(x => x.key === txn.type) || TYPES[0];
+                  const isExternal = txn.type === 'external';
+                  const extProfit  = isExternal ? (txn.settlement ?? txn.amount) - txn.amount : 0;
                   return (
                     <div key={txn.id} style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -290,15 +373,22 @@ export default function TodayTab({ transactions, onAdd }) {
                             {txn.name}
                           </span>
                           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                            {t.label}
+                            {isExternal
+                              ? `${txn.externalSource ? txn.externalSource + ' · ' : ''}Paid ${formatAmount(txn.amount)} · Rcvd ${formatAmount(txn.settlement ?? 0)}`
+                              : t.label
+                            }
                           </span>
                         </div>
                       </div>
                       <span style={{
                         fontSize: 14, fontWeight: 700,
-                        color: t.color, marginLeft: 12, flexShrink: 0,
+                        color: isExternal ? (extProfit >= 0 ? '#16A34A' : '#DC2626') : t.color,
+                        marginLeft: 12, flexShrink: 0,
                       }}>
-                        {formatAmount(txn.amount)}
+                        {isExternal
+                          ? `${extProfit >= 0 ? '+' : ''}${formatAmount(extProfit)}`
+                          : formatAmount(txn.amount)
+                        }
                       </span>
                     </div>
                   );

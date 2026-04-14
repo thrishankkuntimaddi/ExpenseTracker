@@ -54,9 +54,6 @@ function AuthenticatedApp({ user, signOut }) {
     applyTheme(newTheme);
   }, [settings, saveSettings]);
 
-  const handleLockChange = useCallback((s) => {
-    saveSettings({ ...settings, ...s });
-  }, [settings, saveSettings]);
 
   const commonProps = {
     transactions, income, settings,
@@ -76,7 +73,6 @@ function AuthenticatedApp({ user, signOut }) {
           onAddIncome={addIncome}
           onDeleteIncome={deleteIncome}
           onDataChange={handleDataChange}
-          onLockChange={handleLockChange}
           onThemeChange={handleThemeChange}
           onSignOut={signOut}
         />
@@ -97,7 +93,7 @@ function AuthenticatedApp({ user, signOut }) {
         {activeTab === 'history'  && <HistoryTab  {...commonProps} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} />}
         {activeTab === 'income'   && <IncomeTab   {...commonProps} onAddIncome={addIncome} onDeleteIncome={deleteIncome} />}
         {activeTab === 'stats'    && <StatsTab    {...commonProps} />}
-        {activeTab === 'settings' && <SettingsTab {...commonProps} onDataChange={handleDataChange} onLockChange={handleLockChange} onThemeChange={handleThemeChange} onSignOut={signOut} />}
+        {activeTab === 'settings' && <SettingsTab {...commonProps} onDataChange={handleDataChange} onThemeChange={handleThemeChange} onSignOut={signOut} addTransaction={addTransaction} addIncome={addIncome} />}
       </div>
 
       {/* ── Mobile Navbar ── */}
