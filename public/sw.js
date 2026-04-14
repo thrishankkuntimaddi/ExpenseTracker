@@ -1,5 +1,5 @@
 // ─── Service Worker — Expense Tracker PWA ────────────────────────
-const CACHE_NAME = 'et-v4';
+const CACHE_NAME = 'et-v5';
 const BASE = '/ExpenseTracker/';
 
 const APP_SHELL = [
