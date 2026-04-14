@@ -1,15 +1,22 @@
 // ─── Service Worker — Expense Tracker PWA ────────────────────────
 // IMPORTANT: Bump CACHE_NAME on every deploy to bust stale caches.
-const CACHE_NAME = 'et-v7';
+const CACHE_NAME = 'et-v8';
 const BASE = '/ExpenseTracker/';
 
-// ── Install: skip waiting so new SW activates immediately ──
+// ── Install: skip waiting immediately so new SW takes over right away ──
 self.addEventListener('install', (e) => {
-  // Pre-cache only index.html so we always have an offline shell
+  // Pre-cache only the HTML shell. JS/CSS have content hashes and get
+  // cached on first fetch. Skipping large asset pre-cache avoids install
+  // failures on slow mobile connections.
   e.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.add(BASE + 'index.html'))
-      .then(() => self.skipWaiting())
+      .then(() => self.skipWaiting())   // activate ASAP, don't wait for old tabs
+      .catch((err) => {
+        // Don't let a cache-add failure block SW install
+        console.warn('[SW] Install pre-cache failed (non-fatal):', err);
+        return self.skipWaiting();
+      })
   );
 });
 
@@ -29,6 +36,7 @@ self.addEventListener('activate', (e) => {
       )
       .then(() => {
         console.log('[SW] Activated cache:', CACHE_NAME);
+        // Claim all clients immediately so the new SW serves pages right away
         return self.clients.claim();
       })
   );
@@ -50,8 +58,8 @@ self.addEventListener('message', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = e.request.url;
 
-  // ── Never intercept Firebase / Google API requests ──
-  if (
+  // ── Never intercept Firebase / Google API / external requests ──
+  const isExternal = (
     url.includes('firestore.googleapis.com') ||
     url.includes('identitytoolkit.googleapis.com') ||
     url.includes('securetoken.googleapis.com') ||
@@ -60,14 +68,14 @@ self.addEventListener('fetch', (e) => {
     url.includes('googleapis.com') ||
     url.includes('fonts.googleapis.com') ||
     url.includes('fonts.gstatic.com')
-  ) {
-    return; // let browser handle it natively
-  }
+  );
+  if (isExternal) return; // let browser handle natively
 
   // ── HTML navigation: NETWORK-FIRST ──
+  // Always try to pull the freshest index.html; only fallback to cache when offline.
   if (e.request.mode === 'navigate') {
     e.respondWith(
-      fetch(e.request)
+      fetch(e.request, { cache: 'no-store' })
         .then((response) => {
           if (response.ok) {
             const clone = response.clone();
@@ -85,21 +93,39 @@ self.addEventListener('fetch', (e) => {
   }
 
   // ── Static assets (JS/CSS/images): CACHE-FIRST ──
-  e.respondWith(
-    caches.match(e.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(e.request).then((response) => {
-        // Only cache valid same-origin responses
-        if (!response || response.status !== 200 || response.type !== 'basic') {
+  // Content-hashed files (e.g. index-AbCd1234.js) are immutable — safe to cache forever.
+  // Non-hashed files (manifest.json, sw.js, icons) use network-first to stay fresh.
+  const isHashedAsset = /\/assets\/[^/]+-[A-Za-z0-9]{8}\.(js|css)/.test(url);
+
+  if (isHashedAsset) {
+    // Cache-first: hashed file → cache hit = instant; miss = fetch + cache
+    e.respondWith(
+      caches.match(e.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(e.request).then((response) => {
+          if (response && response.status === 200 && response.type === 'basic') {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+          }
           return response;
-        }
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
-        return response;
-      }).catch(() => {
-        // If asset is missing, try serving the cached shell as last resort
-        return caches.match(BASE + 'index.html');
-      });
-    })
-  );
+        }).catch(() => {
+          // Asset totally unavailable — serve cached shell as last resort
+          return caches.match(BASE + 'index.html');
+        });
+      })
+    );
+  } else {
+    // Non-hashed assets (icons, manifest): network-first with cache fallback
+    e.respondWith(
+      fetch(e.request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type === 'basic') {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(e.request))
+    );
+  }
 });
