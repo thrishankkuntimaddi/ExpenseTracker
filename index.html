@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
 
@@ -34,8 +34,56 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   </head>
-  <body>
-    <div id="root"></div>
+  <body style="background:#F5F3FF;margin:0">
+    <!-- Theme applied before React boots — prevents FOUC -->
+    <script>
+      (function() {
+        try {
+          var s = localStorage.getItem('expenseTrackerState');
+          var parsed = s && JSON.parse(s);
+          var theme = parsed && parsed.settings && parsed.settings.theme;
+          if (theme) document.documentElement.setAttribute('data-theme', theme);
+        } catch(e) {}
+        // Set body colour to match current theme before React mounts
+        var t = document.documentElement.getAttribute('data-theme');
+        document.body.style.backgroundColor = t === 'monoflow' ? '#0c0c0c' : '#F8FAFC';
+      })();
+    </script>
+    <div id="root">
+      <!-- Preloader: shown before React JS bundle executes -->
+      <div id="app-preloader" style="
+        height:100dvh; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; gap:16px;
+      ">
+        <div style="
+          width:52px; height:52px; border-radius:14px;
+          background:#6366F1; display:flex;
+          align-items:center; justify-content:center;
+          box-shadow:0 8px 24px rgba(99,102,241,0.35);
+        ">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+        <div style="
+          width:36px; height:4px; border-radius:99px;
+          background:rgba(99,102,241,0.15); overflow:hidden;
+        ">
+          <div style="
+            width:60%; height:100%; border-radius:99px;
+            background:#6366F1;
+            animation:preloaderSlide 1.2s ease-in-out infinite alternate;
+          "></div>
+        </div>
+      </div>
+      <style>
+        @keyframes preloaderSlide {
+          from { transform: translateX(-8px); }
+          to   { transform: translateX(8px); }
+        }
+      </style>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
       if ('serviceWorker' in navigator) {

@@ -33,12 +33,12 @@ export function useAuth() {
         setUser(firebaseUser);
         setLoading(false);
       } else {
-        // Give 5 seconds before treating as signed out
+        // Give 800ms before treating as signed out
         // (handles transient token-refresh null blips)
         graceTimer.current = setTimeout(() => {
           setUser(null);
           setLoading(false);
-        }, 5000);
+        }, 800);
       }
     });
 
