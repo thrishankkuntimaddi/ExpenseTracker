@@ -3,26 +3,33 @@
   <head>
     <meta charset="UTF-8" />
 
-    <!-- Favicon & Icons — %BASE_URL% is replaced by Vite at build time -->
-    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
-    <link rel="alternate icon" href="%BASE_URL%favicon.svg" />
-    <link rel="apple-touch-icon" href="%BASE_URL%icon-512.png" />
+    <!-- ── Favicon — all browsers ── -->
+    <!-- SVG favicon (modern browsers: Chrome, Firefox, Edge) -->
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" sizes="any" />
+    <!-- PNG fallback (Safari, older browsers) -->
+    <link rel="icon" type="image/png" href="%BASE_URL%icon-512.png" sizes="512x512" />
+    <!-- Shortcut icon for legacy IE/older-->
+    <link rel="shortcut icon" href="%BASE_URL%favicon.svg" />
+
+    <!-- ── Apple / PWA icons ── -->
+    <link rel="apple-touch-icon" sizes="512x512" href="%BASE_URL%icon-512.png" />
     <link rel="manifest" href="%BASE_URL%manifest.json" />
 
-    <!-- Viewport & Theme -->
+    <!-- ── Viewport & Theme ── -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#2563EB" />
+    <meta name="theme-color" content="#6366F1" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Expense Tracker" />
 
-    <!-- SEO -->
+    <!-- ── SEO ── -->
     <meta name="description" content="Personal Expense Tracker – smart month-based financial tracking with carry-forward balance, wastage awareness, income management, and visual analytics." />
+    <meta name="keywords" content="expense tracker, personal finance, budget, savings, income" />
 
     <title>Expense Tracker – Personal Finance</title>
 
-    <!-- Fonts -->
+    <!-- ── Fonts ── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
