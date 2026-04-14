@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { PenLine, IndianRupee, Zap, TrendingDown, Coins, Briefcase } from 'lucide-react';
+import { PenLine, IndianRupee, Zap, TrendingDown, Coins, Briefcase, ShoppingCart, PiggyBank, Users } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount } from '../../utils/dateHelpers';
 import { TRANSACTION_TYPES as TYPES } from '../../utils/typeConfig';
