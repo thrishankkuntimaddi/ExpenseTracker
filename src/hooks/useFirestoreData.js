@@ -110,16 +110,21 @@ export function useFirestoreData(uid) {
     }
   }, []);
 
+  // Keep a live ref to current data so saveSettings never captures stale snapshots
+  const latestDataRef = useRef({ transactions: [], income: [] });
+  useEffect(() => { latestDataRef.current = { transactions, income }; }, [transactions, income]);
+
   const saveSettings = useCallback(async (newSettings) => {
     if (!uidRef.current) return;
     setSettings(newSettings);
-    saveState({ transactions, income, settings: newSettings });
+    const { transactions: t, income: i } = latestDataRef.current;
+    saveState({ transactions: t, income: i, settings: newSettings });
     try {
       await fsUpdateSettings(uidRef.current, newSettings);
     } catch (err) {
       console.error("[saveSettings] Firestore write failed:", err?.code, err?.message, err);
     }
-  }, [transactions, income]);
+  }, []);
 
   // Batch update (used by import/reset)
   const handleDataChange = useCallback(({ transactions: t, income: i }) => {

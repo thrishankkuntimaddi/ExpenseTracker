@@ -16,14 +16,6 @@ import SettingsTab from '../features/settings/SettingsTab';
 import { useStats } from '../hooks/useStats';
 import { useWastage } from '../hooks/useWastage';
 
-/* ─── Color Constants (hex for Recharts SVG – CSS vars don't work in SVG) ─── */
-const C_LIGHT = {
-  expense: '#DC2626', savings: '#2563EB', person: '#D97706', income: '#16A34A',
-};
-const C_DARK = {
-  expense: '#e05252', savings: '#6b8dd6', person: '#c9943a', income: '#5aba8a',
-};
-
 /* ─── Entry types ─── */
 const ENTRY_TYPES = [
   { key: 'expense', label: 'Expense', color: 'var(--expense)', bg: 'var(--expense-bg)', border: 'var(--expense-border)', Icon: ShoppingCart },
@@ -485,10 +477,10 @@ export default function DesktopDashboard({
                             ref={wasteInputRef} type="number" placeholder="Waste amount" value={wasteInput}
                             onChange={e => setWasteInput(e.target.value)} inputMode="decimal"
                             style={{ flex: 1, padding: '6px 10px', borderRadius: 8, fontSize: 12, border: '1.5px solid var(--expense)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }}
-                            onKeyDown={e => { if (e.key === 'Enter') saveWaste(txn); if (e.key === 'Escape') { setEditingWaste(null); setWasteInput(''); } }}
+                            onKeyDown={e => { if (e.key === 'Enter') saveWaste(txn); if (e.key === 'Escape') cancelWaste(); }}
                           />
                           <button onClick={() => saveWaste(txn)} style={{ padding: '5px 10px', borderRadius: 7, fontSize: 11, fontWeight: 700, background: 'var(--expense)', color: '#fff', border: 'none', cursor: 'pointer' }}>Save</button>
-                          <button onClick={() => { setEditingWaste(null); setWasteInput(''); }} style={{ padding: '5px 8px', borderRadius: 7, fontSize: 11, background: 'var(--surface2)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer' }}>✕</button>
+                          <button onClick={cancelWaste} style={{ padding: '5px 8px', borderRadius: 7, fontSize: 11, background: 'var(--surface2)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer' }}>✕</button>
                         </div>
                       )}
                     </div>

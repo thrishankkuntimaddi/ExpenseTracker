@@ -137,11 +137,6 @@ export function getAvailableYears(transactions, income) {
   return Array.from(years).sort().reverse();
 }
 
-/* Add month field to a transaction/income item */
-export function withMonth(item) {
-  return item.month ? item : { ...item, month: item.date?.slice(0, 7) || getCurrentMonthValue() };
-}
-
 /* Format a YYYY-MM string into a human label */
 export function formatMonthLabel(yyyyMM) {
   const [y, m] = yyyyMM.split('-');
