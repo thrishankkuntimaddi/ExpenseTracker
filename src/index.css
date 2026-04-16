@@ -52,6 +52,11 @@
   --waste:    #DC2626;
   --waste-bg: #FEE2E2;
 
+  /* External / Proxy */
+  --external:        #7C3AED;
+  --external-bg:     #F5F3FF;
+  --external-border: #DDD6FE;
+
   /* Navbar */
   --nav-bg:     #FFFFFF;
   --nav-border: #E2E8F0;
@@ -113,6 +118,11 @@
   /* Waste */
   --waste:    #e05252;
   --waste-bg: #1f0d0d;
+
+  /* External / Proxy */
+  --external:        #a78bfa;
+  --external-bg:     #1a1030;
+  --external-border: #2e1f5e;
 
   /* Navbar */
   --nav-bg:     #111111;

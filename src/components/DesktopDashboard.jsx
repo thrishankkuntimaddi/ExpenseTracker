@@ -6,13 +6,14 @@ import {
 import {
   ShoppingCart, PenLine, IndianRupee, PiggyBank,
   Wallet, TrendingUp, TrendingDown, Flame, ChevronDown,
-  ChevronRight, Trash2, Zap, Moon, Sun, Briefcase, Upload,
+  ChevronRight, Trash2, Zap, Moon, Sun, Briefcase, Upload, ArrowLeftRight,
 } from 'lucide-react';
 import { generateId } from '../utils/storage';
 import { formatAmount, formatDate } from '../utils/dateHelpers';
 import { getPeriodLabel, getCurrentMonthValue } from '../utils/periodHelpers';
 import PeriodSelector from './PeriodSelector';
 import SettingsTab from '../features/settings/SettingsTab';
+import ExternalTab from '../features/external/ExternalTab';
 import { useStats } from '../hooks/useStats';
 import { useWastage } from '../hooks/useWastage';
 import { useTransactions } from '../hooks/useTransactions';
@@ -217,20 +218,25 @@ export default function DesktopDashboard({
         <div style={{ display: 'flex', gap: 4 }}>
           {[
             { key: 'dashboard', label: 'Dashboard' },
+            { key: 'external',  label: 'External',  icon: <ArrowLeftRight size={12} /> },
             { key: 'settings',  label: 'Settings'  },
           ].map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveSection(tab.key)}
               style={{
+                display: 'flex', alignItems: 'center', gap: 5,
                 padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                 border: '1px solid var(--border)',
-                background: activeSection === tab.key ? 'var(--accent)' : 'transparent',
+                background: activeSection === tab.key
+                  ? (tab.key === 'external' ? 'linear-gradient(135deg,#7C3AED,#A855F7)' : 'var(--accent)')
+                  : 'transparent',
                 color: activeSection === tab.key ? '#fff' : 'var(--text-muted)',
                 cursor: 'pointer', fontFamily: 'inherit',
                 transition: 'all 0.15s',
               }}
             >
+              {tab.icon}
               {tab.label}
             </button>
           ))}
@@ -300,6 +306,17 @@ export default function DesktopDashboard({
             onDataChange={onDataChange}
             onThemeChange={onThemeChange}
             onSignOut={onSignOut}
+          />
+        </div>
+      )}
+
+      {/* ══ EXTERNAL VIEW ══ */}
+      {activeSection === 'external' && (
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 28px 28px', height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
+          <ExternalTab
+            user={user}
+            onAddIncome={onAddIncome}
+            onAddTransaction={onAddTransaction}
           />
         </div>
       )}

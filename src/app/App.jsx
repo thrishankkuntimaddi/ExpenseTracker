@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Home, List, Wallet, BarChart2, Settings } from 'lucide-react';
+import { Home, List, Wallet, BarChart2, Settings, ArrowLeftRight } from 'lucide-react';
 import { useFirestoreData } from '../hooks/useFirestoreData';
 import { getDefaultPeriod } from '../utils/periodHelpers';
 import AuthGate from '../features/auth/AuthGate';
@@ -8,14 +8,16 @@ import HistoryTab       from '../features/transactions/HistoryTab';
 import IncomeTab        from '../features/income/IncomeTab';
 import StatsTab         from '../features/stats/StatsTab';
 import SettingsTab      from '../features/settings/SettingsTab';
+import ExternalTab      from '../features/external/ExternalTab';
 import DesktopDashboard from '../components/DesktopDashboard';
 
 const TABS = [
-  { key: 'today',    label: 'Today',    Icon: Home      },
-  { key: 'history',  label: 'History',  Icon: List      },
-  { key: 'income',   label: 'Income',   Icon: Wallet    },
-  { key: 'stats',    label: 'Stats',    Icon: BarChart2 },
-  { key: 'settings', label: 'Settings', Icon: Settings  },
+  { key: 'today',    label: 'Today',    Icon: Home           },
+  { key: 'history',  label: 'History',  Icon: List           },
+  { key: 'income',   label: 'Income',   Icon: Wallet         },
+  { key: 'external', label: 'External', Icon: ArrowLeftRight },
+  { key: 'stats',    label: 'Stats',    Icon: BarChart2      },
+  { key: 'settings', label: 'Settings', Icon: Settings       },
 ];
 
 function useIsDesktop() {
@@ -83,8 +85,8 @@ function AuthenticatedApp({ user, signOut }) {
   /* ── MOBILE ── */
   const isMonoflow = theme === 'monoflow';
   const tabColors = isMonoflow
-    ? { today: '#b8956a', history: '#c9a87c', income: '#5aba8a', stats: '#6b8dd6', settings: '#9ca3af' }
-    : { today: '#DC2626', history: '#D97706', income: '#16A34A', stats: '#2563EB', settings: '#6366F1' };
+    ? { today: '#b8956a', history: '#c9a87c', income: '#5aba8a', external: '#a78bfa', stats: '#6b8dd6', settings: '#9ca3af' }
+    : { today: '#DC2626', history: '#D97706', income: '#16A34A', external: '#7C3AED', stats: '#2563EB', settings: '#6366F1' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
@@ -92,6 +94,7 @@ function AuthenticatedApp({ user, signOut }) {
         {activeTab === 'today'    && <TodayTab    {...commonProps} onAdd={addTransaction} />}
         {activeTab === 'history'  && <HistoryTab  {...commonProps} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onAddTransaction={addTransaction} onAddIncome={addIncome} />}
         {activeTab === 'income'   && <IncomeTab   {...commonProps} onAddIncome={addIncome} onDeleteIncome={deleteIncome} />}
+        {activeTab === 'external' && <ExternalTab user={user} onAddIncome={addIncome} onAddTransaction={addTransaction} />}
         {activeTab === 'stats'    && <StatsTab    {...commonProps} />}
         {activeTab === 'settings' && <SettingsTab {...commonProps} onDataChange={handleDataChange} onThemeChange={handleThemeChange} onSignOut={signOut} addTransaction={addTransaction} addIncome={addIncome} />}
       </div>

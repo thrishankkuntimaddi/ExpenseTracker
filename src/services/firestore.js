@@ -1,7 +1,7 @@
 // ─── Firestore CRUD Layer ────────────────────────────────────────
 import {
   doc, collection, updateDoc, deleteDoc,
-  onSnapshot, query, where, serverTimestamp, setDoc, getDoc, deleteField, getDocs,
+  onSnapshot, query, where, orderBy, serverTimestamp, setDoc, getDoc, deleteField, getDocs,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { loadState } from "../utils/storage";
@@ -164,4 +164,50 @@ export async function purgeCarryForwards(uid) {
   if (snap.empty) return;
   await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
   console.info(`[purgeCarryForwards] Deleted ${snap.size} carry_forward entries.`);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EXTERNAL TRANSACTIONS (Proxy / Billing ledger)
+   Collection: users/{uid}/external_transactions
+═══════════════════════════════════════════════════════════════════ */
+
+/* ── Ref helpers ── */
+const extRef    = (uid)     => collection(db, "users", uid, "external_transactions");
+const extDocRef = (uid, id) => doc(db, "users", uid, "external_transactions", id);
+
+/* ── Real-time listener ──
+   Fires onData(session[]) on any change.
+   Returns unsubscribe fn.
+─────────────────────────────────────────────────────────────────── */
+export function subscribeToExternalTransactions(uid, onData) {
+  const q = query(extRef(uid), orderBy("date", "desc"));
+  return onSnapshot(
+    q,
+    { includeMetadataChanges: false },
+    (snap) => {
+      const sessions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      onData(sessions);
+    },
+    (err) => console.error("[Firestore] external_transactions error", err)
+  );
+}
+
+/* ── Upsert (create-or-update) — used for auto-save ── */
+export async function upsertExternalTransaction(uid, session) {
+  const { id, ...data } = session;
+  await setDoc(extDocRef(uid, id), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+/* ── Close session — atomically mark as closed ── */
+export async function closeExternalTransaction(uid, id, patch) {
+  await updateDoc(extDocRef(uid, id), {
+    ...patch,
+    status: "closed",
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/* ── Delete session ── */
+export async function deleteExternalTransaction(uid, id) {
+  await deleteDoc(extDocRef(uid, id));
 }
