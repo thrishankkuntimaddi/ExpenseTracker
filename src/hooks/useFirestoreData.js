@@ -8,14 +8,13 @@ import {
   addIncome as fsAddIncome,
   deleteIncome as fsDeleteIncome,
   updateSettings as fsUpdateSettings,
+  purgeCarryForwards,
 } from "../services/firestore";
 import { saveState, loadState } from "../utils/storage";
 
 /**
  * Real-time Firestore data for the authenticated user.
  * Falls back to localStorage cache while offline.
- *
- * Returns the full app data state + mutation handlers.
  */
 export function useFirestoreData(uid) {
   // Seed from localStorage cache so the UI is instant on load
@@ -41,6 +40,11 @@ export function useFirestoreData(uid) {
       saveState({ transactions: t, income: i, settings: s });
     });
 
+    // One-time DB migration: remove any lingering carry_forward income docs
+    purgeCarryForwards(uid).catch(err =>
+      console.warn('[useFirestoreData] purgeCarryForwards failed:', err)
+    );
+
     return unsub;
   }, [uid]);
 
@@ -48,16 +52,14 @@ export function useFirestoreData(uid) {
 
   const addTransaction = useCallback(async (txn) => {
     if (!uidRef.current) {
-      console.error("[addTransaction] No UID — user not logged in?");
+      console.error('[addTransaction] No UID — user not logged in?');
       return;
     }
-    // Optimistic update — shows immediately in UI
     setTransactions(prev => [...prev, txn]);
     try {
       await fsAddTxn(uidRef.current, txn);
     } catch (err) {
-      console.error("[addTransaction] Firestore write failed:", err?.code, err?.message, err);
-      // Revert optimistic update on hard failure
+      console.error('[addTransaction] Firestore write failed:', err?.code, err?.message, err);
       setTransactions(prev => prev.filter(t => t.id !== txn.id));
     }
   }, []);
@@ -68,7 +70,7 @@ export function useFirestoreData(uid) {
     try {
       await fsUpdateTxn(uidRef.current, updated);
     } catch (err) {
-      console.error("[updateTransaction] Firestore write failed:", err?.code, err?.message, err);
+      console.error('[updateTransaction] Firestore write failed:', err?.code, err?.message, err);
     }
   }, []);
 
@@ -81,8 +83,7 @@ export function useFirestoreData(uid) {
     try {
       await fsDeleteTxn(uidRef.current, id);
     } catch (err) {
-      console.error("[deleteTransaction] Firestore write failed:", err?.code, err?.message, err);
-      // Restore optimistic delete on failure
+      console.error('[deleteTransaction] Firestore write failed:', err?.code, err?.message, err);
       setTransactions(prev =>
         deletedTxnRef.current ? [...prev, deletedTxnRef.current] : prev
       );
@@ -95,7 +96,7 @@ export function useFirestoreData(uid) {
     try {
       await fsAddIncome(uidRef.current, entry);
     } catch (err) {
-      console.error("[addIncome] Firestore write failed:", err?.code, err?.message, err);
+      console.error('[addIncome] Firestore write failed:', err?.code, err?.message, err);
       setIncome(prev => prev.filter(i => i.id !== entry.id));
     }
   }, []);
@@ -106,23 +107,19 @@ export function useFirestoreData(uid) {
     try {
       await fsDeleteIncome(uidRef.current, id);
     } catch (err) {
-      console.error("[deleteIncome] Firestore write failed:", err?.code, err?.message, err);
+      console.error('[deleteIncome] Firestore write failed:', err?.code, err?.message, err);
     }
   }, []);
-
-  // Keep a live ref to current data so saveSettings never captures stale snapshots
-  const latestDataRef = useRef({ transactions: [], income: [] });
-  useEffect(() => { latestDataRef.current = { transactions, income }; }, [transactions, income]);
 
   const saveSettings = useCallback(async (newSettings) => {
     if (!uidRef.current) return;
     setSettings(newSettings);
-    const { transactions: t, income: i } = latestDataRef.current;
-    saveState({ transactions: t, income: i, settings: newSettings });
+    const raw = loadState();
+    saveState({ ...raw, settings: newSettings });
     try {
       await fsUpdateSettings(uidRef.current, newSettings);
     } catch (err) {
-      console.error("[saveSettings] Firestore write failed:", err?.code, err?.message, err);
+      console.error('[saveSettings] Firestore write failed:', err?.code, err?.message, err);
     }
   }, []);
 

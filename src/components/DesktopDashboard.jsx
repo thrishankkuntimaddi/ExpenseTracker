@@ -1,12 +1,12 @@
 import { useState, useRef, useMemo } from 'react';
 import {
   AreaChart, Area, PieChart, Pie, Cell, BarChart, Bar,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import {
   ShoppingCart, PenLine, IndianRupee, PiggyBank,
   Wallet, TrendingUp, TrendingDown, Flame, ChevronDown,
-  ChevronRight, ArrowDownToLine, Trash2, Zap, Moon, Sun, LogOut, Briefcase, Upload,
+  ChevronRight, Trash2, Zap, Moon, Sun, Briefcase, Upload,
 } from 'lucide-react';
 import { generateId } from '../utils/storage';
 import { formatAmount, formatDate } from '../utils/dateHelpers';
@@ -87,7 +87,7 @@ export default function DesktopDashboard({
 }) {
   const isMonoflow = theme === 'monoflow';
   // Use shared hooks — no more duplicated logic
-  const { stats, filtTxns, pieData, barData, areaData, C } = useStats(transactions, income, selectedPeriod, theme);
+  const { stats, filtTxns, filtInc, pieData, barData, areaData, C } = useStats(transactions, income, selectedPeriod, theme);
   const { editingWaste, wasteInput, wasteInputRef, handleTxnTap, saveWaste, cancelWaste, setWasteInput } = useWastage(onUpdateTransaction);
 
   /* ── UI state ── */
@@ -147,6 +147,8 @@ export default function DesktopDashboard({
     setTimeout(() => iNameRef.current?.focus(), 50);
   }
 
+
+
   function toggleGroup(label) {
     setExpandedGroups(prev => { const n = new Set(prev); n.has(label) ? n.delete(label) : n.add(label); return n; });
   }
@@ -176,6 +178,8 @@ export default function DesktopDashboard({
           onAddTransaction={onAddTransaction}
           onAddIncome={onAddIncome}
           onClose={() => setShowImport(false)}
+          transactions={transactions}
+          income={income}
         />
       )}
 
@@ -318,11 +322,6 @@ export default function DesktopDashboard({
             <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', lineHeight: 1.1 }}>
               {formatAmount(stats.balance)}
             </div>
-            {stats.openingBalance !== 0 && (
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: 2, marginTop: 1 }}>
-                <ArrowDownToLine size={9} />Opening: {formatAmount(stats.openingBalance)}
-              </div>
-            )}
           </div>
 
           {/* Income */}
@@ -563,7 +562,7 @@ export default function DesktopDashboard({
                 title="Income"
                 right={
                   <div style={{ padding: '3px 10px', borderRadius: 20, background: 'var(--income-bg)', color: 'var(--income)', fontSize: 11, fontWeight: 700, border: '1px solid var(--income-border)' }}>
-                    {formatAmount(income.reduce((s, i) => s + i.amount, 0))}
+                    {formatAmount(filtInc.reduce((s, i) => s + i.amount, 0))}
                   </div>
                 }
               />
@@ -597,15 +596,18 @@ export default function DesktopDashboard({
                 </button>
               </div>
               <div style={{ maxHeight: 280, overflowY: 'auto', borderTop: '1px solid var(--border)' }}>
-                {income.length === 0 ? (
+                {filtInc.length === 0 ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 70 }}>
-                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No income yet</p>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No income this period</p>
                   </div>
-                ) : income.slice().reverse().map(entry => (
-                  <div key={entry.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 16px', borderBottom: '1px solid var(--border)' }}>
+                ) : filtInc.slice().reverse().map(entry => (
+                  <div key={entry.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '9px 16px', borderBottom: '1px solid var(--border)',
+                  }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                       <Wallet size={11} style={{ color: 'var(--income)', flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                         {entry.name}
                       </span>
                     </div>

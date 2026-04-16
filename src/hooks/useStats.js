@@ -1,8 +1,7 @@
 // ─── useStats hook ───────────────────────────────────────────────
-// Centralises ALL financial calculations that were previously
-// duplicated between StatsTab and DesktopDashboard.
+// Centralises ALL financial calculations used by StatsTab and DesktopDashboard.
 import { useMemo } from "react";
-import { filterItemsByPeriod, getOpeningBalance } from "../utils/periodHelpers";
+import { filterItemsByPeriod } from "../utils/periodHelpers";
 
 const C_LIGHT = {
   expense: "#DC2626", savings: "#2563EB",
@@ -26,7 +25,6 @@ export function useStats(transactions, income, selectedPeriod, theme) {
   );
 
   const stats = useMemo(() => {
-    const openingBalance = getOpeningBalance(selectedPeriod, transactions, income);
     const totalIncome  = filtInc.reduce((s, i) => s + i.amount, 0);
     const totalExpense = filtTxns.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
     const totalSavings = filtTxns.filter(t => t.type === "savings").reduce((s, t) => s + t.amount, 0);
@@ -36,12 +34,12 @@ export function useStats(transactions, income, selectedPeriod, theme) {
     const externalProfit = filtTxns
       .filter(t => t.type === "external")
       .reduce((s, t) => s + ((t.settlement ?? t.amount) - t.amount), 0);
-    const balance      = openingBalance + totalIncome + externalProfit - totalExpense - totalSavings - totalPerson;
-    const totalSpend   = totalExpense + totalSavings + totalPerson;
+    const balance    = totalIncome + externalProfit - totalExpense - totalSavings - totalPerson;
+    const totalSpend = totalExpense + totalSavings + totalPerson;
     const wastePercent = totalSpend > 0 ? ((totalWaste / totalSpend) * 100).toFixed(1) : "0.0";
 
-    const now   = new Date();
-    const all   = [...filtTxns, ...filtInc];
+    const now = new Date();
+    const all = [...filtTxns, ...filtInc];
     const firstDate = all.reduce((min, t) => { const d = new Date(t.date); return d < min ? d : min; }, now);
     const days   = Math.max(1, Math.ceil((now - firstDate) / 86400000) + 1);
     const weeks  = Math.max(1, days / 7);
@@ -49,11 +47,11 @@ export function useStats(transactions, income, selectedPeriod, theme) {
     const spend  = totalExpense + totalPerson;
 
     return {
-      openingBalance, totalIncome, totalExpense, totalSavings,
+      totalIncome, totalExpense, totalSavings,
       totalPerson, totalWaste, externalProfit, balance, wastePercent,
       avgDay: spend / days, avgWeek: spend / weeks, avgMonth: spend / months,
     };
-  }, [filtTxns, filtInc, selectedPeriod, transactions, income]);
+  }, [filtTxns, filtInc]);
 
   /* ── Chart data ── */
   const pieData = useMemo(() => [

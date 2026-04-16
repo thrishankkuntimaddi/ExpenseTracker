@@ -50,6 +50,8 @@ export default function HistoryTab({
           onAddTransaction={onAddTransaction}
           onAddIncome={onAddIncome}
           onClose={() => setShowImport(false)}
+          transactions={transactions}
+          income={income}
         />
       )}
 

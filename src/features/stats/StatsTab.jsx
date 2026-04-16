@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   TrendingUp, TrendingDown, PiggyBank, Users,
-  Scale, Flame, CalendarDays, ArrowDownToLine,
+  Scale, Flame, CalendarDays,
   ChevronDown, ChevronUp,
 } from 'lucide-react';
 import {
@@ -158,30 +158,6 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
             {/* ── LEFT COLUMN ── */}
             <div className="stats-left">
 
-              {/* Opening balance carry-forward */}
-              {stats.openingBalance !== 0 && (
-                <div style={{
-                  borderRadius: 12, padding: '12px 16px', marginBottom: 14,
-                  background: stats.openingBalance >= 0 ? 'var(--income-bg)' : 'var(--expense-bg)',
-                  border: `1.5px solid ${stats.openingBalance >= 0 ? 'var(--income-border)' : 'var(--expense-border)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <ArrowDownToLine size={14} style={{ color: stats.openingBalance >= 0 ? 'var(--income)' : 'var(--expense)' }} />
-                    <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: stats.openingBalance >= 0 ? 'var(--income)' : 'var(--expense)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                        Opening Balance
-                      </div>
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>
-                        Carried forward from previous period
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: stats.openingBalance >= 0 ? 'var(--income)' : 'var(--expense)' }}>
-                    {formatAmount(stats.openingBalance)}
-                  </div>
-                </div>
-              )}
 
               {/* Balance Hero */}
               <div style={{
@@ -196,7 +172,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                   {formatAmount(stats.balance)}
                 </p>
                 <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
-                  {stats.openingBalance !== 0 ? 'Opening + Income − Expense − Savings − Given' : 'Income − Expense − Savings − Given'}
+                  Income − Expense − Savings − Given
                 </p>
               </div>
 

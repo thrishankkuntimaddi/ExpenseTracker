@@ -1,8 +1,8 @@
 import { useRef, useState, useMemo } from 'react';
 import { PenLine, IndianRupee, Wallet, Trash2, TrendingUp, CalendarDays } from 'lucide-react';
 import { generateId } from '../../utils/storage';
-import { formatAmount, groupByDay, formatDate } from '../../utils/dateHelpers';
-import { filterItemsByPeriod } from '../../utils/periodHelpers';
+import { formatAmount, groupByDay } from '../../utils/dateHelpers';
+import { filterItemsByPeriod, getCurrentMonthValue } from '../../utils/periodHelpers';
 import PeriodSelector from '../../components/PeriodSelector';
 
 export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selectedPeriod, onPeriodChange, transactions }) {
@@ -17,12 +17,13 @@ export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selecte
     [income, selectedPeriod]
   );
 
+  const currentMonth = getCurrentMonthValue();
+
   const totalIncome     = filtInc.reduce((s, i) => s + i.amount, 0);
-  const allTimeIncome   = income.reduce((s, i) => s + i.amount, 0);
   const grouped         = groupByDay(filtInc);
 
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const thisMonthIncome = income.filter(i => i.date?.slice(0, 7) === currentMonth)
+  const thisMonthIncome = income
+    .filter(i => i.date?.slice(0, 7) === currentMonth)
     .reduce((s, i) => s + i.amount, 0);
 
   function handleNameKey(e)   { if (e.key === 'Enter') { e.preventDefault(); amountRef.current?.focus(); } }
@@ -66,6 +67,8 @@ export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selecte
           />
         </div>
       </div>
+
+
 
       {/* Body */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -186,26 +189,40 @@ export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selecte
                     </div>
                     <div className="card">
                       {group.entries.map((entry, i) => (
-                        <div key={entry.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: i < group.entries.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--income-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <TrendingUp size={14} style={{ color: 'var(--income)' }} />
+                          <div key={entry.id} style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '12px 14px',
+                            borderBottom: i < group.entries.length - 1 ? '1px solid var(--border)' : 'none',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div style={{
+                                width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                                background: 'var(--income-bg)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              }}>
+                                <TrendingUp size={14} style={{ color: 'var(--income)' }} />
+                              </div>
+                              <div>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                                  {entry.name}
+                                </span>
+                              </div>
                             </div>
-                            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{entry.name}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--income)' }}>
+                                {formatAmount(entry.amount)}
+                              </span>
+                              {onDeleteIncome && (
+                                <button onClick={() => onDeleteIncome(entry.id)}
+                                  style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
+                                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--income)' }}>{formatAmount(entry.amount)}</span>
-                            {onDeleteIncome && (
-                              <button onClick={() => onDeleteIncome(entry.id)}
-                                style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
-                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
-                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
-                                <Trash2 size={12} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </div>
                 ))}

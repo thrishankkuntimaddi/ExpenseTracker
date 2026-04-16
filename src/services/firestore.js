@@ -1,7 +1,7 @@
 // ─── Firestore CRUD Layer ────────────────────────────────────────
 import {
   doc, collection, updateDoc, deleteDoc,
-  onSnapshot, query, serverTimestamp, setDoc, getDoc, deleteField, getDocs,
+  onSnapshot, query, where, serverTimestamp, setDoc, getDoc, deleteField, getDocs,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { loadState } from "../utils/storage";
@@ -158,3 +158,10 @@ export async function deleteAllUserData(uid) {
   ]);
 }
 
+/* ── One-time purge: delete all carry_forward income entries ── */
+export async function purgeCarryForwards(uid) {
+  const snap = await getDocs(query(incRef(uid), where('type', '==', 'carry_forward')));
+  if (snap.empty) return;
+  await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+  console.info(`[purgeCarryForwards] Deleted ${snap.size} carry_forward entries.`);
+}
