@@ -90,7 +90,7 @@ function AuthenticatedApp({ user, signOut }) {
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {activeTab === 'today'    && <TodayTab    {...commonProps} onAdd={addTransaction} />}
-        {activeTab === 'history'  && <HistoryTab  {...commonProps} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} />}
+        {activeTab === 'history'  && <HistoryTab  {...commonProps} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onAddTransaction={addTransaction} onAddIncome={addIncome} />}
         {activeTab === 'income'   && <IncomeTab   {...commonProps} onAddIncome={addIncome} onDeleteIncome={deleteIncome} />}
         {activeTab === 'stats'    && <StatsTab    {...commonProps} />}
         {activeTab === 'settings' && <SettingsTab {...commonProps} onDataChange={handleDataChange} onThemeChange={handleThemeChange} onSignOut={signOut} addTransaction={addTransaction} addIncome={addIncome} />}

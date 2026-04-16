@@ -1,17 +1,20 @@
 import { useState, useMemo } from 'react';
-import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Upload } from 'lucide-react';
 import { formatAmount } from '../../utils/dateHelpers';
 import PeriodSelector from '../../components/PeriodSelector';
 import { useWastage } from '../../hooks/useWastage';
 import { useTransactions } from '../../hooks/useTransactions';
 import { TYPE_META } from '../../utils/typeConfig';
+import LoadMonthlyData from '../../components/LoadMonthlyData';
 
 
 export default function HistoryTab({
   transactions, income = [], selectedPeriod, onPeriodChange,
   onUpdateTransaction, onDeleteTransaction,
+  onAddTransaction, onAddIncome,
 }) {
   const [collapsedGroups, setCollapsedGroups] = useState(new Set());
+  const [showImport, setShowImport] = useState(false);
   const { editingWaste, wasteInput, wasteInputRef, handleTxnTap, saveWaste, cancelWaste, setWasteInput } = useWastage(onUpdateTransaction);
 
   /* ─ Filter & group — shared hook eliminates the duplicate useMemo blocks ─ */
@@ -41,6 +44,15 @@ export default function HistoryTab({
   return (
     <div className="tab-root">
 
+      {/* Load Past Data modal */}
+      {showImport && onAddTransaction && onAddIncome && (
+        <LoadMonthlyData
+          onAddTransaction={onAddTransaction}
+          onAddIncome={onAddIncome}
+          onClose={() => setShowImport(false)}
+        />
+      )}
+
       {/* Header */}
       <div className="tab-header">
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -52,6 +64,34 @@ export default function HistoryTab({
               {groupLabel} · {filtTxns.length} transactions
             </p>
           </div>
+          {/* Load Past Data button */}
+          {onAddTransaction && onAddIncome && (
+            <button
+              id="mobile-btn-load-past-data"
+              onClick={() => setShowImport(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '7px 12px', borderRadius: 10,
+                fontSize: 11, fontWeight: 700,
+                background: 'var(--accent-bg)',
+                color: 'var(--accent)',
+                border: '1.5px solid var(--accent-border)',
+                cursor: 'pointer', fontFamily: 'inherit',
+                flexShrink: 0,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'var(--accent)';
+                e.currentTarget.style.color = '#fff';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'var(--accent-bg)';
+                e.currentTarget.style.color = 'var(--accent)';
+              }}
+            >
+              <Upload size={11} />
+              Load Past Data
+            </button>
+          )}
         </div>
 
         {/* Period selector */}

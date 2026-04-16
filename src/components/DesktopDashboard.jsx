@@ -6,7 +6,7 @@ import {
 import {
   ShoppingCart, PenLine, IndianRupee, PiggyBank,
   Wallet, TrendingUp, TrendingDown, Flame, ChevronDown,
-  ChevronRight, ArrowDownToLine, Trash2, Zap, Moon, Sun, LogOut, Briefcase,
+  ChevronRight, ArrowDownToLine, Trash2, Zap, Moon, Sun, LogOut, Briefcase, Upload,
 } from 'lucide-react';
 import { generateId } from '../utils/storage';
 import { formatAmount, formatDate } from '../utils/dateHelpers';
@@ -17,6 +17,7 @@ import { useStats } from '../hooks/useStats';
 import { useWastage } from '../hooks/useWastage';
 import { useTransactions } from '../hooks/useTransactions';
 import { TYPE_META, TRANSACTION_TYPES } from '../utils/typeConfig';
+import LoadMonthlyData from './LoadMonthlyData';
 
 
 const TODAY_LABEL = formatDate(new Date().toISOString());
@@ -91,6 +92,7 @@ export default function DesktopDashboard({
 
   /* ── UI state ── */
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [showImport,    setShowImport]    = useState(false);
   const [name, setName]             = useState('');
   const [amount, setAmount]         = useState('');
   const [settlement, setSettlement] = useState('');
@@ -167,6 +169,15 @@ export default function DesktopDashboard({
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)', overflowY: 'auto', overflowX: 'hidden' }}>
+
+      {/* Load Monthly Data modal */}
+      {showImport && (
+        <LoadMonthlyData
+          onAddTransaction={onAddTransaction}
+          onAddIncome={onAddIncome}
+          onClose={() => setShowImport(false)}
+        />
+      )}
 
       {/* ══ HEADER ══ */}
       <div style={{
@@ -725,6 +736,33 @@ export default function DesktopDashboard({
                   {getPeriodLabel(selectedPeriod)} · {filtTxns.length} transactions · Click group to expand
                 </div>
               </div>
+              {/* Import Monthly Data button */}
+              <button
+                id="desktop-btn-import-monthly"
+                onClick={() => setShowImport(true)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '7px 13px', borderRadius: 9,
+                  fontSize: 11, fontWeight: 700,
+                  background: 'var(--accent-bg)',
+                  color: 'var(--accent)',
+                  border: '1.5px solid var(--accent-border)',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  flexShrink: 0,
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'var(--accent)';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--accent-bg)';
+                  e.currentTarget.style.color = 'var(--accent)';
+                }}
+              >
+                <Upload size={11} />
+                Import Monthly Data
+              </button>
             </div>
 
             <div style={{ maxHeight: 420, overflowY: 'auto' }}>
