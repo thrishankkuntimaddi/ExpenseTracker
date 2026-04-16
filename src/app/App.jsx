@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Home, List, Wallet, BarChart2, Settings, ArrowLeftRight } from 'lucide-react';
 import { useFirestoreData } from '../hooks/useFirestoreData';
+import { useRollover } from '../hooks/useRollover';
 import { getDefaultPeriod } from '../utils/periodHelpers';
 import AuthGate from '../features/auth/AuthGate';
 import TodayTab         from '../features/transactions/TodayTab';
@@ -49,6 +50,9 @@ function AuthenticatedApp({ user, signOut }) {
 
   const theme = settings?.theme || 'light';
 
+  // ── Monthly carry-forward rollover engine ──
+  const { isRolling, monthlySummaries } = useRollover(user.uid, income, transactions);
+
   useEffect(() => { applyTheme(theme); }, [theme]);
 
   const handleThemeChange = useCallback((newTheme) => {
@@ -67,8 +71,23 @@ function AuthenticatedApp({ user, signOut }) {
   if (isDesktop) {
     return (
       <div style={{ width: '100%', minHeight: '100%', overflow: 'auto', background: 'var(--bg)' }}>
+        {/* Rollover indicator */}
+        {isRolling && (
+          <div style={{
+            position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(22,163,74,0.92)', color: '#fff',
+            padding: '6px 16px', borderRadius: 99, fontSize: 12, fontWeight: 600,
+            zIndex: 9999, pointerEvents: 'none',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff', opacity: 0.8, display: 'inline-block', animation: 'pulse 1s infinite' }} />
+            Syncing monthly balances…
+          </div>
+        )}
         <DesktopDashboard
           {...commonProps}
+          monthlySummaries={monthlySummaries}
           onAddTransaction={addTransaction}
           onUpdateTransaction={updateTransaction}
           onDeleteTransaction={deleteTransaction}
@@ -90,10 +109,24 @@ function AuthenticatedApp({ user, signOut }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
+      {/* Rollover syncing indicator (mobile) */}
+      {isRolling && (
+        <div style={{
+          position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(22,163,74,0.92)', color: '#fff',
+          padding: '6px 16px', borderRadius: 99, fontSize: 12, fontWeight: 600,
+          zIndex: 9999, pointerEvents: 'none',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff', opacity: 0.8, display: 'inline-block' }} />
+          Syncing monthly balances…
+        </div>
+      )}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {activeTab === 'today'    && <TodayTab    {...commonProps} onAdd={addTransaction} />}
         {activeTab === 'history'  && <HistoryTab  {...commonProps} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onAddTransaction={addTransaction} onAddIncome={addIncome} />}
-        {activeTab === 'income'   && <IncomeTab   {...commonProps} onAddIncome={addIncome} onDeleteIncome={deleteIncome} />}
+        {activeTab === 'income'   && <IncomeTab   {...commonProps} onAddIncome={addIncome} onDeleteIncome={deleteIncome} monthlySummaries={monthlySummaries} />}
         {activeTab === 'external' && <ExternalTab user={user} onAddIncome={addIncome} onAddTransaction={addTransaction} />}
         {activeTab === 'stats'    && <StatsTab    {...commonProps} />}
         {activeTab === 'settings' && <SettingsTab {...commonProps} onDataChange={handleDataChange} onThemeChange={handleThemeChange} onSignOut={signOut} addTransaction={addTransaction} addIncome={addIncome} />}

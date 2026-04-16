@@ -26,17 +26,19 @@ export function useStats(transactions, income, selectedPeriod, theme) {
 
   const stats = useMemo(() => {
     const totalIncome  = filtInc.reduce((s, i) => s + i.amount, 0);
-    const totalExpense = filtTxns.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-    const totalSavings = filtTxns.filter(t => t.type === "savings").reduce((s, t) => s + t.amount, 0);
-    const totalPerson  = filtTxns.filter(t => t.type === "person").reduce((s, t) => s + t.amount, 0);
+    const totalExpense = filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    const totalSavings = filtTxns.filter(t => t.type === 'savings').reduce((s, t) => s + t.amount, 0);
+    const totalPerson  = filtTxns.filter(t => t.type === 'person').reduce((s, t) => s + t.amount, 0);
     const totalWaste   = filtTxns.reduce((s, t) => s + (t.wasteAmount || 0), 0);
+    // carry_forward_deficit = negative closing balance brought in from prior month — deducted from balance
+    const carryDeficit = filtTxns.filter(t => t.type === 'carry_forward_deficit').reduce((s, t) => s + t.amount, 0);
     // External: amount paid is NOT an expense — only the net profit/loss counts
     const externalProfit = filtTxns
-      .filter(t => t.type === "external")
+      .filter(t => t.type === 'external')
       .reduce((s, t) => s + ((t.settlement ?? t.amount) - t.amount), 0);
-    const balance    = totalIncome + externalProfit - totalExpense - totalSavings - totalPerson;
+    const balance    = totalIncome + externalProfit - totalExpense - totalSavings - totalPerson - carryDeficit;
     const totalSpend = totalExpense + totalSavings + totalPerson;
-    const wastePercent = totalSpend > 0 ? ((totalWaste / totalSpend) * 100).toFixed(1) : "0.0";
+    const wastePercent = totalSpend > 0 ? ((totalWaste / totalSpend) * 100).toFixed(1) : '0.0';
 
     const now = new Date();
     const all = [...filtTxns, ...filtInc];
