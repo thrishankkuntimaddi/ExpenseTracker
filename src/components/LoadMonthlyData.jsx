@@ -43,7 +43,7 @@ function parseEntries(text) {
       const amountStr = tokens[tokens.length - 1];
       const name      = tokens.slice(0, tokens.length - 1).join(' ').trim();
       const amount    = Math.round(parseFloat(amountStr) * 100) / 100; // keep 2dp, avoid float drift
-      if (!name || isNaN(amount) || amount <= 0) return null;
+      if (!name || isNaN(amount) || amount === 0) return null;
       return { name, amount };
     })
     .filter(Boolean);
