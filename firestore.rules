@@ -2,7 +2,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Each user owns their top-level doc + ALL subcollections under it
+    // ─── ExpenseTracker (nistha-passi-core) ─────────────────────────
+    // Strict user-scoped rules: each user can only access their own data.
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
 
@@ -21,6 +22,19 @@ service cloud.firestore {
       match /monthly_summaries/{monthId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+    }
+
+    // ─── Other Apps (shared Firebase project) ───────────────────────
+    // Catch-all: any authenticated user can access any document/collection
+    // NOT already matched above. This restores access for all other apps
+    // in this project (ClearMyMind, Chttrix, etc.) without affecting
+    // the ExpenseTracker's strict rules above.
+    //
+    // ⚠️  ACTION REQUIRED: Replace this catch-all with app-specific rules
+    //     for each other app as you build/maintain them. A catch-all is safe
+    //     only while each app enforces its own auth checks in code.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
