@@ -8,6 +8,7 @@ import {
 import { useExternalTransactions } from '../../hooks/useExternalTransactions';
 import { generateId } from '../../utils/storage';
 import { formatAmount, formatDate } from '../../utils/dateHelpers';
+import { filterItemsByPeriod, getPeriodLabel } from '../../utils/periodHelpers';
 
 /* ─── Pure helpers ─────────────────────────────────────────────── */
 function calcTotals(items, received) {
@@ -254,11 +255,17 @@ function HistoryCard({ session, onDelete }) {
 /* ═══════════════════════════════════════════════════════════════
    MAIN ExternalTab
 ═══════════════════════════════════════════════════════════════ */
-export default function ExternalTab({ user, onAddIncome, onAddTransaction }) {
+export default function ExternalTab({ user, onAddIncome, onAddTransaction, selectedPeriod, theme }) {
   const {
     sessions, activeSession, saving,
     createSession, updateSession, closeSession, deleteSession,
   } = useExternalTransactions(user?.uid);
+
+  const isMonoflow = theme === 'monoflow';
+  // In monoflow, primary actions use warm gold accent; in light theme, keep external purple
+  const primaryColor = isMonoflow ? 'var(--accent)' : 'var(--external)';
+  const primaryBg    = isMonoflow ? 'var(--accent-bg)' : 'var(--external-bg)';
+  const primaryBorder = isMonoflow ? 'var(--accent-border)' : 'var(--external-border)';
 
   /* ── Local working copy of the active session rows ── */
   const [items,    setItems]    = useState([newItemRow()]);
@@ -396,8 +403,11 @@ export default function ExternalTab({ user, onAddIncome, onAddTransaction }) {
     }
   };
 
-  /* ── Closed sessions ── */
-  const closedSessions = sessions.filter(s => s.status === 'closed');
+  /* ── Closed sessions — filtered by the selected period ── */
+  const allClosedSessions = sessions.filter(s => s.status === 'closed');
+  const closedSessions = selectedPeriod
+    ? filterItemsByPeriod(allClosedSessions, selectedPeriod)
+    : allClosedSessions;
 
   /* ── Shared table style ── */
   const tableStyle = {
@@ -440,9 +450,9 @@ export default function ExternalTab({ user, onAddIncome, onAddTransaction }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 38, height: 38, borderRadius: 11,
-              background: 'linear-gradient(135deg, #7C3AED, #A855F7)',
+              background: primaryColor,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(124,58,237,0.3)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
             }}>
               <ArrowLeftRight size={17} color="#fff" strokeWidth={2.5} />
             </div>
@@ -469,13 +479,13 @@ export default function ExternalTab({ user, onAddIncome, onAddTransaction }) {
         {activeSession ? (
           <div style={{
             marginTop: 12, padding: '8px 14px', borderRadius: 10,
-            background: 'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(168,85,247,0.06))',
-            border: '1px solid rgba(124,58,237,0.2)',
+            background: primaryBg,
+            border: `1px solid ${primaryBorder}`,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#A855F7', animation: 'pulse 2s infinite' }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#7C3AED' }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: primaryColor, animation: 'pulse 2s infinite' }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: primaryColor }}>
                 Session active · started {formatDate(activeSession.date)}
               </span>
             </div>
@@ -493,14 +503,14 @@ export default function ExternalTab({ user, onAddIncome, onAddTransaction }) {
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '11px 20px', borderRadius: 12,
-                background: 'linear-gradient(135deg, #7C3AED, #A855F7)',
+                background: primaryColor,
                 color: '#fff', border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
-                boxShadow: '0 4px 14px rgba(124,58,237,0.35)',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
                 transition: 'transform 0.15s, box-shadow 0.15s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(124,58,237,0.45)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(124,58,237,0.35)'; }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.4)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.3)'; }}
             >
               <Plus size={16} />
               Start New Billing Session
@@ -517,11 +527,11 @@ export default function ExternalTab({ user, onAddIncome, onAddTransaction }) {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', gap: 16, textAlign: 'center' }}>
             <div style={{
               width: 80, height: 80, borderRadius: 24,
-              background: 'linear-gradient(135deg,rgba(124,58,237,0.1),rgba(168,85,247,0.06))',
-              border: '1.5px solid rgba(124,58,237,0.2)',
+              background: primaryBg,
+              border: `1.5px solid ${primaryBorder}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <ReceiptText size={34} style={{ color: '#A855F7', opacity: 0.7 }} />
+              <ReceiptText size={34} style={{ color: primaryColor, opacity: 0.7 }} />
             </div>
             <div>
               <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>No billing sessions yet</p>
@@ -539,7 +549,7 @@ export default function ExternalTab({ user, onAddIncome, onAddTransaction }) {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <ShoppingBag size={15} style={{ color: '#7C3AED' }} />
+                  <ShoppingBag size={15} style={{ color: 'var(--external)' }} />
                   <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
                     Goods Purchased
                   </span>
@@ -550,11 +560,11 @@ export default function ExternalTab({ user, onAddIncome, onAddTransaction }) {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 5,
                     padding: '5px 11px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                    background: 'rgba(124,58,237,0.1)', color: '#7C3AED',
-                    border: '1px solid rgba(124,58,237,0.25)', cursor: 'pointer', fontFamily: 'inherit',
+                    background: 'var(--external-bg)', color: 'var(--external)',
+                    border: '1px solid var(--external-border)', cursor: 'pointer', fontFamily: 'inherit',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124,58,237,0.18)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(124,58,237,0.1)'; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-bg)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--external-bg)'; }}
                 >
                   <Plus size={11} /> Add Row
                 </button>
@@ -837,6 +847,11 @@ export default function ExternalTab({ user, onAddIncome, onAddTransaction }) {
               <Clock size={14} style={{ color: 'var(--text-muted)' }} />
               <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
                 Session History ({closedSessions.length})
+                {selectedPeriod && (
+                  <span style={{ fontWeight: 500, textTransform: 'none', marginLeft: 6, color: 'var(--text-muted)', opacity: 0.7 }}>
+                    · {getPeriodLabel(selectedPeriod)}
+                  </span>
+                )}
               </span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

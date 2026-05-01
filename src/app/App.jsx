@@ -30,9 +30,20 @@ function useIsDesktop() {
   return isDesktop;
 }
 
+const THEME_KEY = 'et_theme';
+
 function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme || 'light');
+  const t = theme || 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem(THEME_KEY, t); } catch {}
 }
+
+// Apply cached theme IMMEDIATELY on module load — before React even mounts.
+// This eliminates the flash-of-light-theme on every refresh.
+try {
+  const cached = localStorage.getItem(THEME_KEY);
+  if (cached) document.documentElement.setAttribute('data-theme', cached);
+} catch {}
 
 /* ── Inner app rendered when user is authenticated ── */
 function AuthenticatedApp({ user, signOut }) {
@@ -47,6 +58,7 @@ function AuthenticatedApp({ user, signOut }) {
     saveSettings, handleDataChange,
   } = useFirestoreData(user.uid);
 
+  // settings is pre-seeded from localStorage cache in useFirestoreData, so theme is correct immediately.
   const theme = settings?.theme || 'light';
 
   useEffect(() => { applyTheme(theme); }, [theme]);
@@ -93,7 +105,7 @@ function AuthenticatedApp({ user, signOut }) {
         {activeTab === 'today'    && <TodayTab    {...commonProps} onAdd={addTransaction} />}
         {activeTab === 'history'  && <HistoryTab  {...commonProps} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onAddTransaction={addTransaction} onAddIncome={addIncome} />}
         {activeTab === 'income'   && <IncomeTab   {...commonProps} onAddIncome={addIncome} onDeleteIncome={deleteIncome} />}
-        {activeTab === 'external' && <ExternalTab user={user} onAddIncome={addIncome} onAddTransaction={addTransaction} />}
+        {activeTab === 'external' && <ExternalTab user={user} onAddIncome={addIncome} onAddTransaction={addTransaction} selectedPeriod={selectedPeriod} />}
         {activeTab === 'stats'    && <StatsTab    {...commonProps} />}
         {activeTab === 'settings' && <SettingsTab {...commonProps} onDataChange={handleDataChange} onThemeChange={handleThemeChange} onSignOut={signOut} addTransaction={addTransaction} addIncome={addIncome} />}
       </div>

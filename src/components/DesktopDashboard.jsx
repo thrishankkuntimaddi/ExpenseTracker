@@ -312,11 +312,28 @@ export default function DesktopDashboard({
 
       {/* ══ EXTERNAL VIEW ══ */}
       {activeSection === 'external' && (
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 28px 28px', height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
+        <div className="desktop-external-host" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 28px 28px', height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
+          {/* Override mobile tab-root/tab-header styles for desktop canvas */}
+          <style>{`
+            .desktop-external-host .tab-root {
+              background: transparent !important;
+            }
+            .desktop-external-host .tab-header {
+              background: transparent !important;
+              border-bottom-color: var(--border) !important;
+              padding: 20px 0 14px !important;
+            }
+            .desktop-external-host .tab-root > div:nth-child(2) {
+              padding-left: 0 !important;
+              padding-right: 0 !important;
+            }
+          `}</style>
           <ExternalTab
             user={user}
             onAddIncome={onAddIncome}
             onAddTransaction={onAddTransaction}
+            selectedPeriod={selectedPeriod}
+            theme={theme}
           />
         </div>
       )}
@@ -696,30 +713,90 @@ export default function DesktopDashboard({
                   </ResponsiveContainer>
                 </div>
 
-                {/* 6-month area */}
+                {/* Full History Trend — scrollable, all 4 series */}
                 <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-                    6-Month Trend
+                  {/* Header + Legend */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
+                      Full History Trend
+                    </p>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      {[
+                        { key: 'Income',  color: C.income  },
+                        { key: 'Expense', color: C.expense },
+                        { key: 'Savings', color: C.savings },
+                        { key: 'Person',  color: C.person  },
+                      ].map(({ key, color }) => (
+                        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <div style={{ width: 20, height: 2.5, borderRadius: 99, background: color }} />
+                          <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-muted)' }}>{key}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Scrollable chart container — scrolled to the right (latest month) */}
+                  <div
+                    ref={el => { if (el) el.scrollLeft = el.scrollWidth; }}
+                    style={{
+                      overflowX: 'auto', overflowY: 'hidden',
+                      borderRadius: 10,
+                      background: 'var(--surface2)',
+                      border: '1px solid var(--border)',
+                      paddingBottom: 2,
+                    }}
+                  >
+                    <div style={{ width: Math.max(400, areaData.length * 68), minWidth: '100%' }}>
+                      <AreaChart
+                        width={Math.max(400, areaData.length * 68)}
+                        height={130}
+                        data={areaData}
+                        margin={{ top: 12, right: 16, left: 0, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient id="tIncGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%"   stopColor={C.income}  stopOpacity={0.4} />
+                            <stop offset="100%" stopColor={C.income}  stopOpacity={0}   />
+                          </linearGradient>
+                          <linearGradient id="tExpGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%"   stopColor={C.expense} stopOpacity={0.4} />
+                            <stop offset="100%" stopColor={C.expense} stopOpacity={0}   />
+                          </linearGradient>
+                          <linearGradient id="tSavGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%"   stopColor={C.savings} stopOpacity={0.35} />
+                            <stop offset="100%" stopColor={C.savings} stopOpacity={0}    />
+                          </linearGradient>
+                          <linearGradient id="tPerGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%"   stopColor={C.person}  stopOpacity={0.35} />
+                            <stop offset="100%" stopColor={C.person}  stopOpacity={0}    />
+                          </linearGradient>
+                        </defs>
+                        <XAxis
+                          dataKey="month"
+                          tick={{ fontSize: 9, fill: 'var(--text-muted)', fontWeight: 600 }}
+                          axisLine={false} tickLine={false}
+                          interval={0}
+                        />
+                        <YAxis hide />
+                        <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'var(--border-dark)', strokeWidth: 1 }} />
+                        <Area type="monotone" dataKey="Income"  stroke={C.income}  strokeWidth={2} fill="url(#tIncGrad)"
+                          dot={{ r: 3, fill: C.income,  stroke: 'var(--surface)', strokeWidth: 1.5 }}
+                          activeDot={{ r: 5, fill: C.income,  stroke: 'var(--surface)', strokeWidth: 2 }} />
+                        <Area type="monotone" dataKey="Expense" stroke={C.expense} strokeWidth={2} fill="url(#tExpGrad)"
+                          dot={{ r: 3, fill: C.expense, stroke: 'var(--surface)', strokeWidth: 1.5 }}
+                          activeDot={{ r: 5, fill: C.expense, stroke: 'var(--surface)', strokeWidth: 2 }} />
+                        <Area type="monotone" dataKey="Savings" stroke={C.savings} strokeWidth={2} fill="url(#tSavGrad)"
+                          dot={{ r: 3, fill: C.savings, stroke: 'var(--surface)', strokeWidth: 1.5 }}
+                          activeDot={{ r: 5, fill: C.savings, stroke: 'var(--surface)', strokeWidth: 2 }} />
+                        <Area type="monotone" dataKey="Person"  stroke={C.person}  strokeWidth={2} fill="url(#tPerGrad)"
+                          dot={{ r: 3, fill: C.person,  stroke: 'var(--surface)', strokeWidth: 1.5 }}
+                          activeDot={{ r: 5, fill: C.person,  stroke: 'var(--surface)', strokeWidth: 2 }} />
+                      </AreaChart>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 5, textAlign: 'right', opacity: 0.6 }}>
+                    ← scroll to view history from Feb 2025
                   </p>
-                  <ResponsiveContainer width="100%" height={90}>
-                    <AreaChart data={areaData} margin={{ top: 4, right: 0, left: -22, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="dIncGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor={C.income}  stopOpacity={0.35} />
-                          <stop offset="95%" stopColor={C.income}  stopOpacity={0}    />
-                        </linearGradient>
-                        <linearGradient id="dExpGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor={C.expense} stopOpacity={0.35} />
-                          <stop offset="95%" stopColor={C.expense} stopOpacity={0}    />
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="month" tick={{ fontSize: 8, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                      <YAxis hide />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Area type="monotone" dataKey="Income"  stroke={C.income}  strokeWidth={1.5} fill="url(#dIncGrad)" dot={{ r: 2, fill: C.income }}  />
-                      <Area type="monotone" dataKey="Expense" stroke={C.expense} strokeWidth={1.5} fill="url(#dExpGrad)" dot={{ r: 2, fill: C.expense }} />
-                    </AreaChart>
-                  </ResponsiveContainer>
                 </div>
 
                 {/* Waste meter */}

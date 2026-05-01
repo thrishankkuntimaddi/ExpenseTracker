@@ -71,16 +71,26 @@ export function useStats(transactions, income, selectedPeriod, theme) {
     };
   }), [transactions]);
 
-  const areaData = useMemo(() => Array.from({ length: 6 }, (_, i) => {
-    const now = new Date();
-    const d   = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-    const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    return {
-      month: d.toLocaleDateString("en-IN", { month: "short" }),
-      Income:  income.filter(it => it.date?.slice(0, 7) === month).reduce((s, it) => s + it.amount, 0),
-      Expense: transactions.filter(t => t.type === "expense" && t.date?.slice(0, 7) === month).reduce((s, t) => s + t.amount, 0),
-    };
-  }), [transactions, income]);
+  const areaData = useMemo(() => {
+    // Start from Feb 2025, end at current month — full history
+    const start = new Date(2025, 1, 1); // Feb 2025
+    const now   = new Date();
+    const end   = new Date(now.getFullYear(), now.getMonth(), 1);
+    const months = [];
+    const cur = new Date(start);
+    while (cur <= end) {
+      const key = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`;
+      months.push({
+        month:   cur.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }),
+        Income:  income.filter(it => it.date?.slice(0, 7) === key).reduce((s, it) => s + it.amount, 0),
+        Expense: transactions.filter(t => t.type === 'expense' && t.date?.slice(0, 7) === key).reduce((s, t) => s + t.amount, 0),
+        Savings: transactions.filter(t => t.type === 'savings' && t.date?.slice(0, 7) === key).reduce((s, t) => s + t.amount, 0),
+        Person:  transactions.filter(t => t.type === 'person'  && t.date?.slice(0, 7) === key).reduce((s, t) => s + t.amount, 0),
+      });
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    return months;
+  }, [transactions, income]);
 
   return { stats, filtTxns, filtInc, pieData, barData, areaData, C };
 }

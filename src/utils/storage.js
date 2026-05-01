@@ -5,8 +5,9 @@ const defaultState = {
   transactions: [],
   income: [],
   settings: {
-    theme: 'light',        // 'light' | 'monoflow'
-    googleSheetUrl: '',   // persisted in Firestore, cached here for cold-start
+    // Read the persisted theme at module load — avoids defaulting to 'light' on cold start
+    theme: (() => { try { const s = localStorage.getItem('expense_tracker_v1'); if (s) { const p = JSON.parse(s); if (p?.settings?.theme) return p.settings.theme; } } catch {} return 'light'; })(),
+    googleSheetUrl: '',
   },
 };
 
