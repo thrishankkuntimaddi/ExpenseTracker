@@ -8,10 +8,8 @@ import {
   addIncome as fsAddIncome,
   deleteIncome as fsDeleteIncome,
   updateSettings as fsUpdateSettings,
-  upsertMonthlySummary,
 } from "../services/firestore";
 import { saveState, loadState } from "../utils/storage";
-import { getCurrentMonthValue } from "../utils/periodHelpers";
 
 /**
  * Real-time Firestore data for the authenticated user.
@@ -26,12 +24,6 @@ export function useFirestoreData(uid) {
 
   const uidRef = useRef(uid);
   uidRef.current = uid;
-
-  // Refs to always-fresh income/txns for summary calculations (avoids stale closures)
-  const incomeRef = useRef(income);
-  const txnsRef   = useRef(transactions);
-  incomeRef.current = income;
-  txnsRef.current   = transactions;
 
   // Internal ref for optimistic delete rollback
   const deletedTxnRef = useRef(null);
@@ -60,12 +52,6 @@ export function useFirestoreData(uid) {
     setTransactions(prev => [...prev, txn]);
     try {
       await fsAddTxn(uidRef.current, txn);
-      // Keep the affected month's summary current
-      const month = txn.date?.slice(0, 7) || getCurrentMonthValue();
-      setTransactions(prev => {
-        upsertMonthlySummary(uidRef.current, month, incomeRef.current, prev).catch(() => {});
-        return prev;
-      });
     } catch (err) {
       console.error('[addTransaction] Firestore write failed:', err?.code, err?.message, err);
       setTransactions(prev => prev.filter(t => t.id !== txn.id));
@@ -84,22 +70,13 @@ export function useFirestoreData(uid) {
 
   const deleteTransaction = useCallback(async (id) => {
     if (!uidRef.current) return;
-    let deletedMonth = getCurrentMonthValue();
     setTransactions(prev => {
       const found = prev.find(t => t.id === id);
-      if (found) {
-        deletedTxnRef.current = found;
-        deletedMonth = found.date?.slice(0, 7) || deletedMonth;
-      }
+      if (found) deletedTxnRef.current = found;
       return prev.filter(t => t.id !== id);
     });
     try {
       await fsDeleteTxn(uidRef.current, id);
-      // Refresh the affected month's summary
-      setTransactions(prev => {
-        upsertMonthlySummary(uidRef.current, deletedMonth, incomeRef.current, prev).catch(() => {});
-        return prev;
-      });
     } catch (err) {
       console.error('[deleteTransaction] Firestore write failed:', err?.code, err?.message, err);
       setTransactions(prev =>
@@ -113,12 +90,6 @@ export function useFirestoreData(uid) {
     setIncome(prev => [...prev, entry]);
     try {
       await fsAddIncome(uidRef.current, entry);
-      // Refresh the affected month's summary
-      const month = entry.date?.slice(0, 7) || getCurrentMonthValue();
-      setIncome(prev => {
-        upsertMonthlySummary(uidRef.current, month, prev, txnsRef.current).catch(() => {});
-        return prev;
-      });
     } catch (err) {
       console.error('[addIncome] Firestore write failed:', err?.code, err?.message, err);
       setIncome(prev => prev.filter(i => i.id !== entry.id));
@@ -127,19 +98,9 @@ export function useFirestoreData(uid) {
 
   const deleteIncome = useCallback(async (id) => {
     if (!uidRef.current) return;
-    let deletedMonth = getCurrentMonthValue();
-    setIncome(prev => {
-      const found = prev.find(i => i.id === id);
-      if (found) deletedMonth = found.date?.slice(0, 7) || deletedMonth;
-      return prev.filter(i => i.id !== id);
-    });
+    setIncome(prev => prev.filter(i => i.id !== id));
     try {
       await fsDeleteIncome(uidRef.current, id);
-      // Refresh the affected month's summary
-      setIncome(prev => {
-        upsertMonthlySummary(uidRef.current, deletedMonth, prev, txnsRef.current).catch(() => {});
-        return prev;
-      });
     } catch (err) {
       console.error('[deleteIncome] Firestore write failed:', err?.code, err?.message, err);
     }

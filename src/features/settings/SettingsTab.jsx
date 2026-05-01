@@ -5,7 +5,7 @@ import {
   Database, Palette, LogOut, Link, RefreshCw, CloudUpload, ArrowDownToLine,
 } from 'lucide-react';
 import { clearState, generateId } from '../../utils/storage';
-import { migrateFromLocalStorage, updateSettings as fsUpdateSettings, deleteAllUserData } from '../../services/firestore';
+import { migrateFromLocalStorage, updateSettings as fsUpdateSettings, deleteAllUserData, purgeCarryForwardData } from '../../services/firestore';
 import { pushToSheet, pullFromSheet, validateSheet, checkServerHealth } from '../../services/googleSheets';
 
 export default function SettingsTab({
@@ -48,6 +48,18 @@ export default function SettingsTab({
     } catch (err) {
       showFeedback('Reset failed. See console.', true);
       console.error('[Reset]', err);
+    }
+  }
+
+  async function handlePurgeCarryForward() {
+    if (!user?.uid) { showFeedback('You must be logged in.', true); return; }
+    try {
+      const count = await purgeCarryForwardData(user.uid);
+      if (count === 0) showFeedback('No carry-forward entries found — already clean!');
+      else showFeedback(`Removed ${count} carry-forward ${count === 1 ? 'entry' : 'entries'} from cloud.`);
+    } catch (err) {
+      showFeedback('Purge failed. See console.', true);
+      console.error('[PurgeCarryForward]', err);
     }
   }
 
@@ -262,6 +274,7 @@ export default function SettingsTab({
               <ActionRow id="btn-import" Icon={Upload}   label={importing ? 'Importing…' : 'Import Data'}   sub="Restore from JSON backup file (writes to cloud)"          iconColor="var(--accent)"  onClick={() => !importing && fileInputRef.current?.click()} />
               <ActionRow id="btn-csv"    Icon={FileSpreadsheet} label={importing ? 'Importing…' : 'Import CSV'}  sub="Import .csv file (date,name,amount,type) → cloud"    iconColor="var(--income)"  onClick={() => !importing && csvInputRef.current?.click()} />
               <ActionRow id="btn-migrate" Icon={CloudUpload} label={migrating ? 'Migrating…' : 'Import Local → Cloud'} sub="One-time: push localStorage data to your cloud account" iconColor="var(--accent)" onClick={handleMigrate} />
+              <ActionRow id="btn-purge-cf" Icon={RefreshCw} label="Remove Legacy Carry Forward" sub="One-time: delete old carry-forward income entries from cloud" iconColor="var(--person)" onClick={handlePurgeCarryForward} />
               <ActionRow id="btn-reset"  Icon={Trash2}   label="Reset All Data" sub="Permanently deletes all cloud + local data"      iconColor="var(--expense)" onClick={handleResetData} danger lastRow />
               <input ref={fileInputRef} type="file" accept=".json"     style={{ display: 'none' }} onChange={handleImport}    />
               <input ref={csvInputRef}  type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={handleCSVImport} />

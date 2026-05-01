@@ -1,11 +1,11 @@
 import { useRef, useState, useMemo } from 'react';
-import { PenLine, IndianRupee, Wallet, Trash2, TrendingUp, CalendarDays, RefreshCw, Lock } from 'lucide-react';
+import { PenLine, IndianRupee, Wallet, Trash2, TrendingUp, CalendarDays } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount, groupByDay } from '../../utils/dateHelpers';
 import { filterItemsByPeriod, getCurrentMonthValue } from '../../utils/periodHelpers';
 import PeriodSelector from '../../components/PeriodSelector';
 
-export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selectedPeriod, onPeriodChange, transactions, monthlySummaries = {} }) {
+export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selectedPeriod, onPeriodChange, transactions }) {
   const [name, setName]     = useState('');
   const [amount, setAmount] = useState('');
   const nameRef   = useRef(null);
@@ -20,17 +20,11 @@ export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selecte
   const currentMonth = getCurrentMonthValue();
 
   const totalIncome     = filtInc.reduce((s, i) => s + i.amount, 0);
-  // Exclude carry-forward entries from "real" income tally shown in the hero card
-  const realIncome      = filtInc.filter(i => i.type !== 'carry_forward');
   const grouped         = groupByDay(filtInc);
 
   const thisMonthIncome = income
     .filter(i => i.date?.slice(0, 7) === currentMonth)
     .reduce((s, i) => s + i.amount, 0);
-
-  // Is the currently viewed period-month closed (locked)?
-  const viewedMonth   = selectedPeriod?.value || currentMonth;
-  const isMonthLocked = monthlySummaries[viewedMonth]?.is_closed === true;
 
   function handleNameKey(e)   { if (e.key === 'Enter') { e.preventDefault(); amountRef.current?.focus(); } }
   function handleAmountKey(e) { if (e.key === 'Enter') { e.preventDefault(); save(); } }
@@ -64,28 +58,15 @@ export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selecte
         <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
           Track all your income sources
         </p>
-        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ marginTop: 10 }}>
           <PeriodSelector
             period={selectedPeriod}
             onChange={onPeriodChange}
             transactions={transactions || []}
             income={income}
           />
-          {isMonthLocked && (
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              background: 'var(--surface2)', border: '1px solid var(--border)',
-              borderRadius: 99, padding: '3px 10px', fontSize: 11, fontWeight: 600,
-              color: 'var(--text-muted)', flexShrink: 0,
-            }}>
-              <Lock size={10} />
-              Closed
-            </div>
-          )}
         </div>
       </div>
-
-
 
       {/* Body */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -114,7 +95,7 @@ export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selecte
                   {formatAmount(totalIncome)}
                 </div>
                 <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>
-                  {realIncome.length} income · {filtInc.length - realIncome.length > 0 ? `+${filtInc.length - realIncome.length} carry-fwd` : ''}
+                  {filtInc.length} income {filtInc.length === 1 ? 'entry' : 'entries'}
                 </div>
               </div>
 
@@ -205,67 +186,39 @@ export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selecte
                       </span>
                     </div>
                     <div className="card">
-                      {group.entries.map((entry, i) => {
-                        const isCarryFwd = entry.type === 'carry_forward';
-                        return (
-                          <div key={entry.id} style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            padding: '12px 14px',
-                            borderBottom: i < group.entries.length - 1 ? '1px solid var(--border)' : 'none',
-                            background: isCarryFwd ? 'var(--income-bg)' : 'transparent',
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                              <div style={{
-                                width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-                                background: isCarryFwd ? 'rgba(22,163,74,0.18)' : 'var(--income-bg)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              }}>
-                                {isCarryFwd
-                                  ? <RefreshCw size={13} style={{ color: 'var(--income)' }} />
-                                  : <TrendingUp size={14} style={{ color: 'var(--income)' }} />
-                                }
-                              </div>
-                              <div>
-                                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-                                  {entry.name}
-                                </span>
-                                {isCarryFwd && (
-                                  <span style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 3,
-                                    marginLeft: 6, background: 'rgba(22,163,74,0.12)',
-                                    border: '1px solid rgba(22,163,74,0.25)',
-                                    borderRadius: 99, padding: '1px 7px',
-                                    fontSize: 9, fontWeight: 700,
-                                    color: 'var(--income)', letterSpacing: '0.04em',
-                                  }}>
-                                    <Lock size={8} />
-                                    SYSTEM
-                                  </span>
-                                )}
-                              </div>
+                      {group.entries.map((entry, i) => (
+                        <div key={entry.id} style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '12px 14px',
+                          borderBottom: i < group.entries.length - 1 ? '1px solid var(--border)' : 'none',
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{
+                              width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                              background: 'var(--income-bg)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              <TrendingUp size={14} style={{ color: 'var(--income)' }} />
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--income)' }}>
-                                {formatAmount(entry.amount)}
-                              </span>
-                              {onDeleteIncome && !isCarryFwd && (
-                                <button onClick={() => onDeleteIncome(entry.id)}
-                                  style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
-                                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
-                                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
-                                  <Trash2 size={12} />
-                                </button>
-                              )}
-                              {isCarryFwd && (
-                                <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', opacity: 0.4 }}>
-                                  <Lock size={11} />
-                                </div>
-                              )}
-                            </div>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                              {entry.name}
+                            </span>
                           </div>
-                        );
-                      })}
-
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--income)' }}>
+                              {formatAmount(entry.amount)}
+                            </span>
+                            {onDeleteIncome && (
+                              <button onClick={() => onDeleteIncome(entry.id)}
+                                style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
+                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
