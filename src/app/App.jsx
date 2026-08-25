@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Home, List, Wallet, BarChart2, Settings, ArrowLeftRight } from 'lucide-react';
+import { Home, List, Wallet, BarChart2, Settings, ArrowLeftRight, Users } from 'lucide-react';
 import { useFirestoreData } from '../hooks/useFirestoreData';
 import { getDefaultPeriod } from '../utils/periodHelpers';
 import AuthGate from '../features/auth/AuthGate';
@@ -9,12 +9,14 @@ import IncomeTab        from '../features/income/IncomeTab';
 import StatsTab         from '../features/stats/StatsTab';
 import SettingsTab      from '../features/settings/SettingsTab';
 import ExternalTab      from '../features/external/ExternalTab';
+import PersonsPanel     from '../features/persons/PersonsPanel';
 import DesktopDashboard from '../components/DesktopDashboard';
 
 const TABS = [
   { key: 'today',    label: 'Today',    Icon: Home           },
   { key: 'history',  label: 'History',  Icon: List           },
   { key: 'income',   label: 'Income',   Icon: Wallet         },
+  { key: 'people',   label: 'People',   Icon: Users          },
   { key: 'external', label: 'External', Icon: ArrowLeftRight },
   { key: 'stats',    label: 'Stats',    Icon: BarChart2      },
   { key: 'settings', label: 'Settings', Icon: Settings       },
@@ -39,7 +41,6 @@ function applyTheme(theme) {
 }
 
 // Apply cached theme IMMEDIATELY on module load — before React even mounts.
-// This eliminates the flash-of-light-theme on every refresh.
 try {
   const cached = localStorage.getItem(THEME_KEY);
   if (cached) document.documentElement.setAttribute('data-theme', cached);
@@ -54,11 +55,10 @@ function AuthenticatedApp({ user, signOut }) {
   const {
     transactions, income, settings,
     addTransaction, updateTransaction, deleteTransaction,
-    addIncome, deleteIncome,
+    addIncome, updateIncome, deleteIncome,
     saveSettings, handleDataChange,
   } = useFirestoreData(user.uid);
 
-  // settings is pre-seeded from localStorage cache in useFirestoreData, so theme is correct immediately.
   const theme = settings?.theme || 'light';
 
   useEffect(() => { applyTheme(theme); }, [theme]);
@@ -84,6 +84,7 @@ function AuthenticatedApp({ user, signOut }) {
           onUpdateTransaction={updateTransaction}
           onDeleteTransaction={deleteTransaction}
           onAddIncome={addIncome}
+          onUpdateIncome={updateIncome}
           onDeleteIncome={deleteIncome}
           onDataChange={handleDataChange}
           onThemeChange={handleThemeChange}
@@ -96,16 +97,17 @@ function AuthenticatedApp({ user, signOut }) {
   /* ── MOBILE ── */
   const isMonoflow = theme === 'monoflow';
   const tabColors = isMonoflow
-    ? { today: '#b8956a', history: '#c9a87c', income: '#5aba8a', external: '#a78bfa', stats: '#6b8dd6', settings: '#9ca3af' }
-    : { today: '#DC2626', history: '#D97706', income: '#16A34A', external: '#7C3AED', stats: '#2563EB', settings: '#6366F1' };
+    ? { today: '#b8956a', history: '#c9a87c', income: '#5aba8a', people: '#d97706', external: '#a78bfa', stats: '#6b8dd6', settings: '#9ca3af' }
+    : { today: '#DC2626', history: '#D97706', income: '#16A34A', people: '#D97706', external: '#7C3AED', stats: '#2563EB', settings: '#6366F1' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {activeTab === 'today'    && <TodayTab    {...commonProps} onAdd={addTransaction} />}
         {activeTab === 'history'  && <HistoryTab  {...commonProps} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onAddTransaction={addTransaction} onAddIncome={addIncome} />}
-        {activeTab === 'income'   && <IncomeTab   {...commonProps} onAddIncome={addIncome} onDeleteIncome={deleteIncome} />}
-        {activeTab === 'external' && <ExternalTab user={user} onAddIncome={addIncome} onAddTransaction={addTransaction} selectedPeriod={selectedPeriod} />}
+        {activeTab === 'income'   && <IncomeTab   {...commonProps} onAddIncome={addIncome} onUpdateIncome={updateIncome} onDeleteIncome={deleteIncome} />}
+        {activeTab === 'people'   && <PersonsPanel transactions={transactions} onAddTransaction={addTransaction} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} />}
+        {activeTab === 'external' && <ExternalTab user={user} onAddIncome={addIncome} onAddTransaction={addTransaction} selectedPeriod={selectedPeriod} theme={theme} />}
         {activeTab === 'stats'    && <StatsTab    {...commonProps} />}
         {activeTab === 'settings' && <SettingsTab {...commonProps} onDataChange={handleDataChange} onThemeChange={handleThemeChange} onSignOut={signOut} addTransaction={addTransaction} addIncome={addIncome} />}
       </div>
@@ -123,7 +125,7 @@ function AuthenticatedApp({ user, signOut }) {
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center',
-                padding: '10px 4px', gap: 3, border: 'none',
+                padding: '8px 2px', gap: 3, border: 'none',
                 background: 'transparent', cursor: 'pointer',
                 color: isActive ? color : 'var(--text-muted)', position: 'relative',
               }}
@@ -135,8 +137,8 @@ function AuthenticatedApp({ user, signOut }) {
                   width: 24, height: 2, borderRadius: 99, background: color,
                 }} />
               )}
-              <Icon size={20} strokeWidth={isActive ? 2.3 : 1.8} />
-              <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 500, letterSpacing: '0.02em' }}>
+              <Icon size={18} strokeWidth={isActive ? 2.3 : 1.8} />
+              <span style={{ fontSize: 9, fontWeight: isActive ? 700 : 500, letterSpacing: '0.01em' }}>
                 {label}
               </span>
             </button>

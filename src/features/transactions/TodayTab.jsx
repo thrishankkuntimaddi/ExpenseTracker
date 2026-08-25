@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
-import { PenLine, IndianRupee, Zap, TrendingDown, Coins, Briefcase, ShoppingCart, PiggyBank, Users } from 'lucide-react';
+import { PenLine, IndianRupee, Zap, TrendingDown, Coins, Briefcase, ShoppingCart, PiggyBank, Users, Calendar } from 'lucide-react';
 import { generateId } from '../../utils/storage';
-import { formatAmount } from '../../utils/dateHelpers';
-import { TRANSACTION_TYPES as TYPES } from '../../utils/typeConfig';
+import { formatAmount, todayInputValue, dateInputToISO, isoToMonth } from '../../utils/dateHelpers';
+import { TRANSACTION_TYPES as TYPES, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType } from '../../utils/typeConfig';
 
 function AppHeader() {
   return (
@@ -34,9 +34,14 @@ function AppHeader() {
 export default function TodayTab({ transactions, onAdd }) {
   const [name, setName]                   = useState('');
   const [amount, setAmount]               = useState('');
+  const [dateInput, setDateInput]         = useState(todayInputValue());
   const [settlement, setSettlement]       = useState('');
   const [externalSource, setExtSource]    = useState('');
   const [type, setType]                   = useState('expense');
+  const [direction, setDirection]         = useState('lent');
+  const [savingsType, setSavingsType]     = useState('cash');
+  const [platform, setPlatform]           = useState('');
+
   const nameRef         = useRef(null);
   const amountRef       = useRef(null);
   const settlementRef   = useRef(null);
@@ -70,19 +75,34 @@ export default function TodayTab({ transactions, onAdd }) {
   function save() {
     const n = name.trim(), a = parseFloat(amount);
     if (!n || !amount || isNaN(a) || a <= 0) return;
+    
+    const isoDate = dateInputToISO(dateInput);
     const entry = {
       id: generateId(), name: n, amount: a, type,
-      date: new Date().toISOString(),
-      month: new Date().toISOString().slice(0, 7),
+      date: isoDate,
+      month: isoToMonth(isoDate),
     };
+
+    if (type === 'person') {
+      entry.direction = direction;
+    }
+    if (type === 'savings') {
+      entry.savingsType = savingsType;
+      const st = getSavingsType(savingsType);
+      if (st.hasPlatform && platform.trim()) {
+        entry.platform = platform.trim();
+      }
+    }
     if (type === 'external') {
       const s = parseFloat(settlement);
       if (!settlement || isNaN(s) || s < 0) return;
       entry.settlement = s;
       if (externalSource.trim()) entry.externalSource = externalSource.trim();
     }
+
     onAdd(entry);
-    setName(''); setAmount(''); setSettlement(''); setExtSource('');
+    setName(''); setAmount(''); setSettlement(''); setExtSource(''); setPlatform('');
+    setDateInput(todayInputValue());
     nameRef.current?.focus();
   }
 
@@ -184,6 +204,72 @@ export default function TodayTab({ transactions, onAdd }) {
               marginBottom: 14, opacity: 0.7,
             }} />
 
+            {/* Person Direction Toggle */}
+            {type === 'person' && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                {PERSON_DIRECTIONS.map(d => (
+                  <button
+                    key={d.key}
+                    type="button"
+                    onClick={() => setDirection(d.key)}
+                    style={{
+                      flex: 1, padding: '8px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                      border: `1.5px solid ${direction === d.key ? d.color : 'var(--border)'}`,
+                      background: direction === d.key ? d.color + '22' : 'transparent',
+                      color: direction === d.key ? d.color : 'var(--text-secondary)',
+                      cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                    }}
+                  >
+                    <d.Icon size={13} />
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Savings Sub-Category Selector */}
+            {type === 'savings' && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
+                  Investment Type
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {SAVINGS_TYPES.map(st => (
+                    <button
+                      key={st.key}
+                      type="button"
+                      onClick={() => setSavingsType(st.key)}
+                      style={{
+                        padding: '5px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                        border: `1.5px solid ${savingsType === st.key ? st.color : 'var(--border)'}`,
+                        background: savingsType === st.key ? st.color + '22' : 'transparent',
+                        color: savingsType === st.key ? st.color : 'var(--text-secondary)',
+                        cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                      }}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
+                {getSavingsType(savingsType).hasPlatform && (
+                  <input
+                    type="text"
+                    placeholder="Platform (e.g. Angel One, Zerodha)"
+                    value={platform}
+                    onChange={e => setPlatform(e.target.value)}
+                    style={{
+                      width: '100%', marginTop: 8, padding: '9px 12px',
+                      borderRadius: 10, fontSize: 13,
+                      border: '1.5px solid var(--input-border)',
+                      background: 'var(--input-bg)', color: 'var(--text)',
+                      outline: 'none', fontFamily: 'inherit',
+                    }}
+                  />
+                )}
+              </div>
+            )}
+
             {/* Name */}
             <div style={{ position: 'relative', marginBottom: 10 }}>
               <PenLine size={14} style={{
@@ -195,7 +281,7 @@ export default function TodayTab({ transactions, onAdd }) {
                 id="input-name"
                 ref={nameRef}
                 type="text"
-                placeholder="What did you spend on?"
+                placeholder={type === 'person' ? 'Person Name (e.g. Mom)' : 'What did you spend on?'}
                 value={name}
                 onChange={e => setName(e.target.value)}
                 onKeyDown={handleNameKey}
@@ -215,7 +301,7 @@ export default function TodayTab({ transactions, onAdd }) {
             </div>
 
             {/* Amount */}
-            <div style={{ position: 'relative', marginBottom: 14 }}>
+            <div style={{ position: 'relative', marginBottom: 10 }}>
               <IndianRupee size={14} style={{
                 position: 'absolute', left: 12, top: '50%',
                 transform: 'translateY(-50%)',
@@ -245,77 +331,31 @@ export default function TodayTab({ transactions, onAdd }) {
               />
             </div>
 
-            {/* Settlement + Source — only shown when External is selected */}
-            {type === 'external' && (
-              <div style={{ marginBottom: 14 }}>
-                <p style={{ fontSize: 11, fontWeight: 600, color: '#7C3AED', marginBottom: 6, marginTop: -6 }}>
-                  Amount Received / Settlement
-                </p>
-                <div style={{ position: 'relative', marginBottom: 8 }}>
-                  <IndianRupee size={14} style={{
-                    position: 'absolute', left: 12, top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: 'var(--text-muted)', pointerEvents: 'none',
-                  }} />
-                  <input
-                    id="input-settlement"
-                    ref={settlementRef}
-                    type="text"
-                    placeholder="Amount you received"
-                    value={settlement}
-                    onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setSettlement(v); }}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), extSourceRef.current?.focus())}
-                    inputMode="decimal"
-                    autoComplete="off"
-                    style={{
-                      width: '100%', paddingLeft: 38, paddingRight: 14,
-                      paddingTop: 12, paddingBottom: 12,
-                      borderRadius: 10, fontSize: 22, fontWeight: 700,
-                      border: '1.5px solid #DDD6FE',
-                      background: '#F5F3FF',
-                      color: '#7C3AED', outline: 'none',
-                      fontFamily: 'inherit', transition: 'border-color 0.15s',
-                    }}
-                    onFocus={e => (e.target.style.borderColor = '#7C3AED')}
-                    onBlur={e =>  (e.target.style.borderColor = '#DDD6FE')}
-                  />
-                </div>
-                {/* External Source — optional label (client/project name) */}
-                <div style={{ position: 'relative', marginBottom: 4 }}>
-                  <Briefcase size={13} style={{
-                    position: 'absolute', left: 12, top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: '#7C3AED', pointerEvents: 'none',
-                  }} />
-                  <input
-                    id="input-external-source"
-                    ref={extSourceRef}
-                    type="text"
-                    placeholder="Source / Client (optional)"
-                    value={externalSource}
-                    onChange={e => setExtSource(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), save())}
-                    autoComplete="off"
-                    style={{
-                      width: '100%', paddingLeft: 38, paddingRight: 14,
-                      paddingTop: 10, paddingBottom: 10,
-                      borderRadius: 10, fontSize: 13,
-                      border: '1.5px solid #DDD6FE',
-                      background: '#F5F3FF',
-                      color: '#7C3AED', outline: 'none',
-                      fontFamily: 'inherit', transition: 'border-color 0.15s',
-                    }}
-                    onFocus={e => (e.target.style.borderColor = '#7C3AED')}
-                    onBlur={e =>  (e.target.style.borderColor = '#DDD6FE')}
-                  />
-                </div>
-                {settlement && amount && parseFloat(settlement) >= 0 && parseFloat(amount) > 0 && (
-                  <p style={{ fontSize: 11, color: (parseFloat(settlement) - parseFloat(amount)) >= 0 ? '#16A34A' : '#DC2626', marginTop: 5, fontWeight: 600 }}>
-                    Net profit: {(parseFloat(settlement) - parseFloat(amount)) >= 0 ? '+' : ''}{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(parseFloat(settlement) - parseFloat(amount))}
-                  </p>
-                )}
-              </div>
-            )}
+            {/* Date Selection */}
+            <div style={{ position: 'relative', marginBottom: 14 }}>
+              <Calendar size={14} style={{
+                position: 'absolute', left: 12, top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--text-muted)', pointerEvents: 'none',
+              }} />
+              <input
+                type="date"
+                value={dateInput}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={e => setDateInput(e.target.value)}
+                style={{
+                  width: '100%', paddingLeft: 38, paddingRight: 14,
+                  paddingTop: 10, paddingBottom: 10,
+                  borderRadius: 10, fontSize: 13,
+                  border: '1.5px solid var(--input-border)',
+                  background: 'var(--input-bg)',
+                  color: 'var(--text)', outline: 'none',
+                  fontFamily: 'inherit', transition: 'border-color 0.15s',
+                }}
+                onFocus={e => (e.target.style.borderColor = sel.color)}
+                onBlur={e =>  (e.target.style.borderColor = 'var(--input-border)')}
+              />
+            </div>
 
             {/* Save Button */}
             <button
@@ -333,7 +373,7 @@ export default function TodayTab({ transactions, onAdd }) {
                 letterSpacing: '0.01em',
               }}
             >
-              Add {sel.label}
+              Add {type === 'person' ? (direction === 'repayment' ? 'Repayment' : 'Lent Money') : sel.label}
             </button>
           </div>
         </div>
@@ -373,8 +413,10 @@ export default function TodayTab({ transactions, onAdd }) {
                             {txn.name}
                           </span>
                           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                            {isExternal
-                              ? `${txn.externalSource ? txn.externalSource + ' · ' : ''}Paid ${formatAmount(txn.amount)} · Rcvd ${formatAmount(txn.settlement ?? 0)}`
+                            {txn.type === 'person'
+                              ? (txn.direction === 'repayment' ? 'Repayment Received' : 'Lent Money')
+                              : txn.type === 'savings'
+                              ? `${txn.savingsType ? txn.savingsType.toUpperCase() : 'Savings'}${txn.platform ? ' · ' + txn.platform : ''}`
                               : t.label
                             }
                           </span>
@@ -382,13 +424,10 @@ export default function TodayTab({ transactions, onAdd }) {
                       </div>
                       <span style={{
                         fontSize: 14, fontWeight: 700,
-                        color: isExternal ? (extProfit >= 0 ? '#16A34A' : '#DC2626') : t.color,
+                        color: txn.type === 'person' && txn.direction === 'repayment' ? 'var(--income)' : t.color,
                         marginLeft: 12, flexShrink: 0,
                       }}>
-                        {isExternal
-                          ? `${extProfit >= 0 ? '+' : ''}${formatAmount(extProfit)}`
-                          : formatAmount(txn.amount)
-                        }
+                        {txn.type === 'person' && txn.direction === 'repayment' ? '+' : ''}{formatAmount(txn.amount)}
                       </span>
                     </div>
                   );

@@ -1,13 +1,19 @@
 import { useRef, useState, useMemo } from 'react';
-import { PenLine, IndianRupee, Wallet, Trash2, TrendingUp, CalendarDays } from 'lucide-react';
+import { PenLine, IndianRupee, Wallet, Trash2, TrendingUp, CalendarDays, Calendar, Pencil } from 'lucide-react';
 import { generateId } from '../../utils/storage';
-import { formatAmount, groupByDay } from '../../utils/dateHelpers';
+import { formatAmount, groupByDay, todayInputValue, dateInputToISO, isoToMonth } from '../../utils/dateHelpers';
 import { filterItemsByPeriod, getCurrentMonthValue } from '../../utils/periodHelpers';
 import PeriodSelector from '../../components/PeriodSelector';
+import EditIncomeModal from '../../components/EditIncomeModal';
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 
-export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selectedPeriod, onPeriodChange, transactions }) {
-  const [name, setName]     = useState('');
-  const [amount, setAmount] = useState('');
+export default function IncomeTab({ income, onAddIncome, onUpdateIncome, onDeleteIncome, selectedPeriod, onPeriodChange, transactions }) {
+  const [name, setName]           = useState('');
+  const [amount, setAmount]       = useState('');
+  const [dateInput, setDateInput] = useState(todayInputValue());
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [deletingId, setDeletingId]     = useState(null);
+
   const nameRef   = useRef(null);
   const amountRef = useRef(null);
 
@@ -36,12 +42,13 @@ export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selecte
   function save() {
     const n = name.trim(), a = parseFloat(amount);
     if (!n || !amount || isNaN(a) || a <= 0) return;
+    const isoDate = dateInputToISO(dateInput);
     onAddIncome({
       id: generateId(), name: n, amount: a, type: 'income',
-      date: new Date().toISOString(),
-      month: new Date().toISOString().slice(0, 7),
+      date: isoDate,
+      month: isoToMonth(isoDate),
     });
-    setName(''); setAmount('');
+    setName(''); setAmount(''); setDateInput(todayInputValue());
     nameRef.current?.focus();
   }
 
@@ -49,6 +56,25 @@ export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selecte
 
   return (
     <div className="tab-root">
+      {/* Edit modal */}
+      {editingEntry && (
+        <EditIncomeModal
+          entry={editingEntry}
+          onSave={onUpdateIncome}
+          onDelete={onDeleteIncome}
+          onClose={() => setEditingEntry(null)}
+        />
+      )}
+
+      {/* Delete confirmation modal */}
+      {deletingId && (
+        <ConfirmDeleteModal
+          title="Delete income entry?"
+          message="This action cannot be undone."
+          onConfirm={() => { onDeleteIncome(deletingId); setDeletingId(null); }}
+          onCancel={() => setDeletingId(null)}
+        />
+      )}
 
       {/* Header */}
       <div className="tab-header">
@@ -141,13 +167,27 @@ export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selecte
               </div>
 
               {/* Amount */}
-              <div style={{ position: 'relative', marginBottom: 14 }}>
+              <div style={{ position: 'relative', marginBottom: 10 }}>
                 <IndianRupee size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                 <input
-                  id="income-input-amount" ref={amountRef} type="number"
+                  id="income-input-amount" ref={amountRef} type="text"
                   placeholder="0.00" value={amount}
                   onChange={handleAmountInput} onKeyDown={handleAmountKey} inputMode="decimal"
                   style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 20, fontWeight: 700, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
+                  onFocus={e => (e.target.style.borderColor = 'var(--income)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
+                />
+              </div>
+
+              {/* Date */}
+              <div style={{ position: 'relative', marginBottom: 14 }}>
+                <Calendar size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                <input
+                  type="date"
+                  value={dateInput}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={e => setDateInput(e.target.value)}
+                  style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 10, paddingBottom: 10, borderRadius: 10, fontSize: 13, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
                   onFocus={e => (e.target.style.borderColor = 'var(--income)')}
                   onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
                 />
@@ -208,8 +248,16 @@ export default function IncomeTab({ income, onAddIncome, onDeleteIncome, selecte
                             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--income)' }}>
                               {formatAmount(entry.amount)}
                             </span>
+                            {onUpdateIncome && (
+                              <button onClick={() => setEditingEntry(entry)}
+                                style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
+                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--income)'; e.currentTarget.style.background = 'var(--income-bg)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                                <Pencil size={12} />
+                              </button>
+                            )}
                             {onDeleteIncome && (
-                              <button onClick={() => onDeleteIncome(entry.id)}
+                              <button onClick={() => setDeletingId(entry.id)}
                                 style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
                                 onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
                                 onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>

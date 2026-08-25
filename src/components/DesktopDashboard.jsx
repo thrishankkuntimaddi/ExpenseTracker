@@ -6,18 +6,22 @@ import {
 import {
   ShoppingCart, PenLine, IndianRupee, PiggyBank,
   Wallet, TrendingUp, TrendingDown, Flame, ChevronDown,
-  ChevronRight, Trash2, Zap, Moon, Sun, Briefcase, Upload, ArrowLeftRight,
+  ChevronRight, Trash2, Zap, Moon, Sun, Briefcase, Upload, ArrowLeftRight, Users, Calendar, Pencil,
 } from 'lucide-react';
 import { generateId } from '../utils/storage';
-import { formatAmount, formatDate } from '../utils/dateHelpers';
+import { formatAmount, formatDate, todayInputValue, dateInputToISO, isoToMonth } from '../utils/dateHelpers';
 import { getPeriodLabel, getCurrentMonthValue } from '../utils/periodHelpers';
 import PeriodSelector from './PeriodSelector';
 import SettingsTab from '../features/settings/SettingsTab';
 import ExternalTab from '../features/external/ExternalTab';
+import PersonsPanel from '../features/persons/PersonsPanel';
+import EditTransactionModal from './EditTransactionModal';
+import EditIncomeModal from './EditIncomeModal';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 import { useStats } from '../hooks/useStats';
 import { useWastage } from '../hooks/useWastage';
 import { useTransactions } from '../hooks/useTransactions';
-import { TYPE_META, TRANSACTION_TYPES } from '../utils/typeConfig';
+import { TYPE_META, TRANSACTION_TYPES, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType } from '../utils/typeConfig';
 import LoadMonthlyData from './LoadMonthlyData';
 
 
@@ -77,41 +81,72 @@ function CardHeader({ title, sub, right }) {
   );
 }
 
+function SummaryTile({ label, value, color, bg, border, Icon }) {
+  return (
+    <div style={{
+      background: bg, border: `1.5px solid ${border}`,
+      borderRadius: 14, padding: '14px 16px',
+      display: 'flex', flexDirection: 'column', gap: 3,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color }}>
+          {label}
+        </span>
+        {Icon && <Icon size={14} style={{ color }} />}
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 800, color, lineHeight: 1.1 }}>
+        {formatAmount(value)}
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════════ */
 export default function DesktopDashboard({
   transactions, income, settings,
   selectedPeriod, onPeriodChange,
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
-  onAddIncome, onDeleteIncome,
+  onAddIncome, onUpdateIncome, onDeleteIncome,
   onDataChange, onThemeChange,
   onSignOut, theme, user,
 }) {
   const isMonoflow = theme === 'monoflow';
-  // Use shared hooks — no more duplicated logic
+  // Use shared hooks
   const { stats, filtTxns, filtInc, pieData, barData, areaData, C } = useStats(transactions, income, selectedPeriod, theme);
   const { editingWaste, wasteInput, wasteInputRef, handleTxnTap, saveWaste, cancelWaste, setWasteInput } = useWastage(onUpdateTransaction);
 
   /* ── UI state ── */
   const [activeSection, setActiveSection] = useState('dashboard');
   const [showImport,    setShowImport]    = useState(false);
+  const [editingTxn,    setEditingTxn]    = useState(null);
+  const [editingInc,    setEditingInc]    = useState(null);
+  const [deletingTxnId, setDeletingTxnId] = useState(null);
+  const [deletingIncId, setDeletingIncId] = useState(null);
+
+  // Quick entry states
   const [name, setName]             = useState('');
   const [amount, setAmount]         = useState('');
+  const [dateInput, setDateInput]   = useState(todayInputValue());
   const [settlement, setSettlement] = useState('');
   const [extSource, setExtSource]   = useState('');
   const [type, setType]             = useState('expense');
+  const [direction, setDirection]   = useState('lent');
+  const [savingsType, setSavingsType] = useState('cash');
+  const [platform, setPlatform]     = useState('');
+
   const nameRef         = useRef(null);
   const amountRef       = useRef(null);
   const settlementRef   = useRef(null);
   const extSourceRef    = useRef(null);
 
-  const [iName, setIName]     = useState('');
-  const [iAmount, setIAmount] = useState('');
+  // Income entry states
+  const [iName, setIName]         = useState('');
+  const [iAmount, setIAmount]     = useState('');
+  const [iDateInput, setIDateInput] = useState(todayInputValue());
   const iNameRef   = useRef(null);
   const iAmountRef = useRef(null);
 
-  const [expandedGroups, setExpandedGroups] = useState(() => new Set([TODAY_LABEL]));
-
-  /* ── Today's entries (still needed locally) ── */
+  /* ── Today's entries ── */
   const todayTxns = useMemo(() => {
     const now = new Date();
     return transactions.filter(t => {
@@ -121,37 +156,50 @@ export default function DesktopDashboard({
   }, [transactions]);
   const todayTotal = todayTxns.reduce((s, t) => s + t.amount, 0);
 
-  /* ── History — shared hook, no more duplicated groupBy* calls ── */
-  const { grouped: histGrouped } = useTransactions(transactions, selectedPeriod);
-
   /* ── Handlers ── */
   function saveEntry() {
     const n = name.trim(), a = parseFloat(amount);
     if (!n || isNaN(a) || a <= 0) return;
-    const entry = { id: generateId(), name: n, amount: a, type, date: new Date().toISOString(), month: getCurrentMonthValue() };
+
+    const isoDate = dateInputToISO(dateInput);
+    const entry = {
+      id: generateId(), name: n, amount: a, type,
+      date: isoDate,
+      month: isoToMonth(isoDate),
+    };
+
+    if (type === 'person') {
+      entry.direction = direction;
+    }
+    if (type === 'savings') {
+      entry.savingsType = savingsType;
+      const st = getSavingsType(savingsType);
+      if (st.hasPlatform && platform.trim()) entry.platform = platform.trim();
+    }
     if (type === 'external') {
       const s = parseFloat(settlement);
       if (isNaN(s) || s < 0) return;
       entry.settlement = s;
       if (extSource.trim()) entry.externalSource = extSource.trim();
     }
+
     onAddTransaction(entry);
-    setName(''); setAmount(''); setSettlement(''); setExtSource('');
+    setName(''); setAmount(''); setSettlement(''); setExtSource(''); setPlatform('');
+    setDateInput(todayInputValue());
     setTimeout(() => nameRef.current?.focus(), 50);
   }
 
   function saveIncome() {
     const n = iName.trim(), a = parseFloat(iAmount);
     if (!n || isNaN(a) || a <= 0) return;
-    onAddIncome({ id: generateId(), name: n, amount: a, type: 'income', date: new Date().toISOString(), month: getCurrentMonthValue() });
-    setIName(''); setIAmount('');
+    const isoDate = dateInputToISO(iDateInput);
+    onAddIncome({
+      id: generateId(), name: n, amount: a, type: 'income',
+      date: isoDate,
+      month: isoToMonth(isoDate),
+    });
+    setIName(''); setIAmount(''); setIDateInput(todayInputValue());
     setTimeout(() => iNameRef.current?.focus(), 50);
-  }
-
-
-
-  function toggleGroup(label) {
-    setExpandedGroups(prev => { const n = new Set(prev); n.has(label) ? n.delete(label) : n.add(label); return n; });
   }
 
   const sel = TRANSACTION_TYPES.find(t => t.key === type);
@@ -172,6 +220,46 @@ export default function DesktopDashboard({
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)', overflowY: 'auto', overflowX: 'hidden' }}>
+
+      {/* Edit Transaction Modal */}
+      {editingTxn && (
+        <EditTransactionModal
+          txn={editingTxn}
+          onSave={onUpdateTransaction}
+          onDelete={onDeleteTransaction}
+          onClose={() => setEditingTxn(null)}
+        />
+      )}
+
+      {/* Edit Income Modal */}
+      {editingInc && onUpdateIncome && (
+        <EditIncomeModal
+          entry={editingInc}
+          onSave={onUpdateIncome}
+          onDelete={onDeleteIncome}
+          onClose={() => setEditingInc(null)}
+        />
+      )}
+
+      {/* Confirm Delete Transaction Modal */}
+      {deletingTxnId && (
+        <ConfirmDeleteModal
+          title="Delete transaction?"
+          message="This action cannot be undone."
+          onConfirm={() => { onDeleteTransaction(deletingTxnId); setDeletingTxnId(null); }}
+          onCancel={() => setDeletingTxnId(null)}
+        />
+      )}
+
+      {/* Confirm Delete Income Modal */}
+      {deletingIncId && (
+        <ConfirmDeleteModal
+          title="Delete income entry?"
+          message="This action cannot be undone."
+          onConfirm={() => { onDeleteIncome(deletingIncId); setDeletingIncId(null); }}
+          onCancel={() => setDeletingIncId(null)}
+        />
+      )}
 
       {/* Load Monthly Data modal */}
       {showImport && (
@@ -219,6 +307,7 @@ export default function DesktopDashboard({
           {[
             { key: 'dashboard', label: 'Dashboard' },
             { key: 'external',  label: 'External',  icon: <ArrowLeftRight size={12} /> },
+            { key: 'people',    label: 'People',    icon: <Users size={12} /> },
             { key: 'settings',  label: 'Settings'  },
           ].map(tab => (
             <button
@@ -229,7 +318,7 @@ export default function DesktopDashboard({
                 padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                 border: '1px solid var(--border)',
                 background: activeSection === tab.key
-                  ? (tab.key === 'external' ? 'linear-gradient(135deg,#7C3AED,#A855F7)' : 'var(--accent)')
+                  ? (tab.key === 'external' ? 'linear-gradient(135deg,#7C3AED,#A855F7)' : tab.key === 'people' ? 'var(--person)' : 'var(--accent)')
                   : 'transparent',
                 color: activeSection === tab.key ? '#fff' : 'var(--text-muted)',
                 cursor: 'pointer', fontFamily: 'inherit',
@@ -280,7 +369,6 @@ export default function DesktopDashboard({
       {/* ══ SETTINGS VIEW ══ */}
       {activeSection === 'settings' && (
         <div className="desktop-settings-host" style={{ maxWidth: 900, margin: '0 auto', padding: '24px 28px' }}>
-          {/* Override tab-root inside desktop context so it renders naturally */}
           <style>{`
             .desktop-settings-host .tab-root {
               height: auto !important;
@@ -313,7 +401,6 @@ export default function DesktopDashboard({
       {/* ══ EXTERNAL VIEW ══ */}
       {activeSection === 'external' && (
         <div className="desktop-external-host" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 28px 28px', height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
-          {/* Override mobile tab-root/tab-header styles for desktop canvas */}
           <style>{`
             .desktop-external-host .tab-root {
               background: transparent !important;
@@ -338,13 +425,24 @@ export default function DesktopDashboard({
         </div>
       )}
 
+      {/* ══ PEOPLE VIEW ══ */}
+      {activeSection === 'people' && (
+        <div className="desktop-people-host" style={{ maxWidth: 1000, margin: '0 auto', padding: '16px 28px 28px', height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
+          <PersonsPanel
+            transactions={transactions}
+            onAddTransaction={onAddTransaction}
+            onUpdateTransaction={onUpdateTransaction}
+            onDeleteTransaction={onDeleteTransaction}
+          />
+        </div>
+      )}
 
       {/* ══ DASHBOARD VIEW ══ */}
       {activeSection === 'dashboard' && (<>
 
         {/* ── SUMMARY STRIP ── */}
-        <div style={{ padding: '16px 28px 0', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-          {/* Balance */}
+        <div style={{ padding: '16px 28px 0', display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
+          {/* Remaining Balance */}
           <div style={{
             background: positive ? 'var(--income)' : 'var(--expense)',
             borderRadius: 14, padding: '15px 16px',
@@ -358,10 +456,10 @@ export default function DesktopDashboard({
             </div>
           </div>
 
-          {/* Income */}
-          <SummaryTile label="Income"  value={stats.totalIncome}  color="var(--income)"  bg="var(--income-bg)"  border="var(--income-border)"  Icon={TrendingUp}   />
-          <SummaryTile label="Expense" value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={TrendingDown}  />
-          <SummaryTile label="Savings" value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" Icon={PiggyBank}    />
+          <SummaryTile label="Income"      value={stats.totalIncome}  color="var(--income)"  bg="var(--income-bg)"  border="var(--income-border)"  Icon={TrendingUp}   />
+          <SummaryTile label="Expense"     value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={TrendingDown}  />
+          <SummaryTile label="Savings"     value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" Icon={PiggyBank}    />
+          <SummaryTile label="Outstanding" value={stats.netLent}       color="var(--person)"  bg="var(--person-bg)"  border="var(--person-border)"  Icon={Users}        />
 
           {/* Waste */}
           <div style={{ background: 'var(--person-bg)', border: '1.5px solid var(--person-border)', borderRadius: 14, padding: '14px 16px' }}>
@@ -418,12 +516,71 @@ export default function DesktopDashboard({
                     </button>
                   ))}
                 </div>
+
+                {/* Person Direction Toggle */}
+                {type === 'person' && (
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                    {PERSON_DIRECTIONS.map(d => (
+                      <button
+                        key={d.key}
+                        type="button"
+                        onClick={() => setDirection(d.key)}
+                        style={{
+                          flex: 1, padding: '6px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                          border: `1.5px solid ${direction === d.key ? d.color : 'var(--border)'}`,
+                          background: direction === d.key ? d.color + '22' : 'transparent',
+                          color: direction === d.key ? d.color : 'var(--text-secondary)',
+                          cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                        }}
+                      >
+                        <d.Icon size={12} />
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Savings Sub-Category */}
+                {type === 'savings' && (
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
+                      {SAVINGS_TYPES.map(st => (
+                        <button
+                          key={st.key}
+                          type="button"
+                          onClick={() => setSavingsType(st.key)}
+                          style={{
+                            padding: '4px 8px', borderRadius: 14, fontSize: 10, fontWeight: 700,
+                            border: `1.5px solid ${savingsType === st.key ? st.color : 'var(--border)'}`,
+                            background: savingsType === st.key ? st.color + '22' : 'transparent',
+                            color: savingsType === st.key ? st.color : 'var(--text-secondary)',
+                            cursor: 'pointer', fontFamily: 'inherit',
+                          }}
+                        >
+                          {st.label}
+                        </button>
+                      ))}
+                    </div>
+                    {getSavingsType(savingsType).hasPlatform && (
+                      <input
+                        type="text"
+                        placeholder="Platform (e.g. Angel One, Zerodha)"
+                        value={platform}
+                        onChange={e => setPlatform(e.target.value)}
+                        style={{ ...inputStyle, paddingLeft: 12, marginBottom: 4 }}
+                      />
+                    )}
+                  </div>
+                )}
+
                 {/* Name */}
                 <div style={{ position: 'relative', marginBottom: 8 }}>
                   <PenLine size={12} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                   <input
                     id="desktop-input-name" ref={nameRef} type="text"
-                    placeholder="Description…" value={name}
+                    placeholder={type === 'person' ? 'Person Name (e.g. Mom)' : 'Description…'}
+                    value={name}
                     onChange={e => setName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), amountRef.current?.focus())}
                     autoComplete="off"
@@ -431,69 +588,48 @@ export default function DesktopDashboard({
                     {...focusHandlers(sel.color)}
                   />
                 </div>
+
                 {/* Amount */}
-                <div style={{ position: 'relative', marginBottom: type === 'external' ? 8 : 12 }}>
+                <div style={{ position: 'relative', marginBottom: 8 }}>
                   <IndianRupee size={12} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                   <input
                     id="desktop-input-amount" ref={amountRef} type="text"
-                    placeholder={type === 'external' ? 'Amount paid' : '0.00'} value={amount}
+                    placeholder="0.00" value={amount}
                     onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), type === 'external' ? settlementRef.current?.focus() : saveEntry())}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveEntry())}
                     inputMode="decimal" autoComplete="off"
                     style={{ ...inputStyle, fontSize: 15, fontWeight: 700 }}
                     {...focusHandlers(sel.color)}
                   />
                 </div>
-                {/* Settlement + Source — only when External is selected */}
-                {type === 'external' && (
-                  <div style={{ marginBottom: 8 }}>
-                    <div style={{ position: 'relative', marginBottom: 6 }}>
-                      <IndianRupee size={12} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#7C3AED', pointerEvents: 'none' }} />
-                      <input
-                        id="desktop-input-settlement" ref={settlementRef} type="text"
-                        placeholder="Amount received" value={settlement}
-                        onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setSettlement(v); }}
-                        onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), extSourceRef.current?.focus())}
-                        inputMode="decimal" autoComplete="off"
-                        style={{ ...inputStyle, fontSize: 15, fontWeight: 700, borderColor: '#DDD6FE', background: '#F5F3FF', color: '#7C3AED' }}
-                        onFocus={e => (e.target.style.borderColor = '#7C3AED')}
-                        onBlur={e =>  (e.target.style.borderColor = '#DDD6FE')}
-                      />
-                    </div>
-                    <div style={{ position: 'relative', marginBottom: 4 }}>
-                      <Briefcase size={11} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#7C3AED', pointerEvents: 'none' }} />
-                      <input
-                        id="desktop-input-ext-source" ref={extSourceRef} type="text"
-                        placeholder="Source / Client (optional)" value={extSource}
-                        onChange={e => setExtSource(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveEntry())}
-                        autoComplete="off"
-                        style={{ ...inputStyle, borderColor: '#DDD6FE', background: '#F5F3FF', color: '#7C3AED' }}
-                        onFocus={e => (e.target.style.borderColor = '#7C3AED')}
-                        onBlur={e =>  (e.target.style.borderColor = '#DDD6FE')}
-                      />
-                    </div>
-                    {settlement && amount && parseFloat(settlement) >= 0 && parseFloat(amount) > 0 && (
-                      <p style={{ fontSize: 10, fontWeight: 700, color: (parseFloat(settlement) - parseFloat(amount)) >= 0 ? '#16A34A' : '#DC2626', margin: 0 }}>
-                        Net profit: {(parseFloat(settlement) - parseFloat(amount)) >= 0 ? '+' : ''}{formatAmount(parseFloat(settlement) - parseFloat(amount))}
-                      </p>
-                    )}
-                  </div>
-                )}
+
+                {/* Date */}
+                <div style={{ position: 'relative', marginBottom: 12 }}>
+                  <Calendar size={12} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                  <input
+                    type="date"
+                    value={dateInput}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={e => setDateInput(e.target.value)}
+                    style={inputStyle}
+                    {...focusHandlers(sel.color)}
+                  />
+                </div>
+
                 <button
                   id="desktop-btn-save"
                   onClick={saveEntry}
-                  disabled={!name.trim() || !amount || parseFloat(amount) <= 0 || (type === 'external' && (settlement === '' || parseFloat(settlement) < 0))}
+                  disabled={!name.trim() || !amount || parseFloat(amount) <= 0}
                   style={{
                     width: '100%', padding: '10px', borderRadius: 10,
                     fontSize: 12, fontWeight: 700,
-                    background: (name.trim() && amount && parseFloat(amount) > 0 && (type !== 'external' || settlement !== '')) ? sel.color : 'var(--surface2)',
-                    color: (name.trim() && amount && parseFloat(amount) > 0 && (type !== 'external' || settlement !== '')) ? '#fff' : 'var(--text-muted)',
+                    background: (name.trim() && amount && parseFloat(amount) > 0) ? sel.color : 'var(--surface2)',
+                    color: (name.trim() && amount && parseFloat(amount) > 0) ? '#fff' : 'var(--text-muted)',
                     border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                     transition: 'all 0.15s',
                   }}
                 >
-                  Add {sel.label} ↵
+                  Add {type === 'person' ? (direction === 'repayment' ? 'Repayment' : 'Lent Money') : sel.label} ↵
                 </button>
               </div>
             </DCard>
@@ -509,46 +645,52 @@ export default function DesktopDashboard({
                   </div>
                 ) : todayTxns.slice().reverse().map((txn) => {
                   const m = TYPE_META[txn.type] || TYPE_META.expense;
-                  const isExternal = txn.type === 'external';
-                  const extProfit  = isExternal ? (txn.settlement ?? txn.amount) - txn.amount : 0;
                   const isWasted  = txn.wasteAmount != null && txn.wasteAmount > 0;
                   const isEditing = editingWaste === txn.id;
                   return (
                     <div key={txn.id}>
                       <div
-                        onClick={isExternal ? undefined : () => handleTxnTap(txn)}
+                        onClick={() => handleTxnTap(txn)}
                         style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                           padding: '9px 18px',
                           borderBottom: '1px solid var(--border)',
-                          cursor: isExternal ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           background: isWasted ? m.bg : 'transparent',
                           borderLeft: isWasted ? `3px solid ${m.color}` : '3px solid transparent',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                           <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 5, fontWeight: 700, background: m.bg, color: m.color, flexShrink: 0 }}>
-                            {m.label}
+                            {txn.type === 'person' && txn.direction === 'repayment' ? 'Repayment' : m.label}
                           </span>
                           <div style={{ minWidth: 0 }}>
                             <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {txn.name}
                             </span>
-                            {isExternal && (
-                              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                                {txn.externalSource ? `${txn.externalSource} · ` : ''}Paid {formatAmount(txn.amount)} · Rcvd {formatAmount(txn.settlement ?? 0)}
-                              </span>
-                            )}
-                            {!isExternal && isWasted && <Flame size={10} style={{ color: m.color, flexShrink: 0 }} />}
+                            {isWasted && <Flame size={10} style={{ color: m.color, flexShrink: 0 }} />}
                           </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: isExternal ? (extProfit >= 0 ? '#16A34A' : '#DC2626') : m.color, marginLeft: 8 }}>
-                            {isExternal ? `${extProfit >= 0 ? '+' : ''}${formatAmount(extProfit)}` : formatAmount(txn.amount)}
+                          <span style={{ fontSize: 12, fontWeight: 700, color: txn.direction === 'repayment' ? 'var(--income)' : m.color, marginLeft: 8 }}>
+                            {txn.direction === 'repayment' ? '+' : ''}{formatAmount(txn.amount)}
                           </span>
+                          <button
+                            onClick={e => { e.stopPropagation(); setEditingTxn(txn); }}
+                            style={{
+                              width: 22, height: 22, borderRadius: 5,
+                              background: 'transparent', border: 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: 'var(--text-muted)', cursor: 'pointer',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-bg)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                          >
+                            <Pencil size={11} />
+                          </button>
                           {onDeleteTransaction && (
                             <button
-                              onClick={e => { e.stopPropagation(); onDeleteTransaction(txn.id); }}
+                              onClick={e => { e.stopPropagation(); setDeletingTxnId(txn.id); }}
                               style={{
                                 width: 22, height: 22, borderRadius: 5,
                                 background: 'transparent', border: 'none',
@@ -563,7 +705,7 @@ export default function DesktopDashboard({
                           )}
                         </div>
                       </div>
-                      {isEditing && !isExternal && (
+                      {isEditing && (
                         <div style={{ display: 'flex', gap: 6, padding: '7px 14px', background: 'var(--expense-bg)', borderBottom: '1px solid var(--expense-border)' }}>
                           <input
                             ref={wasteInputRef} type="number" placeholder="Waste amount" value={wasteInput}
@@ -579,11 +721,6 @@ export default function DesktopDashboard({
                   );
                 })}
               </div>
-              {todayTxns.length > 0 && (
-                <div style={{ padding: '6px 18px', borderTop: '1px solid var(--border)', fontSize: 10, color: 'var(--text-muted)', textAlign: 'center' }}>
-                  Tap any entry = waste · Double-tap = custom amount
-                </div>
-              )}
             </DCard>
           </div>
 
@@ -608,12 +745,24 @@ export default function DesktopDashboard({
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), iAmountRef.current?.focus())}
                     autoComplete="off" style={inputStyle} {...focusHandlers('var(--income)')} />
                 </div>
-                <div style={{ position: 'relative', marginBottom: 10 }}>
+                <div style={{ position: 'relative', marginBottom: 7 }}>
                   <IndianRupee size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                   <input id="desktop-income-amount" ref={iAmountRef} type="text" placeholder="0.00" value={iAmount}
                     onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setIAmount(v); }}
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveIncome())}
                     inputMode="decimal" autoComplete="off" style={{ ...inputStyle, fontSize: 14, fontWeight: 700 }} {...focusHandlers('var(--income)')} />
+                </div>
+                {/* Income Date */}
+                <div style={{ position: 'relative', marginBottom: 10 }}>
+                  <Calendar size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                  <input
+                    type="date"
+                    value={iDateInput}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={e => setIDateInput(e.target.value)}
+                    style={inputStyle}
+                    {...focusHandlers('var(--income)')}
+                  />
                 </div>
                 <button
                   id="desktop-btn-income" onClick={saveIncome}
@@ -647,9 +796,19 @@ export default function DesktopDashboard({
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--income)' }}>{formatAmount(entry.amount)}</span>
+                      {onUpdateIncome && (
+                        <button
+                          onClick={() => setEditingInc(entry)}
+                          style={{ width: 20, height: 20, borderRadius: 4, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}
+                          onMouseEnter={e => { e.currentTarget.style.color = 'var(--income)'; e.currentTarget.style.background = 'var(--income-bg)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <Pencil size={10} />
+                        </button>
+                      )}
                       {onDeleteIncome && (
                         <button
-                          onClick={() => onDeleteIncome(entry.id)}
+                          onClick={() => setDeletingIncId(entry.id)}
                           style={{ width: 20, height: 20, borderRadius: 4, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}
                           onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
                           onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
@@ -696,270 +855,11 @@ export default function DesktopDashboard({
                     <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No distribution data</p>
                   </div>
                 )}
-
-                {/* 14-day bar */}
-                <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-                    Last 14 Days
-                  </p>
-                  <ResponsiveContainer width="100%" height={90}>
-                    <BarChart data={barData} margin={{ top: 0, right: 0, left: -22, bottom: 0 }}>
-                      <XAxis dataKey="day" tick={{ fontSize: 8, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                      <YAxis hide />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--surface2)' }} />
-                      <Bar dataKey="Expense" fill={C.expense} radius={[3, 3, 0, 0]} maxBarSize={16} />
-                      <Bar dataKey="Savings" fill={C.savings} radius={[3, 3, 0, 0]} maxBarSize={16} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Full History Trend — scrollable, all 4 series */}
-                <div>
-                  {/* Header + Legend */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
-                      Full History Trend
-                    </p>
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                      {[
-                        { key: 'Income',  color: C.income  },
-                        { key: 'Expense', color: C.expense },
-                        { key: 'Savings', color: C.savings },
-                        { key: 'Person',  color: C.person  },
-                      ].map(({ key, color }) => (
-                        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <div style={{ width: 20, height: 2.5, borderRadius: 99, background: color }} />
-                          <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-muted)' }}>{key}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Scrollable chart container — scrolled to the right (latest month) */}
-                  <div
-                    ref={el => { if (el) el.scrollLeft = el.scrollWidth; }}
-                    style={{
-                      overflowX: 'auto', overflowY: 'hidden',
-                      borderRadius: 10,
-                      background: 'var(--surface2)',
-                      border: '1px solid var(--border)',
-                      paddingBottom: 2,
-                    }}
-                  >
-                    <div style={{ width: Math.max(400, areaData.length * 68), minWidth: '100%' }}>
-                      <AreaChart
-                        width={Math.max(400, areaData.length * 68)}
-                        height={130}
-                        data={areaData}
-                        margin={{ top: 12, right: 16, left: 0, bottom: 0 }}
-                      >
-                        <defs>
-                          <linearGradient id="tIncGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%"   stopColor={C.income}  stopOpacity={0.4} />
-                            <stop offset="100%" stopColor={C.income}  stopOpacity={0}   />
-                          </linearGradient>
-                          <linearGradient id="tExpGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%"   stopColor={C.expense} stopOpacity={0.4} />
-                            <stop offset="100%" stopColor={C.expense} stopOpacity={0}   />
-                          </linearGradient>
-                          <linearGradient id="tSavGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%"   stopColor={C.savings} stopOpacity={0.35} />
-                            <stop offset="100%" stopColor={C.savings} stopOpacity={0}    />
-                          </linearGradient>
-                          <linearGradient id="tPerGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%"   stopColor={C.person}  stopOpacity={0.35} />
-                            <stop offset="100%" stopColor={C.person}  stopOpacity={0}    />
-                          </linearGradient>
-                        </defs>
-                        <XAxis
-                          dataKey="month"
-                          tick={{ fontSize: 9, fill: 'var(--text-muted)', fontWeight: 600 }}
-                          axisLine={false} tickLine={false}
-                          interval={0}
-                        />
-                        <YAxis hide />
-                        <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'var(--border-dark)', strokeWidth: 1 }} />
-                        <Area type="monotone" dataKey="Income"  stroke={C.income}  strokeWidth={2} fill="url(#tIncGrad)"
-                          dot={{ r: 3, fill: C.income,  stroke: 'var(--surface)', strokeWidth: 1.5 }}
-                          activeDot={{ r: 5, fill: C.income,  stroke: 'var(--surface)', strokeWidth: 2 }} />
-                        <Area type="monotone" dataKey="Expense" stroke={C.expense} strokeWidth={2} fill="url(#tExpGrad)"
-                          dot={{ r: 3, fill: C.expense, stroke: 'var(--surface)', strokeWidth: 1.5 }}
-                          activeDot={{ r: 5, fill: C.expense, stroke: 'var(--surface)', strokeWidth: 2 }} />
-                        <Area type="monotone" dataKey="Savings" stroke={C.savings} strokeWidth={2} fill="url(#tSavGrad)"
-                          dot={{ r: 3, fill: C.savings, stroke: 'var(--surface)', strokeWidth: 1.5 }}
-                          activeDot={{ r: 5, fill: C.savings, stroke: 'var(--surface)', strokeWidth: 2 }} />
-                        <Area type="monotone" dataKey="Person"  stroke={C.person}  strokeWidth={2} fill="url(#tPerGrad)"
-                          dot={{ r: 3, fill: C.person,  stroke: 'var(--surface)', strokeWidth: 1.5 }}
-                          activeDot={{ r: 5, fill: C.person,  stroke: 'var(--surface)', strokeWidth: 2 }} />
-                      </AreaChart>
-                    </div>
-                  </div>
-                  <p style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 5, textAlign: 'right', opacity: 0.6 }}>
-                    ← scroll to view history from Feb 2025
-                  </p>
-                </div>
-
-                {/* Waste meter */}
-                <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-                    Waste Meter
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 10, color: 'var(--expense)', fontWeight: 600 }}>{formatAmount(stats.totalWaste)}</span>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--expense)' }}>{stats.wastePercent}%</span>
-                  </div>
-                  <div style={{ height: 6, background: 'var(--surface2)', borderRadius: 99, overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%', width: `${Math.min(100, parseFloat(stats.wastePercent))}%`,
-                      background: `linear-gradient(90deg, #F59E0B, ${C.expense})`,
-                      borderRadius: 99, transition: 'width 0.4s ease',
-                    }} />
-                  </div>
-                </div>
-
               </div>
             </DCard>
           </div>
         </div>
-
-        {/* ── HISTORY ── */}
-        <div style={{ padding: '14px 28px 32px' }}>
-          <DCard>
-            <div style={{ padding: '13px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Transaction History</div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>
-                  {getPeriodLabel(selectedPeriod)} · {filtTxns.length} transactions · Click group to expand
-                </div>
-              </div>
-              {/* Import Monthly Data button */}
-              <button
-                id="desktop-btn-import-monthly"
-                onClick={() => setShowImport(true)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '7px 13px', borderRadius: 9,
-                  fontSize: 11, fontWeight: 700,
-                  background: 'var(--accent-bg)',
-                  color: 'var(--accent)',
-                  border: '1.5px solid var(--accent-border)',
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  flexShrink: 0,
-                  transition: 'all 0.15s',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = 'var(--accent)';
-                  e.currentTarget.style.color = '#fff';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'var(--accent-bg)';
-                  e.currentTarget.style.color = 'var(--accent)';
-                }}
-              >
-                <Upload size={11} />
-                Import Monthly Data
-              </button>
-            </div>
-
-            <div style={{ maxHeight: 420, overflowY: 'auto' }}>
-              {histGrouped.length === 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 80 }}>
-                  <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No transactions in this period</p>
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))' }}>
-                  {histGrouped.map(group => {
-                    const total   = group.entries.reduce((s, t) => s + t.amount, 0);
-                    const waste   = group.entries.reduce((s, t) => s + (t.wasteAmount || 0), 0);
-                    const isOpen  = expandedGroups.has(group.label);
-                    const isToday = group.label === TODAY_LABEL;
-                    return (
-                      <div key={group.label} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <button
-                          onClick={() => toggleGroup(group.label)}
-                          style={{
-                            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            padding: '10px 18px', background: isToday ? 'var(--income-bg)' : 'transparent',
-                            border: 'none', cursor: 'pointer', textAlign: 'left', gap: 8,
-                            fontFamily: 'inherit', borderLeft: isToday ? '3px solid var(--income)' : '3px solid transparent',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1 }}>
-                            {isOpen ? <ChevronDown size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : <ChevronRight size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
-                            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{group.label}</span>
-                            {isToday && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3, background: 'var(--income-bg)', color: 'var(--income)', textTransform: 'uppercase' }}>Today</span>}
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-                            {waste > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 10, color: 'var(--expense)', fontWeight: 600 }}><Flame size={9} />{formatAmount(waste)}</span>}
-                            <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>{formatAmount(total)}</span>
-                            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{group.entries.length}</span>
-                          </div>
-                        </button>
-                        {isOpen && (
-                          <div style={{ borderTop: '1px solid var(--border)' }}>
-                            {group.entries.map((txn, i) => {
-                              const m = TYPE_META[txn.type] || TYPE_META.expense;
-                              const isWasted = txn.wasteAmount != null && txn.wasteAmount > 0;
-                              return (
-                                <div
-                                  key={txn.id}
-                                  onClick={() => handleTxnTap(txn)}
-                                  style={{
-                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                    padding: '8px 18px 8px 40px',
-                                    borderBottom: i < group.entries.length - 1 ? '1px solid var(--border)' : 'none',
-                                    background: isWasted ? m.bg : 'transparent',
-                                    cursor: 'pointer',
-                                    borderLeft: isWasted ? `3px solid ${m.color}` : '3px solid transparent',
-                                  }}
-                                >
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
-                                    <span style={{ fontSize: 9, padding: '2px 5px', borderRadius: 4, fontWeight: 700, background: m.bg, color: m.color, flexShrink: 0 }}>{m.label}</span>
-                                    <span style={{ fontSize: 12, color: 'var(--text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{txn.name}</span>
-                                    {isWasted && <span style={{ fontSize: 9, color: 'var(--expense)', flexShrink: 0 }}>🔥{txn.wasteAmount === txn.amount ? 'Full' : formatAmount(txn.wasteAmount)}</span>}
-                                  </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                                    <span style={{ fontSize: 12, fontWeight: 700, color: m.color, marginLeft: 8 }}>{formatAmount(txn.amount)}</span>
-                                    {onDeleteTransaction && (
-                                      <button
-                                        onClick={e => { e.stopPropagation(); onDeleteTransaction(txn.id); }}
-                                        style={{ width: 20, height: 20, borderRadius: 4, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}
-                                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
-                                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
-                                      >
-                                        <Trash2 size={10} />
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </DCard>
-        </div>
-
       </>)}
-    </div>
-  );
-}
-
-function SummaryTile({ label, value, color, bg, border, Icon }) {
-  return (
-    <div style={{ background: bg, border: `1.5px solid ${border}`, borderRadius: 14, padding: '14px 16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color }}>{label}</span>
-        <div style={{ width: 24, height: 24, borderRadius: 6, background: color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={11} color={color} />
-        </div>
-      </div>
-      <div style={{ fontSize: 16, fontWeight: 800, color }}>{formatAmount(value)}</div>
     </div>
   );
 }

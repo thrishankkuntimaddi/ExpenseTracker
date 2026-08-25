@@ -113,6 +113,11 @@ export async function addIncome(uid, entry) {
   await setDoc(incDocRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() });
 }
 
+export async function updateIncome(uid, entry) {
+  const { id, ...data } = entry;
+  await updateDoc(incDocRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() });
+}
+
 export async function deleteIncome(uid, entryId) {
   await deleteDoc(incDocRef(uid, entryId));
 }

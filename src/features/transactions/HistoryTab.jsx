@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
-import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Upload } from 'lucide-react';
+import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Upload, Pencil } from 'lucide-react';
 import { formatAmount } from '../../utils/dateHelpers';
 import PeriodSelector from '../../components/PeriodSelector';
 import { useWastage } from '../../hooks/useWastage';
 import { useTransactions } from '../../hooks/useTransactions';
 import { TYPE_META } from '../../utils/typeConfig';
 import LoadMonthlyData from '../../components/LoadMonthlyData';
-
+import EditTransactionModal from '../../components/EditTransactionModal';
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 
 export default function HistoryTab({
   transactions, income = [], selectedPeriod, onPeriodChange,
@@ -14,10 +15,13 @@ export default function HistoryTab({
   onAddTransaction, onAddIncome,
 }) {
   const [collapsedGroups, setCollapsedGroups] = useState(new Set());
-  const [showImport, setShowImport] = useState(false);
+  const [showImport, setShowImport]           = useState(false);
+  const [editingTxn, setEditingTxn]         = useState(null);
+  const [deletingId, setDeletingId]         = useState(null);
+
   const { editingWaste, wasteInput, wasteInputRef, handleTxnTap, saveWaste, cancelWaste, setWasteInput } = useWastage(onUpdateTransaction);
 
-  /* ─ Filter & group — shared hook eliminates the duplicate useMemo blocks ─ */
+  /* ─ Filter & group ─ */
   const { filtTxns, grouped, grouping } = useTransactions(transactions, selectedPeriod);
 
   const periodTotals = useMemo(() => ({
@@ -26,8 +30,6 @@ export default function HistoryTab({
     person:  filtTxns.filter(t => t.type === 'person').reduce((s, t) => s + t.amount, 0),
     waste:   filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + (t.wasteAmount || 0), 0),
   }), [filtTxns]);
-
-  /* ─ Wastage — delegated to useWastage hook ─ */
 
   function toggleGroup(label) {
     setCollapsedGroups(prev => {
@@ -43,6 +45,25 @@ export default function HistoryTab({
 
   return (
     <div className="tab-root">
+      {/* Edit modal */}
+      {editingTxn && (
+        <EditTransactionModal
+          txn={editingTxn}
+          onSave={onUpdateTransaction}
+          onDelete={onDeleteTransaction}
+          onClose={() => setEditingTxn(null)}
+        />
+      )}
+
+      {/* Delete confirm modal */}
+      {deletingId && (
+        <ConfirmDeleteModal
+          title="Delete transaction?"
+          message="This action cannot be undone."
+          onConfirm={() => { onDeleteTransaction(deletingId); setDeletingId(null); }}
+          onCancel={() => setDeletingId(null)}
+        />
+      )}
 
       {/* Load Past Data modal */}
       {showImport && onAddTransaction && onAddIncome && (
@@ -104,276 +125,202 @@ export default function HistoryTab({
           income={income}
         />
 
-        {/* Period summary strip */}
-        {filtTxns.length > 0 && (
-          <div style={{
-            display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap',
-          }}>
-            <MiniChip label="Spent"  val={periodTotals.expense} color="var(--expense)" bg="var(--expense-bg)"  />
-            <MiniChip label="Saved"  val={periodTotals.savings} color="var(--savings)" bg="var(--savings-bg)"  />
-            <MiniChip label="Given"  val={periodTotals.person}  color="var(--person)"  bg="var(--person-bg)"   />
-            {periodTotals.waste > 0 && (
-              <MiniChip label="🔥 Waste" val={periodTotals.waste} color="var(--expense)" bg="var(--expense-bg)" />
-            )}
-          </div>
-        )}
+        {/* Period Totals Summary */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'auto', paddingBottom: 2 }}>
+          <StatPill label="Expense" value={periodTotals.expense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" />
+          <StatPill label="Savings" value={periodTotals.savings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" />
+          <StatPill label="Person"  value={periodTotals.person}  color="var(--person)"  bg="var(--person-bg)"  border="var(--person-border)"  />
+          {periodTotals.waste > 0 && (
+            <StatPill label="Waste"   value={periodTotals.waste}   color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={Flame} />
+          )}
+        </div>
       </div>
 
-      {/* List */}
-      <div className="tab-body">
-
+      {/* Body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 24px' }}>
         {grouped.length === 0 ? (
-          <EmptyState />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12 }}>
+            <LayoutList size={32} style={{ color: 'var(--text-muted)' }} />
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+              No transactions in this period
+            </p>
+          </div>
         ) : (
-          <div className="history-grid">
-            {grouped.map(group => {
-              const total    = group.entries.reduce((s, t) => s + t.amount, 0);
-              const waste    = group.entries.reduce((s, t) => s + (t.wasteAmount || 0), 0);
-              const isCollapsed = collapsedGroups.has(group.label);
+          grouped.map(group => {
+            const isCollapsed = collapsedGroups.has(group.label);
+            const groupTotal  = group.entries.reduce((s, t) => s + t.amount, 0);
 
-              return (
-                <div key={group.label} style={{ marginBottom: 16 }}>
-                  {/* Group header — tappable to collapse */}
-                  <button
-                    onClick={() => toggleGroup(group.label)}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center',
-                      justifyContent: 'space-between', marginBottom: 6,
-                      background: 'transparent', border: 'none',
-                      cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
-                      padding: '4px 2px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {isCollapsed
-                        ? <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} />
-                        : <ChevronUp   size={13} style={{ color: 'var(--text-muted)' }} />
-                      }
-                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>
-                        {group.label}
-                      </span>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                        ({group.entries.length})
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {waste > 0 && (
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                          fontSize: 11, fontWeight: 600, padding: '2px 7px',
-                          borderRadius: 20, background: 'var(--expense-bg)', color: 'var(--expense)',
-                        }}>
-                          <Flame size={10} />{formatAmount(waste)}
-                        </span>
-                      )}
-                      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
-                        {formatAmount(total)}
-                      </span>
-                    </div>
-                  </button>
+            return (
+              <div key={group.label} style={{ marginBottom: 14 }}>
+                {/* Group header bar */}
+                <button
+                  onClick={() => toggleGroup(group.label)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '8px 12px', borderRadius: 10, border: 'none',
+                    background: 'var(--surface2)', cursor: 'pointer',
+                    fontFamily: 'inherit', marginBottom: 6,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {isCollapsed ? <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} />}
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>
+                      {group.label}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      ({group.entries.length})
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                    {formatAmount(groupTotal)}
+                  </span>
+                </button>
 
-                  {/* Group card */}
-                  {!isCollapsed && (
-                    <div className="card">
-                      {group.entries.map((txn, i) => {
-                        const meta      = TYPE_META[txn.type] || TYPE_META.expense;
-                        const isWasted  = txn.wasteAmount != null && txn.wasteAmount > 0;
-                        const isEditing = editingWaste === txn.id;
-                        const isFullWaste = txn.wasteAmount === txn.amount;
+                {/* Group items */}
+                {!isCollapsed && (
+                  <div className="card">
+                    {group.entries.map((txn, i) => {
+                      const m = TYPE_META[txn.type] || TYPE_META.expense;
+                      const isWasted  = txn.wasteAmount != null && txn.wasteAmount > 0;
+                      const isEditingWaste = editingWaste === txn.id;
 
-                        return (
-                          <div key={txn.id}>
-                            <div
-                              onClick={txn.type === 'expense' ? () => handleTxnTap(txn) : undefined}
-                              onDoubleClick={e => e.preventDefault()}
-                              style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                padding: '12px 14px',
-                                cursor: txn.type === 'expense' ? 'pointer' : 'default',
-                                background: isWasted ? 'var(--expense-bg)' : 'transparent',
-                                borderLeft: isWasted ? '3px solid var(--expense)' : '3px solid transparent',
-                                borderBottom: i < group.entries.length - 1 ? '1px solid var(--border)' : 'none',
-                                userSelect: 'none',
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                      return (
+                        <div key={txn.id}>
+                          <div
+                            onClick={() => handleTxnTap(txn)}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              padding: '12px 14px',
+                              borderBottom: i < group.entries.length - 1 ? '1px solid var(--border)' : 'none',
+                              cursor: 'pointer',
+                              background: isWasted ? m.bg : 'transparent',
+                              borderLeft: isWasted ? `3px solid ${m.color}` : '3px solid transparent',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                              <span style={{
+                                fontSize: 10, padding: '2px 7px', borderRadius: 6, fontWeight: 700,
+                                background: m.bg, color: m.color, border: `1px solid ${m.border}`,
+                                flexShrink: 0,
+                              }}>
+                                {txn.type === 'person' && txn.direction === 'repayment' ? 'Repayment' : m.label}
+                              </span>
+                              <div style={{ minWidth: 0 }}>
                                 <span style={{
-                                  fontSize: 10, padding: '3px 7px', borderRadius: 6,
-                                  fontWeight: 700, background: meta.bg, color: meta.color, flexShrink: 0,
+                                  fontSize: 13, fontWeight: 600, color: 'var(--text)',
+                                  display: 'block', overflow: 'hidden',
+                                  textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                 }}>
-                                  {meta.label}
+                                  {txn.name}
                                 </span>
-                                <div style={{ minWidth: 0 }}>
-                                  <span style={{
-                                    fontSize: 13, fontWeight: 500, color: 'var(--text)',
-                                    display: 'block', overflow: 'hidden',
-                                    textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                  }}>
-                                    {txn.name}
+                                {isWasted && (
+                                  <span style={{ fontSize: 11, color: 'var(--expense)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
+                                    <Flame size={10} /> Wasted: {formatAmount(txn.wasteAmount)}
                                   </span>
-                                  {txn.type === 'external' ? (
-                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                      {txn.externalSource ? `${txn.externalSource} · ` : ''}Paid {formatAmount(txn.amount)} · Rcvd {formatAmount(txn.settlement ?? 0)}
-                                    </span>
-                                  ) : isWasted ? (
-                                    <span style={{ fontSize: 11, color: 'var(--expense)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                                      <Flame size={10} />
-                                      {isFullWaste ? 'Full waste' : `Waste: ${formatAmount(txn.wasteAmount)}`}
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                                {txn.type === 'external' ? (() => {
-                                  const profit = (txn.settlement ?? txn.amount) - txn.amount;
-                                  return (
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: profit >= 0 ? '#16A34A' : '#DC2626', marginLeft: 8 }}>
-                                      {profit >= 0 ? '+' : ''}{formatAmount(profit)}
-                                    </span>
-                                  );
-                                })() : (
-                                  <span style={{ fontSize: 13, fontWeight: 700, color: meta.color, marginLeft: 8 }}>
-                                    {formatAmount(txn.amount)}
-                                  </span>
-                                )}
-                                {onDeleteTransaction && (
-                                  <button
-                                    onClick={e => { e.stopPropagation(); onDeleteTransaction(txn.id); }}
-                                    style={{
-                                      width: 24, height: 24, borderRadius: 6,
-                                      background: 'transparent', border: 'none',
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      color: 'var(--text-muted)', cursor: 'pointer',
-                                      transition: 'color 0.15s, background 0.15s',
-                                    }}
-                                    onMouseEnter={e => {
-                                      e.currentTarget.style.color = 'var(--expense)';
-                                      e.currentTarget.style.background = 'var(--expense-bg)';
-                                    }}
-                                    onMouseLeave={e => {
-                                      e.currentTarget.style.color = 'var(--text-muted)';
-                                      e.currentTarget.style.background = 'transparent';
-                                    }}
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
                                 )}
                               </div>
                             </div>
 
-                            {isEditing && txn.type === 'expense' && (
-                              <div style={{
-                                display: 'flex', gap: 8, alignItems: 'center',
-                                padding: '10px 14px',
-                                background: 'var(--expense-bg)',
-                                borderTop: '1px solid var(--expense-border)',
-                              }}>
-                                <input
-                                  ref={wasteInputRef}
-                                  type="number"
-                                  placeholder="Waste amount"
-                                  value={wasteInput}
-                                  onChange={e => setWasteInput(e.target.value)}
-                                  inputMode="decimal"
-                                  style={{
-                                    flex: 1, padding: '8px 10px', borderRadius: 8,
-                                    fontSize: 13, border: '1.5px solid var(--expense)',
-                                    background: 'var(--input-bg)', color: 'var(--text)',
-                                    outline: 'none', fontFamily: 'inherit',
-                                  }}
-                                  onKeyDown={e => {
-                                    if (e.key === 'Enter') saveWaste(txn);
-                                    if (e.key === 'Escape') cancelWaste();
-                                  }}
-                                />
-                                <button
-                                  onClick={() => saveWaste(txn)}
-                                  style={{
-                                    padding: '7px 12px', borderRadius: 8,
-                                    fontSize: 12, fontWeight: 700,
-                                    background: 'var(--expense)', color: '#fff',
-                                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                                  }}
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={cancelWaste}
-                                  style={{
-                                    padding: '7px 10px', borderRadius: 8,
-                                    fontSize: 12, fontWeight: 600,
-                                    background: 'var(--surface2)', color: 'var(--text-secondary)',
-                                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                                  }}
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: txn.direction === 'repayment' ? 'var(--income)' : m.color }}>
+                                {txn.direction === 'repayment' ? '+' : ''}{formatAmount(txn.amount)}
+                              </span>
+                              <button
+                                onClick={e => { e.stopPropagation(); setEditingTxn(txn); }}
+                                style={{
+                                  width: 26, height: 26, borderRadius: 6,
+                                  background: 'transparent', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.15s',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-bg)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                              >
+                                <Pencil size={12} />
+                              </button>
+                              <button
+                                onClick={e => { e.stopPropagation(); setDeletingId(txn.id); }}
+                                style={{
+                                  width: 26, height: 26, borderRadius: 6,
+                                  background: 'transparent', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.15s',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
 
-                  {!isCollapsed && (
-                    <p style={{
-                      fontSize: 10, marginTop: 5, paddingLeft: 2,
-                      color: 'var(--text-muted)',
-                    }}>
-                      Tap expense to toggle waste · Double-tap for custom amount
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                          {/* Waste editor inline row */}
+                          {isEditingWaste && (
+                            <div style={{
+                              display: 'flex', gap: 6, padding: '8px 14px',
+                              background: 'var(--expense-bg)', borderBottom: '1px solid var(--expense-border)',
+                            }}>
+                              <input
+                                ref={wasteInputRef}
+                                type="number"
+                                placeholder="Waste amount"
+                                value={wasteInput}
+                                onChange={e => setWasteInput(e.target.value)}
+                                inputMode="decimal"
+                                style={{
+                                  flex: 1, padding: '6px 10px', borderRadius: 8, fontSize: 12,
+                                  border: '1.5px solid var(--expense)', background: 'var(--input-bg)',
+                                  color: 'var(--text)', outline: 'none', fontFamily: 'inherit',
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter')  saveWaste(txn);
+                                  if (e.key === 'Escape') cancelWaste();
+                                }}
+                              />
+                              <button
+                                onClick={() => saveWaste(txn)}
+                                style={{
+                                  padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                                  background: 'var(--expense)', color: '#fff', border: 'none', cursor: 'pointer',
+                                }}
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={cancelWaste}
+                                style={{
+                                  padding: '5px 10px', borderRadius: 8, fontSize: 12,
+                                  background: 'var(--surface2)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer',
+                                }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
-
-      <style>{`
-        @media (min-width: 1024px) {
-          .history-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; align-items: start; }
-        }
-      `}</style>
     </div>
   );
 }
 
-function MiniChip({ label, val, color, bg }) {
-  if (!val) return null;
+function StatPill({ label, value, color, bg, border, Icon }) {
   return (
     <div style={{
-      padding: '4px 10px', borderRadius: 8,
-      background: bg, fontSize: 11, fontWeight: 600, color,
+      padding: '5px 10px', borderRadius: 20,
+      background: bg, border: `1px solid ${border}`,
+      display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
     }}>
-      {label}: {formatAmount(val)}
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div style={{
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      height: '60%', gap: 12,
-    }}>
-      <div style={{
-        width: 56, height: 56, borderRadius: 16,
-        background: 'var(--surface2)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <LayoutList size={26} style={{ color: 'var(--text-muted)' }} />
-      </div>
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>
-          No transactions in this period
-        </p>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-          Try a different time range
-        </p>
-      </div>
+      {Icon && <Icon size={11} style={{ color }} />}
+      <span style={{ fontSize: 11, fontWeight: 600, color }}>{label}:</span>
+      <span style={{ fontSize: 11, fontWeight: 800, color }}>{formatAmount(value)}</span>
     </div>
   );
 }

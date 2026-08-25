@@ -6,6 +6,7 @@ import {
   updateTransaction as fsUpdateTxn,
   deleteTransaction as fsDeleteTxn,
   addIncome as fsAddIncome,
+  updateIncome as fsUpdateIncome,
   deleteIncome as fsDeleteIncome,
   updateSettings as fsUpdateSettings,
 } from "../services/firestore";
@@ -96,6 +97,16 @@ export function useFirestoreData(uid) {
     }
   }, []);
 
+  const updateIncome = useCallback(async (updated) => {
+    if (!uidRef.current) return;
+    setIncome(prev => prev.map(i => i.id === updated.id ? updated : i));
+    try {
+      await fsUpdateIncome(uidRef.current, updated);
+    } catch (err) {
+      console.error('[updateIncome] Firestore write failed:', err?.code, err?.message, err);
+    }
+  }, []);
+
   const deleteIncome = useCallback(async (id) => {
     if (!uidRef.current) return;
     setIncome(prev => prev.filter(i => i.id !== id));
@@ -127,7 +138,7 @@ export function useFirestoreData(uid) {
   return {
     transactions, income, settings,
     addTransaction, updateTransaction, deleteTransaction,
-    addIncome, deleteIncome,
+    addIncome, updateIncome, deleteIncome,
     saveSettings, handleDataChange,
   };
 }
