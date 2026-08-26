@@ -106,7 +106,7 @@ function AuthenticatedApp({ user, signOut }) {
         {activeTab === 'history'  && <HistoryTab  {...commonProps} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onAddTransaction={addTransaction} onAddIncome={addIncome} />}
         {activeTab === 'income'   && <IncomeTab   {...commonProps} onAddIncome={addIncome} onUpdateIncome={updateIncome} onDeleteIncome={deleteIncome} />}
         {activeTab === 'people'   && <PersonsPanel transactions={transactions} onAddTransaction={addTransaction} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} />}
-        {activeTab === 'external' && <ExternalTab user={user} onAddIncome={addIncome} onAddTransaction={addTransaction} selectedPeriod={selectedPeriod} theme={theme} />}
+        {activeTab === 'external' && <ExternalTab user={user} transactions={transactions} income={income} onAddIncome={addIncome} onUpdateIncome={updateIncome} onDeleteIncome={deleteIncome} onAddTransaction={addTransaction} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} selectedPeriod={selectedPeriod} theme={theme} />}
         {activeTab === 'stats'    && <StatsTab    {...commonProps} />}
         {activeTab === 'settings' && <SettingsTab {...commonProps} onDataChange={handleDataChange} onThemeChange={handleThemeChange} onSignOut={signOut} addTransaction={addTransaction} addIncome={addIncome} />}
       </div>

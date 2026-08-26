@@ -1,8 +1,6 @@
-import { useState } from 'react';
-import { ChevronDown, CalendarRange } from 'lucide-react';
+import { ChevronDown, Calendar } from 'lucide-react';
 import {
-  getCurrentMonthValue, getDefaultPeriod, getPeriodLabel,
-  getAvailableMonths, getAvailableYears, formatMonthLabel,
+  getCurrentMonthValue, getAvailableMonths, getAvailableYears, formatMonthLabel,
 } from '../utils/periodHelpers';
 
 const PERIOD_TYPES = [
@@ -14,19 +12,20 @@ const PERIOD_TYPES = [
 ];
 
 const selectStyle = {
-  padding: '6px 28px 6px 10px',
-  borderRadius: 8, fontSize: 12, fontWeight: 600,
-  border: '1.5px solid var(--border)',
-  background: 'var(--input-bg)',
+  padding: '6px 26px 6px 12px',
+  borderRadius: 10, fontSize: 12, fontWeight: 600,
+  border: '1px solid var(--border)',
+  background: 'var(--surface2)',
   color: 'var(--text)',
   outline: 'none', fontFamily: 'inherit', cursor: 'pointer',
   appearance: 'none', WebkitAppearance: 'none',
+  transition: 'all 0.15s ease',
 };
 
 const dateInputStyle = {
-  padding: '6px 10px', borderRadius: 8, fontSize: 12, fontWeight: 500,
-  border: '1.5px solid var(--border)',
-  background: 'var(--input-bg)',
+  padding: '6px 10px', borderRadius: 10, fontSize: 12, fontWeight: 500,
+  border: '1px solid var(--border)',
+  background: 'var(--surface2)',
   color: 'var(--text)',
   outline: 'none', fontFamily: 'inherit',
   colorScheme: 'dark light',
@@ -36,7 +35,6 @@ export default function PeriodSelector({ period, onChange, transactions = [], in
   const months = getAvailableMonths(transactions, income);
   const years  = getAvailableYears(transactions, income);
   const today  = new Date().toISOString().slice(0, 10);
-  const label  = getPeriodLabel(period);
 
   function handleTypeChange(type) {
     switch (type) {
@@ -58,26 +56,20 @@ export default function PeriodSelector({ period, onChange, transactions = [], in
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-
-      {/* Period badge */}
-      <div className="period-badge">
-        <CalendarRange size={12} />
-        {label}
-      </div>
-
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
       {/* Type selector */}
-      <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <Calendar size={13} style={{ position: 'absolute', left: 10, color: 'var(--accent)', pointerEvents: 'none' }} />
         <select
           value={period.type}
           onChange={e => handleTypeChange(e.target.value)}
-          style={selectStyle}
+          style={{ ...selectStyle, paddingLeft: 30 }}
         >
           {PERIOD_TYPES.map(t => (
             <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </select>
-        <ChevronDown size={11} style={{
+        <ChevronDown size={12} style={{
           position: 'absolute', right: 8, top: '50%',
           transform: 'translateY(-50%)',
           color: 'var(--text-muted)', pointerEvents: 'none',
@@ -96,7 +88,7 @@ export default function PeriodSelector({ period, onChange, transactions = [], in
               <option key={m} value={m}>{formatMonthLabel(m)}</option>
             ))}
           </select>
-          <ChevronDown size={11} style={{
+          <ChevronDown size={12} style={{
             position: 'absolute', right: 8, top: '50%',
             transform: 'translateY(-50%)',
             color: 'var(--text-muted)', pointerEvents: 'none',
@@ -116,7 +108,7 @@ export default function PeriodSelector({ period, onChange, transactions = [], in
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
-          <ChevronDown size={11} style={{
+          <ChevronDown size={12} style={{
             position: 'absolute', right: 8, top: '50%',
             transform: 'translateY(-50%)',
             color: 'var(--text-muted)', pointerEvents: 'none',
@@ -126,7 +118,7 @@ export default function PeriodSelector({ period, onChange, transactions = [], in
 
       {/* Custom date range */}
       {period.type === 'custom_range' && (
-        <>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <input
             type="date"
             value={period.start || ''}
@@ -147,7 +139,7 @@ export default function PeriodSelector({ period, onChange, transactions = [], in
             }}
             style={dateInputStyle}
           />
-        </>
+        </div>
       )}
     </div>
   );

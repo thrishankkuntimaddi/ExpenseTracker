@@ -106,36 +106,39 @@ export function useExternalTransactions(uid) {
   }, []);
 
   /* ── Discard session ── */
-  const discardSession = useCallback(async (id, { onDeleteIncome, onDeleteTransaction } = {}) => {
-    if (!uidRef.current) return;
-    const session = sessions.find((s) => s.id === id);
-    if (session?.settlementId) {
-      if (session.settlementType === 'income' && onDeleteIncome) {
-        onDeleteIncome(session.settlementId);
-      } else if (session.settlementType === 'expense' && onDeleteTransaction) {
-        onDeleteTransaction(session.settlementId);
+  const discardSession = useCallback(
+    async (id, { onDeleteIncome, onDeleteTransaction, transactions = [], income = [] } = {}) => {
+      if (!uidRef.current) return;
+      const session = sessions.find((s) => s.id === id);
+      const matchingIncomes = income.filter(
+        (i) => i.externalSessionId === id || i.id === session?.settlementId
+      );
+      const matchingTxns = transactions.filter(
+        (t) => t.externalSessionId === id || t.id === session?.settlementId
+      );
+      matchingIncomes.forEach((i) => onDeleteIncome && onDeleteIncome(i.id));
+      matchingTxns.forEach((t) => onDeleteTransaction && onDeleteTransaction(t.id));
+
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      try {
+        await deleteExternalTransaction(uidRef.current, id);
+      } catch (err) {
+        console.error('[discardSession] Firestore delete failed:', err);
       }
-    }
-    setSessions((prev) => prev.filter((s) => s.id !== id));
-    try {
-      await deleteExternalTransaction(uidRef.current, id);
-    } catch (err) {
-      console.error('[discardSession] Firestore delete failed:', err);
-    }
-  }, [sessions]);
+    },
+    [sessions]
+  );
 
   /* ── Close session + settle into income/expense idempotently ── */
   const closeSession = useCallback(
     async (
       sessionId,
       { netBalance, items, received, total_received, total_spent, sessionDate, sessionName },
-      { onAddIncome, onUpdateIncome, onDeleteIncome, onAddTransaction, onUpdateTransaction, onDeleteTransaction }
+      { onAddIncome, onUpdateIncome, onDeleteIncome, onAddTransaction, onUpdateTransaction, onDeleteTransaction, transactions = [], income = [] }
     ) => {
       if (!uidRef.current) return;
 
       const session = sessions.find((s) => s.id === sessionId);
-      const existingSettlementId = session?.settlementId;
-      const existingSettlementType = session?.settlementType;
 
       // Build person label (comma-separated if multiple)
       const persons = received
@@ -146,12 +149,25 @@ export function useExternalTransactions(uid) {
       const dateForEntry = sessionDate || new Date().toISOString();
       const month = isoToMonth(dateForEntry);
 
-      let settlementId = existingSettlementId || null;
-      let settlementType = existingSettlementType || null;
+      // Search for existing settlement entries matching this session
+      const matchingIncomes = income.filter(
+        (i) => i.externalSessionId === sessionId || i.id === session?.settlementId || (i.tag === 'External Settlement' && (i.name === persons || i.name === sessionName))
+      );
+      const matchingTxns = transactions.filter(
+        (t) => t.externalSessionId === sessionId || t.id === session?.settlementId || (t.category === 'External' && (t.name === `External – ${persons}` || t.name?.includes(persons)))
+      );
+
+      const primaryIncome = matchingIncomes.find((i) => i.id === session?.settlementId) || matchingIncomes[0];
+      const primaryTxn    = matchingTxns.find((t) => t.id === session?.settlementId) || matchingTxns[0];
+
+      let settlementId = session?.settlementId || primaryIncome?.id || primaryTxn?.id || generateId();
+      let settlementType = null;
 
       if (netBalance > 0) {
         // PROFIT → Income tab
+        settlementType = 'income';
         const incomeData = {
+          id: settlementId,
           name: persons,
           amount: netBalance,
           type: 'income',
@@ -161,25 +177,26 @@ export function useExternalTransactions(uid) {
           externalSessionId: sessionId,
         };
 
-        if (existingSettlementId && existingSettlementType === 'income') {
-          settlementId = existingSettlementId;
-          settlementType = 'income';
-          if (onUpdateIncome) {
-            await onUpdateIncome({ id: settlementId, ...incomeData });
-          }
+        if (primaryIncome) {
+          if (onUpdateIncome) await onUpdateIncome(incomeData);
         } else {
-          if (existingSettlementId && existingSettlementType === 'expense' && onDeleteTransaction) {
-            await onDeleteTransaction(existingSettlementId);
-          }
-          settlementId = generateId();
-          settlementType = 'income';
-          if (onAddIncome) {
-            await onAddIncome({ id: settlementId, ...incomeData });
-          }
+          if (onAddIncome) await onAddIncome(incomeData);
         }
+
+        // Clean up any extra duplicate incomes for this session
+        matchingIncomes.filter((i) => i.id !== settlementId).forEach((dup) => {
+          if (onDeleteIncome) onDeleteIncome(dup.id);
+        });
+        // Clean up any opposite expense txns for this session
+        matchingTxns.forEach((oldTxn) => {
+          if (onDeleteTransaction) onDeleteTransaction(oldTxn.id);
+        });
+
       } else if (netBalance < 0) {
         // LOSS → Expense tab
+        settlementType = 'expense';
         const expenseData = {
+          id: settlementId,
           name: `External – ${persons}`,
           amount: Math.abs(netBalance),
           type: 'expense',
@@ -189,33 +206,31 @@ export function useExternalTransactions(uid) {
           externalSessionId: sessionId,
         };
 
-        if (existingSettlementId && existingSettlementType === 'expense') {
-          settlementId = existingSettlementId;
-          settlementType = 'expense';
-          if (onUpdateTransaction) {
-            await onUpdateTransaction({ id: settlementId, ...expenseData });
-          }
+        if (primaryTxn) {
+          if (onUpdateTransaction) await onUpdateTransaction(expenseData);
         } else {
-          if (existingSettlementId && existingSettlementType === 'income' && onDeleteIncome) {
-            await onDeleteIncome(existingSettlementId);
-          }
-          settlementId = generateId();
-          settlementType = 'expense';
-          if (onAddTransaction) {
-            await onAddTransaction({ id: settlementId, ...expenseData });
-          }
+          if (onAddTransaction) await onAddTransaction(expenseData);
         }
+
+        // Clean up any extra duplicate expense txns for this session
+        matchingTxns.filter((t) => t.id !== settlementId).forEach((dup) => {
+          if (onDeleteTransaction) onDeleteTransaction(dup.id);
+        });
+        // Clean up any opposite income entries for this session
+        matchingIncomes.forEach((oldInc) => {
+          if (onDeleteIncome) onDeleteIncome(oldInc.id);
+        });
+
       } else {
-        // netBalance === 0 → Perfectly settled
-        if (existingSettlementId) {
-          if (existingSettlementType === 'income' && onDeleteIncome) {
-            await onDeleteIncome(existingSettlementId);
-          } else if (existingSettlementType === 'expense' && onDeleteTransaction) {
-            await onDeleteTransaction(existingSettlementId);
-          }
-        }
+        // netBalance === 0 → Perfectly settled; remove all settlement entries
         settlementId = null;
         settlementType = null;
+        matchingIncomes.forEach((oldInc) => {
+          if (onDeleteIncome) onDeleteIncome(oldInc.id);
+        });
+        matchingTxns.forEach((oldTxn) => {
+          if (onDeleteTransaction) onDeleteTransaction(oldTxn.id);
+        });
       }
 
       const finalPatch = {
@@ -241,16 +256,18 @@ export function useExternalTransactions(uid) {
 
   /* ── Delete session ── */
   const deleteSession = useCallback(
-    async (id, { onDeleteIncome, onDeleteTransaction } = {}) => {
+    async (id, { onDeleteIncome, onDeleteTransaction, transactions = [], income = [] } = {}) => {
       if (!uidRef.current) return;
       const session = sessions.find((s) => s.id === id);
-      if (session?.settlementId) {
-        if (session.settlementType === 'income' && onDeleteIncome) {
-          onDeleteIncome(session.settlementId);
-        } else if (session.settlementType === 'expense' && onDeleteTransaction) {
-          onDeleteTransaction(session.settlementId);
-        }
-      }
+      const matchingIncomes = income.filter(
+        (i) => i.externalSessionId === id || i.id === session?.settlementId
+      );
+      const matchingTxns = transactions.filter(
+        (t) => t.externalSessionId === id || t.id === session?.settlementId
+      );
+      matchingIncomes.forEach((i) => onDeleteIncome && onDeleteIncome(i.id));
+      matchingTxns.forEach((t) => onDeleteTransaction && onDeleteTransaction(t.id));
+
       setSessions((prev) => prev.filter((s) => s.id !== id));
       try {
         await deleteExternalTransaction(uidRef.current, id);

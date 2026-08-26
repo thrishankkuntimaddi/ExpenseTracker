@@ -82,20 +82,54 @@ function CardHeader({ title, sub, right }) {
   );
 }
 
-function SummaryTile({ label, value, color, bg, border, Icon }) {
+function SummaryTile({ label, value, color, bg, border, Icon, gradient }) {
   return (
-    <div style={{
-      background: bg, border: `1.5px solid ${border}`,
-      borderRadius: 14, padding: '14px 16px',
-      display: 'flex', flexDirection: 'column', gap: 3,
-    }}>
+    <div
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 16,
+        padding: '15px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+        boxShadow: 'var(--shadow-sm)',
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.boxShadow = 'var(--shadow)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = 'none';
+        e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          background: gradient || color,
+        }}
+      />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color }}>
+        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
           {label}
         </span>
-        {Icon && <Icon size={14} style={{ color }} />}
+        <div style={{
+          width: 26, height: 26, borderRadius: 8,
+          background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: color,
+        }}>
+          {Icon && <Icon size={13} />}
+        </div>
       </div>
-      <div style={{ fontSize: 18, fontWeight: 800, color, lineHeight: 1.1 }}>
+      <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
         {formatAmount(value)}
       </div>
     </div>
@@ -463,38 +497,91 @@ export default function DesktopDashboard({
       {activeSection === 'dashboard' && (<>
 
         {/* ── SUMMARY STRIP ── */}
-        <div style={{ padding: '16px 28px 0', display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
+        <div style={{ padding: '20px 28px 0', display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
           {/* Remaining Balance */}
-          <div style={{
-            background: positive ? 'var(--income)' : 'var(--expense)',
-            borderRadius: 14, padding: '15px 16px',
-            display: 'flex', flexDirection: 'column', gap: 3,
-          }}>
-            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.75)' }}>
-              Remaining
-            </span>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', lineHeight: 1.1 }}>
+          <div
+            style={{
+              background: positive
+                ? 'linear-gradient(135deg, #10B981, #059669)'
+                : 'linear-gradient(135deg, #F43F5E, #E11D48)',
+              borderRadius: 16,
+              padding: '15px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+              boxShadow: positive ? '0 6px 18px rgba(16, 185, 129, 0.22)' : '0 6px 18px rgba(244, 63, 94, 0.22)',
+              color: '#fff',
+              position: 'relative',
+              overflow: 'hidden',
+              transition: 'transform 0.2s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.85)' }}>
+                Remaining
+              </span>
+              <div style={{ width: 26, height: 26, borderRadius: 8, background: 'rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Wallet size={13} color="#fff" />
+              </div>
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
               {formatAmount(stats.balance)}
             </div>
           </div>
 
-          <SummaryTile label="Income"      value={stats.totalIncome}  color="var(--income)"  bg="var(--income-bg)"  border="var(--income-border)"  Icon={TrendingUp}   />
-          <SummaryTile label="Expense"     value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={TrendingDown}  />
-          <SummaryTile label="Savings"     value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" Icon={PiggyBank}    />
-          <SummaryTile label="Outstanding" value={stats.netLent}       color="var(--person)"  bg="var(--person-bg)"  border="var(--person-border)"  Icon={Users}        />
+          <SummaryTile label="Income"      value={stats.totalIncome}  color="var(--income)"  bg="var(--income-bg)"  gradient="linear-gradient(135deg, #10B981, #0D9488)" Icon={TrendingUp}   />
+          <SummaryTile label="Expense"     value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" gradient="linear-gradient(135deg, #F43F5E, #E11D48)" Icon={TrendingDown}  />
+          <SummaryTile label="Savings"     value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" gradient="linear-gradient(135deg, #3B82F6, #6366F1)" Icon={PiggyBank}    />
+          <SummaryTile label="Outstanding" value={stats.netLent}       color="var(--person)"  bg="var(--person-bg)"  gradient="linear-gradient(135deg, #F59E0B, #D97706)" Icon={Users}        />
 
-          {/* Waste */}
-          <div style={{ background: 'var(--person-bg)', border: '1.5px solid var(--person-border)', borderRadius: 14, padding: '14px 16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--expense)' }}>
+          {/* Waste Card */}
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 16,
+              padding: '15px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+              boxShadow: 'var(--shadow-sm)',
+              position: 'relative',
+              overflow: 'hidden',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = 'var(--shadow)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'none';
+              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                background: 'linear-gradient(135deg, #FF5722, #EA580C)',
+              }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
                 Wastage
               </span>
-              <div style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--expense-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Flame size={11} style={{ color: 'var(--expense)' }} />
+              <div style={{ width: 26, height: 26, borderRadius: 8, background: 'var(--waste-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Flame size={13} style={{ color: 'var(--waste)' }} />
               </div>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--expense)' }}>{stats.wastePercent}%</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginTop: 2 }}>{formatAmount(stats.totalWaste)}</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--waste)', letterSpacing: '-0.02em' }}>{stats.wastePercent}%</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>({formatAmount(stats.totalWaste)})</div>
+            </div>
           </div>
         </div>
 
@@ -881,36 +968,77 @@ export default function DesktopDashboard({
             {/* Analytics Panel */}
             <DCard>
               <CardHeader title="Analytics" sub={getPeriodLabel(selectedPeriod)} />
-              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-                {/* Donut */}
+                {/* Donut & Legend */}
                 {pieData.length > 0 ? (
                   <div>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Distribution</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <ResponsiveContainer width={100} height={100}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                      Category Breakdown
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <ResponsiveContainer width={110} height={110}>
                         <PieChart>
-                          <Pie data={pieData} cx="50%" cy="50%" innerRadius={28} outerRadius={46} dataKey="value" paddingAngle={3}>
+                          <Pie data={pieData} cx="50%" cy="50%" innerRadius={30} outerRadius={50} dataKey="value" paddingAngle={4}>
                             {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
                           </Pie>
                           <Tooltip content={<ChartTooltip />} />
                         </PieChart>
                       </ResponsiveContainer>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, flex: 1 }}>
                         {pieData.map(d => (
-                          <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <div style={{ width: 8, height: 8, borderRadius: 2, background: d.color, flexShrink: 0 }} />
-                            <span style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 500 }}>{d.name}: {formatAmount(d.value)}</span>
+                          <div key={d.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <div style={{ width: 9, height: 9, borderRadius: 3, background: d.color, flexShrink: 0 }} />
+                              <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>{d.name}</span>
+                            </div>
+                            <span style={{ fontSize: 11, color: 'var(--text)', fontWeight: 700 }}>{formatAmount(d.value)}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div style={{ height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No distribution data</p>
+                  <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No category data available</p>
                   </div>
                 )}
+
+                {/* Financial Health Indicators */}
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
+                    Period Ratios
+                  </p>
+
+                  {/* Expense Ratio */}
+                  {(() => {
+                    const expRatio = stats.totalIncome > 0 ? Math.min(100, Math.round((stats.totalExpense / stats.totalIncome) * 100)) : 0;
+                    const savRatio = stats.totalIncome > 0 ? Math.min(100, Math.round((stats.totalSavings / stats.totalIncome) * 100)) : 0;
+                    return (
+                      <>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>Expense Ratio</span>
+                            <span style={{ color: expRatio > 80 ? 'var(--expense)' : 'var(--text)' }}>{expRatio}% of Income</span>
+                          </div>
+                          <div style={{ height: 6, width: '100%', borderRadius: 99, background: 'var(--surface2)', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${expRatio}%`, borderRadius: 99, background: expRatio > 80 ? 'var(--expense)' : 'var(--accent)', transition: 'width 0.3s ease' }} />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>Savings Rate</span>
+                            <span style={{ color: 'var(--savings)' }}>{savRatio}% of Income</span>
+                          </div>
+                          <div style={{ height: 6, width: '100%', borderRadius: 99, background: 'var(--surface2)', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${savRatio}%`, borderRadius: 99, background: 'linear-gradient(90deg, #3B82F6, #6366F1)', transition: 'width 0.3s ease' }} />
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
             </DCard>
           </div>
