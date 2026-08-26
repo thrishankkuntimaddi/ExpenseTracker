@@ -235,7 +235,7 @@ export default function IncomeTab({
               </div>
 
               {/* Person Dropdown for Repayment Rec. */}
-              {incMode === 'repaymentRec' && !isCustomName && hasLentPersons ? (
+              {incMode === 'repaymentRec' && !isCustomName ? (
                 <div style={{ marginBottom: 10 }}>
                   <select
                     value={name}
@@ -264,7 +264,9 @@ export default function IncomeTab({
                       outline: 'none', fontFamily: 'inherit', fontWeight: 600,
                     }}
                   >
-                    <option value="">-- Select Person Who Repaid You --</option>
+                    <option value="">
+                      {hasLentPersons ? '-- Select Person Who Repaid You --' : '-- No Active Debtors (Type Custom Name) --'}
+                    </option>
                     {lentPersons.map(p => (
                       <option key={p} value={p}>
                         {p} (Owes You: {formatAmount(stats.personDebts[p].netLent)})
@@ -300,8 +302,8 @@ export default function IncomeTab({
                 </div>
               ) : null}
 
-              {/* Name (for Income, Borrowed, Custom Name, or when no debt contacts) */}
-              {(incMode !== 'repaymentRec' || isCustomName || !hasLentPersons) && (
+              {/* Name (for Income, Borrowed, or Custom Name mode) */}
+              {(incMode !== 'repaymentRec' || isCustomName) && (
                 <div style={{ position: 'relative', marginBottom: 10 }}>
                   <PenLine size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                   <input
@@ -309,11 +311,11 @@ export default function IncomeTab({
                     placeholder={incMode === 'income' ? 'Source (Salary, Freelance…)' : 'Person Name'}
                     value={name}
                     onChange={e => setName(e.target.value)} onKeyDown={handleNameKey} autoComplete="off"
-                    style={{ width: '100%', paddingLeft: 38, paddingRight: incMode === 'repaymentRec' && hasLentPersons ? 80 : 14, paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 14, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
+                    style={{ width: '100%', paddingLeft: 38, paddingRight: incMode === 'repaymentRec' ? 80 : 14, paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 14, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
                     onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2')}
                     onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
                   />
-                  {incMode === 'repaymentRec' && hasLentPersons && (
+                  {incMode === 'repaymentRec' && (
                     <button
                       type="button"
                       onClick={() => { setIsCustomName(false); setName(''); setAmount(''); }}
@@ -446,8 +448,13 @@ export default function IncomeTab({
                             )}
                             <button
                               onClick={() => {
-                                if (entry.isBorrowed) onDeleteTransaction ? onDeleteTransaction(entry.id) : onDeleteIncome(entry.id);
-                                else setDeletingId(entry.id);
+                                if (income.some(i => i.id === entry.id)) {
+                                  setDeletingId(entry.id);
+                                } else if (transactions.some(t => t.id === entry.id)) {
+                                  if (onDeleteTransaction) onDeleteTransaction(entry.id);
+                                } else {
+                                  setDeletingId(entry.id);
+                                }
                               }}
                               style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
                               onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}

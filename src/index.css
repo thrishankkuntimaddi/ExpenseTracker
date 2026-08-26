@@ -51,9 +51,9 @@
   --lent-border:    #FDE68A;
 
   /* Category colors — PERSON: BORROWED (you took, owe back) */
-  --borrowed:        #DC2626;
-  --borrowed-bg:     #FEF2F2;
-  --borrowed-border: #FECACA;
+  --borrowed:        #8B5CF6;
+  --borrowed-bg:     #F5F3FF;
+  --borrowed-border: #DDD6FE;
 
   /* Category colors — PERSON: REPAYMENT REC. (money returned to you) */
   --repayment-rec:        #0891B2;

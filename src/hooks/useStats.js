@@ -11,7 +11,7 @@ const C_LIGHT = {
   expense:      '#E11D48', // --expense
   savings:      '#2563EB', // --savings
   lent:         '#D97706', // --lent
-  borrowed:     '#DC2626', // --borrowed
+  borrowed:     '#8B5CF6', // --borrowed
   repaymentRec: '#0891B2', // --repayment-rec
   given:        '#7C3AED', // --given
   external:     '#7C3AED', // --external
@@ -21,7 +21,7 @@ const C_DARK = {
   expense:      '#F43F5E', // --expense
   savings:      '#3B82F6', // --savings
   lent:         '#F59E0B', // --lent
-  borrowed:     '#F87171', // --borrowed
+  borrowed:     '#A78BFA', // --borrowed
   repaymentRec: '#22D3EE', // --repayment-rec
   given:        '#A78BFA', // --given
   external:     '#8B5CF6', // --external

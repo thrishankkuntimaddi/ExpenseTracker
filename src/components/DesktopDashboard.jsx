@@ -1065,7 +1065,7 @@ export default function DesktopDashboard({
                 </div>
 
                 {/* Person Dropdown for Repayment Rec. */}
-                {incMode === 'repaymentRec' && !isICustomName && hasLentPersons ? (
+                {incMode === 'repaymentRec' && !isICustomName ? (
                   <div style={{ marginBottom: 7 }}>
                     <select
                       value={iName}
@@ -1094,7 +1094,9 @@ export default function DesktopDashboard({
                         outline: 'none', fontFamily: 'inherit', fontWeight: 600,
                       }}
                     >
-                      <option value="">-- Select Person Who Repaid You --</option>
+                      <option value="">
+                        {hasLentPersons ? '-- Select Person Who Repaid You --' : '-- No Active Debtors (Type Custom Name) --'}
+                      </option>
                       {lentPersons.map(p => (
                         <option key={p} value={p}>
                           {p} (Owes You: {formatAmount(stats.personDebts[p].netLent)})
@@ -1133,7 +1135,7 @@ export default function DesktopDashboard({
                 ) : null}
 
                 {/* Name Input */}
-                {(incMode !== 'repaymentRec' || isICustomName || !hasLentPersons) && (
+                {(incMode !== 'repaymentRec' || isICustomName) && (
                   <div style={{ position: 'relative', marginBottom: 7 }}>
                     <PenLine size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input
@@ -1142,10 +1144,10 @@ export default function DesktopDashboard({
                       value={iName}
                       onChange={e => setIName(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), iAmountRef.current?.focus())}
-                      autoComplete="off" style={{ ...inputStyle, paddingRight: incMode === 'repaymentRec' && hasLentPersons ? 70 : 12 }}
+                      autoComplete="off" style={{ ...inputStyle, paddingRight: incMode === 'repaymentRec' ? 70 : 12 }}
                       {...focusHandlers(incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2')}
                     />
-                    {incMode === 'repaymentRec' && hasLentPersons && (
+                    {incMode === 'repaymentRec' && (
                       <button
                         type="button"
                         onClick={() => { setIsICustomName(false); setIName(''); setIAmount(''); }}
@@ -1248,11 +1250,16 @@ export default function DesktopDashboard({
                               <Pencil size={10} />
                             </button>
                           )}
-                          {((!entry.isBorrowed && onDeleteIncome) || (entry.isBorrowed && onDeleteTransaction)) && (
+                          {(onDeleteIncome || onDeleteTransaction) && (
                             <button
                               onClick={() => {
-                                if (entry.isBorrowed) onDeleteTransaction(entry.id);
-                                else setDeletingIncId(entry.id);
+                                if (income.some(i => i.id === entry.id)) {
+                                  setDeletingIncId(entry.id);
+                                } else if (transactions.some(t => t.id === entry.id)) {
+                                  if (onDeleteTransaction) onDeleteTransaction(entry.id);
+                                } else {
+                                  setDeletingIncId(entry.id);
+                                }
                               }}
                               style={{ width: 20, height: 20, borderRadius: 4, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}
                               onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
