@@ -379,10 +379,15 @@ button:disabled { cursor: not-allowed; }
   flex-shrink: 0;
 }
 
-/* ══ MOBILE RESPONSIVE DASHBOARD OVERRIDES ══════════════════════ */
+/* ══ MOBILE RESPONSIVE DASHBOARD & INPUT ZOOM OVERRIDES ══════════════════════ */
 @media (max-width: 1023px) {
-  body { overflow: auto; }
+  body { overflow: auto; touch-action: manipulation; }
   #root { overflow: auto; }
+
+  /* Prevent mobile browsers (especially Mobile Safari) from auto-zooming on input focus */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 
   .desktop-dashboard-summary {
     grid-template-columns: repeat(2, 1fr) !important;

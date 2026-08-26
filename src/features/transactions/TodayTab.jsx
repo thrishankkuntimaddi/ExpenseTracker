@@ -205,23 +205,24 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
             {/* Person Direction Toggle */}
             {type === 'person' && (
               <div style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 10 }}>
                   {PERSON_DIRECTIONS.map(d => (
                     <button
                       key={d.key}
                       type="button"
                       onClick={() => setDirection(d.key)}
                       style={{
-                        flex: 1, padding: '8px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                        padding: '9px 6px', borderRadius: 10, fontSize: 12, fontWeight: 700,
                         border: `1.5px solid ${direction === d.key ? d.color : 'var(--border)'}`,
                         background: direction === d.key ? d.color + '22' : 'transparent',
                         color: direction === d.key ? d.color : 'var(--text-secondary)',
                         cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                        textAlign: 'center',
                       }}
                     >
-                      <d.Icon size={13} />
-                      {d.label}
+                      <d.Icon size={13} flexShrink={0} />
+                      <span style={{ lineHeight: 1.2 }}>{d.label}</span>
                     </button>
                   ))}
                 </div>
@@ -583,6 +584,10 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
         @media (min-width: 1024px) {
           .today-form-col    { flex: 0 0 400px !important; padding: 24px !important; }
           .today-entries-col { flex: 1 1 0% !important; padding: 24px 24px 24px 0 !important; overflow-y: auto; }
+        }
+        @media (max-width: 1023px) {
+          .today-form-col    { flex: 0 0 100% !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
+          .today-entries-col { flex: 0 0 100% !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
         }
       `}</style>
     </div>
