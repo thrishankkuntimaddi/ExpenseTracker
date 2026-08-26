@@ -152,35 +152,35 @@ export default function DesktopDashboard({
 
   /* ── UI state ── */
   const [activeSection, setActiveSection] = useState('dashboard');
-  const [dashTxnView,   setDashTxnView]   = useState('today');
-  const [showImport,    setShowImport]    = useState(false);
-  const [editingTxn,    setEditingTxn]    = useState(null);
-  const [editingInc,    setEditingInc]    = useState(null);
+  const [dashTxnView, setDashTxnView] = useState('today');
+  const [showImport, setShowImport] = useState(false);
+  const [editingTxn, setEditingTxn] = useState(null);
+  const [editingInc, setEditingInc] = useState(null);
   const [deletingTxnId, setDeletingTxnId] = useState(null);
   const [deletingIncId, setDeletingIncId] = useState(null);
 
   // Quick entry states
-  const [name, setName]             = useState('');
-  const [amount, setAmount]         = useState('');
-  const [dateInput, setDateInput]   = useState(todayInputValue());
+  const [name, setName] = useState('');
+  const [amount, setAmount] = useState('');
+  const [dateInput, setDateInput] = useState(todayInputValue());
   const [settlement, setSettlement] = useState('');
-  const [extSource, setExtSource]   = useState('');
-  const [type, setType]             = useState('expense');
-  const [direction, setDirection]   = useState('lent');
+  const [extSource, setExtSource] = useState('');
+  const [type, setType] = useState('expense');
+  const [direction, setDirection] = useState('lent');
   const [savingsType, setSavingsType] = useState('cash');
-  const [platform, setPlatform]     = useState('');
+  const [platform, setPlatform] = useState('');
 
-  const nameRef         = useRef(null);
-  const amountRef       = useRef(null);
-  const settlementRef   = useRef(null);
-  const extSourceRef    = useRef(null);
+  const nameRef = useRef(null);
+  const amountRef = useRef(null);
+  const settlementRef = useRef(null);
+  const extSourceRef = useRef(null);
 
   // Income entry states
-  const [incMode, setIncMode]     = useState('income'); // 'income' | 'borrowed'
-  const [iName, setIName]         = useState('');
-  const [iAmount, setIAmount]     = useState('');
+  const [incMode, setIncMode] = useState('income'); // 'income' | 'borrowed'
+  const [iName, setIName] = useState('');
+  const [iAmount, setIAmount] = useState('');
   const [iDateInput, setIDateInput] = useState(todayInputValue());
-  const iNameRef   = useRef(null);
+  const iNameRef = useRef(null);
   const iAmountRef = useRef(null);
 
   /* ── Today's entries ── */
@@ -256,7 +256,7 @@ export default function DesktopDashboard({
   };
   const focusHandlers = (color) => ({
     onFocus: e => (e.target.style.borderColor = color),
-    onBlur:  e => (e.target.style.borderColor = 'var(--input-border)'),
+    onBlur: e => (e.target.style.borderColor = 'var(--input-border)'),
   });
 
   return (
@@ -347,9 +347,9 @@ export default function DesktopDashboard({
         <div style={{ display: 'flex', gap: 4 }}>
           {[
             { key: 'dashboard', label: 'Dashboard' },
-            { key: 'history',   label: 'History',   icon: <List size={12} /> },
-            { key: 'external',  label: 'External',  icon: <ArrowLeftRight size={12} /> },
-            { key: 'settings',  label: 'Settings'  },
+            { key: 'history', label: 'History', icon: <List size={12} /> },
+            { key: 'external', label: 'External', icon: <ArrowLeftRight size={12} /> },
+            { key: 'settings', label: 'Settings' },
           ].map(tab => (
             <button
               key={tab.key}
@@ -536,10 +536,10 @@ export default function DesktopDashboard({
             </div>
           </div>
 
-          <SummaryTile label="Income"      value={stats.totalIncome}  color="var(--income)"  bg="var(--income-bg)"  gradient="linear-gradient(135deg, #10B981, #0D9488)" Icon={TrendingUp}   />
-          <SummaryTile label="Expense"     value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" gradient="linear-gradient(135deg, #F43F5E, #E11D48)" Icon={TrendingDown}  />
-          <SummaryTile label="Savings"     value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" gradient="linear-gradient(135deg, #3B82F6, #6366F1)" Icon={PiggyBank}    />
-          <SummaryTile label="Outstanding" value={stats.netLent}       color="var(--person)"  bg="var(--person-bg)"  gradient="linear-gradient(135deg, #F59E0B, #D97706)" Icon={Users}        />
+          <SummaryTile label="Income" value={stats.totalIncome} color="var(--income)" bg="var(--income-bg)" gradient="linear-gradient(135deg, #10B981, #0D9488)" Icon={TrendingUp} />
+          <SummaryTile label="Expense" value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" gradient="linear-gradient(135deg, #F43F5E, #E11D48)" Icon={TrendingDown} />
+          <SummaryTile label="Savings" value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" gradient="linear-gradient(135deg, #3B82F6, #6366F1)" Icon={PiggyBank} />
+          <SummaryTile label="Outstanding" value={stats.netLent} color="var(--person)" bg="var(--person-bg)" gradient="linear-gradient(135deg, #F59E0B, #D97706)" Icon={Users} />
 
           {/* Waste Card */}
           <div
@@ -693,7 +693,7 @@ export default function DesktopDashboard({
                   <PenLine size={12} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                   <input
                     id="desktop-input-name" ref={nameRef} type="text"
-                    placeholder={type === 'person' ? 'Person Name (e.g. Mom)' : 'Description…'}
+                    placeholder={type === 'person' ? 'Person Name ' : 'Description…'}
                     value={name}
                     onChange={e => setName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), amountRef.current?.focus())}
@@ -790,87 +790,87 @@ export default function DesktopDashboard({
                         </p>
                       </div>
                     ) : displayTxns.slice().reverse().map((txn) => {
-                  const m = TYPE_META[txn.type] || TYPE_META.expense;
-                  const isWasted  = txn.wasteAmount != null && txn.wasteAmount > 0;
-                  const isEditing = editingWaste === txn.id;
-                  return (
-                    <div key={txn.id}>
-                      <div
-                        onClick={() => handleTxnTap(txn)}
-                        style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '9px 18px',
-                          borderBottom: '1px solid var(--border)',
-                          cursor: 'pointer',
-                          background: isWasted ? m.bg : 'transparent',
-                          borderLeft: isWasted ? `3px solid ${m.color}` : '3px solid transparent',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                          <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 5, fontWeight: 700, background: m.bg, color: m.color, flexShrink: 0 }}>
-                            {txn.type === 'person' && txn.direction === 'repayment' ? 'Repayment' : m.label}
-                          </span>
-                          <div style={{ minWidth: 0 }}>
-                            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {txn.name}
-                            </span>
-                            {isWasted && <Flame size={10} style={{ color: m.color, flexShrink: 0 }} />}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: txn.direction === 'repayment' ? 'var(--income)' : m.color, marginLeft: 8 }}>
-                            {txn.direction === 'repayment' ? '+' : ''}{formatAmount(txn.amount)}
-                          </span>
-                          <button
-                            onClick={e => { e.stopPropagation(); setEditingTxn(txn); }}
+                      const m = TYPE_META[txn.type] || TYPE_META.expense;
+                      const isWasted = txn.wasteAmount != null && txn.wasteAmount > 0;
+                      const isEditing = editingWaste === txn.id;
+                      return (
+                        <div key={txn.id}>
+                          <div
+                            onClick={() => handleTxnTap(txn)}
                             style={{
-                              width: 22, height: 22, borderRadius: 5,
-                              background: 'transparent', border: 'none',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              color: 'var(--text-muted)', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              padding: '9px 18px',
+                              borderBottom: '1px solid var(--border)',
+                              cursor: 'pointer',
+                              background: isWasted ? m.bg : 'transparent',
+                              borderLeft: isWasted ? `3px solid ${m.color}` : '3px solid transparent',
                             }}
-                            onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-bg)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
                           >
-                            <Pencil size={11} />
-                          </button>
-                          {onDeleteTransaction && (
-                            <button
-                              onClick={e => { e.stopPropagation(); setDeletingTxnId(txn.id); }}
-                              style={{
-                                width: 22, height: 22, borderRadius: 5,
-                                background: 'transparent', border: 'none',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                color: 'var(--text-muted)', cursor: 'pointer',
-                              }}
-                              onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
-                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
-                            >
-                              <Trash2 size={11} />
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                              <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 5, fontWeight: 700, background: m.bg, color: m.color, flexShrink: 0 }}>
+                                {txn.type === 'person' && txn.direction === 'repayment' ? 'Repayment' : m.label}
+                              </span>
+                              <div style={{ minWidth: 0 }}>
+                                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {txn.name}
+                                </span>
+                                {isWasted && <Flame size={10} style={{ color: m.color, flexShrink: 0 }} />}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: txn.direction === 'repayment' ? 'var(--income)' : m.color, marginLeft: 8 }}>
+                                {txn.direction === 'repayment' ? '+' : ''}{formatAmount(txn.amount)}
+                              </span>
+                              <button
+                                onClick={e => { e.stopPropagation(); setEditingTxn(txn); }}
+                                style={{
+                                  width: 22, height: 22, borderRadius: 5,
+                                  background: 'transparent', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  color: 'var(--text-muted)', cursor: 'pointer',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-bg)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                              >
+                                <Pencil size={11} />
+                              </button>
+                              {onDeleteTransaction && (
+                                <button
+                                  onClick={e => { e.stopPropagation(); setDeletingTxnId(txn.id); }}
+                                  style={{
+                                    width: 22, height: 22, borderRadius: 5,
+                                    background: 'transparent', border: 'none',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    color: 'var(--text-muted)', cursor: 'pointer',
+                                  }}
+                                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                                >
+                                  <Trash2 size={11} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {isEditing && (
+                            <div style={{ display: 'flex', gap: 6, padding: '7px 14px', background: 'var(--expense-bg)', borderBottom: '1px solid var(--expense-border)' }}>
+                              <input
+                                ref={wasteInputRef} type="number" placeholder="Waste amount" value={wasteInput}
+                                onChange={e => setWasteInput(e.target.value)} inputMode="decimal"
+                                style={{ flex: 1, padding: '6px 10px', borderRadius: 8, fontSize: 12, border: '1.5px solid var(--expense)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }}
+                                onKeyDown={e => { if (e.key === 'Enter') saveWaste(txn); if (e.key === 'Escape') cancelWaste(); }}
+                              />
+                              <button onClick={() => saveWaste(txn)} style={{ padding: '5px 10px', borderRadius: 7, fontSize: 11, fontWeight: 700, background: 'var(--expense)', color: '#fff', border: 'none', cursor: 'pointer' }}>Save</button>
+                              <button onClick={cancelWaste} style={{ padding: '5px 8px', borderRadius: 7, fontSize: 11, background: 'var(--surface2)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer' }}>✕</button>
+                            </div>
                           )}
                         </div>
-                      </div>
-                      {isEditing && (
-                        <div style={{ display: 'flex', gap: 6, padding: '7px 14px', background: 'var(--expense-bg)', borderBottom: '1px solid var(--expense-border)' }}>
-                          <input
-                            ref={wasteInputRef} type="number" placeholder="Waste amount" value={wasteInput}
-                            onChange={e => setWasteInput(e.target.value)} inputMode="decimal"
-                            style={{ flex: 1, padding: '6px 10px', borderRadius: 8, fontSize: 12, border: '1.5px solid var(--expense)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }}
-                            onKeyDown={e => { if (e.key === 'Enter') saveWaste(txn); if (e.key === 'Escape') cancelWaste(); }}
-                          />
-                          <button onClick={() => saveWaste(txn)} style={{ padding: '5px 10px', borderRadius: 7, fontSize: 11, fontWeight: 700, background: 'var(--expense)', color: '#fff', border: 'none', cursor: 'pointer' }}>Save</button>
-                          <button onClick={cancelWaste} style={{ padding: '5px 8px', borderRadius: 7, fontSize: 11, background: 'var(--surface2)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer' }}>✕</button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </DCard>
-          );
-        })()}
-      </div>
+                      );
+                    })}
+                  </div>
+                </DCard>
+              );
+            })()}
+          </div>
 
           {/* RIGHT: Income + Analytics */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'start' }}>
@@ -920,7 +920,7 @@ export default function DesktopDashboard({
                   <PenLine size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                   <input
                     id="desktop-income-name" ref={iNameRef} type="text"
-                    placeholder={incMode === 'income' ? 'Source (Salary, Freelance...)' : 'Person Name (e.g. Preetham)'}
+                    placeholder={incMode === 'income' ? 'Source (Salary, Freelance...)' : 'Person Name'}
                     value={iName}
                     onChange={e => setIName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), iAmountRef.current?.focus())}

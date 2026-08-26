@@ -215,7 +215,7 @@ export default function IncomeTab({
                 <PenLine size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                 <input
                   id="income-input-name" ref={nameRef} type="text"
-                  placeholder={incMode === 'income' ? 'Source (Salary, Freelance…)' : 'Person Name (e.g. Preetham)'}
+                  placeholder={incMode === 'income' ? 'Source (Salary, Freelance…)' : 'Person Name'}
                   value={name}
                   onChange={e => setName(e.target.value)} onKeyDown={handleNameKey} autoComplete="off"
                   style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 14, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
@@ -265,7 +265,6 @@ export default function IncomeTab({
                 background: 'var(--surface2)', border: '1px solid var(--border)',
                 fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5,
               }}>
-                
               </div>
             </div>
           </div>

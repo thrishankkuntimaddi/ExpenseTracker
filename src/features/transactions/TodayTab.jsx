@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { PenLine, IndianRupee, Zap, TrendingDown, Coins, Briefcase, ShoppingCart, PiggyBank, Users, Calendar } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount, todayInputValue, dateInputToISO, isoToMonth } from '../../utils/dateHelpers';
 import { TRANSACTION_TYPES as TYPES, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType } from '../../utils/typeConfig';
+import { useStats } from '../../hooks/useStats';
 
 function AppHeader() {
   return (
@@ -31,7 +32,8 @@ function AppHeader() {
   );
 }
 
-export default function TodayTab({ transactions, onAdd }) {
+export default function TodayTab({ transactions = [], onAdd, theme }) {
+  const { stats } = useStats(transactions, [], { type: 'select_month', month: new Date().toISOString().slice(0, 7) }, theme);
   const [name, setName]                   = useState('');
   const [amount, setAmount]               = useState('');
   const [dateInput, setDateInput]         = useState(todayInputValue());
@@ -206,25 +208,111 @@ export default function TodayTab({ transactions, onAdd }) {
 
             {/* Person Direction Toggle */}
             {type === 'person' && (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                {PERSON_DIRECTIONS.map(d => (
-                  <button
-                    key={d.key}
-                    type="button"
-                    onClick={() => setDirection(d.key)}
-                    style={{
-                      flex: 1, padding: '8px', borderRadius: 10, fontSize: 12, fontWeight: 700,
-                      border: `1.5px solid ${direction === d.key ? d.color : 'var(--border)'}`,
-                      background: direction === d.key ? d.color + '22' : 'transparent',
-                      color: direction === d.key ? d.color : 'var(--text-secondary)',
-                      cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                    }}
-                  >
-                    <d.Icon size={13} />
-                    {d.label}
-                  </button>
-                ))}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  {PERSON_DIRECTIONS.map(d => (
+                    <button
+                      key={d.key}
+                      type="button"
+                      onClick={() => setDirection(d.key)}
+                      style={{
+                        flex: 1, padding: '8px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                        border: `1.5px solid ${direction === d.key ? d.color : 'var(--border)'}`,
+                        background: direction === d.key ? d.color + '22' : 'transparent',
+                        color: direction === d.key ? d.color : 'var(--text-secondary)',
+                        cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                      }}
+                    >
+                      <d.Icon size={13} />
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Dropdown for Repaid Them */}
+                {direction === 'repaid' && (
+                  <div>
+                    <select
+                      value={name}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setName(val);
+                        const debt = stats.personDebts?.[val]?.netOwed ?? 0;
+                        if (debt > 0) setAmount(debt.toString());
+                      }}
+                      style={{
+                        width: '100%', padding: '9px 12px', borderRadius: 10, fontSize: 13,
+                        border: '1.5px solid var(--person)', background: 'var(--input-bg)', color: 'var(--text)',
+                        outline: 'none', fontFamily: 'inherit', fontWeight: 600,
+                      }}
+                    >
+                      <option value="">-- Select Person to Repay (Debt Left) --</option>
+                      {Object.keys(stats.personDebts || {})
+                        .filter(p => stats.personDebts[p].netOwed > 0)
+                        .map(p => (
+                          <option key={p} value={p}>
+                            {p} — Pending Debt: {formatAmount(stats.personDebts[p].netOwed)}
+                          </option>
+                        ))
+                      }
+                    </select>
+                    {name && (stats.personDebts?.[name]?.netOwed ?? 0) > 0 && (
+                      <div style={{ fontSize: 12, color: 'var(--person)', fontWeight: 700, marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>Pending Debt: {formatAmount(stats.personDebts[name].netOwed)}</span>
+                        <button
+                          type="button"
+                          onClick={() => setAmount((stats.personDebts[name].netOwed).toString())}
+                          style={{ background: 'var(--person-bg)', border: '1px solid var(--person-border)', color: 'var(--person)', borderRadius: 6, fontSize: 11, padding: '2px 8px', cursor: 'pointer', fontWeight: 700 }}
+                        >
+                          Fill Full Debt
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Dropdown for Repayment Rec. */}
+                {direction === 'repayment' && (
+                  <div>
+                    <select
+                      value={name}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setName(val);
+                        const debt = stats.personDebts?.[val]?.netLent ?? 0;
+                        if (debt > 0) setAmount(debt.toString());
+                      }}
+                      style={{
+                        width: '100%', padding: '9px 12px', borderRadius: 10, fontSize: 13,
+                        border: '1.5px solid var(--income)', background: 'var(--input-bg)', color: 'var(--text)',
+                        outline: 'none', fontFamily: 'inherit', fontWeight: 600,
+                      }}
+                    >
+                      <option value="">-- Select Person Who Repaid You --</option>
+                      {Object.keys(stats.personDebts || {})
+                        .filter(p => stats.personDebts[p].netLent > 0)
+                        .map(p => (
+                          <option key={p} value={p}>
+                            {p} — Owes You: {formatAmount(stats.personDebts[p].netLent)}
+                          </option>
+                        ))
+                      }
+                    </select>
+                    {name && (stats.personDebts?.[name]?.netLent ?? 0) > 0 && (
+                      <div style={{ fontSize: 12, color: 'var(--income)', fontWeight: 700, marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>Owes You: {formatAmount(stats.personDebts[name].netLent)}</span>
+                        <button
+                          type="button"
+                          onClick={() => setAmount((stats.personDebts[name].netLent).toString())}
+                          style={{ background: 'var(--income-bg)', border: '1px solid var(--income-border)', color: 'var(--income)', borderRadius: 6, fontSize: 11, padding: '2px 8px', cursor: 'pointer', fontWeight: 700 }}
+                        >
+                          Fill Full Amount
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -281,7 +369,7 @@ export default function TodayTab({ transactions, onAdd }) {
                 id="input-name"
                 ref={nameRef}
                 type="text"
-                placeholder={type === 'person' ? 'Person Name (e.g. Mom)' : 'What did you spend on?'}
+                placeholder={type === 'person' ? 'Person Name' : 'What did you spend on?'}
                 value={name}
                 onChange={e => setName(e.target.value)}
                 onKeyDown={handleNameKey}

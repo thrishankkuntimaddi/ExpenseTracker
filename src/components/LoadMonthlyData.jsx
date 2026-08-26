@@ -355,7 +355,7 @@ export default function LoadMonthlyData({
                     )}
                   </label>
                   <textarea
-                    placeholder={"Mom 1000\nSalary 25000\nFreelance 5000"}
+                    placeholder={"Salary 25000\nFreelance 5000"}
                     value={incomeText}
                     onChange={e => setIncomeText(e.target.value)}
                     style={textAreaStyle}

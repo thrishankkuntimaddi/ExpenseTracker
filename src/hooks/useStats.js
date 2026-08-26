@@ -26,22 +26,62 @@ export function useStats(transactions, income, selectedPeriod, theme) {
     [income, selectedPeriod]
   );
 
-  const stats = useMemo(() => {
-    const totalIncome  = filtInc.reduce((s, i) => s + (i.amount ?? 0), 0);
-    const totalExpense = filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount ?? 0), 0);
-    const totalSavings = filtTxns.filter(t => t.type === 'savings').reduce((s, t) => s + (t.amount ?? 0), 0);
+  /* ── All-time person debt balances (carries over across months) ── */
+  const personDebts = useMemo(() => {
+    const map = {};
+    (transactions || []).forEach(t => {
+      if (t.type !== 'person' || !t.name) return;
+      const name = t.name.trim();
+      if (!name) return;
+      if (!map[name]) map[name] = { borrowed: 0, repaid: 0, lent: 0, repaymentRec: 0 };
+      const amt = t.amount ?? 0;
+      if (t.direction === 'borrowed') map[name].borrowed += amt;
+      else if (t.direction === 'repaid') map[name].repaid += amt;
+      else if (t.direction === 'repayment') map[name].repaymentRec += amt;
+      else map[name].lent += amt;
+    });
 
-    // Person: 4-way direction calculations (Lent, Repayment, Borrowed, Repaid)
+    const balances = {};
+    Object.keys(map).forEach(name => {
+      const { borrowed, repaid, lent, repaymentRec } = map[name];
+      const netOwed = Math.max(0, borrowed - repaid);   // Money I owe this person
+      const netLent = Math.max(0, lent - repaymentRec); // Money this person owes me
+      balances[name] = { borrowed, repaid, lent, repaymentRec, netOwed, netLent };
+    });
+    return balances;
+  }, [transactions]);
+
+  const stats = useMemo(() => {
+    // Person: 4-way direction calculations for selected period
     const personTxns      = filtTxns.filter(t => t.type === 'person');
     const totalLent       = personTxns.filter(t => t.direction === 'lent' || (!t.direction && t.direction !== 'repayment')).reduce((s, t) => s + (t.amount ?? 0), 0);
     const totalRepaid     = personTxns.filter(t => t.direction === 'repayment').reduce((s, t) => s + (t.amount ?? 0), 0);
     const totalBorrowed   = personTxns.filter(t => t.direction === 'borrowed').reduce((s, t) => s + (t.amount ?? 0), 0);
     const totalRepaidThem = personTxns.filter(t => t.direction === 'repaid').reduce((s, t) => s + (t.amount ?? 0), 0);
 
-    const netLent     = totalLent - totalRepaid;        // They owe me (positive)
-    const netOwed     = totalBorrowed - totalRepaidThem; // I owe them (positive)
-    const netPerson   = netLent - netOwed;               // Overall net person position (positive = net owed to me)
-    const totalPerson = totalLent;
+    const pureIncome   = filtInc.reduce((s, i) => s + (i.amount ?? 0), 0);
+    // Total income for period includes regular income + borrowed money brought in
+    const totalIncome  = pureIncome + totalBorrowed;
+    const totalExpense = filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount ?? 0), 0);
+    const totalSavings = filtTxns.filter(t => t.type === 'savings').reduce((s, t) => s + (t.amount ?? 0), 0);
+
+    const netLentPeriod     = totalLent - totalRepaid;        // They owe me this period
+    const netOwedPeriod     = totalBorrowed - totalRepaidThem; // I owe them this period
+    const totalPerson       = totalLent;
+
+    // All-time debt balances (carried over month to month)
+    let allTimeBorrowed = 0, allTimeRepaidThem = 0, allTimeLent = 0, allTimeRepaidRec = 0;
+    (transactions || []).forEach(t => {
+      if (t.type !== 'person') return;
+      const amt = t.amount ?? 0;
+      if (t.direction === 'borrowed') allTimeBorrowed += amt;
+      else if (t.direction === 'repaid') allTimeRepaidThem += amt;
+      else if (t.direction === 'repayment') allTimeRepaidRec += amt;
+      else allTimeLent += amt;
+    });
+    const allTimeNetOwed = Math.max(0, allTimeBorrowed - allTimeRepaidThem);
+    const allTimeNetLent = Math.max(0, allTimeLent - allTimeRepaidRec);
+    const allTimeNetPerson = allTimeNetLent - allTimeNetOwed;
 
     const totalWaste   = filtTxns.reduce((s, t) => s + (t.wasteAmount || 0), 0);
 
@@ -51,9 +91,7 @@ export function useStats(transactions, income, selectedPeriod, theme) {
       .reduce((s, t) => s + ((t.settlement ?? t.amount) - t.amount), 0);
 
     // Balance: Total cash inflows minus total cash outflows
-    // Inflows: Income + External Profit + Borrowed money + Repayments received
-    // Outflows: Expenses + Savings + Lent money + Repaid money to others
-    const balance    = totalIncome + externalProfit + totalBorrowed + totalRepaid - totalExpense - totalSavings - totalLent - totalRepaidThem;
+    const balance    = pureIncome + totalBorrowed + externalProfit + totalRepaid - totalExpense - totalSavings - totalLent - totalRepaidThem;
     const totalSpend = totalExpense + totalSavings + (totalLent + totalRepaidThem);
     const wastePercent = totalSpend > 0 ? ((totalWaste / totalSpend) * 100).toFixed(1) : '0.0';
 
@@ -66,13 +104,14 @@ export function useStats(transactions, income, selectedPeriod, theme) {
     const spend  = totalExpense + (totalLent + totalRepaidThem);
 
     return {
-      totalIncome, totalExpense, totalSavings,
+      totalIncome, pureIncome, totalExpense, totalSavings,
       totalPerson, totalLent, totalRepaid, totalBorrowed, totalRepaidThem,
-      netLent, netOwed, netPerson,
+      netLent: netLentPeriod, netOwed: netOwedPeriod, netPerson: allTimeNetPerson,
+      allTimeNetOwed, allTimeNetLent, allTimeNetPerson, personDebts,
       totalWaste, externalProfit, balance, wastePercent,
       avgDay: spend / days, avgWeek: spend / weeks, avgMonth: spend / months,
     };
-  }, [filtTxns, filtInc]);
+  }, [filtTxns, filtInc, transactions, personDebts]);
 
   /* ── Chart data ── */
   const pieData = useMemo(() => {
