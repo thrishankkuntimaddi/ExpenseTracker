@@ -13,10 +13,11 @@ import PersonsPanel     from '../features/persons/PersonsPanel';
 import DesktopDashboard from '../components/DesktopDashboard';
 
 const TABS = [
-  { key: 'dashboard', label: 'Dashboard', Icon: Home           },
-  { key: 'history',   label: 'History',   Icon: List           },
-  { key: 'external',  label: 'External',  Icon: ArrowLeftRight },
-  { key: 'settings',  label: 'Settings',  Icon: Settings       },
+  { key: 'today',    label: 'Expenses', Icon: Home           },
+  { key: 'history',  label: 'History',  Icon: List           },
+  { key: 'income',   label: 'Income',   Icon: Wallet         },
+  { key: 'external', label: 'External', Icon: ArrowLeftRight },
+  { key: 'settings', label: 'Settings', Icon: Settings       },
 ];
 
 function useIsDesktop() {
@@ -45,7 +46,7 @@ try {
 
 /* ── Inner app rendered when user is authenticated ── */
 function AuthenticatedApp({ user, signOut }) {
-  const [activeTab, setActiveTab]           = useState('dashboard');
+  const [activeTab, setActiveTab]           = useState('today');
   const [selectedPeriod, setSelectedPeriod] = useState(() => getDefaultPeriod());
   const isDesktop = useIsDesktop();
 
@@ -94,24 +95,16 @@ function AuthenticatedApp({ user, signOut }) {
   /* ── MOBILE ── */
   const isMonoflow = theme === 'monoflow';
   const tabColors = isMonoflow
-    ? { dashboard: '#b8956a', history: '#c9a87c', external: '#a78bfa', settings: '#9ca3af' }
-    : { dashboard: '#4F46E5', history: '#D97706', external: '#7C3AED', settings: '#6366F1' };
+    ? { today: '#b8956a', history: '#c9a87c', income: '#5aba8a', external: '#a78bfa', settings: '#9ca3af' }
+    : { today: '#E11D48', history: '#D97706', income: '#059669', external: '#7C3AED', settings: '#6366F1' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
       <div style={{ flex: 1, overflow: 'auto' }}>
-        {activeTab === 'dashboard' && (
-          <DesktopDashboard
+        {activeTab === 'today' && (
+          <TodayTab
             {...commonProps}
-            onAddTransaction={addTransaction}
-            onUpdateTransaction={updateTransaction}
-            onDeleteTransaction={deleteTransaction}
-            onAddIncome={addIncome}
-            onUpdateIncome={updateIncome}
-            onDeleteIncome={deleteIncome}
-            onDataChange={handleDataChange}
-            onThemeChange={handleThemeChange}
-            onSignOut={signOut}
+            onAdd={addTransaction}
           />
         )}
         {activeTab === 'history' && (
@@ -121,6 +114,16 @@ function AuthenticatedApp({ user, signOut }) {
             onDeleteTransaction={deleteTransaction}
             onAddTransaction={addTransaction}
             onAddIncome={addIncome}
+          />
+        )}
+        {activeTab === 'income' && (
+          <IncomeTab
+            {...commonProps}
+            onAddIncome={addIncome}
+            onUpdateIncome={updateIncome}
+            onDeleteIncome={deleteIncome}
+            onAddTransaction={addTransaction}
+            onDeleteTransaction={deleteTransaction}
           />
         )}
         {activeTab === 'external' && (
