@@ -6,7 +6,7 @@ import {
 import {
   ShoppingCart, PenLine, IndianRupee, PiggyBank,
   Wallet, TrendingUp, TrendingDown, Flame, ChevronDown,
-  ChevronRight, Trash2, Zap, Moon, Sun, Briefcase, Upload, ArrowLeftRight, Users, Calendar, Pencil,
+  ChevronRight, Trash2, Zap, Moon, Sun, Briefcase, Upload, ArrowLeftRight, Users, Calendar, Pencil, List,
 } from 'lucide-react';
 import { generateId } from '../utils/storage';
 import { formatAmount, formatDate, todayInputValue, dateInputToISO, isoToMonth } from '../utils/dateHelpers';
@@ -14,6 +14,7 @@ import { getPeriodLabel, getCurrentMonthValue } from '../utils/periodHelpers';
 import PeriodSelector from './PeriodSelector';
 import SettingsTab from '../features/settings/SettingsTab';
 import ExternalTab from '../features/external/ExternalTab';
+import HistoryTab from '../features/transactions/HistoryTab';
 import PersonsPanel from '../features/persons/PersonsPanel';
 import EditTransactionModal from './EditTransactionModal';
 import EditIncomeModal from './EditIncomeModal';
@@ -117,6 +118,7 @@ export default function DesktopDashboard({
 
   /* ── UI state ── */
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [dashTxnView,   setDashTxnView]   = useState('today');
   const [showImport,    setShowImport]    = useState(false);
   const [editingTxn,    setEditingTxn]    = useState(null);
   const [editingInc,    setEditingInc]    = useState(null);
@@ -306,6 +308,7 @@ export default function DesktopDashboard({
         <div style={{ display: 'flex', gap: 4 }}>
           {[
             { key: 'dashboard', label: 'Dashboard' },
+            { key: 'history',   label: 'History',   icon: <List size={12} /> },
             { key: 'external',  label: 'External',  icon: <ArrowLeftRight size={12} /> },
             { key: 'settings',  label: 'Settings'  },
           ].map(tab => (
@@ -393,6 +396,22 @@ export default function DesktopDashboard({
             onDataChange={onDataChange}
             onThemeChange={onThemeChange}
             onSignOut={onSignOut}
+          />
+        </div>
+      )}
+
+      {/* ══ HISTORY VIEW ══ */}
+      {activeSection === 'history' && (
+        <div className="desktop-history-host" style={{ maxWidth: 1100, margin: '0 auto', padding: '16px 28px 28px', height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
+          <HistoryTab
+            transactions={transactions}
+            income={income}
+            selectedPeriod={selectedPeriod}
+            onPeriodChange={onPeriodChange}
+            onUpdateTransaction={onUpdateTransaction}
+            onDeleteTransaction={onDeleteTransaction}
+            onAddTransaction={onAddTransaction}
+            onAddIncome={onAddIncome}
           />
         </div>
       )}
@@ -637,16 +656,48 @@ export default function DesktopDashboard({
               </div>
             </DCard>
 
-            {/* Today's Entries */}
-            <DCard>
-              <CardHeader title="Today's Entries" sub={`${todayTxns.length} transactions`} />
-              <div style={{ maxHeight: 340, overflowY: 'auto' }}>
-                {todayTxns.length === 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 100, gap: 6 }}>
-                    <ShoppingCart size={20} style={{ color: 'var(--text-muted)' }} />
-                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No entries yet today</p>
-                  </div>
-                ) : todayTxns.slice().reverse().map((txn) => {
+            {/* Today / Period Entries Card */}
+            {(() => {
+              const displayTxns = dashTxnView === 'today' ? todayTxns : filtTxns;
+              return (
+                <DCard>
+                  <CardHeader
+                    title={dashTxnView === 'today' ? "Today's Entries" : "Period Entries"}
+                    sub={`${displayTxns.length} transactions`}
+                    right={
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <button
+                          onClick={() => setDashTxnView(v => v === 'today' ? 'period' : 'today')}
+                          style={{
+                            fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+                            background: 'var(--surface2)', border: '1px solid var(--border)',
+                            color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit',
+                          }}
+                        >
+                          {dashTxnView === 'today' ? 'Period →' : 'Today →'}
+                        </button>
+                        <button
+                          onClick={() => setActiveSection('history')}
+                          style={{
+                            fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+                            background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+                            color: 'var(--accent)', cursor: 'pointer', fontFamily: 'inherit',
+                          }}
+                        >
+                          Full History
+                        </button>
+                      </div>
+                    }
+                  />
+                  <div style={{ maxHeight: 340, overflowY: 'auto' }}>
+                    {displayTxns.length === 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 100, gap: 6 }}>
+                        <ShoppingCart size={20} style={{ color: 'var(--text-muted)' }} />
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                          {dashTxnView === 'today' ? 'No entries yet today' : 'No entries in this period'}
+                        </p>
+                      </div>
+                    ) : displayTxns.slice().reverse().map((txn) => {
                   const m = TYPE_META[txn.type] || TYPE_META.expense;
                   const isWasted  = txn.wasteAmount != null && txn.wasteAmount > 0;
                   const isEditing = editingWaste === txn.id;
@@ -725,7 +776,9 @@ export default function DesktopDashboard({
                 })}
               </div>
             </DCard>
-          </div>
+          );
+        })()}
+      </div>
 
           {/* RIGHT: Income + Analytics */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'start' }}>
