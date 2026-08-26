@@ -46,9 +46,18 @@ function NewBillingModal({ onCreate, onCancel }) {
         animation: 'modalPop 0.2s cubic-bezier(0.16,1,0.3,1)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>New Billing Session</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>Create a workspace for proxy spending</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 9,
+              background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: '1px solid var(--accent-border)',
+            }}>
+              <ReceiptText size={16} style={{ color: 'var(--accent)' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>New Billing Session</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>Create a workspace for proxy spending</div>
+            </div>
           </div>
           <button onClick={onCancel} style={{
             width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--surface2)',
@@ -61,7 +70,7 @@ function NewBillingModal({ onCreate, onCancel }) {
 
         {/* Session Name */}
         <div style={{ position: 'relative', marginBottom: 12 }}>
-          <PenLine size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--external)', pointerEvents: 'none' }} />
+          <PenLine size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--accent)', pointerEvents: 'none' }} />
           <input
             type="text"
             placeholder="Session Name (e.g. Bike Purchase, Family Trip)"
@@ -70,7 +79,7 @@ function NewBillingModal({ onCreate, onCancel }) {
             autoFocus
             style={{
               width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 11, paddingBottom: 11,
-              borderRadius: 10, fontSize: 14, border: '1.5px solid var(--external-border)',
+              borderRadius: 10, fontSize: 14, border: '1.5px solid var(--input-border)',
               background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit',
             }}
           />
@@ -78,14 +87,14 @@ function NewBillingModal({ onCreate, onCancel }) {
 
         {/* Transaction Date */}
         <div style={{ position: 'relative', marginBottom: 18 }}>
-          <Calendar size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--external)', pointerEvents: 'none' }} />
+          <Calendar size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--accent)', pointerEvents: 'none' }} />
           <input
             type="date"
             value={dateStr}
             onChange={e => setDateStr(e.target.value)}
             style={{
               width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 11, paddingBottom: 11,
-              borderRadius: 10, fontSize: 13, border: '1.5px solid var(--external-border)',
+              borderRadius: 10, fontSize: 13, border: '1.5px solid var(--input-border)',
               background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit',
             }}
           />
@@ -101,7 +110,7 @@ function NewBillingModal({ onCreate, onCancel }) {
           </button>
           <button onClick={handleCreate} disabled={!name.trim()} style={{
             flex: 2, padding: '11px', borderRadius: 11, fontSize: 13, fontWeight: 700,
-            background: name.trim() ? 'var(--external)' : 'var(--surface2)',
+            background: name.trim() ? 'var(--accent)' : 'var(--surface2)',
             color: name.trim() ? '#fff' : 'var(--text-muted)',
             border: 'none', cursor: name.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -593,7 +602,7 @@ export default function ExternalTab({
 
       {/* Header */}
       <div className="tab-header">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {currentSession && (
               <button
@@ -607,20 +616,12 @@ export default function ExternalTab({
                 <ArrowLeft size={16} />
               </button>
             )}
-            <div style={{
-              width: 38, height: 38, borderRadius: 11,
-              background: '#7C3AED', display: 'flex',
-              alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(124,58,237,0.3)',
-            }}>
-              <ArrowLeftRight size={17} color="#fff" strokeWidth={2.5} />
-            </div>
             <div>
-              <h1 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
-                {currentSession ? currentSession.name : 'External Billing'}
+              <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
+                {currentSession ? currentSession.name : 'Billings'}
               </h1>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>
-                Proxy spending ledger · track spend on behalf of others
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                Proxy spending ledger · track group bills on behalf of others
               </p>
             </div>
           </div>
@@ -636,14 +637,17 @@ export default function ExternalTab({
               <button
                 onClick={() => setShowNewModal(true)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 7,
-                  padding: '9px 16px', borderRadius: 11,
-                  background: '#7C3AED', color: '#fff', border: 'none',
-                  cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
-                  boxShadow: '0 4px 12px rgba(124,58,237,0.25)', transition: 'all 0.15s',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '7px 12px', borderRadius: 10,
+                  fontSize: 11, fontWeight: 700,
+                  background: 'var(--accent-bg)',
+                  color: 'var(--accent)',
+                  border: '1px solid var(--accent-border)',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  transition: 'all 0.15s',
                 }}
               >
-                <Plus size={15} /> New Billing
+                <Plus size={13} /> New Billing
               </button>
             )}
           </div>
@@ -651,7 +655,7 @@ export default function ExternalTab({
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 100px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0 100px' }}>
 
         {/* ═══ SESSIONS LIST VIEW (when no session is open for editing) ═══ */}
         {!currentSession && (
@@ -661,8 +665,8 @@ export default function ExternalTab({
             {activeSessions.length > 0 && (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#7C3AED' }} />
-                  <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7C3AED' }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
+                  <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)' }}>
                     Active Sessions ({activeSessions.length})
                   </span>
                 </div>
@@ -673,12 +677,12 @@ export default function ExternalTab({
                       onClick={() => setActiveSessionId(s.id)}
                       style={{
                         padding: '16px 18px', borderRadius: 16, background: 'var(--surface)',
-                        border: '1.5px solid #DDD6FE', boxShadow: 'var(--shadow-sm)',
+                        border: '1.5px solid var(--accent-border)', boxShadow: 'var(--shadow-sm)',
                         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         transition: 'all 0.15s',
                       }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = '#7C3AED'}
-                      onMouseLeave={e => e.currentTarget.style.borderColor = '#DDD6FE'}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--accent-border)'}
                     >
                       <div>
                         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{s.name}</div>
@@ -688,7 +692,7 @@ export default function ExternalTab({
                       </div>
                       <button style={{
                         padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
-                        background: '#F5F3FF', color: '#7C3AED', border: '1px solid #DDD6FE',
+                        background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)',
                         cursor: 'pointer', fontFamily: 'inherit',
                       }}>
                         Open Workspace →
@@ -962,7 +966,7 @@ export default function ExternalTab({
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '9px 18px', borderRadius: 11,
-                    background: canClose ? '#7C3AED' : 'var(--surface2)',
+                    background: canClose ? 'var(--accent)' : 'var(--surface2)',
                     color: canClose ? '#fff' : 'var(--text-muted)',
                     border: 'none', cursor: canClose ? 'pointer' : 'not-allowed',
                     fontFamily: 'inherit', fontSize: 13, fontWeight: 700,

@@ -239,7 +239,7 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
                 </div>
 
                 {/* Dropdown for Debt Repayment (only active/uncleared debts) */}
-                {isRepayDirection && !isCustomName && hasDebtPersons ? (
+                {isRepayDirection && !isCustomName ? (
                   <div style={{ marginBottom: 10 }}>
                     <select
                       value={name}
@@ -269,7 +269,9 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
                         outline: 'none', fontFamily: 'inherit', fontWeight: 600,
                       }}
                     >
-                      <option value="">-- Select Person to Repay (Debt Left) --</option>
+                      <option value="">
+                        {hasDebtPersons ? '-- Select Person to Repay (Debt Left) --' : '-- No Active Debts (Type Custom Name) --'}
+                      </option>
                       {debtPersons.map(p => (
                         <option key={p} value={p}>
                           {p} (Debt Left: {formatAmount(stats.personDebts[p].netOwed)})
@@ -352,8 +354,8 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
           </div>
         )}
 
-        {/* Standard Name Input field (for non-repayment, custom name mode, or when no active debt contacts) */}
-        {(!isRepayDirection || isCustomName || !hasDebtPersons) && (
+        {/* Standard Name Input field (for non-repayment or custom name mode) */}
+        {(!isRepayDirection || isCustomName) && (
           <div style={{ position: 'relative', marginBottom: 10 }}>
             <PenLine size={14} style={{
               position: 'absolute', left: 12, top: '50%',
@@ -364,24 +366,23 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
               id="input-name"
               ref={nameRef}
               type="text"
-              placeholder={type === 'person' ? 'Person Name' : 'What did you spend on?'}
+              placeholder={type === 'person' ? 'Person Name' : 'Description…'}
               value={name}
               onChange={e => setName(e.target.value)}
               onKeyDown={handleNameKey}
               autoComplete="off"
               style={{
-                width: '100%', paddingLeft: 38, paddingRight: isRepayDirection && hasDebtPersons ? 80 : 14,
-                paddingTop: 12, paddingBottom: 12,
+                width: '100%', paddingLeft: 38, paddingRight: isRepayDirection ? 80 : 14, paddingTop: 11, paddingBottom: 11,
                 borderRadius: 10, fontSize: 14,
                 border: '1.5px solid var(--input-border)',
-                background: 'var(--input-bg)',
-                color: 'var(--text)', outline: 'none',
-                fontFamily: 'inherit', transition: 'border-color 0.15s',
+                background: 'var(--input-bg)', color: 'var(--text)',
+                outline: 'none', fontFamily: 'inherit',
+                transition: 'border-color 0.15s',
               }}
-              onFocus={e => (e.target.style.borderColor = sel.color)}
+              onFocus={e => (e.target.style.borderColor = type === 'person' ? getDirectionMeta(direction).color : sel.color)}
               onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
             />
-            {isRepayDirection && hasDebtPersons && (
+            {isRepayDirection && (
               <button
                 type="button"
                 onClick={() => { setIsCustomName(false); setName(''); setAmount(''); }}

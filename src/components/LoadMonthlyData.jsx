@@ -4,28 +4,12 @@ import { X, Upload, CheckCircle2, AlertCircle, Calendar, FileText, ChevronDown }
 import { generateId } from '../utils/storage';
 import { getCurrentMonthValue, formatMonthLabel } from '../utils/periodHelpers';
 
-/* ── Generate list of importable months (Feb 2025 → last month) ── */
-function getImportableMonths() {
-  const months = [];
-  const now = new Date();
-  let year = 2025, month = 2;
+/* ── Parse text block: "[Day/Date] Name Amount" per line ── */
+function parseEntries(text, selectedMonth) {
+  if (!text || !selectedMonth) return [];
+  const [defaultYear, defaultMonth] = selectedMonth.split('-').map(Number);
+  const daysInDefaultMonth = new Date(defaultYear, defaultMonth, 0).getDate();
 
-  const currentYear  = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
-
-  while (true) {
-    if (year > currentYear) break;
-    if (year === currentYear && month >= currentMonth) break;
-    const mm = String(month).padStart(2, '0');
-    months.push(`${year}-${mm}`);
-    month++;
-    if (month > 12) { month = 1; year++; }
-  }
-  return months.reverse();
-}
-
-/* ── Parse text block: "Name Amount" per line ── */
-function parseEntries(text) {
   return text
     .split('\n')
     .map(line => line.trim())
@@ -33,31 +17,58 @@ function parseEntries(text) {
     .map(line => {
       const tokens = line.split(/\s+/);
       if (tokens.length < 2) return null;
-      const amountStr = tokens[tokens.length - 1];
-      const name      = tokens.slice(0, tokens.length - 1).join(' ').trim();
-      const amount    = Math.round(parseFloat(amountStr) * 100) / 100;
-      if (!name || isNaN(amount) || amount === 0) return null;
-      return { name, amount };
+
+      const lastToken = tokens[tokens.length - 1];
+      const amount = Math.round(parseFloat(lastToken) * 100) / 100;
+      if (isNaN(amount) || amount <= 0) return null;
+
+      let nameTokens = tokens.slice(0, tokens.length - 1);
+      let dayNum = 1;
+      let exactDateStr = null;
+
+      if (nameTokens.length > 1) {
+        const first = nameTokens[0];
+        // Match day number: "1" to "31" or "01" to "31"
+        if (/^\d{1,2}$/.test(first)) {
+          const d = parseInt(first, 10);
+          if (d >= 1 && d <= daysInDefaultMonth) {
+            dayNum = d;
+            nameTokens = nameTokens.slice(1);
+          }
+        }
+        // Match YYYY-MM-DD
+        else if (/^\d{4}-\d{2}-\d{2}$/.test(first)) {
+          exactDateStr = first;
+          nameTokens = nameTokens.slice(1);
+        }
+        // Match DD/MM/YYYY or DD-MM-YYYY
+        else if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(first)) {
+          const p = first.split(/[\/\-]/);
+          const dd = p[0].padStart(2, '0');
+          const mm = p[1].padStart(2, '0');
+          const yyyy = p[2];
+          exactDateStr = `${yyyy}-${mm}-${dd}`;
+          nameTokens = nameTokens.slice(1);
+        }
+      }
+
+      const name = nameTokens.join(' ').trim();
+      if (!name) return null;
+
+      let finalIsoDate, finalMonth;
+      if (exactDateStr) {
+        finalIsoDate = `${exactDateStr}T12:00:00.000Z`;
+        finalMonth = exactDateStr.slice(0, 7);
+      } else {
+        const padDay = String(dayNum).padStart(2, '0');
+        const padMonth = String(defaultMonth).padStart(2, '0');
+        finalIsoDate = `${defaultYear}-${padMonth}-${padDay}T12:00:00.000Z`;
+        finalMonth = selectedMonth;
+      }
+
+      return { name, amount, date: finalIsoDate, month: finalMonth };
     })
     .filter(Boolean);
-}
-
-/* ── Distribute entries across days of a month ── */
-function distributeByDay(entries, yearNum, monthNum) {
-  if (!entries.length) return [];
-  const daysInMonth    = new Date(yearNum, monthNum, 0).getDate();
-  const N              = entries.length;
-  const entriesPerDay  = Math.ceil(N / daysInMonth);
-  const result         = [];
-  let entryIdx         = 0;
-
-  for (let day = 1; day <= daysInMonth && entryIdx < N; day++) {
-    const chunk   = entries.slice(entryIdx, entryIdx + entriesPerDay);
-    const dateStr = `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(day).padStart(2, '0')}T12:00:00.000Z`;
-    chunk.forEach(entry => result.push({ ...entry, date: dateStr }));
-    entryIdx += entriesPerDay;
-  }
-  return result;
 }
 
 /* ═══════════════════════════════════════════════════════════════ */
@@ -65,10 +76,9 @@ export default function LoadMonthlyData({
   onAddTransaction, onAddIncome, onClose,
   transactions = [], income = [],
 }) {
-  const months       = getImportableMonths();
   const currentMonth = getCurrentMonthValue();
 
-  const [selectedMonth, setSelectedMonth] = useState(months[0] || '');
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [incomeText,    setIncomeText]    = useState('');
   const [expenseText,   setExpenseText]   = useState('');
   const [status,        setStatus]        = useState('idle');
@@ -78,8 +88,8 @@ export default function LoadMonthlyData({
 
   /* ── Live preview ── */
   useEffect(() => {
-    const incEntries = parseEntries(incomeText);
-    const expEntries = parseEntries(expenseText);
+    const incEntries = parseEntries(incomeText, selectedMonth);
+    const expEntries = parseEntries(expenseText, selectedMonth);
     setPreview({
       income:   incEntries.length,
       expense:  expEntries.length,
@@ -87,7 +97,7 @@ export default function LoadMonthlyData({
       incTotal: incEntries.reduce((s, e) => s + e.amount, 0),
       expTotal: expEntries.reduce((s, e) => s + e.amount, 0),
     });
-  }, [incomeText, expenseText]);
+  }, [incomeText, expenseText, selectedMonth]);
 
   /* ── Escape key ── */
   useEffect(() => {
@@ -107,50 +117,39 @@ export default function LoadMonthlyData({
   const handleImport = useCallback(async () => {
     setErrorMsg('');
 
-    if (selectedMonth === currentMonth) {
-      setErrorMsg('Cannot import data for the current month.');
-      return;
-    }
-
-    const incEntries = parseEntries(incomeText);
-    const expEntries = parseEntries(expenseText);
+    const incEntries = parseEntries(incomeText, selectedMonth);
+    const expEntries = parseEntries(expenseText, selectedMonth);
 
     if (incEntries.length === 0 && expEntries.length === 0) {
-      setErrorMsg('Please enter at least one income or expense entry.');
+      setErrorMsg('Please enter at least one valid income or expense entry.');
       return;
     }
-
-    const [yearNum, monthNum] = selectedMonth.split('-').map(Number);
 
     setStatus('importing');
     try {
       // ── Save income entries ──
-      const distributedIncome = distributeByDay(incEntries, yearNum, monthNum);
-      for (const entry of distributedIncome) {
+      for (const entry of incEntries) {
         await onAddIncome({
           id:     generateId(),
           name:   entry.name,
           amount: entry.amount,
           type:   'income',
           date:   entry.date,
-          month:  selectedMonth,
+          month:  entry.month || selectedMonth,
         });
       }
 
       // ── Save expense entries ──
-      const distributedExpense = distributeByDay(expEntries, yearNum, monthNum);
-      for (const entry of distributedExpense) {
+      for (const entry of expEntries) {
         await onAddTransaction({
           id:     generateId(),
           name:   entry.name,
           amount: entry.amount,
           type:   'expense',
           date:   entry.date,
-          month:  selectedMonth,
+          month:  entry.month || selectedMonth,
         });
       }
-
-
 
       setStatus('success');
     } catch (err) {
@@ -158,7 +157,7 @@ export default function LoadMonthlyData({
       setErrorMsg('Import failed. Please try again.');
       setStatus('error');
     }
-  }, [selectedMonth, incomeText, expenseText, currentMonth, onAddIncome, onAddTransaction]);
+  }, [selectedMonth, incomeText, expenseText, onAddIncome, onAddTransaction]);
 
   const f = n => new Intl.NumberFormat('en-IN', {
     style: 'currency', currency: 'INR',
@@ -277,7 +276,7 @@ export default function LoadMonthlyData({
                 </div>
                 <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                   <button
-                    onClick={() => { setStatus('idle'); setIncomeText(''); setExpenseText(''); setSelectedMonth(months[0] || ''); }}
+                    onClick={() => { setStatus('idle'); setIncomeText(''); setExpenseText(''); setSelectedMonth(currentMonth); }}
                     style={{ padding: '10px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700, background: 'var(--surface2)', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit' }}
                   >
                     Import Another
@@ -292,31 +291,25 @@ export default function LoadMonthlyData({
               </div>
             ) : (
               <>
-                {/* Month Selector */}
+                {/* Month/Year Selector */}
                 <div style={{ marginBottom: 14 }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
                     <Calendar size={11} />
-                    Select Month
+                    Target Month &amp; Year
                   </label>
-                  <div style={{ position: 'relative' }}>
-                    <select
-                      value={selectedMonth}
-                      onChange={e => setSelectedMonth(e.target.value)}
-                      style={{
-                        width: '100%', padding: '10px 36px 10px 14px',
-                        borderRadius: 10, fontSize: 14, fontWeight: 700,
-                        border: '1.5px solid var(--accent-border)',
-                        background: 'var(--accent-bg)', color: 'var(--accent)',
-                        outline: 'none', fontFamily: 'inherit',
-                        appearance: 'none', cursor: 'pointer',
-                      }}
-                    >
-                      {months.map(m => (
-                        <option key={m} value={m}>{formatMonthLabel(m)}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--accent)', pointerEvents: 'none' }} />
-                  </div>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={e => setSelectedMonth(e.target.value)}
+                    style={{
+                      width: '100%', padding: '10px 14px',
+                      borderRadius: 10, fontSize: 14, fontWeight: 700,
+                      border: '1.5px solid var(--accent-border)',
+                      background: 'var(--accent-bg)', color: 'var(--accent)',
+                      outline: 'none', fontFamily: 'inherit',
+                      cursor: 'pointer',
+                    }}
+                  />
                 </div>
 
                 {/* Already-imported info banner */}
@@ -334,11 +327,13 @@ export default function LoadMonthlyData({
                 <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--surface2)', border: '1px solid var(--border)', marginBottom: 14 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', margin: '0 0 4px' }}>
                     <FileText size={10} style={{ display: 'inline', marginRight: 4 }} />
-                    Format: <code style={{ background: 'var(--surface3)', padding: '1px 5px', borderRadius: 4 }}>Name Amount</code> — one per line
+                    Format: <code style={{ background: 'var(--surface3)', padding: '1px 5px', borderRadius: 4 }}>[Day] Name Amount</code> (one per line)
                   </p>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
-                    Example: <span style={{ fontFamily: 'monospace' }}>Salary 25000</span> or <span style={{ fontFamily: 'monospace' }}>Tea 15</span>
-                  </p>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                    • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>01 Salary 25000</span> (Day 1 of selected month)<br/>
+                    • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>15 Rent 8000</span> (Day 15 of selected month)<br/>
+                    • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>Tea 15</span> (Defaults to Day 1)
+                  </div>
                 </div>
 
                 {/* Income */}
@@ -355,7 +350,7 @@ export default function LoadMonthlyData({
                     )}
                   </label>
                   <textarea
-                    placeholder={"Salary 25000\nFreelance 5000"}
+                    placeholder={"01 Salary 25000\n15 Freelance 5000\n25 Bonus 2000"}
                     value={incomeText}
                     onChange={e => setIncomeText(e.target.value)}
                     style={textAreaStyle}
@@ -378,7 +373,7 @@ export default function LoadMonthlyData({
                     )}
                   </label>
                   <textarea
-                    placeholder={"Tea 10\nBus 20\nFood 100\nRent 8000"}
+                    placeholder={"01 Rent 8000\n05 Electricity 1200\n12 Grocery 1500\n20 Tea 15"}
                     value={expenseText}
                     onChange={e => setExpenseText(e.target.value)}
                     style={textAreaStyle}

@@ -6,7 +6,7 @@ import {
 import {
   ShoppingCart, PenLine, IndianRupee, PiggyBank,
   Wallet, TrendingUp, TrendingDown, Flame, ChevronDown,
-  ChevronRight, Trash2, Zap, Moon, Sun, Briefcase, Upload, ArrowLeftRight, Users, Calendar, Pencil, List,
+  ChevronRight, Trash2, Zap, Moon, Sun, Briefcase, Upload, ArrowLeftRight, Users, Calendar, Pencil, List, ReceiptText,
 } from 'lucide-react';
 import { generateId } from '../utils/storage';
 import { formatAmount, formatDate, todayInputValue, dateInputToISO, isoToMonth } from '../utils/dateHelpers';
@@ -364,7 +364,7 @@ export default function DesktopDashboard({
           {[
             { key: 'dashboard', label: 'Dashboard' },
             { key: 'history', label: 'History', icon: <List size={12} /> },
-            { key: 'external', label: 'External', icon: <ArrowLeftRight size={12} /> },
+            { key: 'external', label: 'Billings', icon: <ReceiptText size={12} /> },
             { key: 'settings', label: 'Settings' },
           ].map(tab => (
             <button
@@ -374,9 +374,7 @@ export default function DesktopDashboard({
                 display: 'flex', alignItems: 'center', gap: 5,
                 padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                 border: '1px solid var(--border)',
-                background: activeSection === tab.key
-                  ? (tab.key === 'external' ? 'linear-gradient(135deg,#7C3AED,#A855F7)' : 'var(--accent)')
-                  : 'transparent',
+                background: activeSection === tab.key ? 'var(--accent)' : 'transparent',
                 color: activeSection === tab.key ? '#fff' : 'var(--text-muted)',
                 cursor: 'pointer', fontFamily: 'inherit',
                 transition: 'all 0.15s',
@@ -471,23 +469,9 @@ export default function DesktopDashboard({
         </div>
       )}
 
-      {/* ══ EXTERNAL VIEW ══ */}
+      {/* ══ BILLINGS VIEW ══ */}
       {activeSection === 'external' && (
-        <div className="desktop-external-host" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 28px 28px', height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
-          <style>{`
-            .desktop-external-host .tab-root {
-              background: transparent !important;
-            }
-            .desktop-external-host .tab-header {
-              background: transparent !important;
-              border-bottom-color: var(--border) !important;
-              padding: 20px 0 14px !important;
-            }
-            .desktop-external-host .tab-root > div:nth-child(2) {
-              padding-left: 0 !important;
-              padding-right: 0 !important;
-            }
-          `}</style>
+        <div className="desktop-external-host" style={{ maxWidth: 1100, margin: '0 auto', padding: '16px 28px 28px', height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
           <ExternalTab
             user={user}
             onAddIncome={onAddIncome}
@@ -720,7 +704,7 @@ export default function DesktopDashboard({
                 )}
 
                 {/* Person Name Selection / Dropdown (only uncleared debt contacts) */}
-                {isRepayDirection && !isCustomName && hasDebtPersons ? (
+                {isRepayDirection && !isCustomName ? (
                   <div style={{ marginBottom: 8 }}>
                     <select
                       id="desktop-select-repayment-person"
@@ -754,7 +738,10 @@ export default function DesktopDashboard({
                       }}
                     >
                       <option value="">
-                        {direction === 'repaid' ? '-- Select Person to Repay (Debt Left) --' : '-- Select Person Who Repaid You --'}
+                        {hasDebtPersons
+                          ? (direction === 'repaid' ? '-- Select Person to Repay (Debt Left) --' : '-- Select Person Who Repaid You --')
+                          : '-- No Active Debts (Type Custom Name) --'
+                        }
                       </option>
                       {debtPersons.map(p => (
                         <option key={p} value={p}>
@@ -797,8 +784,8 @@ export default function DesktopDashboard({
                   </div>
                 ) : null}
 
-                {/* Standard Name Input field (for non-repayment, custom name mode, or when no active debt contacts) */}
-                {(!isRepayDirection || isCustomName || !hasDebtPersons) && (
+                {/* Standard Name Input field (for non-repayment or custom name mode) */}
+                {(!isRepayDirection || isCustomName) && (
                   <div style={{ position: 'relative', marginBottom: 8 }}>
                     <PenLine size={12} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input
@@ -808,10 +795,10 @@ export default function DesktopDashboard({
                       onChange={e => setName(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), amountRef.current?.focus())}
                       autoComplete="off"
-                      style={{ ...inputStyle, paddingRight: isRepayDirection && hasDebtPersons ? 70 : 12 }}
+                      style={{ ...inputStyle, paddingRight: isRepayDirection ? 70 : 12 }}
                       {...focusHandlers(sel.color)}
                     />
-                    {isRepayDirection && hasDebtPersons && (
+                    {isRepayDirection && (
                       <button
                         type="button"
                         onClick={() => { setIsCustomName(false); setName(''); setAmount(''); }}
@@ -1318,37 +1305,109 @@ export default function DesktopDashboard({
                 {/* Financial Health Indicators */}
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
-                    Period Ratios
+                    Period Ratios &amp; Health
                   </p>
 
-                  {/* Expense Ratio */}
                   {(() => {
-                    const expRatio = stats.totalIncome > 0 ? Math.min(100, Math.round((stats.totalExpense / stats.totalIncome) * 100)) : 0;
-                    const savRatio = stats.totalIncome > 0 ? Math.min(100, Math.round((stats.totalSavings / stats.totalIncome) * 100)) : 0;
+                    const inc = stats.totalIncome || 0;
+                    const exp = stats.totalExpense || 0;
+                    const sav = stats.totalSavings || 0;
+                    const wst = stats.totalWaste || 0;
+
+                    const expRatio = inc > 0 ? Math.min(100, Math.round((exp / inc) * 100)) : 0;
+                    const savRatio = inc > 0 ? Math.min(100, Math.round((sav / inc) * 100)) : 0;
+                    const wstRatio = exp > 0 ? Math.min(100, Math.round((wst / exp) * 100)) : 0;
+                    const netSurplus = inc - exp - sav;
+
                     return (
                       <>
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>Expense Ratio</span>
-                            <span style={{ color: expRatio > 80 ? 'var(--expense)' : 'var(--text)' }}>{expRatio}% of Income</span>
-                          </div>
-                          <div style={{ height: 6, width: '100%', borderRadius: 99, background: 'var(--surface2)', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${expRatio}%`, borderRadius: 99, background: expRatio > 80 ? 'var(--expense)' : 'var(--accent)', transition: 'width 0.3s ease' }} />
-                          </div>
-                        </div>
-
+                        {/* Savings Rate */}
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
                             <span style={{ color: 'var(--text-secondary)' }}>Savings Rate</span>
-                            <span style={{ color: 'var(--savings)' }}>{savRatio}% of Income</span>
+                            <span style={{ color: savRatio >= 20 ? 'var(--income)' : savRatio >= 10 ? 'var(--lent)' : 'var(--expense)' }}>
+                              {savRatio}% {savRatio >= 20 ? '(Healthy)' : savRatio >= 10 ? '(Moderate)' : '(Low)'}
+                            </span>
                           </div>
                           <div style={{ height: 6, width: '100%', borderRadius: 99, background: 'var(--surface2)', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${savRatio}%`, borderRadius: 99, background: 'linear-gradient(90deg, #3B82F6, #6366F1)', transition: 'width 0.3s ease' }} />
+                            <div style={{ height: '100%', width: `${savRatio}%`, borderRadius: 99, background: 'linear-gradient(90deg, #3B82F6, #10B981)', transition: 'width 0.3s ease' }} />
                           </div>
+                        </div>
+
+                        {/* Expense Ratio */}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>Expense Ratio</span>
+                            <span style={{ color: expRatio > 80 ? 'var(--expense)' : expRatio > 60 ? 'var(--lent)' : 'var(--income)' }}>
+                              {expRatio}% of Income
+                            </span>
+                          </div>
+                          <div style={{ height: 6, width: '100%', borderRadius: 99, background: 'var(--surface2)', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${expRatio}%`, borderRadius: 99, background: expRatio > 80 ? 'var(--expense)' : expRatio > 60 ? 'var(--lent)' : 'var(--income)', transition: 'width 0.3s ease' }} />
+                          </div>
+                        </div>
+
+                        {/* Wastage Impact */}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
+                            <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <Flame size={11} style={{ color: wst > 0 ? 'var(--expense)' : 'var(--text-muted)' }} /> Wastage Leakage
+                            </span>
+                            <span style={{ color: wst > 0 ? 'var(--expense)' : 'var(--text-muted)', fontWeight: 700 }}>
+                              {wstRatio}% of Expenses ({formatAmount(wst)})
+                            </span>
+                          </div>
+                          <div style={{ height: 6, width: '100%', borderRadius: 99, background: 'var(--surface2)', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${wstRatio}%`, borderRadius: 99, background: 'var(--expense)', transition: 'width 0.3s ease' }} />
+                          </div>
+                        </div>
+
+                        {/* Net Period Cash Status */}
+                        <div style={{ marginTop: 4, padding: '8px 10px', borderRadius: 8, background: netSurplus >= 0 ? 'var(--income-bg)' : 'var(--expense-bg)', border: `1px solid ${netSurplus >= 0 ? 'var(--income-border)' : 'var(--expense-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Net Cash Flow</span>
+                          <span style={{ fontSize: 11, fontWeight: 800, color: netSurplus >= 0 ? 'var(--income)' : 'var(--expense)' }}>
+                            {netSurplus >= 0 ? `+ ${formatAmount(netSurplus)} Surplus` : `- ${formatAmount(Math.abs(netSurplus))} Deficit`}
+                          </span>
                         </div>
                       </>
                     );
                   })()}
+                </div>
+
+                {/* Cash Flow Trend Graph */}
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
+                      Cash Flow Trend (6 Months)
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 10, fontWeight: 700 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.income }}>
+                        <span style={{ width: 7, height: 7, borderRadius: 2, background: C.income }} /> Income
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.expense }}>
+                        <span style={{ width: 7, height: 7, borderRadius: 2, background: C.expense }} /> Expense
+                      </span>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={150}>
+                    <AreaChart data={areaData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="incGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={C.income} stopOpacity={0.4} />
+                          <stop offset="95%" stopColor={C.income} stopOpacity={0.0} />
+                        </linearGradient>
+                        <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={C.expense} stopOpacity={0.4} />
+                          <stop offset="95%" stopColor={C.expense} stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="month" tick={{ fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Area type="monotone" dataKey="Income" stroke={C.income} strokeWidth={2} fillOpacity={1} fill="url(#incGrad)" />
+                      <Area type="monotone" dataKey="Expense" stroke={C.expense} strokeWidth={2} fillOpacity={1} fill="url(#expGrad)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </DCard>

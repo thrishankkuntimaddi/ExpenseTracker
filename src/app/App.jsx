@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Home, List, Wallet, BarChart2, Settings, ArrowLeftRight, Users } from 'lucide-react';
+import { Home, List, Wallet, BarChart2, Settings, ReceiptText, Users } from 'lucide-react';
 import { useFirestoreData } from '../hooks/useFirestoreData';
 import { getDefaultPeriod } from '../utils/periodHelpers';
 import AuthGate from '../features/auth/AuthGate';
@@ -13,12 +13,12 @@ import PersonsPanel     from '../features/persons/PersonsPanel';
 import DesktopDashboard from '../components/DesktopDashboard';
 
 const TABS = [
-  { key: 'today',    label: 'Expenses', Icon: Home           },
-  { key: 'history',  label: 'History',  Icon: List           },
-  { key: 'income',   label: 'Income',   Icon: Wallet         },
-  { key: 'external', label: 'External', Icon: ArrowLeftRight },
-  { key: 'stats',    label: 'Stats',    Icon: BarChart2      },
-  { key: 'settings', label: 'Settings', Icon: Settings       },
+  { key: 'today',    label: 'Expenses', Icon: Home        },
+  { key: 'history',  label: 'History',  Icon: List        },
+  { key: 'income',   label: 'Income',   Icon: Wallet      },
+  { key: 'external', label: 'Billings', Icon: ReceiptText },
+  { key: 'stats',    label: 'Stats',    Icon: BarChart2   },
+  { key: 'settings', label: 'Settings', Icon: Settings    },
 ];
 
 function useIsDesktop() {
@@ -119,8 +119,8 @@ function AuthenticatedApp({ user, signOut }) {
   /* ── MOBILE ── */
   const isMonoflow = theme === 'monoflow';
   const tabColors = isMonoflow
-    ? { today: '#b8956a', history: '#c9a87c', income: '#5aba8a', external: '#a78bfa', stats: '#6b8dd6', settings: '#9ca3af' }
-    : { today: '#E11D48', history: '#D97706', income: '#059669', external: '#7C3AED', stats: '#2563EB', settings: '#6366F1' };
+    ? { today: '#b8956a', history: '#c9a87c', income: '#5aba8a', external: '#7c3aed', stats: '#6b8dd6', settings: '#9ca3af' }
+    : { today: '#E11D48', history: '#D97706', income: '#059669', external: '#4F46E5', stats: '#2563EB', settings: '#6366F1' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
