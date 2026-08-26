@@ -17,6 +17,7 @@ const TABS = [
   { key: 'history',  label: 'History',  Icon: List           },
   { key: 'income',   label: 'Income',   Icon: Wallet         },
   { key: 'external', label: 'External', Icon: ArrowLeftRight },
+  { key: 'stats',    label: 'Stats',    Icon: BarChart2      },
   { key: 'settings', label: 'Settings', Icon: Settings       },
 ];
 
@@ -95,8 +96,8 @@ function AuthenticatedApp({ user, signOut }) {
   /* ── MOBILE ── */
   const isMonoflow = theme === 'monoflow';
   const tabColors = isMonoflow
-    ? { today: '#b8956a', history: '#c9a87c', income: '#5aba8a', external: '#a78bfa', settings: '#9ca3af' }
-    : { today: '#E11D48', history: '#D97706', income: '#059669', external: '#7C3AED', settings: '#6366F1' };
+    ? { today: '#b8956a', history: '#c9a87c', income: '#5aba8a', external: '#a78bfa', stats: '#6b8dd6', settings: '#9ca3af' }
+    : { today: '#E11D48', history: '#D97706', income: '#059669', external: '#7C3AED', stats: '#2563EB', settings: '#6366F1' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
@@ -139,6 +140,11 @@ function AuthenticatedApp({ user, signOut }) {
             onDeleteTransaction={deleteTransaction}
             selectedPeriod={selectedPeriod}
             theme={theme}
+          />
+        )}
+        {activeTab === 'stats' && (
+          <StatsTab
+            {...commonProps}
           />
         )}
         {activeTab === 'settings' && (

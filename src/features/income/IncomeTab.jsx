@@ -265,8 +265,7 @@ export default function IncomeTab({
                 background: 'var(--surface2)', border: '1px solid var(--border)',
                 fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5,
               }}>
-                <span style={{ fontWeight: 700, color: 'var(--text)' }}>💡 Income vs Borrowed Money:</span><br />
-                Use this form for non-returnable money (Salary, Gifts, Freelance). If someone gave you money that you <b>must return</b>, add it under <b>People → Borrowed</b> so your cash balance updates and debt is tracked!
+                
               </div>
             </div>
           </div>
