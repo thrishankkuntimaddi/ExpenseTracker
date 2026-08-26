@@ -11,15 +11,16 @@ function AppHeader() {
       display: 'flex', alignItems: 'center', gap: 10,
       marginBottom: 10,
     }}>
-      <div style={{
-        width: 36, height: 36, borderRadius: 10,
-        background: 'var(--accent)', display: 'flex',
-        alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        flexShrink: 0,
-      }}>
-        <Zap size={18} color="#fff" strokeWidth={2.5} />
-      </div>
+      <img
+        src={import.meta.env.BASE_URL + 'Expense.png'}
+        alt="Expense Tracker Logo"
+        style={{
+          width: 36, height: 36, borderRadius: 10,
+          objectFit: 'cover',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          flexShrink: 0,
+        }}
+      />
       <div>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em', lineHeight: 1 }}>
           Expense Tracker

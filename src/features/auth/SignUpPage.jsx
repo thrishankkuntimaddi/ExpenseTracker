@@ -27,13 +27,15 @@ export default function SignUpPage({ onSignUp, onGoLogin, error, loading }) {
 
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 56, height: 56, borderRadius: 16, background: 'var(--income)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 14px', boxShadow: '0 8px 24px rgba(22,163,74,0.30)',
-          }}>
-            <Zap size={26} color="#fff" strokeWidth={2.5} />
-          </div>
+          <img
+            src={import.meta.env.BASE_URL + 'Expense.png'}
+            alt="Expense Tracker"
+            style={{
+              width: 56, height: 56, borderRadius: 16,
+              objectFit: 'cover', margin: '0 auto 14px', display: 'block',
+              boxShadow: '0 8px 24px rgba(22,163,74,0.30)',
+            }}
+          />
           <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', margin: 0 }}>
             Create Account
           </h1>

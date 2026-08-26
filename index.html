@@ -4,16 +4,16 @@
     <meta charset="UTF-8" />
 
     <!-- ── Favicon — all browsers ── -->
-    <!-- SVG favicon (modern browsers: Chrome, Firefox, Edge) -->
-    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg?v=3" sizes="any" />
-    <!-- PNG fallback (Safari, older browsers) -->
-    <link rel="icon" type="image/png" href="%BASE_URL%icon-512.png?v=3" sizes="512x512" />
-    <!-- Shortcut icon for IE/legacy -->
-    <link rel="shortcut icon" href="%BASE_URL%favicon.svg?v=3" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%favicon-32x32.png?v=4" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%BASE_URL%favicon-16x16.png?v=4" />
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg?v=4" sizes="any" />
+    <!-- Shortcut icon for legacy -->
+    <link rel="shortcut icon" href="%BASE_URL%favicon-32x32.png?v=4" />
 
     <!-- ── Apple / PWA icons ── -->
-    <link rel="apple-touch-icon" sizes="512x512" href="%BASE_URL%icon-512.png?v=3" />
-    <link rel="manifest" href="%BASE_URL%manifest.json?v=3" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%apple-touch-icon.png?v=4" />
+    <link rel="apple-touch-icon" sizes="512x512" href="%BASE_URL%icon-512.png?v=4" />
+    <link rel="manifest" href="%BASE_URL%manifest.json?v=4" />
 
     <!-- ── Viewport & Theme ── -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -71,17 +71,11 @@
 
     <!-- Preloader: OUTSIDE #root so React's createRoot() doesn't wipe it -->
     <div id="app-preloader">
-      <div style="
+      <img src="%BASE_URL%Expense.png" alt="Expense Tracker Logo" style="
         width:52px; height:52px; border-radius:14px;
-        background:#6366F1; display:flex;
-        align-items:center; justify-content:center;
+        object-fit:cover;
         box-shadow:0 8px 24px rgba(99,102,241,0.35);
-      ">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-          stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-        </svg>
-      </div>
+      " />
       <div style="
         width:36px; height:4px; border-radius:99px;
         background:rgba(99,102,241,0.15); overflow:hidden;

@@ -322,13 +322,14 @@ export default function DesktopDashboard({
       }}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: 'var(--accent)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Zap size={18} color="#fff" strokeWidth={2.5} />
-          </div>
+          <img
+            src={import.meta.env.BASE_URL + 'Expense.png'}
+            alt="Expense Tracker Logo"
+            style={{
+              width: 36, height: 36, borderRadius: 10,
+              objectFit: 'cover',
+            }}
+          />
           <div>
             <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em', lineHeight: 1.1 }}>
               Expense Tracker

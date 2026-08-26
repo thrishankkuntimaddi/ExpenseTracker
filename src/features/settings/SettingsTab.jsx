@@ -381,9 +381,11 @@ export default function SettingsTab({
 
             {/* About */}
             <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--savings-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Info size={18} style={{ color: 'var(--savings)' }} />
-              </div>
+              <img
+                src={import.meta.env.BASE_URL + 'Expense.png'}
+                alt="Expense Tracker Logo"
+                style={{ width: 38, height: 38, borderRadius: 10, objectFit: 'cover' }}
+              />
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Expense Tracker v3.0</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Firebase · Real-time sync · PWA</div>

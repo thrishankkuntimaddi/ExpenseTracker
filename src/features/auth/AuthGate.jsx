@@ -12,14 +12,15 @@ function LoadingScreen() {
       alignItems: 'center', justifyContent: 'center',
       background: 'var(--bg)', gap: 16,
     }}>
-      <div style={{
-        width: 52, height: 52, borderRadius: 14,
-        background: 'var(--accent)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 8px 24px rgba(99,102,241,0.3)',
-      }}>
-        <Zap size={24} color="#fff" strokeWidth={2.5} />
-      </div>
+      <img
+        src={import.meta.env.BASE_URL + 'Expense.png'}
+        alt="Expense Tracker Logo"
+        style={{
+          width: 52, height: 52, borderRadius: 14,
+          objectFit: 'cover',
+          boxShadow: '0 8px 24px rgba(99,102,241,0.3)',
+        }}
+      />
       <div style={{
         width: 36, height: 4, borderRadius: 99,
         background: 'var(--border)', overflow: 'hidden',
