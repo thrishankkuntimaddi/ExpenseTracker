@@ -307,7 +307,6 @@ export default function DesktopDashboard({
           {[
             { key: 'dashboard', label: 'Dashboard' },
             { key: 'external',  label: 'External',  icon: <ArrowLeftRight size={12} /> },
-            { key: 'people',    label: 'People',    icon: <Users size={12} /> },
             { key: 'settings',  label: 'Settings'  },
           ].map(tab => (
             <button
@@ -318,7 +317,7 @@ export default function DesktopDashboard({
                 padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                 border: '1px solid var(--border)',
                 background: activeSection === tab.key
-                  ? (tab.key === 'external' ? 'linear-gradient(135deg,#7C3AED,#A855F7)' : tab.key === 'people' ? 'var(--person)' : 'var(--accent)')
+                  ? (tab.key === 'external' ? 'linear-gradient(135deg,#7C3AED,#A855F7)' : 'var(--accent)')
                   : 'transparent',
                 color: activeSection === tab.key ? '#fff' : 'var(--text-muted)',
                 cursor: 'pointer', fontFamily: 'inherit',
@@ -418,7 +417,11 @@ export default function DesktopDashboard({
           <ExternalTab
             user={user}
             onAddIncome={onAddIncome}
+            onUpdateIncome={onUpdateIncome}
+            onDeleteIncome={onDeleteIncome}
             onAddTransaction={onAddTransaction}
+            onUpdateTransaction={onUpdateTransaction}
+            onDeleteTransaction={onDeleteTransaction}
             selectedPeriod={selectedPeriod}
             theme={theme}
           />

@@ -106,20 +106,36 @@ export function useExternalTransactions(uid) {
   }, []);
 
   /* ── Discard session ── */
-  const discardSession = useCallback(async (id) => {
+  const discardSession = useCallback(async (id, { onDeleteIncome, onDeleteTransaction } = {}) => {
     if (!uidRef.current) return;
+    const session = sessions.find((s) => s.id === id);
+    if (session?.settlementId) {
+      if (session.settlementType === 'income' && onDeleteIncome) {
+        onDeleteIncome(session.settlementId);
+      } else if (session.settlementType === 'expense' && onDeleteTransaction) {
+        onDeleteTransaction(session.settlementId);
+      }
+    }
     setSessions((prev) => prev.filter((s) => s.id !== id));
     try {
       await deleteExternalTransaction(uidRef.current, id);
     } catch (err) {
       console.error('[discardSession] Firestore delete failed:', err);
     }
-  }, []);
+  }, [sessions]);
 
-  /* ── Close session + settle into income/expense ── */
+  /* ── Close session + settle into income/expense idempotently ── */
   const closeSession = useCallback(
-    async (sessionId, { netBalance, items, received, total_received, total_spent, sessionDate, sessionName }, onAddIncome, onAddTransaction) => {
+    async (
+      sessionId,
+      { netBalance, items, received, total_received, total_spent, sessionDate, sessionName },
+      { onAddIncome, onUpdateIncome, onDeleteIncome, onAddTransaction, onUpdateTransaction, onDeleteTransaction }
+    ) => {
       if (!uidRef.current) return;
+
+      const session = sessions.find((s) => s.id === sessionId);
+      const existingSettlementId = session?.settlementId;
+      const existingSettlementType = session?.settlementType;
 
       // Build person label (comma-separated if multiple)
       const persons = received
@@ -127,12 +143,89 @@ export function useExternalTransactions(uid) {
         .map((r) => r.person.trim())
         .join(', ') || sessionName || 'External';
 
+      const dateForEntry = sessionDate || new Date().toISOString();
+      const month = isoToMonth(dateForEntry);
+
+      let settlementId = existingSettlementId || null;
+      let settlementType = existingSettlementType || null;
+
+      if (netBalance > 0) {
+        // PROFIT → Income tab
+        const incomeData = {
+          name: persons,
+          amount: netBalance,
+          type: 'income',
+          tag: 'External Settlement',
+          date: dateForEntry,
+          month,
+          externalSessionId: sessionId,
+        };
+
+        if (existingSettlementId && existingSettlementType === 'income') {
+          settlementId = existingSettlementId;
+          settlementType = 'income';
+          if (onUpdateIncome) {
+            await onUpdateIncome({ id: settlementId, ...incomeData });
+          }
+        } else {
+          if (existingSettlementId && existingSettlementType === 'expense' && onDeleteTransaction) {
+            await onDeleteTransaction(existingSettlementId);
+          }
+          settlementId = generateId();
+          settlementType = 'income';
+          if (onAddIncome) {
+            await onAddIncome({ id: settlementId, ...incomeData });
+          }
+        }
+      } else if (netBalance < 0) {
+        // LOSS → Expense tab
+        const expenseData = {
+          name: `External – ${persons}`,
+          amount: Math.abs(netBalance),
+          type: 'expense',
+          category: 'External',
+          date: dateForEntry,
+          month,
+          externalSessionId: sessionId,
+        };
+
+        if (existingSettlementId && existingSettlementType === 'expense') {
+          settlementId = existingSettlementId;
+          settlementType = 'expense';
+          if (onUpdateTransaction) {
+            await onUpdateTransaction({ id: settlementId, ...expenseData });
+          }
+        } else {
+          if (existingSettlementId && existingSettlementType === 'income' && onDeleteIncome) {
+            await onDeleteIncome(existingSettlementId);
+          }
+          settlementId = generateId();
+          settlementType = 'expense';
+          if (onAddTransaction) {
+            await onAddTransaction({ id: settlementId, ...expenseData });
+          }
+        }
+      } else {
+        // netBalance === 0 → Perfectly settled
+        if (existingSettlementId) {
+          if (existingSettlementType === 'income' && onDeleteIncome) {
+            await onDeleteIncome(existingSettlementId);
+          } else if (existingSettlementType === 'expense' && onDeleteTransaction) {
+            await onDeleteTransaction(existingSettlementId);
+          }
+        }
+        settlementId = null;
+        settlementType = null;
+      }
+
       const finalPatch = {
         items,
         received,
         total_received,
         total_spent,
         net_balance: netBalance,
+        settlementId,
+        settlementType,
         closedAt: new Date().toISOString(),
       };
 
@@ -142,54 +235,36 @@ export function useExternalTransactions(uid) {
         console.error('[closeSession] Firestore close failed:', err);
         throw err;
       }
-
-      // Use the session's transaction date, not today
-      const dateForEntry = sessionDate || new Date().toISOString();
-      const month = isoToMonth(dateForEntry);
-
-      if (netBalance > 0) {
-        // PROFIT → Income tab
-        onAddIncome({
-          id:     generateId(),
-          name:   persons,
-          amount: netBalance,
-          type:   'income',
-          tag:    'External Settlement',
-          date:   dateForEntry,
-          month,
-        });
-      } else if (netBalance < 0) {
-        // LOSS → Expense tab
-        onAddTransaction({
-          id:       generateId(),
-          name:     `External – ${persons}`,
-          amount:   Math.abs(netBalance),
-          type:     'expense',
-          category: 'External',
-          date:     dateForEntry,
-          month,
-        });
-      }
-      // net_balance === 0 → perfectly settled; no entry needed
     },
-    []
+    [sessions]
   );
 
   /* ── Delete session ── */
-  const deleteSession = useCallback(async (id) => {
-    if (!uidRef.current) return;
-    setSessions((prev) => prev.filter((s) => s.id !== id));
-    try {
-      await deleteExternalTransaction(uidRef.current, id);
-    } catch (err) {
-      console.error('[deleteSession] Firestore delete failed:', err);
-    }
-  }, []);
+  const deleteSession = useCallback(
+    async (id, { onDeleteIncome, onDeleteTransaction } = {}) => {
+      if (!uidRef.current) return;
+      const session = sessions.find((s) => s.id === id);
+      if (session?.settlementId) {
+        if (session.settlementType === 'income' && onDeleteIncome) {
+          onDeleteIncome(session.settlementId);
+        } else if (session.settlementType === 'expense' && onDeleteTransaction) {
+          onDeleteTransaction(session.settlementId);
+        }
+      }
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      try {
+        await deleteExternalTransaction(uidRef.current, id);
+      } catch (err) {
+        console.error('[deleteSession] Firestore delete failed:', err);
+      }
+    },
+    [sessions]
+  );
 
   /* ── Reopen a closed/draft session for editing (set back to open) ── */
   const reopenSession = useCallback(async (id) => {
     if (!uidRef.current) return;
-    setSessions((prev) => prev.map((s) => s.id === id ? { ...s, status: 'open' } : s));
+    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, status: 'open' } : s)));
     try {
       await upsertExternalTransaction(uidRef.current, { id, status: 'open' });
     } catch (err) {

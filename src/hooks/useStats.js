@@ -31,12 +31,16 @@ export function useStats(transactions, income, selectedPeriod, theme) {
     const totalExpense = filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount ?? 0), 0);
     const totalSavings = filtTxns.filter(t => t.type === 'savings').reduce((s, t) => s + (t.amount ?? 0), 0);
 
-    // Person: separate lent vs repayment
-    const personTxns  = filtTxns.filter(t => t.type === 'person');
-    const totalLent   = personTxns.filter(t => t.direction !== 'repayment').reduce((s, t) => s + (t.amount ?? 0), 0);
-    const totalRepaid = personTxns.filter(t => t.direction === 'repayment').reduce((s, t) => s + (t.amount ?? 0), 0);
-    const netLent     = totalLent - totalRepaid;  // outstanding (positive = I am owed money)
-    // Legacy: totalPerson kept for backward compat (net amount of person transactions)
+    // Person: 4-way direction calculations (Lent, Repayment, Borrowed, Repaid)
+    const personTxns      = filtTxns.filter(t => t.type === 'person');
+    const totalLent       = personTxns.filter(t => t.direction === 'lent' || (!t.direction && t.direction !== 'repayment')).reduce((s, t) => s + (t.amount ?? 0), 0);
+    const totalRepaid     = personTxns.filter(t => t.direction === 'repayment').reduce((s, t) => s + (t.amount ?? 0), 0);
+    const totalBorrowed   = personTxns.filter(t => t.direction === 'borrowed').reduce((s, t) => s + (t.amount ?? 0), 0);
+    const totalRepaidThem = personTxns.filter(t => t.direction === 'repaid').reduce((s, t) => s + (t.amount ?? 0), 0);
+
+    const netLent     = totalLent - totalRepaid;        // They owe me (positive)
+    const netOwed     = totalBorrowed - totalRepaidThem; // I owe them (positive)
+    const netPerson   = netLent - netOwed;               // Overall net person position (positive = net owed to me)
     const totalPerson = totalLent;
 
     const totalWaste   = filtTxns.reduce((s, t) => s + (t.wasteAmount || 0), 0);
@@ -46,9 +50,11 @@ export function useStats(transactions, income, selectedPeriod, theme) {
       .filter(t => t.type === 'external')
       .reduce((s, t) => s + ((t.settlement ?? t.amount) - t.amount), 0);
 
-    // Balance: income minus outflows. Lent money is an outflow but repayments flow back.
-    const balance    = totalIncome + externalProfit - totalExpense - totalSavings - netLent;
-    const totalSpend = totalExpense + totalSavings + netLent;
+    // Balance: Total cash inflows minus total cash outflows
+    // Inflows: Income + External Profit + Borrowed money + Repayments received
+    // Outflows: Expenses + Savings + Lent money + Repaid money to others
+    const balance    = totalIncome + externalProfit + totalBorrowed + totalRepaid - totalExpense - totalSavings - totalLent - totalRepaidThem;
+    const totalSpend = totalExpense + totalSavings + (totalLent + totalRepaidThem);
     const wastePercent = totalSpend > 0 ? ((totalWaste / totalSpend) * 100).toFixed(1) : '0.0';
 
     const now = new Date();
@@ -57,11 +63,12 @@ export function useStats(transactions, income, selectedPeriod, theme) {
     const days   = Math.max(1, Math.ceil((now - firstDate) / 86400000) + 1);
     const weeks  = Math.max(1, days / 7);
     const months = Math.max(1, days / 30);
-    const spend  = totalExpense + netLent;
+    const spend  = totalExpense + (totalLent + totalRepaidThem);
 
     return {
       totalIncome, totalExpense, totalSavings,
-      totalPerson, totalLent, totalRepaid, netLent,
+      totalPerson, totalLent, totalRepaid, totalBorrowed, totalRepaidThem,
+      netLent, netOwed, netPerson,
       totalWaste, externalProfit, balance, wastePercent,
       avgDay: spend / days, avgWeek: spend / weeks, avgMonth: spend / months,
     };

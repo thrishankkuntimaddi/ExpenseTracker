@@ -16,7 +16,6 @@ const TABS = [
   { key: 'today',    label: 'Today',    Icon: Home           },
   { key: 'history',  label: 'History',  Icon: List           },
   { key: 'income',   label: 'Income',   Icon: Wallet         },
-  { key: 'people',   label: 'People',   Icon: Users          },
   { key: 'external', label: 'External', Icon: ArrowLeftRight },
   { key: 'stats',    label: 'Stats',    Icon: BarChart2      },
   { key: 'settings', label: 'Settings', Icon: Settings       },

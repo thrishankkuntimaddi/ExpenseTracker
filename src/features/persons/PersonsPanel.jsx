@@ -9,8 +9,10 @@ import PersonLedger from './PersonLedger';
 
 /* ─── Person Card ─── */
 function PersonCard({ person, onClick }) {
-  const isOwed      = person.outstanding >= 0; // I am owed money (or settled)
-  const outstanding = Math.abs(person.outstanding);
+  const isOwed      = person.outstanding > 0;  // They owe me money
+  const isDebt      = person.outstanding < 0;  // I owe them money
+  const isSettled   = person.outstanding === 0;
+  const absAmount   = Math.abs(person.outstanding);
 
   return (
     <button
@@ -29,9 +31,10 @@ function PersonCard({ person, onClick }) {
         {/* Avatar */}
         <div style={{
           width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-          background: 'var(--person-bg)', border: '1.5px solid var(--person-border)',
+          background: isDebt ? '#EFF6FF' : 'var(--person-bg)',
+          border: `1.5px solid ${isDebt ? '#93C5FD' : 'var(--person-border)'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, fontWeight: 800, color: 'var(--person)',
+          fontSize: 14, fontWeight: 800, color: isDebt ? '#2563EB' : 'var(--person)',
         }}>
           {person.name.trim()[0]?.toUpperCase() ?? '?'}
         </div>
@@ -41,7 +44,7 @@ function PersonCard({ person, onClick }) {
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
             {person.txnCount} transaction{person.txnCount !== 1 ? 's' : ''}
-            {person.outstanding === 0 ? ' · Settled' : ''}
+            {isSettled ? ' · Settled' : ''}
           </div>
         </div>
       </div>
@@ -50,12 +53,12 @@ function PersonCard({ person, onClick }) {
         <div style={{ textAlign: 'right' }}>
           <div style={{
             fontSize: 14, fontWeight: 800,
-            color: outstanding === 0 ? 'var(--text-muted)' : isOwed ? 'var(--expense)' : 'var(--income)',
+            color: isSettled ? 'var(--text-muted)' : isOwed ? 'var(--expense)' : 'var(--income)',
           }}>
-            {outstanding === 0 ? '₹0' : (isOwed ? '' : '+') + formatAmount(outstanding)}
+            {isSettled ? '₹0' : (isDebt ? '-' : '+') + formatAmount(absAmount)}
           </div>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>
-            {outstanding === 0 ? 'settled' : isOwed ? 'outstanding' : 'owe them'}
+            {isSettled ? 'settled' : isOwed ? 'owes you' : 'you owe them'}
           </div>
         </div>
         <ChevronRight size={15} style={{ color: 'var(--text-muted)' }} />
@@ -69,7 +72,7 @@ export default function PersonsPanel({ transactions, onAddTransaction, onUpdateT
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [search, setSearch]                 = useState('');
 
-  // Aggregate all person transactions by normalized name
+  // Aggregate all person transactions by normalized name across all 4 directions
   const persons = useMemo(() => {
     const map = {};
     transactions
@@ -78,15 +81,29 @@ export default function PersonsPanel({ transactions, onAddTransaction, onUpdateT
         const key = t.name?.trim().toLowerCase() ?? 'unknown';
         const displayName = t.name?.trim() ?? 'Unknown';
         if (!map[key]) {
-          map[key] = { name: displayName, txnCount: 0, totalLent: 0, totalRepaid: 0, outstanding: 0 };
+          map[key] = {
+            name: displayName, txnCount: 0,
+            totalLent: 0, totalRepaid: 0,
+            totalBorrowed: 0, totalRepaidThem: 0,
+            outstanding: 0
+          };
         }
         map[key].txnCount++;
-        if (t.direction === 'repayment') {
-          map[key].totalRepaid += (t.amount ?? 0);
-        } else {
-          map[key].totalLent += (t.amount ?? 0);
+        const dir = t.direction ?? 'lent';
+        const amt = t.amount ?? 0;
+
+        if (dir === 'lent') {
+          map[key].totalLent += amt;
+        } else if (dir === 'repayment') {
+          map[key].totalRepaid += amt;
+        } else if (dir === 'borrowed') {
+          map[key].totalBorrowed += amt;
+        } else if (dir === 'repaid') {
+          map[key].totalRepaidThem += amt;
         }
-        map[key].outstanding = map[key].totalLent - map[key].totalRepaid;
+
+        // Net outstanding: positive = they owe me, negative = I owe them
+        map[key].outstanding = (map[key].totalLent - map[key].totalRepaid) - (map[key].totalBorrowed - map[key].totalRepaidThem);
       });
     return Object.values(map).sort((a, b) => Math.abs(b.outstanding) - Math.abs(a.outstanding));
   }, [transactions]);
@@ -96,8 +113,9 @@ export default function PersonsPanel({ transactions, onAddTransaction, onUpdateT
     [persons, search]
   );
 
-  const totalOutstanding = persons.reduce((s, p) => s + Math.max(0, p.outstanding), 0);
-  const totalCount       = persons.length;
+  const totalOwedToMe = persons.filter(p => p.outstanding > 0).reduce((s, p) => s + p.outstanding, 0);
+  const totalIOwe     = persons.filter(p => p.outstanding < 0).reduce((s, p) => s + Math.abs(p.outstanding), 0);
+  const totalCount    = persons.length;
 
   // Show ledger for a selected person
   if (selectedPerson) {
@@ -123,16 +141,29 @@ export default function PersonsPanel({ transactions, onAddTransaction, onUpdateT
               People
             </h1>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-              Debt ledger — who owes you what
+              Debt & lending ledger — track who owes you & who you owe
             </p>
           </div>
           {totalCount > 0 && (
-            <div style={{
-              padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-              background: 'var(--person-bg)', color: 'var(--person)',
-              border: '1.5px solid var(--person-border)',
-            }}>
-              {formatAmount(totalOutstanding)} outstanding
+            <div style={{ display: 'flex', gap: 8 }}>
+              {totalOwedToMe > 0 && (
+                <div style={{
+                  padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                  background: 'var(--person-bg)', color: 'var(--person)',
+                  border: '1.5px solid var(--person-border)',
+                }}>
+                  {formatAmount(totalOwedToMe)} owed to you
+                </div>
+              )}
+              {totalIOwe > 0 && (
+                <div style={{
+                  padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                  background: '#EFF6FF', color: '#2563EB',
+                  border: '1.5px solid #93C5FD',
+                }}>
+                  {formatAmount(totalIOwe)} you owe
+                </div>
+              )}
             </div>
           )}
         </div>

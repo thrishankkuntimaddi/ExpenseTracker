@@ -27,11 +27,13 @@ export const TRANSACTION_TYPES = [
 ];
 
 /**
- * PERSON_DIRECTIONS — lent money vs repayment received
+ * PERSON_DIRECTIONS — 4-way person transaction directions
  */
 export const PERSON_DIRECTIONS = [
-  { key: 'lent',      label: 'Lent',      color: '#D97706', Icon: TrendingDown, description: 'I gave money' },
-  { key: 'repayment', label: 'Repayment', color: '#16A34A', Icon: TrendingUp,   description: 'They returned money' },
+  { key: 'lent',      label: 'Lent',         color: '#D97706', Icon: TrendingDown, description: 'I gave money (they owe me)' },
+  { key: 'repayment', label: 'Repayment Rec.', color: '#16A34A', Icon: TrendingUp,   description: 'They returned money to me' },
+  { key: 'borrowed',  label: 'Borrowed',     color: '#2563EB', Icon: TrendingUp,   description: 'I received money (I owe them)' },
+  { key: 'repaid',    label: 'Repaid Them',  color: '#DC2626', Icon: TrendingDown, description: 'I returned money I owed' },
 ];
 
 /**

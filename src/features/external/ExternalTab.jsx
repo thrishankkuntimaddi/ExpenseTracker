@@ -327,7 +327,12 @@ function HistoryCard({ session, onEdit, onDelete }) {
    MAIN ExternalTab
    Supports multiple sessions (Active, Drafts, History), name & date!
 ═══════════════════════════════════════════════════════════════ */
-export default function ExternalTab({ user, onAddIncome, onAddTransaction, selectedPeriod, theme }) {
+export default function ExternalTab({
+  user,
+  onAddIncome, onUpdateIncome, onDeleteIncome,
+  onAddTransaction, onUpdateTransaction, onDeleteTransaction,
+  selectedPeriod, theme,
+}) {
   const {
     sessions, saving,
     createSession, updateSession, saveDraftSession,
@@ -488,8 +493,7 @@ export default function ExternalTab({ user, onAddIncome, onAddTransaction, selec
           sessionDate: dateInputToISO(sessionDate),
           sessionName,
         },
-        onAddIncome,
-        onAddTransaction
+        { onAddIncome, onUpdateIncome, onDeleteIncome, onAddTransaction, onUpdateTransaction, onDeleteTransaction }
       );
       setActiveSessionId(null);
       setShowCloseModal(false);
@@ -503,7 +507,7 @@ export default function ExternalTab({ user, onAddIncome, onAddTransaction, selec
   /* ── Discard Session ── */
   function handleDiscard() {
     if (!activeSessionId) return;
-    discardSession(activeSessionId);
+    discardSession(activeSessionId, { onDeleteIncome, onDeleteTransaction });
     setActiveSessionId(null);
   }
 
@@ -577,7 +581,7 @@ export default function ExternalTab({ user, onAddIncome, onAddTransaction, selec
         <ConfirmDeleteModal
           title="Delete billing session?"
           message="This will permanently remove all items, received entries, and totals."
-          onConfirm={() => { deleteSession(deletingId); setDeletingId(null); }}
+          onConfirm={() => { deleteSession(deletingId, { onDeleteIncome, onDeleteTransaction }); setDeletingId(null); }}
           onCancel={() => setDeletingId(null)}
         />
       )}

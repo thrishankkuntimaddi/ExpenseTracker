@@ -201,15 +201,20 @@ export default function PersonLedger({ personName, transactions, onAddTransactio
     [transactions, personName]
   );
 
-  const totalLent   = personTxns.filter(t => t.direction !== 'repayment').reduce((s, t) => s + (t.amount ?? 0), 0);
-  const totalRepaid = personTxns.filter(t => t.direction === 'repayment').reduce((s, t) => s + (t.amount ?? 0), 0);
-  const outstanding = totalLent - totalRepaid;
+  const totalLent       = personTxns.filter(t => t.direction === 'lent' || (!t.direction && t.direction !== 'repayment')).reduce((s, t) => s + (t.amount ?? 0), 0);
+  const totalRepaid     = personTxns.filter(t => t.direction === 'repayment').reduce((s, t) => s + (t.amount ?? 0), 0);
+  const totalBorrowed   = personTxns.filter(t => t.direction === 'borrowed').reduce((s, t) => s + (t.amount ?? 0), 0);
+  const totalRepaidThem = personTxns.filter(t => t.direction === 'repaid').reduce((s, t) => s + (t.amount ?? 0), 0);
+
+  const netPosition = (totalLent - totalRepaid) - (totalBorrowed - totalRepaidThem);
 
   function handleSaveNew(txn)  { onAddTransaction(txn);    setShowAddForm(false); }
   function handleSaveEdit(txn) { onUpdateTransaction(txn); setEditingId(null);    }
   function handleDelete(id)    { onDeleteTransaction(id);  setDeleteTarget(null); }
 
-  const isPositive = outstanding >= 0;
+  const isOwed    = netPosition > 0;
+  const isDebt    = netPosition < 0;
+  const isSettled = netPosition === 0;
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -238,10 +243,11 @@ export default function PersonLedger({ personName, transactions, onAddTransactio
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
           <div style={{
             width: 52, height: 52, borderRadius: 16,
-            background: 'var(--person-bg)', border: '2px solid var(--person-border)',
+            background: isDebt ? '#EFF6FF' : 'var(--person-bg)',
+            border: `2px solid ${isDebt ? '#93C5FD' : 'var(--person-border)'}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            <User size={24} style={{ color: 'var(--person)' }} />
+            <User size={24} style={{ color: isDebt ? '#2563EB' : 'var(--person)' }} />
           </div>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
@@ -254,20 +260,27 @@ export default function PersonLedger({ personName, transactions, onAddTransactio
         </div>
 
         {/* Summary cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
           {[
-            { label: 'Total Lent', value: totalLent,   color: 'var(--person)',  bg: 'var(--person-bg)',  border: 'var(--person-border)'  },
-            { label: 'Repaid',     value: totalRepaid, color: 'var(--income)',  bg: 'var(--income-bg)',  border: 'var(--income-border)'  },
-            { label: 'Outstanding', value: Math.abs(outstanding), color: isPositive ? 'var(--expense)' : 'var(--income)', bg: isPositive ? 'var(--expense-bg)' : 'var(--income-bg)', border: isPositive ? 'var(--expense-border)' : 'var(--income-border)' },
+            { label: 'Lent (I Gave)',     value: totalLent,       color: '#D97706', bg: 'rgba(217,119,6,0.1)',  border: 'rgba(217,119,6,0.3)' },
+            { label: 'Repayment Rec.',   value: totalRepaid,     color: '#16A34A', bg: 'var(--income-bg)',      border: 'var(--income-border)' },
+            { label: 'Borrowed (I Took)', value: totalBorrowed,   color: '#2563EB', bg: '#EFF6FF',              border: '#93C5FD' },
+            {
+              label: isSettled ? 'Net Position' : isOwed ? 'Owes You' : 'You Owe Them',
+              value: Math.abs(netPosition),
+              color: isSettled ? 'var(--text-muted)' : isOwed ? 'var(--expense)' : '#2563EB',
+              bg: isSettled ? 'var(--surface2)' : isOwed ? 'var(--expense-bg)' : '#EFF6FF',
+              border: isSettled ? 'var(--border)' : isOwed ? 'var(--expense-border)' : '#93C5FD'
+            },
           ].map(({ label, value, color, bg, border }) => (
             <div key={label} style={{
               borderRadius: 14, padding: '12px 14px',
               background: bg, border: `1.5px solid ${border}`,
             }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color, marginBottom: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {label}
               </div>
-              <div style={{ fontSize: 17, fontWeight: 800, color }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color }}>
                 {formatAmount(value)}
               </div>
             </div>
@@ -331,8 +344,8 @@ export default function PersonLedger({ personName, transactions, onAddTransactio
 
             <div style={{ border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: 'var(--surface)' }}>
               {personTxns.map((txn, idx) => {
-                const isRepayment = txn.direction === 'repayment';
                 const dirCfg = getPersonDirection(txn.direction);
+                const isInflow = txn.direction === 'repayment' || txn.direction === 'borrowed';
                 const isEditing = editingId === txn.id;
                 return (
                   <div key={txn.id}>
@@ -363,12 +376,12 @@ export default function PersonLedger({ personName, transactions, onAddTransactio
                             background: dirCfg.color + '22', color: dirCfg.color,
                             display: 'inline-flex', alignItems: 'center', gap: 4,
                           }}>
-                            {isRepayment ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                            <dirCfg.Icon size={10} />
                             {dirCfg.label}
                           </span>
                         </div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: isRepayment ? 'var(--income)' : 'var(--person)' }}>
-                          {isRepayment ? '+' : ''}{formatAmount(txn.amount)}
+                        <div style={{ fontSize: 13, fontWeight: 700, color: isInflow ? 'var(--income)' : dirCfg.color }}>
+                          {isInflow ? '+' : '-'}{formatAmount(txn.amount)}
                         </div>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button onClick={() => setEditingId(txn.id)} style={{
