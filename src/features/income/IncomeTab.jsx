@@ -36,6 +36,19 @@ export default function IncomeTab({
 
   const totalIncome     = filtInc.reduce((s, i) => s + i.amount, 0);
 
+  const borrowedTxns = useMemo(
+    () => filtTxns.filter(t => t.type === 'person' && t.direction === 'borrowed'),
+    [filtTxns]
+  );
+
+  const combinedItems = useMemo(() => {
+    const incList = filtInc.map(i => ({ ...i, isBorrowed: false }));
+    const borList = borrowedTxns.map(t => ({ ...t, isBorrowed: true }));
+    return [...incList, ...borList].sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [filtInc, borrowedTxns]);
+
+  const grouped = useMemo(() => groupByDay(combinedItems), [combinedItems]);
+
   const thisMonthIncome = income
     .filter(i => i.date?.slice(0, 7) === currentMonth)
     .reduce((s, i) => s + i.amount, 0);
@@ -258,20 +271,20 @@ export default function IncomeTab({
             </div>
           </div>
 
-          {/* RIGHT: Income list */}
+          {/* RIGHT: Income & Borrowed list */}
           <div className="income-right" style={{ padding: '0 20px 20px' }}>
-            {filtInc.length === 0 ? (
+            {combinedItems.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 160, gap: 12 }}>
                 <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--income-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Wallet size={22} style={{ color: 'var(--income)' }} />
                 </div>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
-                  No income in this period.
+                  No income or borrowed money in this period.
                 </p>
               </div>
             ) : (
               <>
-                <p className="section-label" style={{ marginBottom: 10 }}>Income History</p>
+                <p className="section-label" style={{ marginBottom: 10 }}>Inflows History</p>
                 {grouped.map(group => (
                   <div key={group.label} style={{ marginBottom: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -280,7 +293,7 @@ export default function IncomeTab({
                         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>{group.label}</span>
                       </div>
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--income)' }}>
-                        {formatAmount(group.entries.reduce((s, e) => s + e.amount, 0))}
+                        +{formatAmount(group.entries.reduce((s, e) => s + e.amount, 0))}
                       </span>
                     </div>
                     <div className="card">
@@ -293,20 +306,57 @@ export default function IncomeTab({
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <div style={{
                               width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-                              background: 'var(--income-bg)',
+                              background: entry.isBorrowed ? 'var(--person-bg)' : 'var(--income-bg)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                              <TrendingUp size={14} style={{ color: 'var(--income)' }} />
+                              <TrendingUp size={14} style={{ color: entry.isBorrowed ? 'var(--person)' : 'var(--income)' }} />
                             </div>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-                              {entry.name}
-                            </span>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{
+                                  fontSize: 9, padding: '2px 6px', borderRadius: 4, fontWeight: 700,
+                                  background: entry.isBorrowed ? 'var(--person-bg)' : 'var(--income-bg)',
+                                  color: entry.isBorrowed ? 'var(--person)' : 'var(--income)',
+                                }}>
+                                  {entry.isBorrowed ? 'Borrowed' : 'Income'}
+                                </span>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                                  {entry.name}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--income)' }}>
-                              {formatAmount(entry.amount)}
+                            <span style={{ fontSize: 13, fontWeight: 700, color: entry.isBorrowed ? 'var(--person)' : 'var(--income)' }}>
+                              +{formatAmount(entry.amount)}
                             </span>
-                            {onUpdateIncome && (
+
+                            {/* Quick Repay button for Borrowed entries */}
+                            {entry.isBorrowed && onAddTransaction && (
+                              <button
+                                onClick={() => {
+                                  onAddTransaction({
+                                    id: generateId(),
+                                    name: entry.name,
+                                    amount: entry.amount,
+                                    type: 'person',
+                                    direction: 'repaid',
+                                    date: new Date().toISOString(),
+                                    month: isoToMonth(new Date().toISOString()),
+                                  });
+                                }}
+                                style={{
+                                  padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                                  background: 'var(--person-bg)', border: '1px solid var(--person-border)',
+                                  color: 'var(--person)', cursor: 'pointer', fontFamily: 'inherit',
+                                }}
+                                title="Repay this debt"
+                              >
+                                Repay
+                              </button>
+                            )}
+
+                            {!entry.isBorrowed && onUpdateIncome && (
                               <button onClick={() => setEditingEntry(entry)}
                                 style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
                                 onMouseEnter={e => { e.currentTarget.style.color = 'var(--income)'; e.currentTarget.style.background = 'var(--income-bg)'; }}
@@ -314,8 +364,12 @@ export default function IncomeTab({
                                 <Pencil size={12} />
                               </button>
                             )}
-                            {onDeleteIncome && (
-                              <button onClick={() => setDeletingId(entry.id)}
+                            {((!entry.isBorrowed && onDeleteIncome) || (entry.isBorrowed && onDeleteTransaction)) && (
+                              <button
+                                onClick={() => {
+                                  if (entry.isBorrowed) onDeleteTransaction(entry.id);
+                                  else setDeletingId(entry.id);
+                                }}
                                 style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
                                 onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
                                 onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
