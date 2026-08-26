@@ -176,6 +176,7 @@ export default function DesktopDashboard({
   const extSourceRef    = useRef(null);
 
   // Income entry states
+  const [incMode, setIncMode]     = useState('income'); // 'income' | 'borrowed'
   const [iName, setIName]         = useState('');
   const [iAmount, setIAmount]     = useState('');
   const [iDateInput, setIDateInput] = useState(todayInputValue());
@@ -198,29 +199,24 @@ export default function DesktopDashboard({
     if (!n || isNaN(a) || a <= 0) return;
 
     const isoDate = dateInputToISO(dateInput);
-    const entry = {
-      id: generateId(), name: n, amount: a, type,
-      date: isoDate,
-      month: isoToMonth(isoDate),
-    };
-
-    if (type === 'person') {
-      entry.direction = direction;
-    }
-    if (type === 'savings') {
-      entry.savingsType = savingsType;
-      const st = getSavingsType(savingsType);
-      if (st.hasPlatform && platform.trim()) entry.platform = platform.trim();
-    }
-    if (type === 'external') {
-      const s = parseFloat(settlement);
-      if (isNaN(s) || s < 0) return;
-      entry.settlement = s;
-      if (extSource.trim()) entry.externalSource = extSource.trim();
+    if (type === 'expense') {
+      onAddTransaction({
+        id: generateId(), name: n, amount: a, type: 'expense',
+        date: isoDate, month: isoToMonth(isoDate),
+      });
+    } else if (type === 'person') {
+      onAddTransaction({
+        id: generateId(), name: n, amount: a, type: 'person', direction,
+        date: isoDate, month: isoToMonth(isoDate),
+      });
+    } else if (type === 'savings') {
+      onAddTransaction({
+        id: generateId(), name: n, amount: a, type: 'savings', savingsType, platform,
+        date: isoDate, month: isoToMonth(isoDate),
+      });
     }
 
-    onAddTransaction(entry);
-    setName(''); setAmount(''); setSettlement(''); setExtSource(''); setPlatform('');
+    setName(''); setAmount(''); setSettlement(''); setExtSource('');
     setDateInput(todayInputValue());
     setTimeout(() => nameRef.current?.focus(), 50);
   }
@@ -229,11 +225,20 @@ export default function DesktopDashboard({
     const n = iName.trim(), a = parseFloat(iAmount);
     if (!n || isNaN(a) || a <= 0) return;
     const isoDate = dateInputToISO(iDateInput);
-    onAddIncome({
-      id: generateId(), name: n, amount: a, type: 'income',
-      date: isoDate,
-      month: isoToMonth(isoDate),
-    });
+    if (incMode === 'income') {
+      onAddIncome({
+        id: generateId(), name: n, amount: a, type: 'income',
+        date: isoDate,
+        month: isoToMonth(isoDate),
+      });
+    } else {
+      // Borrowed Money -> log as person transaction with direction 'borrowed'
+      onAddTransaction({
+        id: generateId(), name: n, amount: a, type: 'person', direction: 'borrowed',
+        date: isoDate,
+        month: isoToMonth(isoDate),
+      });
+    }
     setIName(''); setIAmount(''); setIDateInput(todayInputValue());
     setTimeout(() => iNameRef.current?.focus(), 50);
   }
@@ -870,10 +875,10 @@ export default function DesktopDashboard({
           {/* RIGHT: Income + Analytics */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'start' }}>
 
-            {/* Income Panel */}
+            {/* Income & Borrowed Money Panel */}
             <DCard>
               <CardHeader
-                title="Income"
+                title="Income & Inflows"
                 right={
                   <div style={{ padding: '3px 10px', borderRadius: 20, background: 'var(--income-bg)', color: 'var(--income)', fontSize: 11, fontWeight: 700, border: '1px solid var(--income-border)' }}>
                     {formatAmount(filtInc.reduce((s, i) => s + i.amount, 0))}
@@ -881,19 +886,56 @@ export default function DesktopDashboard({
                 }
               />
               <div style={{ padding: '12px 16px' }}>
+                {/* 2-way mode toggle: Income vs Borrowed Money */}
+                <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 9, padding: 2, marginBottom: 10, border: '1px solid var(--border)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIncMode('income')}
+                    style={{
+                      flex: 1, padding: '5px', borderRadius: 7, fontSize: 11, fontWeight: 700,
+                      border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                      background: incMode === 'income' ? 'var(--income)' : 'transparent',
+                      color: incMode === 'income' ? '#fff' : 'var(--text-muted)',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    💰 Income
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIncMode('borrowed')}
+                    style={{
+                      flex: 1, padding: '5px', borderRadius: 7, fontSize: 11, fontWeight: 700,
+                      border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                      background: incMode === 'borrowed' ? 'var(--person)' : 'transparent',
+                      color: incMode === 'borrowed' ? '#fff' : 'var(--text-muted)',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    🤝 Borrowed
+                  </button>
+                </div>
+
                 <div style={{ position: 'relative', marginBottom: 7 }}>
                   <PenLine size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                  <input id="desktop-income-name" ref={iNameRef} type="text" placeholder="Source (Salary, etc.)" value={iName}
+                  <input
+                    id="desktop-income-name" ref={iNameRef} type="text"
+                    placeholder={incMode === 'income' ? 'Source (Salary, Freelance...)' : 'Person Name (e.g. Preetham)'}
+                    value={iName}
                     onChange={e => setIName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), iAmountRef.current?.focus())}
-                    autoComplete="off" style={inputStyle} {...focusHandlers('var(--income)')} />
+                    autoComplete="off" style={inputStyle} {...focusHandlers(incMode === 'income' ? 'var(--income)' : 'var(--person)')}
+                  />
                 </div>
                 <div style={{ position: 'relative', marginBottom: 7 }}>
                   <IndianRupee size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                  <input id="desktop-income-amount" ref={iAmountRef} type="text" placeholder="0.00" value={iAmount}
+                  <input
+                    id="desktop-income-amount" ref={iAmountRef} type="text" placeholder="0.00" value={iAmount}
                     onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setIAmount(v); }}
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveIncome())}
-                    inputMode="decimal" autoComplete="off" style={{ ...inputStyle, fontSize: 14, fontWeight: 700 }} {...focusHandlers('var(--income)')} />
+                    inputMode="decimal" autoComplete="off" style={{ ...inputStyle, fontSize: 14, fontWeight: 700 }}
+                    {...focusHandlers(incMode === 'income' ? 'var(--income)' : 'var(--person)')}
+                  />
                 </div>
                 {/* Income Date */}
                 <div style={{ position: 'relative', marginBottom: 10 }}>
@@ -904,7 +946,7 @@ export default function DesktopDashboard({
                     max={new Date().toISOString().slice(0, 10)}
                     onChange={e => setIDateInput(e.target.value)}
                     style={inputStyle}
-                    {...focusHandlers('var(--income)')}
+                    {...focusHandlers(incMode === 'income' ? 'var(--income)' : 'var(--person)')}
                   />
                 </div>
                 <button
@@ -913,56 +955,108 @@ export default function DesktopDashboard({
                   style={{
                     width: '100%', padding: '9px', borderRadius: 10,
                     fontSize: 12, fontWeight: 700,
-                    background: iName.trim() && iAmount && parseFloat(iAmount) > 0 ? 'var(--income)' : 'var(--surface2)',
+                    background: iName.trim() && iAmount && parseFloat(iAmount) > 0
+                      ? (incMode === 'income' ? 'var(--income)' : 'var(--person)')
+                      : 'var(--surface2)',
                     color: iName.trim() && iAmount && parseFloat(iAmount) > 0 ? '#fff' : 'var(--text-muted)',
                     border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
                   }}
                 >
-                  Add Income ↵
+                  {incMode === 'income' ? 'Add Income ↵' : 'Add Borrowed Money ↵'}
                 </button>
               </div>
-              <div style={{ maxHeight: 280, overflowY: 'auto', borderTop: '1px solid var(--border)' }}>
-                {filtInc.length === 0 ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 70 }}>
-                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No income this period</p>
+
+              {/* Combined List (Income + Borrowed) */}
+              {(() => {
+                const borrowedTxns = filtTxns.filter(t => t.type === 'person' && t.direction === 'borrowed');
+                const combinedList = [
+                  ...filtInc.map(i => ({ ...i, isBorrowed: false })),
+                  ...borrowedTxns.map(t => ({ ...t, isBorrowed: true })),
+                ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                return (
+                  <div style={{ maxHeight: 280, overflowY: 'auto', borderTop: '1px solid var(--border)' }}>
+                    {combinedList.length === 0 ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 70 }}>
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No entries this period</p>
+                      </div>
+                    ) : combinedList.map(entry => (
+                      <div key={entry.id} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '9px 16px', borderBottom: '1px solid var(--border)',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+                          <span style={{
+                            fontSize: 9, padding: '2px 6px', borderRadius: 5, fontWeight: 700,
+                            background: entry.isBorrowed ? 'var(--person-bg)' : 'var(--income-bg)',
+                            color: entry.isBorrowed ? 'var(--person)' : 'var(--income)',
+                            flexShrink: 0,
+                          }}>
+                            {entry.isBorrowed ? 'Borrowed' : 'Income'}
+                          </span>
+                          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                            {entry.name}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: entry.isBorrowed ? 'var(--person)' : 'var(--income)' }}>
+                            +{formatAmount(entry.amount)}
+                          </span>
+
+                          {/* Quick Repay button for Borrowed entries */}
+                          {entry.isBorrowed && (
+                            <button
+                              onClick={() => {
+                                onAddTransaction({
+                                  id: generateId(),
+                                  name: entry.name,
+                                  amount: entry.amount,
+                                  type: 'person',
+                                  direction: 'repaid',
+                                  date: new Date().toISOString(),
+                                  month: isoToMonth(new Date().toISOString()),
+                                });
+                              }}
+                              style={{
+                                padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                                background: 'var(--person-bg)', border: '1px solid var(--person-border)',
+                                color: 'var(--person)', cursor: 'pointer', fontFamily: 'inherit',
+                              }}
+                              title="Repay this debt"
+                            >
+                              Repay
+                            </button>
+                          )}
+
+                          {!entry.isBorrowed && onUpdateIncome && (
+                            <button
+                              onClick={() => setEditingInc(entry)}
+                              style={{ width: 20, height: 20, borderRadius: 4, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}
+                              onMouseEnter={e => { e.currentTarget.style.color = 'var(--income)'; e.currentTarget.style.background = 'var(--income-bg)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                            >
+                              <Pencil size={10} />
+                            </button>
+                          )}
+                          {((!entry.isBorrowed && onDeleteIncome) || (entry.isBorrowed && onDeleteTransaction)) && (
+                            <button
+                              onClick={() => {
+                                if (entry.isBorrowed) onDeleteTransaction(entry.id);
+                                else setDeletingIncId(entry.id);
+                              }}
+                              style={{ width: 20, height: 20, borderRadius: 4, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}
+                              onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                            >
+                              <Trash2 size={10} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ) : filtInc.slice().reverse().map(entry => (
-                  <div key={entry.id} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '9px 16px', borderBottom: '1px solid var(--border)',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
-                      <Wallet size={11} style={{ color: 'var(--income)', flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                        {entry.name}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--income)' }}>{formatAmount(entry.amount)}</span>
-                      {onUpdateIncome && (
-                        <button
-                          onClick={() => setEditingInc(entry)}
-                          style={{ width: 20, height: 20, borderRadius: 4, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}
-                          onMouseEnter={e => { e.currentTarget.style.color = 'var(--income)'; e.currentTarget.style.background = 'var(--income-bg)'; }}
-                          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
-                        >
-                          <Pencil size={10} />
-                        </button>
-                      )}
-                      {onDeleteIncome && (
-                        <button
-                          onClick={() => setDeletingIncId(entry.id)}
-                          style={{ width: 20, height: 20, borderRadius: 4, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}
-                          onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
-                          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
-                        >
-                          <Trash2 size={10} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                );
+              })()}
             </DCard>
 
             {/* Analytics Panel */}

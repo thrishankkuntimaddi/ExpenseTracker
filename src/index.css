@@ -333,8 +333,27 @@ button:disabled { cursor: not-allowed; }
   flex-shrink: 0;
 }
 
-/* ══ DESKTOP LAYOUT ══════════════════════════════════════════ */
-@media (min-width: 1024px) {
+/* ══ MOBILE RESPONSIVE DASHBOARD OVERRIDES ══════════════════════ */
+@media (max-width: 1023px) {
   body { overflow: auto; }
   #root { overflow: auto; }
+
+  .desktop-dashboard-summary {
+    grid-template-columns: repeat(2, 1fr) !important;
+    padding: 14px 16px 0 !important;
+    gap: 8px !important;
+  }
+  .desktop-dashboard-grid {
+    grid-template-columns: 1fr !important;
+    padding: 12px 16px 16px !important;
+    gap: 12px !important;
+  }
+  .desktop-dashboard-right-cols {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .desktop-header-bar {
+    padding: 10px 16px !important;
+    gap: 8px !important;
+  }
 }

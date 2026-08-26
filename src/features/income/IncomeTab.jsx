@@ -7,7 +7,12 @@ import PeriodSelector from '../../components/PeriodSelector';
 import EditIncomeModal from '../../components/EditIncomeModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 
-export default function IncomeTab({ income, onAddIncome, onUpdateIncome, onDeleteIncome, selectedPeriod, onPeriodChange, transactions }) {
+export default function IncomeTab({
+  income = [], onAddIncome, onUpdateIncome, onDeleteIncome,
+  selectedPeriod, onPeriodChange,
+  transactions = [], onAddTransaction, onDeleteTransaction,
+}) {
+  const [incMode, setIncMode]     = useState('income'); // 'income' | 'borrowed'
   const [name, setName]           = useState('');
   const [amount, setAmount]       = useState('');
   const [dateInput, setDateInput] = useState(todayInputValue());
@@ -22,11 +27,14 @@ export default function IncomeTab({ income, onAddIncome, onUpdateIncome, onDelet
     () => filterItemsByPeriod(income, selectedPeriod),
     [income, selectedPeriod]
   );
+  const filtTxns = useMemo(
+    () => filterItemsByPeriod(transactions, selectedPeriod),
+    [transactions, selectedPeriod]
+  );
 
   const currentMonth = getCurrentMonthValue();
 
   const totalIncome     = filtInc.reduce((s, i) => s + i.amount, 0);
-  const grouped         = groupByDay(filtInc);
 
   const thisMonthIncome = income
     .filter(i => i.date?.slice(0, 7) === currentMonth)
@@ -43,11 +51,19 @@ export default function IncomeTab({ income, onAddIncome, onUpdateIncome, onDelet
     const n = name.trim(), a = parseFloat(amount);
     if (!n || !amount || isNaN(a) || a <= 0) return;
     const isoDate = dateInputToISO(dateInput);
-    onAddIncome({
-      id: generateId(), name: n, amount: a, type: 'income',
-      date: isoDate,
-      month: isoToMonth(isoDate),
-    });
+    if (incMode === 'income') {
+      onAddIncome({
+        id: generateId(), name: n, amount: a, type: 'income',
+        date: isoDate,
+        month: isoToMonth(isoDate),
+      });
+    } else if (onAddTransaction) {
+      onAddTransaction({
+        id: generateId(), name: n, amount: a, type: 'person', direction: 'borrowed',
+        date: isoDate,
+        month: isoToMonth(isoDate),
+      });
+    }
     setName(''); setAmount(''); setDateInput(todayInputValue());
     nameRef.current?.focus();
   }
@@ -151,17 +167,46 @@ export default function IncomeTab({ income, onAddIncome, onUpdateIncome, onDelet
               background: 'var(--surface)', borderRadius: 16,
               border: '1.5px solid var(--income-border)', boxShadow: 'var(--shadow)', padding: 16,
             }}>
-              <p className="section-label" style={{ marginBottom: 12 }}>Add Income</p>
+              {/* 2-way mode toggle */}
+              <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 10, padding: 3, marginBottom: 14, border: '1px solid var(--border)' }}>
+                <button
+                  type="button"
+                  onClick={() => setIncMode('income')}
+                  style={{
+                    flex: 1, padding: '7px 4px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                    background: incMode === 'income' ? 'var(--income)' : 'transparent',
+                    color: incMode === 'income' ? '#fff' : 'var(--text-muted)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  💰 Income
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIncMode('borrowed')}
+                  style={{
+                    flex: 1, padding: '7px 4px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                    background: incMode === 'borrowed' ? 'var(--person)' : 'transparent',
+                    color: incMode === 'borrowed' ? '#fff' : 'var(--text-muted)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  🤝 Borrowed
+                </button>
+              </div>
 
               {/* Name */}
               <div style={{ position: 'relative', marginBottom: 10 }}>
                 <PenLine size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                 <input
                   id="income-input-name" ref={nameRef} type="text"
-                  placeholder="Source (Salary, Freelance…)" value={name}
+                  placeholder={incMode === 'income' ? 'Source (Salary, Freelance…)' : 'Person Name (e.g. Preetham)'}
+                  value={name}
                   onChange={e => setName(e.target.value)} onKeyDown={handleNameKey} autoComplete="off"
                   style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 14, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
-                  onFocus={e => (e.target.style.borderColor = 'var(--income)')}
+                  onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : 'var(--person)')}
                   onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
                 />
               </div>
@@ -174,7 +219,7 @@ export default function IncomeTab({ income, onAddIncome, onUpdateIncome, onDelet
                   placeholder="0.00" value={amount}
                   onChange={handleAmountInput} onKeyDown={handleAmountKey} inputMode="decimal"
                   style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 20, fontWeight: 700, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
-                  onFocus={e => (e.target.style.borderColor = 'var(--income)')}
+                  onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : 'var(--person)')}
                   onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
                 />
               </div>
@@ -188,14 +233,18 @@ export default function IncomeTab({ income, onAddIncome, onUpdateIncome, onDelet
                   max={new Date().toISOString().slice(0, 10)}
                   onChange={e => setDateInput(e.target.value)}
                   style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 10, paddingBottom: 10, borderRadius: 10, fontSize: 13, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
-                  onFocus={e => (e.target.style.borderColor = 'var(--income)')}
+                  onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : 'var(--person)')}
                   onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
                 />
               </div>
 
               <button id="btn-save-income" onClick={save} disabled={!canSave}
-                style={{ width: '100%', padding: 13, borderRadius: 12, fontSize: 14, fontWeight: 700, background: canSave ? 'var(--income)' : 'var(--surface2)', color: canSave ? '#fff' : 'var(--text-muted)', border: 'none', cursor: canSave ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-                Add Income
+                style={{
+                  width: '100%', padding: 13, borderRadius: 12, fontSize: 14, fontWeight: 700,
+                  background: canSave ? (incMode === 'income' ? 'var(--income)' : 'var(--person)') : 'var(--surface2)',
+                  color: canSave ? '#fff' : 'var(--text-muted)', border: 'none', cursor: canSave ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'all 0.15s',
+                }}>
+                {incMode === 'income' ? 'Add Income ↵' : 'Add Borrowed Money ↵'}
               </button>
 
               <div style={{

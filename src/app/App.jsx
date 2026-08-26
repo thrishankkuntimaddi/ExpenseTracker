@@ -13,12 +13,10 @@ import PersonsPanel     from '../features/persons/PersonsPanel';
 import DesktopDashboard from '../components/DesktopDashboard';
 
 const TABS = [
-  { key: 'today',    label: 'Today',    Icon: Home           },
-  { key: 'history',  label: 'History',  Icon: List           },
-  { key: 'income',   label: 'Income',   Icon: Wallet         },
-  { key: 'external', label: 'External', Icon: ArrowLeftRight },
-  { key: 'stats',    label: 'Stats',    Icon: BarChart2      },
-  { key: 'settings', label: 'Settings', Icon: Settings       },
+  { key: 'dashboard', label: 'Dashboard', Icon: Home           },
+  { key: 'history',   label: 'History',   Icon: List           },
+  { key: 'external',  label: 'External',  Icon: ArrowLeftRight },
+  { key: 'settings',  label: 'Settings',  Icon: Settings       },
 ];
 
 function useIsDesktop() {
@@ -47,7 +45,7 @@ try {
 
 /* ── Inner app rendered when user is authenticated ── */
 function AuthenticatedApp({ user, signOut }) {
-  const [activeTab, setActiveTab]           = useState('today');
+  const [activeTab, setActiveTab]           = useState('dashboard');
   const [selectedPeriod, setSelectedPeriod] = useState(() => getDefaultPeriod());
   const isDesktop = useIsDesktop();
 
@@ -96,19 +94,60 @@ function AuthenticatedApp({ user, signOut }) {
   /* ── MOBILE ── */
   const isMonoflow = theme === 'monoflow';
   const tabColors = isMonoflow
-    ? { today: '#b8956a', history: '#c9a87c', income: '#5aba8a', people: '#d97706', external: '#a78bfa', stats: '#6b8dd6', settings: '#9ca3af' }
-    : { today: '#DC2626', history: '#D97706', income: '#16A34A', people: '#D97706', external: '#7C3AED', stats: '#2563EB', settings: '#6366F1' };
+    ? { dashboard: '#b8956a', history: '#c9a87c', external: '#a78bfa', settings: '#9ca3af' }
+    : { dashboard: '#4F46E5', history: '#D97706', external: '#7C3AED', settings: '#6366F1' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        {activeTab === 'today'    && <TodayTab    {...commonProps} onAdd={addTransaction} />}
-        {activeTab === 'history'  && <HistoryTab  {...commonProps} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} onAddTransaction={addTransaction} onAddIncome={addIncome} />}
-        {activeTab === 'income'   && <IncomeTab   {...commonProps} onAddIncome={addIncome} onUpdateIncome={updateIncome} onDeleteIncome={deleteIncome} />}
-        {activeTab === 'people'   && <PersonsPanel transactions={transactions} onAddTransaction={addTransaction} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} />}
-        {activeTab === 'external' && <ExternalTab user={user} transactions={transactions} income={income} onAddIncome={addIncome} onUpdateIncome={updateIncome} onDeleteIncome={deleteIncome} onAddTransaction={addTransaction} onUpdateTransaction={updateTransaction} onDeleteTransaction={deleteTransaction} selectedPeriod={selectedPeriod} theme={theme} />}
-        {activeTab === 'stats'    && <StatsTab    {...commonProps} />}
-        {activeTab === 'settings' && <SettingsTab {...commonProps} onDataChange={handleDataChange} onThemeChange={handleThemeChange} onSignOut={signOut} addTransaction={addTransaction} addIncome={addIncome} />}
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        {activeTab === 'dashboard' && (
+          <DesktopDashboard
+            {...commonProps}
+            onAddTransaction={addTransaction}
+            onUpdateTransaction={updateTransaction}
+            onDeleteTransaction={deleteTransaction}
+            onAddIncome={addIncome}
+            onUpdateIncome={updateIncome}
+            onDeleteIncome={deleteIncome}
+            onDataChange={handleDataChange}
+            onThemeChange={handleThemeChange}
+            onSignOut={signOut}
+          />
+        )}
+        {activeTab === 'history' && (
+          <HistoryTab
+            {...commonProps}
+            onUpdateTransaction={updateTransaction}
+            onDeleteTransaction={deleteTransaction}
+            onAddTransaction={addTransaction}
+            onAddIncome={addIncome}
+          />
+        )}
+        {activeTab === 'external' && (
+          <ExternalTab
+            user={user}
+            transactions={transactions}
+            income={income}
+            onAddIncome={addIncome}
+            onUpdateIncome={updateIncome}
+            onDeleteIncome={deleteIncome}
+            onAddTransaction={addTransaction}
+            onUpdateTransaction={updateTransaction}
+            onDeleteTransaction={deleteTransaction}
+            selectedPeriod={selectedPeriod}
+            theme={theme}
+          />
+        )}
+        {activeTab === 'settings' && (
+          <SettingsTab
+            {...commonProps}
+            onDataChange={handleDataChange}
+            onThemeChange={handleThemeChange}
+            onSignOut={signOut}
+            addTransaction={addTransaction}
+            addIncome={addIncome}
+          />
+        )}
       </div>
 
       {/* ── Mobile Navbar ── */}
