@@ -6,21 +6,32 @@ import { filterItemsByPeriod, getCurrentMonthValue } from '../../utils/periodHel
 import PeriodSelector from '../../components/PeriodSelector';
 import EditIncomeModal from '../../components/EditIncomeModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
+import { useStats } from '../../hooks/useStats';
 
 export default function IncomeTab({
   income = [], onAddIncome, onUpdateIncome, onDeleteIncome,
   selectedPeriod, onPeriodChange,
-  transactions = [], onAddTransaction, onDeleteTransaction,
+  transactions = [], onAddTransaction, onDeleteTransaction, theme,
 }) {
-  const [incMode, setIncMode]     = useState('income'); // 'income' | 'borrowed'
-  const [name, setName]           = useState('');
-  const [amount, setAmount]       = useState('');
-  const [dateInput, setDateInput] = useState(todayInputValue());
+  const { stats } = useStats(transactions, income, selectedPeriod, theme);
+  const [incMode, setIncMode]         = useState('income'); // 'income' | 'borrowed' | 'repaymentRec'
+  const [name, setName]               = useState('');
+  const [amount, setAmount]           = useState('');
+  const [dateInput, setDateInput]     = useState(todayInputValue());
+  const [isCustomName, setIsCustomName] = useState(false);
+  const [isFullPayment, setIsFullPayment] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [deletingId, setDeletingId]     = useState(null);
 
   const nameRef   = useRef(null);
   const amountRef = useRef(null);
+
+  const lentPersons = useMemo(() => {
+    const all = Object.keys(stats?.personDebts || {});
+    return all.filter(p => (stats.personDebts[p]?.netLent ?? 0) > 0);
+  }, [stats?.personDebts]);
+
+  const hasLentPersons = lentPersons.length > 0;
 
   // Filter income by selected period
   const filtInc = useMemo(
@@ -45,7 +56,7 @@ export default function IncomeTab({
   );
 
   const combinedItems = useMemo(() => {
-    const incList = filtInc.map(i => ({ ...i, isBorrowed: !!i.isBorrowed }));
+    const incList = filtInc.map(i => ({ ...i, isBorrowed: !!i.isBorrowed, isRepaymentRec: !!i.isRepaymentRec }));
     const borList = borrowedTxns.map(t => ({ ...t, isBorrowed: true }));
     return [...incList, ...borList].sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [filtInc, borrowedTxns]);
@@ -73,10 +84,11 @@ export default function IncomeTab({
       amount: a,
       type: 'income',
       isBorrowed: incMode === 'borrowed',
+      isRepaymentRec: incMode === 'repaymentRec',
       date: isoDate,
       month: isoToMonth(isoDate),
     });
-    setName(''); setAmount(''); setDateInput(todayInputValue());
+    setName(''); setAmount(''); setDateInput(todayInputValue()); setIsCustomName(false); setIsFullPayment(false);
     nameRef.current?.focus();
   }
 
@@ -179,49 +191,144 @@ export default function IncomeTab({
               background: 'var(--surface)', borderRadius: 16,
               border: '1.5px solid var(--income-border)', boxShadow: 'var(--shadow)', padding: 16,
             }}>
-              {/* 2-way mode toggle */}
-              <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 10, padding: 3, marginBottom: 14, border: '1px solid var(--border)' }}>
+              {/* 3-way mode toggle */}
+              <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 10, padding: 3, marginBottom: 14, border: '1px solid var(--border)', gap: 3 }}>
                 <button
                   type="button"
-                  onClick={() => setIncMode('income')}
+                  onClick={() => { setIncMode('income'); setName(''); setAmount(''); setIsCustomName(false); }}
                   style={{
-                    flex: 1, padding: '7px 4px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                    flex: 1, padding: '7px 2px', borderRadius: 8, fontSize: 11, fontWeight: 700,
                     border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                     background: incMode === 'income' ? 'var(--income)' : 'transparent',
                     color: incMode === 'income' ? '#fff' : 'var(--text-muted)',
-                    transition: 'all 0.15s',
+                    transition: 'all 0.15s', textAlign: 'center',
                   }}
                 >
                   💰 Income
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIncMode('borrowed')}
+                  onClick={() => { setIncMode('borrowed'); setName(''); setAmount(''); setIsCustomName(false); }}
                   style={{
-                    flex: 1, padding: '7px 4px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                    flex: 1, padding: '7px 2px', borderRadius: 8, fontSize: 11, fontWeight: 700,
                     border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                     background: incMode === 'borrowed' ? 'var(--person)' : 'transparent',
                     color: incMode === 'borrowed' ? '#fff' : 'var(--text-muted)',
-                    transition: 'all 0.15s',
+                    transition: 'all 0.15s', textAlign: 'center',
                   }}
                 >
                   🤝 Borrowed
                 </button>
+                <button
+                  type="button"
+                  onClick={() => { setIncMode('repaymentRec'); setName(''); setAmount(''); setIsCustomName(false); }}
+                  style={{
+                    flex: 1, padding: '7px 2px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                    background: incMode === 'repaymentRec' ? '#0891B2' : 'transparent',
+                    color: incMode === 'repaymentRec' ? '#fff' : 'var(--text-muted)',
+                    transition: 'all 0.15s', textAlign: 'center',
+                  }}
+                >
+                  ⮐ Repayment Rec.
+                </button>
               </div>
 
-              {/* Name */}
-              <div style={{ position: 'relative', marginBottom: 10 }}>
-                <PenLine size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                <input
-                  id="income-input-name" ref={nameRef} type="text"
-                  placeholder={incMode === 'income' ? 'Source (Salary, Freelance…)' : 'Person Name'}
-                  value={name}
-                  onChange={e => setName(e.target.value)} onKeyDown={handleNameKey} autoComplete="off"
-                  style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 14, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
-                  onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : 'var(--person)')}
-                  onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
-                />
-              </div>
+              {/* Person Dropdown for Repayment Rec. */}
+              {incMode === 'repaymentRec' && !isCustomName && hasLentPersons ? (
+                <div style={{ marginBottom: 10 }}>
+                  <select
+                    value={name}
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val === '__custom__') {
+                        setIsCustomName(true);
+                        setName('');
+                        setAmount('');
+                        setIsFullPayment(false);
+                        return;
+                      }
+                      setName(val);
+                      setIsFullPayment(false);
+                      const debt = stats.personDebts?.[val]?.netLent ?? 0;
+                      if (debt > 0) {
+                        setAmount(debt.toString());
+                        setIsFullPayment(true);
+                      } else {
+                        setAmount('');
+                      }
+                    }}
+                    style={{
+                      width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 13,
+                      border: '1.5px solid #0891B2', background: 'var(--input-bg)', color: 'var(--text)',
+                      outline: 'none', fontFamily: 'inherit', fontWeight: 600,
+                    }}
+                  >
+                    <option value="">-- Select Person Who Repaid You --</option>
+                    {lentPersons.map(p => (
+                      <option key={p} value={p}>
+                        {p} (Owes You: {formatAmount(stats.personDebts[p].netLent)})
+                      </option>
+                    ))}
+                    <option value="__custom__">✏️ Type Custom Name…</option>
+                  </select>
+
+                  {name && name !== '__custom__' && (
+                    <div style={{
+                      fontSize: 12, color: '#0891B2', fontWeight: 700, marginTop: 6,
+                      padding: '8px 10px', borderRadius: 8, background: '#ECFEFF',
+                      border: '1px solid #A5F3FC', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    }}>
+                      <span>Owes You: {formatAmount(stats.personDebts?.[name]?.netLent ?? 0)}</span>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={isFullPayment}
+                          onChange={e => {
+                            const checked = e.target.checked;
+                            setIsFullPayment(checked);
+                            if (checked) {
+                              const fullAmt = stats.personDebts?.[name]?.netLent ?? 0;
+                              setAmount(fullAmt.toString());
+                            }
+                          }}
+                        />
+                        Full Repayment
+                      </label>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {/* Name (for Income, Borrowed, Custom Name, or when no debt contacts) */}
+              {(incMode !== 'repaymentRec' || isCustomName || !hasLentPersons) && (
+                <div style={{ position: 'relative', marginBottom: 10 }}>
+                  <PenLine size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                  <input
+                    id="income-input-name" ref={nameRef} type="text"
+                    placeholder={incMode === 'income' ? 'Source (Salary, Freelance…)' : 'Person Name'}
+                    value={name}
+                    onChange={e => setName(e.target.value)} onKeyDown={handleNameKey} autoComplete="off"
+                    style={{ width: '100%', paddingLeft: 38, paddingRight: incMode === 'repaymentRec' && hasLentPersons ? 80 : 14, paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 14, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
+                    onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2')}
+                    onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
+                  />
+                  {incMode === 'repaymentRec' && hasLentPersons && (
+                    <button
+                      type="button"
+                      onClick={() => { setIsCustomName(false); setName(''); setAmount(''); }}
+                      style={{
+                        position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                        background: 'var(--surface2)', border: '1px solid var(--border)',
+                        borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 600,
+                        color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      List 📋
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Amount */}
               <div style={{ position: 'relative', marginBottom: 10 }}>
@@ -231,7 +338,7 @@ export default function IncomeTab({
                   placeholder="0.00" value={amount}
                   onChange={handleAmountInput} onKeyDown={handleAmountKey} inputMode="decimal"
                   style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 20, fontWeight: 700, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
-                  onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : 'var(--person)')}
+                  onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2')}
                   onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
                 />
               </div>
@@ -245,7 +352,7 @@ export default function IncomeTab({
                   max={new Date().toISOString().slice(0, 10)}
                   onChange={e => setDateInput(e.target.value)}
                   style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 10, paddingBottom: 10, borderRadius: 10, fontSize: 13, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
-                  onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : 'var(--person)')}
+                  onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2')}
                   onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
                 />
               </div>
@@ -253,10 +360,10 @@ export default function IncomeTab({
               <button id="btn-save-income" onClick={save} disabled={!canSave}
                 style={{
                   width: '100%', padding: 13, borderRadius: 12, fontSize: 14, fontWeight: 700,
-                  background: canSave ? (incMode === 'income' ? 'var(--income)' : 'var(--person)') : 'var(--surface2)',
+                  background: canSave ? (incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2') : 'var(--surface2)',
                   color: canSave ? '#fff' : 'var(--text-muted)', border: 'none', cursor: canSave ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'all 0.15s',
                 }}>
-                {incMode === 'income' ? 'Add Income ↵' : 'Add Borrowed Money ↵'}
+                {incMode === 'income' ? 'Add Income ↵' : incMode === 'borrowed' ? 'Add Borrowed Money ↵' : 'Add Repayment Rec. ↵'}
               </button>
 
               <div style={{
@@ -328,32 +435,8 @@ export default function IncomeTab({
                               +{formatAmount(entry.amount)}
                             </span>
 
-                            {/* Quick Repay button for Borrowed entries */}
-                            {entry.isBorrowed && onAddTransaction && (
-                              <button
-                                onClick={() => {
-                                  onAddTransaction({
-                                    id: generateId(),
-                                    name: entry.name,
-                                    amount: entry.amount,
-                                    type: 'person',
-                                    direction: 'repaid',
-                                    date: new Date().toISOString(),
-                                    month: isoToMonth(new Date().toISOString()),
-                                  });
-                                }}
-                                style={{
-                                  padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700,
-                                  background: 'var(--person-bg)', border: '1px solid var(--person-border)',
-                                  color: 'var(--person)', cursor: 'pointer', fontFamily: 'inherit',
-                                }}
-                                title="Repay this debt"
-                              >
-                                Repay
-                              </button>
-                            )}
-
-                            {!entry.isBorrowed && onUpdateIncome && (
+                            {/* Edit button for all entries (Income, Borrowed, Repayment Rec) */}
+                            {onUpdateIncome && (
                               <button onClick={() => setEditingEntry(entry)}
                                 style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
                                 onMouseEnter={e => { e.currentTarget.style.color = 'var(--income)'; e.currentTarget.style.background = 'var(--income-bg)'; }}
@@ -361,27 +444,16 @@ export default function IncomeTab({
                                 <Pencil size={12} />
                               </button>
                             )}
-                            {((!entry.isBorrowed && !entry.isRepaymentRec && onDeleteIncome) || (entry.isBorrowed && onDeleteTransaction)) && (
-                              <button
-                                onClick={() => {
-                                  if (entry.isBorrowed) onDeleteTransaction(entry.id);
-                                  else setDeletingId(entry.id);
-                                }}
-                                style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
-                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
-                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
-                                <Trash2 size={12} />
-                              </button>
-                            )}
-                            {entry.isRepaymentRec && onDeleteIncome && (
-                              <button
-                                onClick={() => setDeletingId(entry.id)}
-                                style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
-                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
-                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
-                                <Trash2 size={12} />
-                              </button>
-                            )}
+                            <button
+                              onClick={() => {
+                                if (entry.isBorrowed) onDeleteTransaction ? onDeleteTransaction(entry.id) : onDeleteIncome(entry.id);
+                                else setDeletingId(entry.id);
+                              }}
+                              style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
+                              onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                              <Trash2 size={12} />
+                            </button>
                           </div>
                         </div>
                       ))}

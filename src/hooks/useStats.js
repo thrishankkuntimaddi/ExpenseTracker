@@ -48,10 +48,10 @@ export function useStats(transactions, income, selectedPeriod, theme) {
       if (!name) return;
       if (!map[name]) map[name] = { borrowed: 0, repaid: 0, lent: 0, repaymentRec: 0 };
       const amt = t.amount ?? 0;
-      if      (t.direction === 'borrowed') map[name].borrowed   += amt;
-      else if (t.direction === 'repaid')   map[name].repaid     += amt;
-      else if (t.direction === 'lent')     map[name].lent       += amt;
-      // 'repayment' entries now live in income (isRepaymentRec), handled below
+      if      (t.direction === 'borrowed')  map[name].borrowed     += amt;
+      else if (t.direction === 'repaid')    map[name].repaid       += amt;
+      else if (t.direction === 'lent')      map[name].lent         += amt;
+      else if (t.direction === 'repayment') map[name].repaymentRec += amt;
     });
 
     (income || []).forEach(i => {
@@ -59,7 +59,7 @@ export function useStats(transactions, income, selectedPeriod, theme) {
       const name = i.name.trim();
       if (!name) return;
       if (!map[name]) map[name] = { borrowed: 0, repaid: 0, lent: 0, repaymentRec: 0 };
-      if (i.isBorrowed)    map[name].borrowed    += (i.amount ?? 0);
+      if (i.isBorrowed)     map[name].borrowed     += (i.amount ?? 0);
       if (i.isRepaymentRec) map[name].repaymentRec += (i.amount ?? 0);
     });
 
@@ -97,23 +97,9 @@ export function useStats(transactions, income, selectedPeriod, theme) {
     // Total Income = regular income + borrowed money received + repayments received back from people I lent to
     const totalIncome = pureIncome + totalBorrowed + totalRepaymentRec;
 
-    // All-time debt balances (carried over month to month)
-    let allTimeBorrowed = 0, allTimeRepaidThem = 0, allTimeLent = 0, allTimeRepaymentRec = 0;
-    (income || []).forEach(i => {
-      if (i.isBorrowed)     allTimeBorrowed     += (i.amount ?? 0);
-      if (i.isRepaymentRec) allTimeRepaymentRec += (i.amount ?? 0);
-    });
-    (transactions || []).forEach(t => {
-      if (t.type !== 'person') return;
-      const amt = t.amount ?? 0;
-      if      (t.direction === 'borrowed') allTimeBorrowed   += amt;
-      else if (t.direction === 'repaid')   allTimeRepaidThem += amt;
-      else if (t.direction === 'lent')     allTimeLent       += amt;
-      // legacy: old 'repayment' entries may still be in transactions before migration
-      else if (t.direction === 'repayment') allTimeRepaymentRec += amt;
-    });
-    const allTimeNetOwed = Math.max(0, allTimeBorrowed - allTimeRepaidThem);  // what I owe others
-    const allTimeNetLent = Math.max(0, allTimeLent - allTimeRepaymentRec);    // what others owe me
+    // All-time debt balances derived directly from personDebts map for 100% synchronization
+    const allTimeNetOwed = Object.values(personDebts).reduce((s, p) => s + p.netOwed, 0);  // what I owe others
+    const allTimeNetLent = Object.values(personDebts).reduce((s, p) => s + p.netLent, 0);  // what others owe me
     const allTimeNetPerson = allTimeNetLent - allTimeNetOwed;
 
     const totalWaste   = filtTxns.reduce((s, t) => s + (t.wasteAmount || 0), 0);
@@ -202,5 +188,7 @@ export function useStats(transactions, income, selectedPeriod, theme) {
     return months;
   }, [transactions, income]);
 
-  return { stats, filtTxns, filtInc, pieData, barData, areaData, C };
+  const areaData4 = useMemo(() => areaData.slice(-4), [areaData]);
+
+  return { stats, filtTxns, filtInc, pieData, barData, areaData, areaData4, C };
 }

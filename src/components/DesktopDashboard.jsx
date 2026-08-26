@@ -170,17 +170,35 @@ export default function DesktopDashboard({
   const [savingsType, setSavingsType] = useState('cash');
   const [platform, setPlatform] = useState('');
   const [isFullPayment, setIsFullPayment] = useState(false);
+  const [isCustomName, setIsCustomName] = useState(false);
 
   const nameRef = useRef(null);
   const amountRef = useRef(null);
   const settlementRef = useRef(null);
   const extSourceRef = useRef(null);
 
+  const debtPersons = useMemo(() => {
+    const all = Object.keys(stats?.personDebts || {});
+    if (direction === 'repaid') return all.filter(p => (stats.personDebts[p]?.netOwed ?? 0) > 0);
+    return [];
+  }, [stats?.personDebts, direction]);
+
+  const hasDebtPersons = debtPersons.length > 0;
+  const isRepayDirection = type === 'person' && direction === 'repaid';
+
+  const lentPersons = useMemo(() => {
+    const all = Object.keys(stats?.personDebts || {});
+    return all.filter(p => (stats.personDebts[p]?.netLent ?? 0) > 0);
+  }, [stats?.personDebts]);
+  const hasLentPersons = lentPersons.length > 0;
+
   // Income entry states
-  const [incMode, setIncMode] = useState('income'); // 'income' | 'borrowed'
+  const [incMode, setIncMode] = useState('income'); // 'income' | 'borrowed' | 'repaymentRec'
   const [iName, setIName] = useState('');
   const [iAmount, setIAmount] = useState('');
   const [iDateInput, setIDateInput] = useState(todayInputValue());
+  const [isICustomName, setIsICustomName] = useState(false);
+  const [isIFullPayment, setIsIFullPayment] = useState(false);
   const iNameRef = useRef(null);
   const iAmountRef = useRef(null);
 
@@ -207,24 +225,24 @@ export default function DesktopDashboard({
       });
     } else if (type === 'person') {
       onAddTransaction({
-        id: generateId(), name: n, amount: a, type: 'person', direction,
-        date: isoDate, month: isoToMonth(isoDate),
+        id: generateId(), name: n, amount: a, type: 'person',
+        direction, date: isoDate, month: isoToMonth(isoDate),
       });
     } else if (type === 'savings') {
       onAddTransaction({
-        id: generateId(), name: n, amount: a, type: 'savings', savingsType, platform,
-        date: isoDate, month: isoToMonth(isoDate),
+        id: generateId(), name: n, amount: a, type: 'savings',
+        savingsType, platform, date: isoDate, month: isoToMonth(isoDate),
       });
     }
 
-    setName(''); setAmount(''); setSettlement(''); setExtSource('');
-    setDateInput(todayInputValue());
+    setName(''); setAmount(''); setPlatform(''); setIsFullPayment(false); setIsCustomName(false);
     setTimeout(() => nameRef.current?.focus(), 50);
   }
 
   function saveIncome() {
     const n = iName.trim(), a = parseFloat(iAmount);
-    if (!n || isNaN(a) || a <= 0) return;
+    if (!n || isNaN(a) || a <= 0 || !onAddIncome) return;
+
     const isoDate = dateInputToISO(iDateInput);
     onAddIncome({
       id: generateId(),
@@ -232,10 +250,11 @@ export default function DesktopDashboard({
       amount: a,
       type: 'income',
       isBorrowed: incMode === 'borrowed',
+      isRepaymentRec: incMode === 'repaymentRec',
       date: isoDate,
       month: isoToMonth(isoDate),
     });
-    setIName(''); setIAmount(''); setIDateInput(todayInputValue());
+    setIName(''); setIAmount(''); setIDateInput(todayInputValue()); setIsICustomName(false); setIsIFullPayment(false);
     setTimeout(() => iNameRef.current?.focus(), 50);
   }
 
@@ -499,7 +518,7 @@ export default function DesktopDashboard({
       {activeSection === 'dashboard' && (<>
 
         {/* ── SUMMARY STRIP ── */}
-        <div style={{ padding: '20px 28px 0', display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
+        <div style={{ padding: '20px 28px 0', display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 10 }}>
           {/* Remaining Balance */}
           <div
             style={{
@@ -507,7 +526,7 @@ export default function DesktopDashboard({
                 ? 'linear-gradient(135deg, #10B981, #059669)'
                 : 'linear-gradient(135deg, #F43F5E, #E11D48)',
               borderRadius: 16,
-              padding: '15px 16px',
+              padding: '15px 14px',
               display: 'flex',
               flexDirection: 'column',
               gap: 6,
@@ -524,11 +543,11 @@ export default function DesktopDashboard({
               <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.85)' }}>
                 Remaining
               </span>
-              <div style={{ width: 26, height: 26, borderRadius: 8, background: 'rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Wallet size={13} color="#fff" />
+              <div style={{ width: 24, height: 24, borderRadius: 8, background: 'rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Wallet size={12} color="#fff" />
               </div>
             </div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
               {formatAmount(stats.balance)}
             </div>
           </div>
@@ -536,24 +555,22 @@ export default function DesktopDashboard({
           <SummaryTile label="Income" value={stats.totalIncome} color="var(--income)" bg="var(--income-bg)" gradient="linear-gradient(135deg, #10B981, #0D9488)" Icon={TrendingUp} />
           <SummaryTile label="Expense" value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" gradient="linear-gradient(135deg, #F43F5E, #E11D48)" Icon={TrendingDown} />
           <SummaryTile label="Savings" value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" gradient="linear-gradient(135deg, #3B82F6, #6366F1)" Icon={PiggyBank} />
-          {(() => {
-            const owesYou = stats.allTimeNetLent || 0;
-            const youOwe  = stats.allTimeNetOwed || 0;
-            const isNetOwed = youOwe > 0 || stats.allTimeNetPerson < 0;
-            const displayLabel = isNetOwed ? "Outstanding (You Owe)" : "Outstanding (Owes You)";
-            const displayVal   = isNetOwed ? (youOwe || Math.abs(stats.allTimeNetPerson)) : (owesYou || stats.allTimeNetPerson);
-
-            return (
-              <SummaryTile
-                label={displayLabel}
-                value={displayVal}
-                color="var(--person)"
-                bg="var(--person-bg)"
-                gradient={isNetOwed ? "linear-gradient(135deg, #EF4444, #DC2626)" : "linear-gradient(135deg, #F59E0B, #D97706)"}
-                Icon={Users}
-              />
-            );
-          })()}
+          <SummaryTile
+            label="You Owe (Debt)"
+            value={stats.allTimeNetOwed}
+            color="var(--borrowed)"
+            bg="var(--borrowed-bg)"
+            gradient="linear-gradient(135deg, #EF4444, #DC2626)"
+            Icon={Users}
+          />
+          <SummaryTile
+            label="Owes You (Lent)"
+            value={stats.allTimeNetLent}
+            color="var(--lent)"
+            bg="var(--lent-bg)"
+            gradient="linear-gradient(135deg, #F59E0B, #D97706)"
+            Icon={Users}
+          />
 
           {/* Waste Card */}
           <div
@@ -702,17 +719,26 @@ export default function DesktopDashboard({
                   </div>
                 )}
 
-                {/* Name & Debt Selector */}
-                {type === 'person' && direction === 'repaid' ? (
+                {/* Person Name Selection / Dropdown (only uncleared debt contacts) */}
+                {isRepayDirection && !isCustomName && hasDebtPersons ? (
                   <div style={{ marginBottom: 8 }}>
                     <select
-                      id="desktop-select-repay-person"
+                      id="desktop-select-repayment-person"
                       value={name}
                       onChange={e => {
-                        const selectedName = e.target.value;
-                        setName(selectedName);
+                        const val = e.target.value;
+                        if (val === '__custom__') {
+                          setIsCustomName(true);
+                          setName('');
+                          setAmount('');
+                          setIsFullPayment(false);
+                          return;
+                        }
+                        setName(val);
                         setIsFullPayment(false);
-                        const debt = stats.personDebts?.[selectedName]?.netOwed ?? 0;
+                        const debt = direction === 'repaid'
+                          ? (stats.personDebts?.[val]?.netOwed ?? 0)
+                          : (stats.personDebts?.[val]?.netLent ?? 0);
                         if (debt > 0) {
                           setAmount(debt.toString());
                           setIsFullPayment(true);
@@ -722,27 +748,34 @@ export default function DesktopDashboard({
                       }}
                       style={{
                         width: '100%', padding: '9px 12px', borderRadius: 9, fontSize: 12,
-                        border: '1.5px solid var(--person)', background: 'var(--input-bg)', color: 'var(--text)',
+                        border: `1.5px solid ${direction === 'repaid' ? 'var(--person)' : 'var(--income)'}`,
+                        background: 'var(--input-bg)', color: 'var(--text)',
                         outline: 'none', fontFamily: 'inherit', fontWeight: 600,
                       }}
                     >
-                      <option value="">-- Select Person to Repay (Debt Left) --</option>
-                      {Object.keys(stats.personDebts || {})
-                        .filter(p => stats.personDebts[p].netOwed > 0)
-                        .map(p => (
-                          <option key={p} value={p}>
-                            {p} (Debt Left: {formatAmount(stats.personDebts[p].netOwed)})
-                          </option>
-                        ))
-                      }
+                      <option value="">
+                        {direction === 'repaid' ? '-- Select Person to Repay (Debt Left) --' : '-- Select Person Who Repaid You --'}
+                      </option>
+                      {debtPersons.map(p => (
+                        <option key={p} value={p}>
+                          {p} ({direction === 'repaid'
+                            ? `Debt Left: ${formatAmount(stats.personDebts[p].netOwed)}`
+                            : `Owes You: ${formatAmount(stats.personDebts[p].netLent)}`
+                          })
+                        </option>
+                      ))}
+                      <option value="__custom__">✏️ Type Custom Name…</option>
                     </select>
 
-                    {name && (stats.personDebts?.[name]?.netOwed ?? 0) > 0 && (
-                      <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, background: 'var(--person-bg)', border: '1px solid var(--person-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--person)' }}>
-                          Pending Debt: {formatAmount(stats.personDebts[name].netOwed)}
+                    {name && name !== '__custom__' && (
+                      <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, background: direction === 'repaid' ? 'var(--person-bg)' : 'var(--income-bg)', border: `1px solid ${direction === 'repaid' ? 'var(--person-border)' : 'var(--income-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: direction === 'repaid' ? 'var(--person)' : 'var(--income)' }}>
+                          {direction === 'repaid'
+                            ? `Pending Debt: ${formatAmount(stats.personDebts?.[name]?.netOwed ?? 0)}`
+                            : `Owes You: ${formatAmount(stats.personDebts?.[name]?.netLent ?? 0)}`
+                          }
                         </span>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--person)', cursor: 'pointer' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: direction === 'repaid' ? 'var(--person)' : 'var(--income)', cursor: 'pointer' }}>
                           <input
                             type="checkbox"
                             checked={isFullPayment}
@@ -750,72 +783,22 @@ export default function DesktopDashboard({
                               const checked = e.target.checked;
                               setIsFullPayment(checked);
                               if (checked) {
-                                setAmount((stats.personDebts[name].netOwed).toString());
+                                const fullAmt = direction === 'repaid'
+                                  ? (stats.personDebts?.[name]?.netOwed ?? 0)
+                                  : (stats.personDebts?.[name]?.netLent ?? 0);
+                                setAmount(fullAmt.toString());
                               }
                             }}
                           />
-                          Full Payment
+                          Full {direction === 'repaid' ? 'Payment' : 'Repayment'}
                         </label>
                       </div>
                     )}
                   </div>
-                ) : type === 'person' && direction === 'repayment' ? (
-                  <div style={{ marginBottom: 8 }}>
-                    <select
-                      id="desktop-select-repayment-rec-person"
-                      value={name}
-                      onChange={e => {
-                        const selectedName = e.target.value;
-                        setName(selectedName);
-                        setIsFullPayment(false);
-                        const debt = stats.personDebts?.[selectedName]?.netLent ?? 0;
-                        if (debt > 0) {
-                          setAmount(debt.toString());
-                          setIsFullPayment(true);
-                        } else {
-                          setAmount('');
-                        }
-                      }}
-                      style={{
-                        width: '100%', padding: '9px 12px', borderRadius: 9, fontSize: 12,
-                        border: '1.5px solid var(--income)', background: 'var(--input-bg)', color: 'var(--text)',
-                        outline: 'none', fontFamily: 'inherit', fontWeight: 600,
-                      }}
-                    >
-                      <option value="">-- Select Person Who Repaid You --</option>
-                      {Object.keys(stats.personDebts || {})
-                        .filter(p => stats.personDebts[p].netLent > 0)
-                        .map(p => (
-                          <option key={p} value={p}>
-                            {p} (Owes You: {formatAmount(stats.personDebts[p].netLent)})
-                          </option>
-                        ))
-                      }
-                    </select>
+                ) : null}
 
-                    {name && (stats.personDebts?.[name]?.netLent ?? 0) > 0 && (
-                      <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, background: 'var(--income-bg)', border: '1px solid var(--income-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--income)' }}>
-                          Owes You: {formatAmount(stats.personDebts[name].netLent)}
-                        </span>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--income)', cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            checked={isFullPayment}
-                            onChange={e => {
-                              const checked = e.target.checked;
-                              setIsFullPayment(checked);
-                              if (checked) {
-                                setAmount((stats.personDebts[name].netLent).toString());
-                              }
-                            }}
-                          />
-                          Full Repayment
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                ) : (
+                {/* Standard Name Input field (for non-repayment, custom name mode, or when no active debt contacts) */}
+                {(!isRepayDirection || isCustomName || !hasDebtPersons) && (
                   <div style={{ position: 'relative', marginBottom: 8 }}>
                     <PenLine size={12} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input
@@ -825,9 +808,23 @@ export default function DesktopDashboard({
                       onChange={e => setName(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), amountRef.current?.focus())}
                       autoComplete="off"
-                      style={inputStyle}
+                      style={{ ...inputStyle, paddingRight: isRepayDirection && hasDebtPersons ? 70 : 12 }}
                       {...focusHandlers(sel.color)}
                     />
+                    {isRepayDirection && hasDebtPersons && (
+                      <button
+                        type="button"
+                        onClick={() => { setIsCustomName(false); setName(''); setAmount(''); }}
+                        style={{
+                          position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                          background: 'var(--surface2)', border: '1px solid var(--border)',
+                          borderRadius: 6, padding: '2px 7px', fontSize: 10, fontWeight: 600,
+                          color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >
+                        List 📋
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -1024,47 +1021,146 @@ export default function DesktopDashboard({
                 }
               />
               <div style={{ padding: '12px 16px' }}>
-                {/* 2-way mode toggle: Income vs Borrowed Money */}
-                <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 9, padding: 2, marginBottom: 10, border: '1px solid var(--border)' }}>
+                {/* 3-way mode toggle: Income vs Borrowed vs Repayment Rec */}
+                <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 9, padding: 2, marginBottom: 10, border: '1px solid var(--border)', gap: 2 }}>
                   <button
                     type="button"
-                    onClick={() => setIncMode('income')}
+                    onClick={() => { setIncMode('income'); setIName(''); setIAmount(''); setIsICustomName(false); }}
                     style={{
-                      flex: 1, padding: '5px', borderRadius: 7, fontSize: 11, fontWeight: 700,
+                      flex: 1, padding: '5px 2px', borderRadius: 7, fontSize: 10, fontWeight: 700,
                       border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                       background: incMode === 'income' ? 'var(--income)' : 'transparent',
                       color: incMode === 'income' ? '#fff' : 'var(--text-muted)',
-                      transition: 'all 0.15s',
+                      transition: 'all 0.15s', textAlign: 'center',
                     }}
                   >
                     💰 Income
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIncMode('borrowed')}
+                    onClick={() => { setIncMode('borrowed'); setIName(''); setIAmount(''); setIsICustomName(false); }}
                     style={{
-                      flex: 1, padding: '5px', borderRadius: 7, fontSize: 11, fontWeight: 700,
+                      flex: 1, padding: '5px 2px', borderRadius: 7, fontSize: 10, fontWeight: 700,
                       border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                       background: incMode === 'borrowed' ? 'var(--person)' : 'transparent',
                       color: incMode === 'borrowed' ? '#fff' : 'var(--text-muted)',
-                      transition: 'all 0.15s',
+                      transition: 'all 0.15s', textAlign: 'center',
                     }}
                   >
                     🤝 Borrowed
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => { setIncMode('repaymentRec'); setIName(''); setIAmount(''); setIsICustomName(false); }}
+                    style={{
+                      flex: 1, padding: '5px 2px', borderRadius: 7, fontSize: 10, fontWeight: 700,
+                      border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                      background: incMode === 'repaymentRec' ? '#0891B2' : 'transparent',
+                      color: incMode === 'repaymentRec' ? '#fff' : 'var(--text-muted)',
+                      transition: 'all 0.15s', textAlign: 'center',
+                    }}
+                  >
+                    ⮐ Repay Rec.
+                  </button>
                 </div>
 
-                <div style={{ position: 'relative', marginBottom: 7 }}>
-                  <PenLine size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                  <input
-                    id="desktop-income-name" ref={iNameRef} type="text"
-                    placeholder={incMode === 'income' ? 'Source (Salary, Freelance...)' : 'Person Name'}
-                    value={iName}
-                    onChange={e => setIName(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), iAmountRef.current?.focus())}
-                    autoComplete="off" style={inputStyle} {...focusHandlers(incMode === 'income' ? 'var(--income)' : 'var(--person)')}
-                  />
-                </div>
+                {/* Person Dropdown for Repayment Rec. */}
+                {incMode === 'repaymentRec' && !isICustomName && hasLentPersons ? (
+                  <div style={{ marginBottom: 7 }}>
+                    <select
+                      value={iName}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === '__custom__') {
+                          setIsICustomName(true);
+                          setIName('');
+                          setIAmount('');
+                          setIsIFullPayment(false);
+                          return;
+                        }
+                        setIName(val);
+                        setIsIFullPayment(false);
+                        const debt = stats.personDebts?.[val]?.netLent ?? 0;
+                        if (debt > 0) {
+                          setIAmount(debt.toString());
+                          setIsIFullPayment(true);
+                        } else {
+                          setIAmount('');
+                        }
+                      }}
+                      style={{
+                        width: '100%', padding: '9px 12px', borderRadius: 9, fontSize: 12,
+                        border: '1.5px solid #0891B2', background: 'var(--input-bg)', color: 'var(--text)',
+                        outline: 'none', fontFamily: 'inherit', fontWeight: 600,
+                      }}
+                    >
+                      <option value="">-- Select Person Who Repaid You --</option>
+                      {lentPersons.map(p => (
+                        <option key={p} value={p}>
+                          {p} (Owes You: {formatAmount(stats.personDebts[p].netLent)})
+                        </option>
+                      ))}
+                      <option value="__custom__">✏️ Type Custom Name…</option>
+                    </select>
+
+                    {iName && iName !== '__custom__' && (
+                      <div style={{
+                        marginTop: 4, padding: '5px 8px', borderRadius: 6,
+                        background: '#ECFEFF', border: '1px solid #A5F3FC',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#0891B2' }}>
+                          Owes You: {formatAmount(stats.personDebts?.[iName]?.netLent ?? 0)}
+                        </span>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#0891B2', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={isIFullPayment}
+                            onChange={e => {
+                              const checked = e.target.checked;
+                              setIsIFullPayment(checked);
+                              if (checked) {
+                                const fullAmt = stats.personDebts?.[iName]?.netLent ?? 0;
+                                setIAmount(fullAmt.toString());
+                              }
+                            }}
+                          />
+                          Full Repayment
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                {/* Name Input */}
+                {(incMode !== 'repaymentRec' || isICustomName || !hasLentPersons) && (
+                  <div style={{ position: 'relative', marginBottom: 7 }}>
+                    <PenLine size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                    <input
+                      id="desktop-income-name" ref={iNameRef} type="text"
+                      placeholder={incMode === 'income' ? 'Source (Salary, Freelance...)' : 'Person Name'}
+                      value={iName}
+                      onChange={e => setIName(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), iAmountRef.current?.focus())}
+                      autoComplete="off" style={{ ...inputStyle, paddingRight: incMode === 'repaymentRec' && hasLentPersons ? 70 : 12 }}
+                      {...focusHandlers(incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2')}
+                    />
+                    {incMode === 'repaymentRec' && hasLentPersons && (
+                      <button
+                        type="button"
+                        onClick={() => { setIsICustomName(false); setIName(''); setIAmount(''); }}
+                        style={{
+                          position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                          background: 'var(--surface2)', border: '1px solid var(--border)',
+                          borderRadius: 6, padding: '2px 7px', fontSize: 10, fontWeight: 600,
+                          color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >
+                        List 📋
+                      </button>
+                    )}
+                  </div>
+                )}
                 <div style={{ position: 'relative', marginBottom: 7 }}>
                   <IndianRupee size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                   <input
@@ -1072,7 +1168,7 @@ export default function DesktopDashboard({
                     onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setIAmount(v); }}
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveIncome())}
                     inputMode="decimal" autoComplete="off" style={{ ...inputStyle, fontSize: 14, fontWeight: 700 }}
-                    {...focusHandlers(incMode === 'income' ? 'var(--income)' : 'var(--person)')}
+                    {...focusHandlers(incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2')}
                   />
                 </div>
                 {/* Income Date */}
@@ -1084,7 +1180,7 @@ export default function DesktopDashboard({
                     max={new Date().toISOString().slice(0, 10)}
                     onChange={e => setIDateInput(e.target.value)}
                     style={inputStyle}
-                    {...focusHandlers(incMode === 'income' ? 'var(--income)' : 'var(--person)')}
+                    {...focusHandlers(incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2')}
                   />
                 </div>
                 <button
@@ -1094,21 +1190,21 @@ export default function DesktopDashboard({
                     width: '100%', padding: '9px', borderRadius: 10,
                     fontSize: 12, fontWeight: 700,
                     background: iName.trim() && iAmount && parseFloat(iAmount) > 0
-                      ? (incMode === 'income' ? 'var(--income)' : 'var(--person)')
+                      ? (incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2')
                       : 'var(--surface2)',
                     color: iName.trim() && iAmount && parseFloat(iAmount) > 0 ? '#fff' : 'var(--text-muted)',
                     border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
                   }}
                 >
-                  {incMode === 'income' ? 'Add Income ↵' : 'Add Borrowed Money ↵'}
+                  {incMode === 'income' ? 'Add Income ↵' : incMode === 'borrowed' ? 'Add Borrowed Money ↵' : 'Add Repayment Rec. ↵'}
                 </button>
               </div>
 
-              {/* Combined List (Income + Borrowed) */}
+              {/* Combined List (Income + Borrowed + Repayment Rec) */}
               {(() => {
                 const borrowedTxns = filtTxns.filter(t => t.type === 'person' && t.direction === 'borrowed');
                 const combinedList = [
-                  ...filtInc.map(i => ({ ...i, isBorrowed: !!i.isBorrowed })),
+                  ...filtInc.map(i => ({ ...i, isBorrowed: !!i.isBorrowed, isRepaymentRec: !!i.isRepaymentRec })),
                   ...borrowedTxns.map(t => ({ ...t, isBorrowed: true })),
                 ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -1126,47 +1222,23 @@ export default function DesktopDashboard({
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                           <span style={{
                             fontSize: 9, padding: '2px 6px', borderRadius: 5, fontWeight: 700,
-                            background: entry.isBorrowed ? 'var(--person-bg)' : 'var(--income-bg)',
-                            color: entry.isBorrowed ? 'var(--person)' : 'var(--income)',
+                            background: entry.isRepaymentRec ? '#ECFEFF' : entry.isBorrowed ? 'var(--person-bg)' : 'var(--income-bg)',
+                            color: entry.isRepaymentRec ? '#0891B2' : entry.isBorrowed ? 'var(--person)' : 'var(--income)',
                             flexShrink: 0,
                           }}>
-                            {entry.isBorrowed ? 'Borrowed' : 'Income'}
+                            {entry.isRepaymentRec ? '⮐ Repay Rec.' : entry.isBorrowed ? 'Borrowed' : 'Income'}
                           </span>
                           <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                             {entry.name}
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: entry.isBorrowed ? 'var(--person)' : 'var(--income)' }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: entry.isRepaymentRec ? '#0891B2' : entry.isBorrowed ? 'var(--person)' : 'var(--income)' }}>
                             +{formatAmount(entry.amount)}
                           </span>
 
-                          {/* Quick Repay button for Borrowed entries */}
-                          {entry.isBorrowed && (
-                            <button
-                              onClick={() => {
-                                onAddTransaction({
-                                  id: generateId(),
-                                  name: entry.name,
-                                  amount: entry.amount,
-                                  type: 'person',
-                                  direction: 'repaid',
-                                  date: new Date().toISOString(),
-                                  month: isoToMonth(new Date().toISOString()),
-                                });
-                              }}
-                              style={{
-                                padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700,
-                                background: 'var(--person-bg)', border: '1px solid var(--person-border)',
-                                color: 'var(--person)', cursor: 'pointer', fontFamily: 'inherit',
-                              }}
-                              title="Repay this debt"
-                            >
-                              Repay
-                            </button>
-                          )}
-
-                          {!entry.isBorrowed && onUpdateIncome && (
+                          {/* Pencil Edit button for all Income entries */}
+                          {onUpdateIncome && (
                             <button
                               onClick={() => setEditingInc(entry)}
                               style={{ width: 20, height: 20, borderRadius: 4, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}

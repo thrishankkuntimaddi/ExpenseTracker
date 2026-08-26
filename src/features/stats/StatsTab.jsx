@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   TrendingUp, TrendingDown, PiggyBank, Users,
   Scale, Flame, CalendarDays,
   ChevronDown, ChevronUp,
+  Wallet, ArrowDownLeft, ArrowUpRight,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -12,7 +13,15 @@ import { formatAmount } from '../../utils/dateHelpers';
 import PeriodSelector from '../../components/PeriodSelector';
 import { useStats } from '../../hooks/useStats';
 
-
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  return isMobile;
+}
 
 /* ── Custom Tooltip ── */
 function ChartTip({ active, payload, label }) {
@@ -108,11 +117,32 @@ function AvgCard({ label, value, Icon }) {
 }
 
 export default function StatsTab({ transactions, income, selectedPeriod, onPeriodChange, theme }) {
-  const { stats, filtTxns, filtInc, pieData, barData, areaData, C } = useStats(transactions, income, selectedPeriod, theme);
+  const { stats, filtTxns, filtInc, pieData, barData, areaData, areaData4, C } = useStats(transactions, income, selectedPeriod, theme);
+  const isMobile = useIsMobile();
+
+  const trendData = isMobile ? (areaData4 || areaData.slice(-4)) : areaData;
+  const trendTitle = isMobile ? "4-Month Trend — All Financials" : "6-Month Trend — All Financials";
 
   const positive  = stats.balance >= 0;
   const hasData   = filtTxns.length > 0 || filtInc.length > 0;
   const hasPieData = pieData.length > 0;
+
+  const barScrollRef = useRef(null);
+  const trendScrollRef = useRef(null);
+
+  // Auto-scroll charts to the far right so current day/month is immediately visible
+  useEffect(() => {
+    const scrollToRight = (ref) => {
+      if (ref.current) {
+        ref.current.scrollLeft = ref.current.scrollWidth;
+      }
+    };
+    const timer = setTimeout(() => {
+      scrollToRight(barScrollRef);
+      scrollToRight(trendScrollRef);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [barData, trendData]);
 
   return (
     <div className="tab-root">
@@ -231,18 +261,85 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
               {/* Breakdown Metric Cards */}
               <Section title="Breakdown">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginTop: 8 }}>
-                  <MetricCard label="Total Income"   value={stats.totalIncome}  color="var(--income)"  bg="var(--income-bg)"  border="var(--income-border)"  Icon={TrendingUp}   />
-                  <MetricCard label="Total Expense"  value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={TrendingDown}  />
-                  <MetricCard label="Savings"        value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" Icon={PiggyBank}    />
+
+                  {/* 1. Remaining Balance — full width */}
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <div style={{
+                      background: stats.balance >= 0 ? 'var(--income-bg)' : 'var(--expense-bg)',
+                      border: `1.5px solid ${stats.balance >= 0 ? 'var(--income-border)' : 'var(--expense-border)'}`,
+                      borderRadius: 14, padding: '14px 16px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      boxShadow: 'var(--shadow-sm)',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: stats.balance >= 0 ? 'var(--income)' : 'var(--expense)', marginBottom: 6 }}>
+                          Remaining Balance
+                        </div>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: stats.balance >= 0 ? 'var(--income)' : 'var(--expense)' }}>
+                          {formatAmount(Math.abs(stats.balance))}
+                        </div>
+                        <div style={{ fontSize: 10, color: stats.balance >= 0 ? 'var(--income)' : 'var(--expense)', opacity: 0.75, marginTop: 3 }}>
+                          {stats.balance >= 0 ? 'You are in the green ✓' : 'Overspent this period'}
+                        </div>
+                      </div>
+                      <div style={{ width: 40, height: 40, borderRadius: 12, background: (stats.balance >= 0 ? 'var(--income)' : 'var(--expense)') + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Wallet size={18} color={stats.balance >= 0 ? 'var(--income)' : 'var(--expense)'} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Total Income */}
                   <MetricCard
-                    label={stats.allTimeNetPerson < 0 ? "You Owe (Debt)" : "Owes You (Debt)"}
-                    value={Math.abs(stats.allTimeNetPerson)}
-                    color="var(--person)"
-                    bg="var(--person-bg)"
-                    border="var(--person-border)"
-                    Icon={Users}
-                    sub={stats.allTimeNetPerson < 0 ? `You owe ${formatAmount(stats.allTimeNetOwed)}` : `Others owe you ${formatAmount(stats.allTimeNetLent)}`}
+                    label="Total Income"
+                    value={stats.totalIncome}
+                    color="var(--income)" bg="var(--income-bg)" border="var(--income-border)"
+                    Icon={TrendingUp}
+                    sub={`Pure: ${formatAmount(stats.pureIncome)}`}
                   />
+
+                  {/* 3. Total Expense */}
+                  <MetricCard
+                    label="Total Expense"
+                    value={stats.totalExpense}
+                    color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)"
+                    Icon={TrendingDown}
+                  />
+
+                  {/* 4. Savings */}
+                  <MetricCard
+                    label="Savings"
+                    value={stats.totalSavings}
+                    color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)"
+                    Icon={PiggyBank}
+                  />
+
+                  {/* 5. Total Wastage */}
+                  <MetricCard
+                    label="Total Wastage"
+                    value={stats.totalWaste}
+                    color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)"
+                    Icon={Flame}
+                    sub={`${stats.wastePercent}% of expenses`}
+                  />
+
+                  {/* 6. Debt Left (I owe others) — always show all-time */}
+                  <MetricCard
+                    label="Debt Left (You Owe)"
+                    value={stats.allTimeNetOwed}
+                    color="var(--borrowed)" bg="var(--borrowed-bg, var(--expense-bg))" border="var(--borrowed-border, var(--expense-border))"
+                    Icon={ArrowDownLeft}
+                    sub={stats.allTimeNetOwed > 0 ? 'Still unpaid to others' : 'All clear ✓'}
+                  />
+
+                  {/* 7. Amount Should Return (others owe me) */}
+                  <MetricCard
+                    label="To Collect (Owed to You)"
+                    value={stats.allTimeNetLent}
+                    color="var(--lent)" bg="var(--lent-bg, var(--savings-bg))" border="var(--lent-border, var(--savings-border))"
+                    Icon={ArrowUpRight}
+                    sub={stats.allTimeNetLent > 0 ? 'Others still owe you' : 'All returned ✓'}
+                  />
+
                 </div>
               </Section>
 
@@ -293,11 +390,14 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
 
               {/* Daily Bar Chart (Horizontally Scrollable) */}
               <Section title="Last 14 Days — Daily Spending">
-                <div style={{
-                  background: 'var(--surface)', borderRadius: 14,
-                  border: '1px solid var(--border)', padding: 14, marginTop: 8,
-                  overflowX: 'auto', WebkitOverflowScrolling: 'touch',
-                }}>
+                <div
+                  ref={barScrollRef}
+                  style={{
+                    background: 'var(--surface)', borderRadius: 14,
+                    border: '1px solid var(--border)', padding: 14, marginTop: 8,
+                    overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+                  }}
+                >
                   <div style={{ minWidth: 480, height: 150 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={barData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -314,16 +414,19 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                 </div>
               </Section>
 
-              {/* Area Chart: 6-Month Trend (All 4 Series + Horizontally Scrollable) */}
-              <Section title="6-Month Trend — All Financials">
-                <div style={{
-                  background: 'var(--surface)', borderRadius: 14,
-                  border: '1px solid var(--border)', padding: 14, marginTop: 8,
-                  overflowX: 'auto', WebkitOverflowScrolling: 'touch',
-                }}>
-                  <div style={{ minWidth: 520, height: 170 }}>
+              {/* Area Chart: Trend (All 4 Series + Horizontally Scrollable) */}
+              <Section title={trendTitle}>
+                <div
+                  ref={trendScrollRef}
+                  style={{
+                    background: 'var(--surface)', borderRadius: 14,
+                    border: '1px solid var(--border)', padding: 14, marginTop: 8,
+                    overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+                  }}
+                >
+                  <div style={{ minWidth: isMobile ? 360 : 520, height: 170 }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={areaData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <AreaChart data={trendData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="incGrad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%"  stopColor={C.income}       stopOpacity={0.3} />

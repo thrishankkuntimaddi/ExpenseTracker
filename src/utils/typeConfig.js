@@ -43,7 +43,6 @@ export const TRANSACTION_TYPES = [
 export const PERSON_DIRECTIONS = [
   { key: 'repaid',     label: 'Debt Repayment',      color: 'var(--borrowed)',      bg: 'var(--borrowed-bg)',      Icon: TrendingDown, description: 'Pay back debt you borrowed'     },
   { key: 'lent',       label: 'Lent (Debt Expected)', color: 'var(--lent)',          bg: 'var(--lent-bg)',          Icon: TrendingDown, description: 'Give money, expect it back'     },
-  { key: 'repayment',  label: 'Repayment Rec.',       color: 'var(--repayment-rec)', bg: 'var(--repayment-rec-bg)', Icon: TrendingUp,   description: 'Someone returned money to you' },
   { key: 'given_gift', label: 'Given (No Debt)',      color: 'var(--given)',         bg: 'var(--given-bg)',         Icon: Gift,         description: 'Gave money, no debt expected'  },
 ];
 
