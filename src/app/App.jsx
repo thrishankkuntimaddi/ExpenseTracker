@@ -67,6 +67,28 @@ function AuthenticatedApp({ user, signOut }) {
     applyTheme(newTheme);
   }, [settings, saveSettings]);
 
+  /**
+   * smartAddEntry — routes entries to the right store.
+   *
+   *  person/repayment  → income  (someone returned money I lent = cash inflow ✅)
+   *  everything else   → transactions
+   */
+  const smartAddEntry = useCallback((entry) => {
+    if (entry.type === 'person' && entry.direction === 'repayment') {
+      // Treat as income: money came back to me
+      addIncome({
+        id: entry.id,
+        date: entry.date,
+        month: entry.month,
+        name: entry.name,
+        amount: entry.amount,
+        isRepaymentRec: true,  // flag: this is money returned by someone I lent to
+      });
+    } else {
+      addTransaction(entry);
+    }
+  }, [addTransaction, addIncome]);
+
   const commonProps = {
     transactions, income, settings,
     selectedPeriod, onPeriodChange: setSelectedPeriod,
@@ -88,6 +110,7 @@ function AuthenticatedApp({ user, signOut }) {
           onDataChange={handleDataChange}
           onThemeChange={handleThemeChange}
           onSignOut={signOut}
+          onSmartAdd={smartAddEntry}
         />
       </div>
     );
@@ -105,7 +128,7 @@ function AuthenticatedApp({ user, signOut }) {
         {activeTab === 'today' && (
           <TodayTab
             {...commonProps}
-            onAdd={addTransaction}
+            onAdd={smartAddEntry}
           />
         )}
         {activeTab === 'history' && (

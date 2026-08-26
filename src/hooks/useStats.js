@@ -3,15 +3,28 @@
 import { useMemo } from "react";
 import { filterItemsByPeriod } from "../utils/periodHelpers";
 
+// ─── Color palettes keyed by type/direction ───────────────────────────────────
+// These are used for chart fills (Recharts doesn't support CSS vars in SVG attrs).
+// Must stay in sync with the CSS variables in index.css.
 const C_LIGHT = {
-  expense: "#DC2626", savings: "#2563EB",
-  person:  "#D97706", income:  "#16A34A",
-  lent:    "#D97706", repayment: "#16A34A",
+  income:       '#059669', // --income
+  expense:      '#E11D48', // --expense
+  savings:      '#2563EB', // --savings
+  lent:         '#D97706', // --lent
+  borrowed:     '#DC2626', // --borrowed
+  repaymentRec: '#0891B2', // --repayment-rec
+  given:        '#7C3AED', // --given
+  external:     '#7C3AED', // --external
 };
 const C_DARK = {
-  expense: "#e05252", savings: "#6b8dd6",
-  person:  "#c9943a", income:  "#5aba8a",
-  lent:    "#c9943a", repayment: "#5aba8a",
+  income:       '#10B981', // --income
+  expense:      '#F43F5E', // --expense
+  savings:      '#3B82F6', // --savings
+  lent:         '#F59E0B', // --lent
+  borrowed:     '#F87171', // --borrowed
+  repaymentRec: '#22D3EE', // --repayment-rec
+  given:        '#A78BFA', // --given
+  external:     '#8B5CF6', // --external
 };
 
 export function useStats(transactions, income, selectedPeriod, theme) {
@@ -35,10 +48,19 @@ export function useStats(transactions, income, selectedPeriod, theme) {
       if (!name) return;
       if (!map[name]) map[name] = { borrowed: 0, repaid: 0, lent: 0, repaymentRec: 0 };
       const amt = t.amount ?? 0;
-      if (t.direction === 'borrowed') map[name].borrowed += amt;
-      else if (t.direction === 'repaid') map[name].repaid += amt;
-      else if (t.direction === 'repayment') map[name].repaymentRec += amt;
-      else map[name].lent += amt;
+      if      (t.direction === 'borrowed') map[name].borrowed   += amt;
+      else if (t.direction === 'repaid')   map[name].repaid     += amt;
+      else if (t.direction === 'lent')     map[name].lent       += amt;
+      // 'repayment' entries now live in income (isRepaymentRec), handled below
+    });
+
+    (income || []).forEach(i => {
+      if (!i.name) return;
+      const name = i.name.trim();
+      if (!name) return;
+      if (!map[name]) map[name] = { borrowed: 0, repaid: 0, lent: 0, repaymentRec: 0 };
+      if (i.isBorrowed)    map[name].borrowed    += (i.amount ?? 0);
+      if (i.isRepaymentRec) map[name].repaymentRec += (i.amount ?? 0);
     });
 
     const balances = {};
@@ -49,50 +71,64 @@ export function useStats(transactions, income, selectedPeriod, theme) {
       balances[name] = { borrowed, repaid, lent, repaymentRec, netOwed, netLent };
     });
     return balances;
-  }, [transactions]);
+  }, [transactions, income]);
 
   const stats = useMemo(() => {
-    // Person: 4-way direction calculations for selected period
     const personTxns      = filtTxns.filter(t => t.type === 'person');
-    const totalLent       = personTxns.filter(t => t.direction === 'lent' || (!t.direction && t.direction !== 'repayment')).reduce((s, t) => s + (t.amount ?? 0), 0);
-    const totalRepaid     = personTxns.filter(t => t.direction === 'repayment').reduce((s, t) => s + (t.amount ?? 0), 0);
-    const totalBorrowed   = personTxns.filter(t => t.direction === 'borrowed').reduce((s, t) => s + (t.amount ?? 0), 0);
-    const totalRepaidThem = personTxns.filter(t => t.direction === 'repaid').reduce((s, t) => s + (t.amount ?? 0), 0);
 
-    const pureIncome   = filtInc.reduce((s, i) => s + (i.amount ?? 0), 0);
-    // Total income for period includes regular income + borrowed money brought in
-    const totalIncome  = pureIncome + totalBorrowed;
+    // Cash OUTFLOWS (money I gave out)
+    const totalLent       = personTxns.filter(t => t.direction === 'lent').reduce((s, t) => s + (t.amount ?? 0), 0);
+    const totalRepaidThem = personTxns.filter(t => t.direction === 'repaid').reduce((s, t) => s + (t.amount ?? 0), 0);
+    const totalGivenGift  = personTxns.filter(t => t.direction === 'given_gift').reduce((s, t) => s + (t.amount ?? 0), 0);
+
+    // Cash INFLOWS from person — 'repayment' entries now live in income (isRepaymentRec)
+    const totalRepaymentRec = filtInc.filter(i => i.isRepaymentRec).reduce((s, i) => s + (i.amount ?? 0), 0);
+
+    // Borrowed money (I took money from someone — cash inflow, but I owe it back)
+    const borrowedTxnsAmt = personTxns.filter(t => t.direction === 'borrowed').reduce((s, t) => s + (t.amount ?? 0), 0);
+    const borrowedIncAmt  = filtInc.filter(i => i.isBorrowed).reduce((s, i) => s + (i.amount ?? 0), 0);
+    const totalBorrowed   = borrowedTxnsAmt + borrowedIncAmt;
+
+    // Pure income = regular income entries (not borrowed, not repayment received)
+    const pureIncome   = filtInc.filter(i => !i.isBorrowed && !i.isRepaymentRec).reduce((s, i) => s + (i.amount ?? 0), 0);
     const totalExpense = filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount ?? 0), 0);
     const totalSavings = filtTxns.filter(t => t.type === 'savings').reduce((s, t) => s + (t.amount ?? 0), 0);
 
-    const netLentPeriod     = totalLent - totalRepaid;        // They owe me this period
-    const netOwedPeriod     = totalBorrowed - totalRepaidThem; // I owe them this period
-    const totalPerson       = totalLent;
+    // Total Income = regular income + borrowed money received + repayments received back from people I lent to
+    const totalIncome = pureIncome + totalBorrowed + totalRepaymentRec;
 
     // All-time debt balances (carried over month to month)
-    let allTimeBorrowed = 0, allTimeRepaidThem = 0, allTimeLent = 0, allTimeRepaidRec = 0;
+    let allTimeBorrowed = 0, allTimeRepaidThem = 0, allTimeLent = 0, allTimeRepaymentRec = 0;
+    (income || []).forEach(i => {
+      if (i.isBorrowed)     allTimeBorrowed     += (i.amount ?? 0);
+      if (i.isRepaymentRec) allTimeRepaymentRec += (i.amount ?? 0);
+    });
     (transactions || []).forEach(t => {
       if (t.type !== 'person') return;
       const amt = t.amount ?? 0;
-      if (t.direction === 'borrowed') allTimeBorrowed += amt;
-      else if (t.direction === 'repaid') allTimeRepaidThem += amt;
-      else if (t.direction === 'repayment') allTimeRepaidRec += amt;
-      else allTimeLent += amt;
+      if      (t.direction === 'borrowed') allTimeBorrowed   += amt;
+      else if (t.direction === 'repaid')   allTimeRepaidThem += amt;
+      else if (t.direction === 'lent')     allTimeLent       += amt;
+      // legacy: old 'repayment' entries may still be in transactions before migration
+      else if (t.direction === 'repayment') allTimeRepaymentRec += amt;
     });
-    const allTimeNetOwed = Math.max(0, allTimeBorrowed - allTimeRepaidThem);
-    const allTimeNetLent = Math.max(0, allTimeLent - allTimeRepaidRec);
+    const allTimeNetOwed = Math.max(0, allTimeBorrowed - allTimeRepaidThem);  // what I owe others
+    const allTimeNetLent = Math.max(0, allTimeLent - allTimeRepaymentRec);    // what others owe me
     const allTimeNetPerson = allTimeNetLent - allTimeNetOwed;
 
     const totalWaste   = filtTxns.reduce((s, t) => s + (t.wasteAmount || 0), 0);
 
-    // External: amount paid is NOT an expense — only the net profit/loss counts
     const externalProfit = filtTxns
       .filter(t => t.type === 'external')
       .reduce((s, t) => s + ((t.settlement ?? t.amount) - t.amount), 0);
 
-    // Balance: Total cash inflows minus total cash outflows
-    const balance    = pureIncome + totalBorrowed + externalProfit + totalRepaid - totalExpense - totalSavings - totalLent - totalRepaidThem;
-    const totalSpend = totalExpense + totalSavings + (totalLent + totalRepaidThem);
+    // Balance = all cash inflows − all cash outflows
+    // Inflows:  pureIncome, borrowed money, repayments received back
+    // Outflows: expenses, savings, money lent to others, debt repaid to others, gifts given
+    const balance = pureIncome + totalBorrowed + totalRepaymentRec + externalProfit
+                    - totalExpense - totalSavings - totalLent - totalRepaidThem - totalGivenGift;
+
+    const totalSpend = totalExpense + totalSavings + totalLent + totalRepaidThem + totalGivenGift;
     const wastePercent = totalSpend > 0 ? ((totalWaste / totalSpend) * 100).toFixed(1) : '0.0';
 
     const now = new Date();
@@ -101,12 +137,11 @@ export function useStats(transactions, income, selectedPeriod, theme) {
     const days   = Math.max(1, Math.ceil((now - firstDate) / 86400000) + 1);
     const weeks  = Math.max(1, days / 7);
     const months = Math.max(1, days / 30);
-    const spend  = totalExpense + (totalLent + totalRepaidThem);
+    const spend  = totalExpense + totalLent + totalRepaidThem + totalGivenGift;
 
     return {
       totalIncome, pureIncome, totalExpense, totalSavings,
-      totalPerson, totalLent, totalRepaid, totalBorrowed, totalRepaidThem,
-      netLent: netLentPeriod, netOwed: netOwedPeriod, netPerson: allTimeNetPerson,
+      totalLent, totalRepaidThem, totalBorrowed, totalRepaymentRec, totalGivenGift,
       allTimeNetOwed, allTimeNetLent, allTimeNetPerson, personDebts,
       totalWaste, externalProfit, balance, wastePercent,
       avgDay: spend / days, avgWeek: spend / weeks, avgMonth: spend / months,
@@ -115,45 +150,54 @@ export function useStats(transactions, income, selectedPeriod, theme) {
 
   /* ── Chart data ── */
   const pieData = useMemo(() => {
-    const personTxns = filtTxns.filter(t => t.type === 'person');
-    const lentTotal  = personTxns.filter(t => t.direction !== 'repayment').reduce((s, t) => s + (t.amount ?? 0), 0);
-    const repaidTotal = personTxns.filter(t => t.direction === 'repayment').reduce((s, t) => s + (t.amount ?? 0), 0);
+    const personTxns   = filtTxns.filter(t => t.type === 'person');
+    const lentTotal    = personTxns.filter(t => t.direction === 'lent').reduce((s, t) => s + (t.amount ?? 0), 0);
+    const repaidTotal  = personTxns.filter(t => t.direction === 'repaid').reduce((s, t) => s + (t.amount ?? 0), 0);
+    const givenTotal   = personTxns.filter(t => t.direction === 'given_gift').reduce((s, t) => s + (t.amount ?? 0), 0);
+    const repRecTotal  = filtInc.filter(i => i.isRepaymentRec).reduce((s, i) => s + (i.amount ?? 0), 0);
     return [
-      { name: "Expense",   value: filtTxns.filter(t => t.type === "expense").reduce((s, t) => s + (t.amount ?? 0), 0), color: C.expense  },
-      { name: "Savings",   value: filtTxns.filter(t => t.type === "savings").reduce((s, t) => s + (t.amount ?? 0), 0), color: C.savings  },
-      { name: "Lent",      value: lentTotal,   color: C.lent      },
-      { name: "Repayment", value: repaidTotal,  color: C.repayment },
+      { name: 'Expense',          value: filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount ?? 0), 0), color: C.expense      },
+      { name: 'Savings',          value: filtTxns.filter(t => t.type === 'savings').reduce((s, t) => s + (t.amount ?? 0), 0), color: C.savings      },
+      { name: 'Lent',             value: lentTotal,   color: C.lent         },
+      { name: 'Debt Repaid',      value: repaidTotal, color: C.borrowed     },
+      { name: 'Given (Gift)',     value: givenTotal,  color: C.given        },
+      { name: 'Repayment Rec.',   value: repRecTotal, color: C.repaymentRec },
     ].filter(d => d.value > 0);
-  }, [filtTxns, C]);
+  }, [filtTxns, filtInc, C]);
 
   const barData = useMemo(() => Array.from({ length: 14 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (13 - i));
     const key = d.toDateString();
     return {
-      day: d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }).split(" ")[0],
-      Expense: transactions.filter(t => t.type === "expense" && new Date(t.date).toDateString() === key).reduce((s, t) => s + (t.amount ?? 0), 0),
-      Savings: transactions.filter(t => t.type === "savings" && new Date(t.date).toDateString() === key).reduce((s, t) => s + (t.amount ?? 0), 0),
+      day: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }).split(' ')[0],
+      Expense: transactions.filter(t => t.type === 'expense' && new Date(t.date).toDateString() === key).reduce((s, t) => s + (t.amount ?? 0), 0),
+      Savings: transactions.filter(t => t.type === 'savings' && new Date(t.date).toDateString() === key).reduce((s, t) => s + (t.amount ?? 0), 0),
+      Lent:    transactions.filter(t => t.type === 'person' && t.direction === 'lent' && new Date(t.date).toDateString() === key).reduce((s, t) => s + (t.amount ?? 0), 0),
     };
   }), [transactions]);
 
   const areaData = useMemo(() => {
-    // Start from Feb 2025, end at current month — full history
-    const start = new Date(2025, 1, 1); // Feb 2025
-    const now   = new Date();
-    const end   = new Date(now.getFullYear(), now.getMonth(), 1);
     const months = [];
-    const cur = new Date(start);
-    while (cur <= end) {
-      const key = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`;
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const pureInc    = income.filter(it => it.date?.slice(0, 7) === key && !it.isBorrowed && !it.isRepaymentRec).reduce((s, it) => s + (it.amount ?? 0), 0);
+      const borInc     = income.filter(it => it.date?.slice(0, 7) === key && it.isBorrowed).reduce((s, it) => s + (it.amount ?? 0), 0);
+      const repRecInc  = income.filter(it => it.date?.slice(0, 7) === key && it.isRepaymentRec).reduce((s, it) => s + (it.amount ?? 0), 0);
+      const expTotal   = transactions.filter(t => t.type === 'expense' && t.date?.slice(0, 7) === key).reduce((s, t) => s + (t.amount ?? 0), 0);
+      const savTotal   = transactions.filter(t => t.type === 'savings' && t.date?.slice(0, 7) === key).reduce((s, t) => s + (t.amount ?? 0), 0);
+      const lentTotal  = transactions.filter(t => t.type === 'person' && t.direction === 'lent' && t.date?.slice(0, 7) === key).reduce((s, t) => s + (t.amount ?? 0), 0);
+      const repaidTotal= transactions.filter(t => t.type === 'person' && t.direction === 'repaid' && t.date?.slice(0, 7) === key).reduce((s, t) => s + (t.amount ?? 0), 0);
       months.push({
-        month:   cur.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }),
-        Income:  income.filter(it => it.date?.slice(0, 7) === key).reduce((s, it) => s + (it.amount ?? 0), 0),
-        Expense: transactions.filter(t => t.type === 'expense' && t.date?.slice(0, 7) === key).reduce((s, t) => s + (t.amount ?? 0), 0),
-        Savings: transactions.filter(t => t.type === 'savings' && t.date?.slice(0, 7) === key).reduce((s, t) => s + (t.amount ?? 0), 0),
-        Lent:    transactions.filter(t => t.type === 'person' && t.direction !== 'repayment' && t.date?.slice(0, 7) === key).reduce((s, t) => s + (t.amount ?? 0), 0),
+        month:          d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }),
+        Income:         pureInc + borInc + repRecInc,
+        Expense:        expTotal,
+        Savings:        savTotal,
+        Lent:           lentTotal,
+        'Debt Repaid':  repaidTotal,
       });
-      cur.setMonth(cur.getMonth() + 1);
     }
     return months;
   }, [transactions, income]);

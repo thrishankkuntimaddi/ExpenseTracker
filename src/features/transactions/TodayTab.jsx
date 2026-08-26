@@ -2,7 +2,7 @@ import { useRef, useState, useMemo } from 'react';
 import { PenLine, IndianRupee, Zap, TrendingDown, Coins, Briefcase, ShoppingCart, PiggyBank, Users, Calendar } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount, todayInputValue, dateInputToISO, isoToMonth } from '../../utils/dateHelpers';
-import { TRANSACTION_TYPES as TYPES, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType } from '../../utils/typeConfig';
+import { TRANSACTION_TYPES as TYPES, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType, getDirectionMeta } from '../../utils/typeConfig';
 import { useStats } from '../../hooks/useStats';
 
 function AppHeader() {
@@ -43,6 +43,7 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
   const [direction, setDirection]         = useState('lent');
   const [savingsType, setSavingsType]     = useState('cash');
   const [platform, setPlatform]           = useState('');
+  const [isFullPayment, setIsFullPayment] = useState(false);
 
   const nameRef         = useRef(null);
   const amountRef       = useRef(null);
@@ -94,12 +95,6 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
       if (st.hasPlatform && platform.trim()) {
         entry.platform = platform.trim();
       }
-    }
-    if (type === 'external') {
-      const s = parseFloat(settlement);
-      if (!settlement || isNaN(s) || s < 0) return;
-      entry.settlement = s;
-      if (externalSource.trim()) entry.externalSource = externalSource.trim();
     }
 
     onAdd(entry);
@@ -195,14 +190,15 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
           <div style={{
             background: 'var(--surface)',
             borderRadius: 16,
-            border: `1.5px solid ${sel.border}`,
+            border: `1.5px solid ${type === 'person' ? getDirectionMeta(direction).border : sel.border}`,
             boxShadow: 'var(--shadow)',
             padding: 16,
             marginBottom: 16,
           }}>
-            {/* Type indicator band */}
+            {/* Type indicator band — direction-aware for person */}
             <div style={{
-              height: 3, borderRadius: 99, background: sel.color,
+              height: 3, borderRadius: 99,
+              background: type === 'person' ? getDirectionMeta(direction).color : sel.color,
               marginBottom: 14, opacity: 0.7,
             }} />
 
@@ -230,7 +226,7 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
                   ))}
                 </div>
 
-                {/* Dropdown for Repaid Them */}
+                {/* Dropdown for Debt Repayment */}
                 {direction === 'repaid' && (
                   <div>
                     <select
@@ -238,11 +234,17 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
                       onChange={e => {
                         const val = e.target.value;
                         setName(val);
+                        setIsFullPayment(false);
                         const debt = stats.personDebts?.[val]?.netOwed ?? 0;
-                        if (debt > 0) setAmount(debt.toString());
+                        if (debt > 0) {
+                          setAmount(debt.toString());
+                          setIsFullPayment(true);
+                        } else {
+                          setAmount('');
+                        }
                       }}
                       style={{
-                        width: '100%', padding: '9px 12px', borderRadius: 10, fontSize: 13,
+                        width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 13,
                         border: '1.5px solid var(--person)', background: 'var(--input-bg)', color: 'var(--text)',
                         outline: 'none', fontFamily: 'inherit', fontWeight: 600,
                       }}
@@ -252,21 +254,28 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
                         .filter(p => stats.personDebts[p].netOwed > 0)
                         .map(p => (
                           <option key={p} value={p}>
-                            {p} — Pending Debt: {formatAmount(stats.personDebts[p].netOwed)}
+                            {p} (Debt Left: {formatAmount(stats.personDebts[p].netOwed)})
                           </option>
                         ))
                       }
                     </select>
                     {name && (stats.personDebts?.[name]?.netOwed ?? 0) > 0 && (
-                      <div style={{ fontSize: 12, color: 'var(--person)', fontWeight: 700, marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: 12, color: 'var(--person)', fontWeight: 700, marginTop: 6, padding: '8px 10px', borderRadius: 8, background: 'var(--person-bg)', border: '1px solid var(--person-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span>Pending Debt: {formatAmount(stats.personDebts[name].netOwed)}</span>
-                        <button
-                          type="button"
-                          onClick={() => setAmount((stats.personDebts[name].netOwed).toString())}
-                          style={{ background: 'var(--person-bg)', border: '1px solid var(--person-border)', color: 'var(--person)', borderRadius: 6, fontSize: 11, padding: '2px 8px', cursor: 'pointer', fontWeight: 700 }}
-                        >
-                          Fill Full Debt
-                        </button>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--person)', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={isFullPayment}
+                            onChange={e => {
+                              const checked = e.target.checked;
+                              setIsFullPayment(checked);
+                              if (checked) {
+                                setAmount((stats.personDebts[name].netOwed).toString());
+                              }
+                            }}
+                          />
+                          Full Payment
+                        </label>
                       </div>
                     )}
                   </div>
@@ -280,11 +289,17 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
                       onChange={e => {
                         const val = e.target.value;
                         setName(val);
+                        setIsFullPayment(false);
                         const debt = stats.personDebts?.[val]?.netLent ?? 0;
-                        if (debt > 0) setAmount(debt.toString());
+                        if (debt > 0) {
+                          setAmount(debt.toString());
+                          setIsFullPayment(true);
+                        } else {
+                          setAmount('');
+                        }
                       }}
                       style={{
-                        width: '100%', padding: '9px 12px', borderRadius: 10, fontSize: 13,
+                        width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 13,
                         border: '1.5px solid var(--income)', background: 'var(--input-bg)', color: 'var(--text)',
                         outline: 'none', fontFamily: 'inherit', fontWeight: 600,
                       }}
@@ -294,21 +309,28 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
                         .filter(p => stats.personDebts[p].netLent > 0)
                         .map(p => (
                           <option key={p} value={p}>
-                            {p} — Owes You: {formatAmount(stats.personDebts[p].netLent)}
+                            {p} (Owes You: {formatAmount(stats.personDebts[p].netLent)})
                           </option>
                         ))
                       }
                     </select>
                     {name && (stats.personDebts?.[name]?.netLent ?? 0) > 0 && (
-                      <div style={{ fontSize: 12, color: 'var(--income)', fontWeight: 700, marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: 12, color: 'var(--income)', fontWeight: 700, marginTop: 6, padding: '8px 10px', borderRadius: 8, background: 'var(--income-bg)', border: '1px solid var(--income-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span>Owes You: {formatAmount(stats.personDebts[name].netLent)}</span>
-                        <button
-                          type="button"
-                          onClick={() => setAmount((stats.personDebts[name].netLent).toString())}
-                          style={{ background: 'var(--income-bg)', border: '1px solid var(--income-border)', color: 'var(--income)', borderRadius: 6, fontSize: 11, padding: '2px 8px', cursor: 'pointer', fontWeight: 700 }}
-                        >
-                          Fill Full Amount
-                        </button>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--income)', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={isFullPayment}
+                            onChange={e => {
+                              const checked = e.target.checked;
+                              setIsFullPayment(checked);
+                              if (checked) {
+                                setAmount((stats.personDebts[name].netLent).toString());
+                              }
+                            }}
+                          />
+                          Full Repayment
+                        </label>
                       </div>
                     )}
                   </div>
@@ -358,35 +380,37 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
               </div>
             )}
 
-            {/* Name */}
-            <div style={{ position: 'relative', marginBottom: 10 }}>
-              <PenLine size={14} style={{
-                position: 'absolute', left: 12, top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)', pointerEvents: 'none',
-              }} />
-              <input
-                id="input-name"
-                ref={nameRef}
-                type="text"
-                placeholder={type === 'person' ? 'Person Name' : 'What did you spend on?'}
-                value={name}
-                onChange={e => setName(e.target.value)}
-                onKeyDown={handleNameKey}
-                autoComplete="off"
-                style={{
-                  width: '100%', paddingLeft: 38, paddingRight: 14,
-                  paddingTop: 12, paddingBottom: 12,
-                  borderRadius: 10, fontSize: 14,
-                  border: '1.5px solid var(--input-border)',
-                  background: 'var(--input-bg)',
-                  color: 'var(--text)', outline: 'none',
-                  fontFamily: 'inherit', transition: 'border-color 0.15s',
-                }}
-                onFocus={e => (e.target.style.borderColor = sel.color)}
-                onBlur={e =>  (e.target.style.borderColor = 'var(--input-border)')}
-              />
-            </div>
+            {/* Name input (only for non-repayment options) */}
+            {!(type === 'person' && (direction === 'repaid' || direction === 'repayment')) && (
+              <div style={{ position: 'relative', marginBottom: 10 }}>
+                <PenLine size={14} style={{
+                  position: 'absolute', left: 12, top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-muted)', pointerEvents: 'none',
+                }} />
+                <input
+                  id="input-name"
+                  ref={nameRef}
+                  type="text"
+                  placeholder={type === 'person' ? 'Person Name' : 'What did you spend on?'}
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  onKeyDown={handleNameKey}
+                  autoComplete="off"
+                  style={{
+                    width: '100%', paddingLeft: 38, paddingRight: 14,
+                    paddingTop: 12, paddingBottom: 12,
+                    borderRadius: 10, fontSize: 14,
+                    border: '1.5px solid var(--input-border)',
+                    background: 'var(--input-bg)',
+                    color: 'var(--text)', outline: 'none',
+                    fontFamily: 'inherit', transition: 'border-color 0.15s',
+                  }}
+                  onFocus={e => (e.target.style.borderColor = sel.color)}
+                  onBlur={e =>  (e.target.style.borderColor = 'var(--input-border)')}
+                />
+              </div>
+            )}
 
             {/* Amount */}
             <div style={{ position: 'relative', marginBottom: 10 }}>
@@ -453,7 +477,7 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
               style={{
                 width: '100%', padding: '13px',
                 borderRadius: 12, fontSize: 14, fontWeight: 700,
-                background: canSave ? sel.color : 'var(--surface2)',
+                background: canSave ? (type === 'person' ? getDirectionMeta(direction).color : sel.color) : 'var(--surface2)',
                 color: canSave ? '#fff' : 'var(--text-muted)',
                 border: 'none', cursor: canSave ? 'pointer' : 'not-allowed',
                 fontFamily: 'inherit',
@@ -461,7 +485,7 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
                 letterSpacing: '0.01em',
               }}
             >
-              Add {type === 'person' ? (direction === 'repayment' ? 'Repayment' : 'Lent Money') : sel.label}
+              Add {type === 'person' ? (getDirectionMeta(direction)?.label ?? 'Lent Money') : sel.label}
             </button>
           </div>
         </div>
@@ -475,9 +499,13 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
               </p>
               <div className="card">
                 {todayTxns.slice().reverse().map((txn, i) => {
-                  const t = TYPES.find(x => x.key === txn.type) || TYPES[0];
+                  // Pick the right color meta: direction-aware for person, type-based otherwise
+                  const t = txn.type === 'person'
+                    ? getDirectionMeta(txn.direction)
+                    : (TYPES.find(x => x.key === txn.type) || TYPES[0]);
                   const isExternal = txn.type === 'external';
                   const extProfit  = isExternal ? (txn.settlement ?? txn.amount) - txn.amount : 0;
+                  const dirMeta    = txn.type === 'person' ? getDirectionMeta(txn.direction) : null;
                   return (
                     <div key={txn.id} style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -490,7 +518,10 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
                           background: t.bg, display: 'flex',
                           alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                         }}>
-                          <t.Icon size={14} style={{ color: t.color }} />
+                          {txn.type === 'person'
+                            ? <Users size={14} style={{ color: t.color }} />
+                            : <t.Icon size={14} style={{ color: t.color }} />
+                          }
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <span style={{
@@ -500,9 +531,9 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
                           }}>
                             {txn.name}
                           </span>
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          <span style={{ fontSize: 11, color: t.color, fontWeight: 600 }}>
                             {txn.type === 'person'
-                              ? (txn.direction === 'repayment' ? 'Repayment Received' : 'Lent Money')
+                              ? dirMeta?.label ?? 'Person'
                               : txn.type === 'savings'
                               ? `${txn.savingsType ? txn.savingsType.toUpperCase() : 'Savings'}${txn.platform ? ' · ' + txn.platform : ''}`
                               : t.label
@@ -512,7 +543,7 @@ export default function TodayTab({ transactions = [], onAdd, theme }) {
                       </div>
                       <span style={{
                         fontSize: 14, fontWeight: 700,
-                        color: txn.type === 'person' && txn.direction === 'repayment' ? 'var(--income)' : t.color,
+                        color: t.color,
                         marginLeft: 12, flexShrink: 0,
                       }}>
                         {txn.type === 'person' && txn.direction === 'repayment' ? '+' : ''}{formatAmount(txn.amount)}

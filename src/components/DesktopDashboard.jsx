@@ -169,6 +169,7 @@ export default function DesktopDashboard({
   const [direction, setDirection] = useState('lent');
   const [savingsType, setSavingsType] = useState('cash');
   const [platform, setPlatform] = useState('');
+  const [isFullPayment, setIsFullPayment] = useState(false);
 
   const nameRef = useRef(null);
   const amountRef = useRef(null);
@@ -225,20 +226,15 @@ export default function DesktopDashboard({
     const n = iName.trim(), a = parseFloat(iAmount);
     if (!n || isNaN(a) || a <= 0) return;
     const isoDate = dateInputToISO(iDateInput);
-    if (incMode === 'income') {
-      onAddIncome({
-        id: generateId(), name: n, amount: a, type: 'income',
-        date: isoDate,
-        month: isoToMonth(isoDate),
-      });
-    } else {
-      // Borrowed Money -> log as person transaction with direction 'borrowed'
-      onAddTransaction({
-        id: generateId(), name: n, amount: a, type: 'person', direction: 'borrowed',
-        date: isoDate,
-        month: isoToMonth(isoDate),
-      });
-    }
+    onAddIncome({
+      id: generateId(),
+      name: n,
+      amount: a,
+      type: 'income',
+      isBorrowed: incMode === 'borrowed',
+      date: isoDate,
+      month: isoToMonth(isoDate),
+    });
     setIName(''); setIAmount(''); setIDateInput(todayInputValue());
     setTimeout(() => iNameRef.current?.focus(), 50);
   }
@@ -539,7 +535,24 @@ export default function DesktopDashboard({
           <SummaryTile label="Income" value={stats.totalIncome} color="var(--income)" bg="var(--income-bg)" gradient="linear-gradient(135deg, #10B981, #0D9488)" Icon={TrendingUp} />
           <SummaryTile label="Expense" value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" gradient="linear-gradient(135deg, #F43F5E, #E11D48)" Icon={TrendingDown} />
           <SummaryTile label="Savings" value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" gradient="linear-gradient(135deg, #3B82F6, #6366F1)" Icon={PiggyBank} />
-          <SummaryTile label="Outstanding" value={stats.netLent} color="var(--person)" bg="var(--person-bg)" gradient="linear-gradient(135deg, #F59E0B, #D97706)" Icon={Users} />
+          {(() => {
+            const owesYou = stats.allTimeNetLent || 0;
+            const youOwe  = stats.allTimeNetOwed || 0;
+            const isNetOwed = youOwe > 0 || stats.allTimeNetPerson < 0;
+            const displayLabel = isNetOwed ? "Outstanding (You Owe)" : "Outstanding (Owes You)";
+            const displayVal   = isNetOwed ? (youOwe || Math.abs(stats.allTimeNetPerson)) : (owesYou || stats.allTimeNetPerson);
+
+            return (
+              <SummaryTile
+                label={displayLabel}
+                value={displayVal}
+                color="var(--person)"
+                bg="var(--person-bg)"
+                gradient={isNetOwed ? "linear-gradient(135deg, #EF4444, #DC2626)" : "linear-gradient(135deg, #F59E0B, #D97706)"}
+                Icon={Users}
+              />
+            );
+          })()}
 
           {/* Waste Card */}
           <div
@@ -688,20 +701,134 @@ export default function DesktopDashboard({
                   </div>
                 )}
 
-                {/* Name */}
-                <div style={{ position: 'relative', marginBottom: 8 }}>
-                  <PenLine size={12} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                  <input
-                    id="desktop-input-name" ref={nameRef} type="text"
-                    placeholder={type === 'person' ? 'Person Name ' : 'Description…'}
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), amountRef.current?.focus())}
-                    autoComplete="off"
-                    style={inputStyle}
-                    {...focusHandlers(sel.color)}
-                  />
-                </div>
+                {/* Name & Debt Selector */}
+                {type === 'person' && direction === 'repaid' ? (
+                  <div style={{ marginBottom: 8 }}>
+                    <select
+                      id="desktop-select-repay-person"
+                      value={name}
+                      onChange={e => {
+                        const selectedName = e.target.value;
+                        setName(selectedName);
+                        setIsFullPayment(false);
+                        const debt = stats.personDebts?.[selectedName]?.netOwed ?? 0;
+                        if (debt > 0) {
+                          setAmount(debt.toString());
+                          setIsFullPayment(true);
+                        } else {
+                          setAmount('');
+                        }
+                      }}
+                      style={{
+                        width: '100%', padding: '9px 12px', borderRadius: 9, fontSize: 12,
+                        border: '1.5px solid var(--person)', background: 'var(--input-bg)', color: 'var(--text)',
+                        outline: 'none', fontFamily: 'inherit', fontWeight: 600,
+                      }}
+                    >
+                      <option value="">-- Select Person to Repay (Debt Left) --</option>
+                      {Object.keys(stats.personDebts || {})
+                        .filter(p => stats.personDebts[p].netOwed > 0)
+                        .map(p => (
+                          <option key={p} value={p}>
+                            {p} (Debt Left: {formatAmount(stats.personDebts[p].netOwed)})
+                          </option>
+                        ))
+                      }
+                    </select>
+
+                    {name && (stats.personDebts?.[name]?.netOwed ?? 0) > 0 && (
+                      <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, background: 'var(--person-bg)', border: '1px solid var(--person-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--person)' }}>
+                          Pending Debt: {formatAmount(stats.personDebts[name].netOwed)}
+                        </span>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--person)', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={isFullPayment}
+                            onChange={e => {
+                              const checked = e.target.checked;
+                              setIsFullPayment(checked);
+                              if (checked) {
+                                setAmount((stats.personDebts[name].netOwed).toString());
+                              }
+                            }}
+                          />
+                          Full Payment
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                ) : type === 'person' && direction === 'repayment' ? (
+                  <div style={{ marginBottom: 8 }}>
+                    <select
+                      id="desktop-select-repayment-rec-person"
+                      value={name}
+                      onChange={e => {
+                        const selectedName = e.target.value;
+                        setName(selectedName);
+                        setIsFullPayment(false);
+                        const debt = stats.personDebts?.[selectedName]?.netLent ?? 0;
+                        if (debt > 0) {
+                          setAmount(debt.toString());
+                          setIsFullPayment(true);
+                        } else {
+                          setAmount('');
+                        }
+                      }}
+                      style={{
+                        width: '100%', padding: '9px 12px', borderRadius: 9, fontSize: 12,
+                        border: '1.5px solid var(--income)', background: 'var(--input-bg)', color: 'var(--text)',
+                        outline: 'none', fontFamily: 'inherit', fontWeight: 600,
+                      }}
+                    >
+                      <option value="">-- Select Person Who Repaid You --</option>
+                      {Object.keys(stats.personDebts || {})
+                        .filter(p => stats.personDebts[p].netLent > 0)
+                        .map(p => (
+                          <option key={p} value={p}>
+                            {p} (Owes You: {formatAmount(stats.personDebts[p].netLent)})
+                          </option>
+                        ))
+                      }
+                    </select>
+
+                    {name && (stats.personDebts?.[name]?.netLent ?? 0) > 0 && (
+                      <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, background: 'var(--income-bg)', border: '1px solid var(--income-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--income)' }}>
+                          Owes You: {formatAmount(stats.personDebts[name].netLent)}
+                        </span>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--income)', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={isFullPayment}
+                            onChange={e => {
+                              const checked = e.target.checked;
+                              setIsFullPayment(checked);
+                              if (checked) {
+                                setAmount((stats.personDebts[name].netLent).toString());
+                              }
+                            }}
+                          />
+                          Full Repayment
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ position: 'relative', marginBottom: 8 }}>
+                    <PenLine size={12} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                    <input
+                      id="desktop-input-name" ref={nameRef} type="text"
+                      placeholder={type === 'person' ? 'Person Name' : 'Description…'}
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), amountRef.current?.focus())}
+                      autoComplete="off"
+                      style={inputStyle}
+                      {...focusHandlers(sel.color)}
+                    />
+                  </div>
+                )}
 
                 {/* Amount */}
                 <div style={{ position: 'relative', marginBottom: 8 }}>
@@ -793,6 +920,16 @@ export default function DesktopDashboard({
                       const m = TYPE_META[txn.type] || TYPE_META.expense;
                       const isWasted = txn.wasteAmount != null && txn.wasteAmount > 0;
                       const isEditing = editingWaste === txn.id;
+                      const isGivenGift = txn.type === 'person' && txn.direction === 'given_gift';
+                      const isRepaidThem = txn.type === 'person' && txn.direction === 'repaid';
+                      const badgeLabel = txn.type === 'person' && txn.direction === 'repayment' ? 'Repayment' :
+                                         isGivenGift ? 'Given' :
+                                         isRepaidThem ? 'Repaid' :
+                                         txn.type === 'person' && txn.direction === 'lent' ? 'Lent' :
+                                         m.label;
+                      const badgeBg    = isGivenGift ? '#EEF2FF' : m.bg;
+                      const badgeColor = isGivenGift ? '#6366F1' : m.color;
+
                       return (
                         <div key={txn.id}>
                           <div
@@ -807,8 +944,8 @@ export default function DesktopDashboard({
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                              <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 5, fontWeight: 700, background: m.bg, color: m.color, flexShrink: 0 }}>
-                                {txn.type === 'person' && txn.direction === 'repayment' ? 'Repayment' : m.label}
+                              <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 5, fontWeight: 700, background: badgeBg, color: badgeColor, flexShrink: 0 }}>
+                                {badgeLabel}
                               </span>
                               <div style={{ minWidth: 0 }}>
                                 <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -970,7 +1107,7 @@ export default function DesktopDashboard({
               {(() => {
                 const borrowedTxns = filtTxns.filter(t => t.type === 'person' && t.direction === 'borrowed');
                 const combinedList = [
-                  ...filtInc.map(i => ({ ...i, isBorrowed: false })),
+                  ...filtInc.map(i => ({ ...i, isBorrowed: !!i.isBorrowed })),
                   ...borrowedTxns.map(t => ({ ...t, isBorrowed: true })),
                 ].sort((a, b) => new Date(b.date) - new Date(a.date));
 

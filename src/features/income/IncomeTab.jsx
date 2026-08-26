@@ -34,7 +34,10 @@ export default function IncomeTab({
 
   const currentMonth = getCurrentMonthValue();
 
-  const totalIncome     = filtInc.reduce((s, i) => s + i.amount, 0);
+  const totalIncome = filtInc.reduce((s, i) => s + i.amount, 0);
+  const pureIncome  = filtInc.filter(i => !i.isBorrowed && !i.isRepaymentRec).reduce((s, i) => s + i.amount, 0);
+  const borrowedInc = filtInc.filter(i => i.isBorrowed).reduce((s, i) => s + i.amount, 0);
+  const repaymentRecInc = filtInc.filter(i => i.isRepaymentRec).reduce((s, i) => s + i.amount, 0);
 
   const borrowedTxns = useMemo(
     () => filtTxns.filter(t => t.type === 'person' && t.direction === 'borrowed'),
@@ -42,7 +45,7 @@ export default function IncomeTab({
   );
 
   const combinedItems = useMemo(() => {
-    const incList = filtInc.map(i => ({ ...i, isBorrowed: false }));
+    const incList = filtInc.map(i => ({ ...i, isBorrowed: !!i.isBorrowed }));
     const borList = borrowedTxns.map(t => ({ ...t, isBorrowed: true }));
     return [...incList, ...borList].sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [filtInc, borrowedTxns]);
@@ -64,19 +67,15 @@ export default function IncomeTab({
     const n = name.trim(), a = parseFloat(amount);
     if (!n || !amount || isNaN(a) || a <= 0) return;
     const isoDate = dateInputToISO(dateInput);
-    if (incMode === 'income') {
-      onAddIncome({
-        id: generateId(), name: n, amount: a, type: 'income',
-        date: isoDate,
-        month: isoToMonth(isoDate),
-      });
-    } else if (onAddTransaction) {
-      onAddTransaction({
-        id: generateId(), name: n, amount: a, type: 'person', direction: 'borrowed',
-        date: isoDate,
-        month: isoToMonth(isoDate),
-      });
-    }
+    onAddIncome({
+      id: generateId(),
+      name: n,
+      amount: a,
+      type: 'income',
+      isBorrowed: incMode === 'borrowed',
+      date: isoDate,
+      month: isoToMonth(isoDate),
+    });
     setName(''); setAmount(''); setDateInput(todayInputValue());
     nameRef.current?.focus();
   }
@@ -311,12 +310,12 @@ export default function IncomeTab({
                             </div>
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{
+                            <span style={{
                                   fontSize: 9, padding: '2px 6px', borderRadius: 4, fontWeight: 700,
-                                  background: entry.isBorrowed ? 'var(--person-bg)' : 'var(--income-bg)',
-                                  color: entry.isBorrowed ? 'var(--person)' : 'var(--income)',
+                                  background: entry.isRepaymentRec ? '#d1fae5' : entry.isBorrowed ? 'var(--person-bg)' : 'var(--income-bg)',
+                                  color: entry.isRepaymentRec ? '#059669' : entry.isBorrowed ? 'var(--person)' : 'var(--income)',
                                 }}>
-                                  {entry.isBorrowed ? 'Borrowed' : 'Income'}
+                                  {entry.isRepaymentRec ? '⮐ Repayment Rec.' : entry.isBorrowed ? 'Borrowed' : 'Income'}
                                 </span>
                                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
                                   {entry.name}
@@ -325,7 +324,7 @@ export default function IncomeTab({
                             </div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: entry.isBorrowed ? 'var(--person)' : 'var(--income)' }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: entry.isRepaymentRec ? '#059669' : entry.isBorrowed ? 'var(--person)' : 'var(--income)' }}>
                               +{formatAmount(entry.amount)}
                             </span>
 
@@ -362,12 +361,21 @@ export default function IncomeTab({
                                 <Pencil size={12} />
                               </button>
                             )}
-                            {((!entry.isBorrowed && onDeleteIncome) || (entry.isBorrowed && onDeleteTransaction)) && (
+                            {((!entry.isBorrowed && !entry.isRepaymentRec && onDeleteIncome) || (entry.isBorrowed && onDeleteTransaction)) && (
                               <button
                                 onClick={() => {
                                   if (entry.isBorrowed) onDeleteTransaction(entry.id);
                                   else setDeletingId(entry.id);
                                 }}
+                                style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
+                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                            {entry.isRepaymentRec && onDeleteIncome && (
+                              <button
+                                onClick={() => setDeletingId(entry.id)}
                                 style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
                                 onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
                                 onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>

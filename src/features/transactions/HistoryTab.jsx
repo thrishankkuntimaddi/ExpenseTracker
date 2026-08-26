@@ -4,7 +4,7 @@ import { formatAmount } from '../../utils/dateHelpers';
 import PeriodSelector from '../../components/PeriodSelector';
 import { useWastage } from '../../hooks/useWastage';
 import { useTransactions } from '../../hooks/useTransactions';
-import { TYPE_META } from '../../utils/typeConfig';
+import { TYPE_META, getDirectionMeta } from '../../utils/typeConfig';
 import LoadMonthlyData from '../../components/LoadMonthlyData';
 import EditTransactionModal from '../../components/EditTransactionModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
@@ -180,9 +180,16 @@ export default function HistoryTab({
                 {!isCollapsed && (
                   <div className="card">
                     {group.entries.map((txn, i) => {
-                      const m = TYPE_META[txn.type] || TYPE_META.expense;
+                      const m = txn.type === 'person'
+                        ? getDirectionMeta(txn.direction)
+                        : (TYPE_META[txn.type] || TYPE_META.expense);
                       const isWasted  = txn.wasteAmount != null && txn.wasteAmount > 0;
                       const isEditingWaste = editingWaste === txn.id;
+
+                      // Amount color: repayment entries show as income-colored
+                      const amtColor = txn.type === 'person' && txn.direction === 'repayment'
+                        ? 'var(--repayment-rec)'
+                        : m.color;
 
                       return (
                         <div key={txn.id}>
@@ -203,7 +210,7 @@ export default function HistoryTab({
                                 background: m.bg, color: m.color, border: `1px solid ${m.border}`,
                                 flexShrink: 0,
                               }}>
-                                {txn.type === 'person' && txn.direction === 'repayment' ? 'Repayment' : m.label}
+                                {txn.type === 'person' ? m.label : m.label}
                               </span>
                               <div style={{ minWidth: 0 }}>
                                 <span style={{
@@ -222,8 +229,8 @@ export default function HistoryTab({
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                              <span style={{ fontSize: 13, fontWeight: 700, color: txn.direction === 'repayment' ? 'var(--income)' : m.color }}>
-                                {txn.direction === 'repayment' ? '+' : ''}{formatAmount(txn.amount)}
+                              <span style={{ fontSize: 13, fontWeight: 700, color: amtColor }}>
+                                {txn.type === 'person' && txn.direction === 'repayment' ? '+' : ''}{formatAmount(txn.amount)}
                               </span>
                               <button
                                 onClick={e => { e.stopPropagation(); setEditingTxn(txn); }}

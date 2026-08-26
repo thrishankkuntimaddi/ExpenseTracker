@@ -234,7 +234,15 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                   <MetricCard label="Total Income"   value={stats.totalIncome}  color="var(--income)"  bg="var(--income-bg)"  border="var(--income-border)"  Icon={TrendingUp}   />
                   <MetricCard label="Total Expense"  value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={TrendingDown}  />
                   <MetricCard label="Savings"        value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" Icon={PiggyBank}    />
-                  <MetricCard label="Given to People" value={stats.totalPerson} color="var(--person)"  bg="var(--person-bg)"  border="var(--person-border)"  Icon={Users}        />
+                  <MetricCard
+                    label={stats.allTimeNetPerson < 0 ? "You Owe (Debt)" : "Owes You (Debt)"}
+                    value={Math.abs(stats.allTimeNetPerson)}
+                    color="var(--person)"
+                    bg="var(--person-bg)"
+                    border="var(--person-border)"
+                    Icon={Users}
+                    sub={stats.allTimeNetPerson < 0 ? `You owe ${formatAmount(stats.allTimeNetOwed)}` : `Others owe you ${formatAmount(stats.allTimeNetLent)}`}
+                  />
                 </div>
               </Section>
 
@@ -255,10 +263,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                           dataKey="value" paddingAngle={3}
                         >
                           {pieData.map((e, i) => (
-                            <Cell key={i} fill={
-                              e.name === 'Expense' ? C.expense :
-                              e.name === 'Savings' ? C.savings : C.person
-                            } />
+                            <Cell key={i} fill={e.color} />
                           ))}
                         </Pie>
                         <Tooltip content={<ChartTip />} />
@@ -269,8 +274,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                         <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                           <div style={{
                             width: 10, height: 10, borderRadius: 3,
-                            background: d.name === 'Expense' ? C.expense : d.name === 'Savings' ? C.savings : C.person,
-                            flexShrink: 0,
+                            background: d.color, flexShrink: 0,
                           }} />
                           <div>
                             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)' }}>{d.name}</div>
@@ -287,54 +291,79 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                 )}
               </Section>
 
-              {/* Daily Bar Chart */}
+              {/* Daily Bar Chart (Horizontally Scrollable) */}
               <Section title="Last 14 Days — Daily Spending">
                 <div style={{
                   background: 'var(--surface)', borderRadius: 14,
                   border: '1px solid var(--border)', padding: 14, marginTop: 8,
+                  overflowX: 'auto', WebkitOverflowScrolling: 'touch',
                 }}>
-                  <ResponsiveContainer width="100%" height={140}>
-                    <BarChart data={barData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                      <XAxis dataKey="day" tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<ChartTip />} cursor={{ fill: 'var(--surface2)' }} />
-                      <Bar dataKey="Expense" fill={C.expense} radius={[4, 4, 0, 0]} maxBarSize={20} />
-                      <Bar dataKey="Savings" fill={C.savings} radius={[4, 4, 0, 0]} maxBarSize={20} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div style={{ minWidth: 480, height: 150 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={barData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                        <XAxis dataKey="day" tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                        <Tooltip content={<ChartTip />} cursor={{ fill: 'var(--surface2)' }} />
+                        <Bar dataKey="Expense" fill={C.expense} radius={[4, 4, 0, 0]} maxBarSize={18} />
+                        <Bar dataKey="Savings" fill={C.savings} radius={[4, 4, 0, 0]} maxBarSize={18} />
+                        <Bar dataKey="Lent"    fill={C.lent}    radius={[4, 4, 0, 0]} maxBarSize={18} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </Section>
 
-              {/* Area Chart: Income vs Expense last 6 months */}
-              <Section title="6-Month Trend — Income vs Expense">
+              {/* Area Chart: 6-Month Trend (All 4 Series + Horizontally Scrollable) */}
+              <Section title="6-Month Trend — All Financials">
                 <div style={{
                   background: 'var(--surface)', borderRadius: 14,
                   border: '1px solid var(--border)', padding: 14, marginTop: 8,
+                  overflowX: 'auto', WebkitOverflowScrolling: 'touch',
                 }}>
-                  <ResponsiveContainer width="100%" height={140}>
-                    <AreaChart data={areaData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="incGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor={C.income} stopOpacity={0.3} />
-                          <stop offset="95%" stopColor={C.income} stopOpacity={0}   />
-                        </linearGradient>
-                        <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor={C.expense} stopOpacity={0.3} />
-                          <stop offset="95%" stopColor={C.expense} stopOpacity={0}   />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                      <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<ChartTip />} />
-                      <Area type="monotone" dataKey="Income"  stroke={C.income}  strokeWidth={2} fill="url(#incGrad)" dot={{ r: 3, fill: C.income }}  />
-                      <Area type="monotone" dataKey="Expense" stroke={C.expense} strokeWidth={2} fill="url(#expGrad)" dot={{ r: 3, fill: C.expense }} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                  <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 8 }}>
-                    <ChartLegend color={C.income}  label="Income"  />
-                    <ChartLegend color={C.expense} label="Expense" />
+                  <div style={{ minWidth: 520, height: 170 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={areaData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="incGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor={C.income}       stopOpacity={0.3} />
+                            <stop offset="95%" stopColor={C.income}       stopOpacity={0}   />
+                          </linearGradient>
+                          <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor={C.expense}      stopOpacity={0.3} />
+                            <stop offset="95%" stopColor={C.expense}      stopOpacity={0}   />
+                          </linearGradient>
+                          <linearGradient id="savGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor={C.savings}      stopOpacity={0.3} />
+                            <stop offset="95%" stopColor={C.savings}      stopOpacity={0}   />
+                          </linearGradient>
+                          <linearGradient id="lentGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor={C.lent}         stopOpacity={0.3} />
+                            <stop offset="95%" stopColor={C.lent}         stopOpacity={0}   />
+                          </linearGradient>
+                          <linearGradient id="repaidGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor={C.borrowed}     stopOpacity={0.3} />
+                            <stop offset="95%" stopColor={C.borrowed}     stopOpacity={0}   />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                        <Tooltip content={<ChartTip />} />
+                        <Area type="monotone" dataKey="Income"       stroke={C.income}   strokeWidth={2} fill="url(#incGrad)"    dot={{ r: 3, fill: C.income }}   />
+                        <Area type="monotone" dataKey="Expense"      stroke={C.expense}  strokeWidth={2} fill="url(#expGrad)"    dot={{ r: 3, fill: C.expense }}  />
+                        <Area type="monotone" dataKey="Savings"      stroke={C.savings}  strokeWidth={2} fill="url(#savGrad)"    dot={{ r: 3, fill: C.savings }}  />
+                        <Area type="monotone" dataKey="Lent"         stroke={C.lent}     strokeWidth={2} fill="url(#lentGrad)"   dot={{ r: 3, fill: C.lent }}     />
+                        <Area type="monotone" dataKey="Debt Repaid"  stroke={C.borrowed} strokeWidth={2} fill="url(#repaidGrad)" dot={{ r: 3, fill: C.borrowed }} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 10, flexWrap: 'wrap' }}>
+                    <ChartLegend color={C.income}   label="Income"      />
+                    <ChartLegend color={C.expense}  label="Expense"     />
+                    <ChartLegend color={C.savings}  label="Savings"     />
+                    <ChartLegend color={C.lent}     label="Lent"        />
+                    <ChartLegend color={C.borrowed} label="Debt Repaid" />
                   </div>
                 </div>
               </Section>

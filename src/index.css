@@ -30,19 +30,42 @@
   --accent-bg:    #EEF2FF;
   --accent-border:#C7D2FE;
 
-  /* Category colors */
+  /* Category colors — INCOME family */
   --income:         #059669;
   --income-bg:      #ECFDF5;
   --income-border:  #A7F3D0;
 
+  /* Category colors — EXPENSE family */
   --expense:        #E11D48;
   --expense-bg:     #FFF1F2;
   --expense-border: #FECDD3;
 
+  /* Category colors — SAVINGS family */
   --savings:        #2563EB;
   --savings-bg:     #EFF6FF;
   --savings-border: #BFDBFE;
 
+  /* Category colors — PERSON: LENT (you gave, expect back) */
+  --lent:           #D97706;
+  --lent-bg:        #FFFBEB;
+  --lent-border:    #FDE68A;
+
+  /* Category colors — PERSON: BORROWED (you took, owe back) */
+  --borrowed:        #DC2626;
+  --borrowed-bg:     #FEF2F2;
+  --borrowed-border: #FECACA;
+
+  /* Category colors — PERSON: REPAYMENT REC. (money returned to you) */
+  --repayment-rec:        #0891B2;
+  --repayment-rec-bg:     #ECFEFF;
+  --repayment-rec-border: #A5F3FC;
+
+  /* Category colors — PERSON: GIVEN / DEBT REPAID / GIFT */
+  --given:        #7C3AED;
+  --given-bg:     #F5F3FF;
+  --given-border: #DDD6FE;
+
+  /* Legacy person (neutral — for mixed/unknown direction) */
   --person:         #D97706;
   --person-bg:      #FFFBEB;
   --person-border:  #FDE68A;
@@ -98,19 +121,42 @@
   --accent-bg:    rgba(99, 102, 241, 0.12);
   --accent-border:rgba(99, 102, 241, 0.25);
 
-  /* Category colors */
+  /* Category colors — INCOME family */
   --income:         #10B981;
   --income-bg:      rgba(16, 185, 129, 0.12);
   --income-border:  rgba(16, 185, 129, 0.25);
 
+  /* Category colors — EXPENSE family */
   --expense:        #F43F5E;
   --expense-bg:     rgba(244, 63, 94, 0.12);
   --expense-border: rgba(244, 63, 94, 0.25);
 
+  /* Category colors — SAVINGS family */
   --savings:        #3B82F6;
   --savings-bg:     rgba(59, 130, 246, 0.12);
   --savings-border: rgba(59, 130, 246, 0.25);
 
+  /* Category colors — PERSON: LENT */
+  --lent:           #F59E0B;
+  --lent-bg:        rgba(245, 158, 11, 0.12);
+  --lent-border:    rgba(245, 158, 11, 0.25);
+
+  /* Category colors — PERSON: BORROWED */
+  --borrowed:        #F87171;
+  --borrowed-bg:     rgba(248, 113, 113, 0.12);
+  --borrowed-border: rgba(248, 113, 113, 0.25);
+
+  /* Category colors — PERSON: REPAYMENT REC. */
+  --repayment-rec:        #22D3EE;
+  --repayment-rec-bg:     rgba(34, 211, 238, 0.12);
+  --repayment-rec-border: rgba(34, 211, 238, 0.25);
+
+  /* Category colors — PERSON: GIVEN / DEBT REPAID / GIFT */
+  --given:        #A78BFA;
+  --given-bg:     rgba(167, 139, 250, 0.12);
+  --given-border: rgba(167, 139, 250, 0.25);
+
+  /* Legacy person (neutral) */
   --person:         #F59E0B;
   --person-bg:      rgba(245, 158, 11, 0.12);
   --person-border:  rgba(245, 158, 11, 0.25);
