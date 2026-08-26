@@ -655,7 +655,7 @@ export default function ExternalTab({
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0 100px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
 
         {/* ═══ SESSIONS LIST VIEW (when no session is open for editing) ═══ */}
         {!currentSession && (
@@ -767,7 +767,7 @@ export default function ExternalTab({
           <div>
             {/* Session Metadata Controls (Name & Date) */}
             <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 180px', gap: 12,
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12,
               marginBottom: 18, background: 'var(--surface)', padding: 14,
               borderRadius: 14, border: '1px solid var(--border)',
             }}>
@@ -824,14 +824,14 @@ export default function ExternalTab({
                 </div>
 
                 <div style={tableStyle}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 36px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 95px 32px' }}>
                     <div style={thStyle}>Item Name</div>
                     <div style={{ ...thStyle, borderLeft: '1px solid var(--border)' }}>Amount (₹)</div>
                     <div style={{ ...thStyle, borderLeft: '1px solid var(--border)' }} />
                   </div>
                   {items.map((item, idx) => (
                     <div key={item.id} style={{
-                      display: 'grid', gridTemplateColumns: '1fr 130px 36px',
+                      display: 'grid', gridTemplateColumns: '1fr 95px 32px',
                       borderBottom: idx < items.length - 1 ? '1px solid var(--border)' : 'none',
                     }}>
                       <div style={{ borderRight: '1px solid var(--border)' }}>
@@ -853,7 +853,7 @@ export default function ExternalTab({
                       </div>
                     </div>
                   ))}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 36px', background: 'var(--surface2)', borderTop: '2px solid var(--border)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 95px 32px', background: 'var(--surface2)', borderTop: '2px solid var(--border)' }}>
                     <div style={{ padding: '9px 11px', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textAlign: 'right', borderRight: '1px solid var(--border)' }}>Total Spent</div>
                     <div style={{ padding: '9px 11px', fontSize: 13, fontWeight: 800, color: 'var(--expense)', borderRight: '1px solid var(--border)' }}>{formatAmount(totalSpent)}</div>
                     <div />
@@ -881,14 +881,14 @@ export default function ExternalTab({
                 </div>
 
                 <div style={tableStyle}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 36px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 95px 32px' }}>
                     <div style={thStyle}>Person Name</div>
                     <div style={{ ...thStyle, borderLeft: '1px solid var(--border)' }}>Amount (₹)</div>
                     <div style={{ ...thStyle, borderLeft: '1px solid var(--border)' }} />
                   </div>
                   {received.map((row, idx) => (
                     <div key={row.id} style={{
-                      display: 'grid', gridTemplateColumns: '1fr 130px 36px',
+                      display: 'grid', gridTemplateColumns: '1fr 95px 32px',
                       borderBottom: idx < received.length - 1 ? '1px solid var(--border)' : 'none',
                     }}>
                       <div style={{ borderRight: '1px solid var(--border)' }}>
@@ -910,7 +910,7 @@ export default function ExternalTab({
                       </div>
                     </div>
                   ))}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 36px', background: 'var(--surface2)', borderTop: '2px solid var(--border)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 95px 32px', background: 'var(--surface2)', borderTop: '2px solid var(--border)' }}>
                     <div style={{ padding: '9px 11px', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textAlign: 'right', borderRight: '1px solid var(--border)' }}>Total Received</div>
                     <div style={{ padding: '9px 11px', fontSize: 13, fontWeight: 800, color: 'var(--income)', borderRight: '1px solid var(--border)' }}>{formatAmount(totalReceived)}</div>
                     <div />

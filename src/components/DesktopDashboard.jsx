@@ -995,10 +995,10 @@ export default function DesktopDashboard({
           </div>
 
           {/* RIGHT: Income + Analytics */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'stretch' }}>
 
             {/* Income & Borrowed Money Panel */}
-            <DCard>
+            <DCard style={{ height: '100%' }}>
               <CardHeader
                 title="Income & Inflows"
                 right={
@@ -1198,7 +1198,7 @@ export default function DesktopDashboard({
                 ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
                 return (
-                  <div style={{ maxHeight: 280, overflowY: 'auto', borderTop: '1px solid var(--border)' }}>
+                  <div style={{ maxHeight: 210, overflowY: 'auto', borderTop: '1px solid var(--border)' }}>
                     {combinedList.length === 0 ? (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 70 }}>
                         <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No entries this period</p>
@@ -1264,7 +1264,7 @@ export default function DesktopDashboard({
             </DCard>
 
             {/* Analytics Panel */}
-            <DCard>
+            <DCard style={{ height: '100%' }}>
               <CardHeader title="Analytics" sub={getPeriodLabel(selectedPeriod)} />
               <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -1361,22 +1361,14 @@ export default function DesktopDashboard({
                             <div style={{ height: '100%', width: `${wstRatio}%`, borderRadius: 99, background: 'var(--expense)', transition: 'width 0.3s ease' }} />
                           </div>
                         </div>
-
-                        {/* Net Period Cash Status */}
-                        <div style={{ marginTop: 4, padding: '8px 10px', borderRadius: 8, background: netSurplus >= 0 ? 'var(--income-bg)' : 'var(--expense-bg)', border: `1px solid ${netSurplus >= 0 ? 'var(--income-border)' : 'var(--expense-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Net Cash Flow</span>
-                          <span style={{ fontSize: 11, fontWeight: 800, color: netSurplus >= 0 ? 'var(--income)' : 'var(--expense)' }}>
-                            {netSurplus >= 0 ? `+ ${formatAmount(netSurplus)} Surplus` : `- ${formatAmount(Math.abs(netSurplus))} Deficit`}
-                          </span>
-                        </div>
                       </>
                     );
                   })()}
                 </div>
 
                 {/* Cash Flow Trend Graph */}
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
                       Cash Flow Trend (6 Months)
                     </p>
@@ -1389,7 +1381,7 @@ export default function DesktopDashboard({
                       </span>
                     </div>
                   </div>
-                  <ResponsiveContainer width="100%" height={150}>
+                  <ResponsiveContainer width="100%" height={130}>
                     <AreaChart data={areaData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                       <defs>
                         <linearGradient id="incGrad" x1="0" y1="0" x2="0" y2="1">
