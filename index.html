@@ -58,14 +58,16 @@
     <script>
       (function() {
         try {
-          var s = localStorage.getItem('expenseTrackerState');
-          var parsed = s && JSON.parse(s);
-          var theme = parsed && parsed.settings && parsed.settings.theme;
-          if (theme) document.documentElement.setAttribute('data-theme', theme);
+          var t = localStorage.getItem('et_theme');
+          if (!t) {
+            var s = localStorage.getItem('expense_tracker_v1') || localStorage.getItem('expenseTrackerState');
+            var parsed = s && JSON.parse(s);
+            t = parsed && parsed.settings && parsed.settings.theme;
+          }
+          t = t || 'light';
+          document.documentElement.setAttribute('data-theme', t);
+          document.body.style.backgroundColor = t === 'monoflow' ? '#0c0c0c' : '#F8FAFC';
         } catch(e) {}
-        // Set body colour to match current theme before React mounts
-        var t = document.documentElement.getAttribute('data-theme');
-        document.body.style.backgroundColor = t === 'monoflow' ? '#0c0c0c' : '#F8FAFC';
       })();
     </script>
 
