@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Upload, Pencil } from 'lucide-react';
-import { formatAmount } from '../../utils/dateHelpers';
+import { formatAmount, formatDate, getWeekStart } from '../../utils/dateHelpers';
 import PeriodSelector from '../../components/PeriodSelector';
 import { useWastage } from '../../hooks/useWastage';
 import { useTransactions } from '../../hooks/useTransactions';
@@ -14,10 +14,11 @@ export default function HistoryTab({
   onUpdateTransaction, onDeleteTransaction,
   onAddTransaction, onAddIncome,
 }) {
-  const [collapsedGroups, setCollapsedGroups] = useState(new Set());
-  const [showImport, setShowImport]           = useState(false);
-  const [editingTxn, setEditingTxn]         = useState(null);
-  const [deletingId, setDeletingId]         = useState(null);
+  const [expandAll, setExpandAll]         = useState(false);
+  const [customToggles, setCustomToggles] = useState({});
+  const [showImport, setShowImport]       = useState(false);
+  const [editingTxn, setEditingTxn]     = useState(null);
+  const [deletingId, setDeletingId]     = useState(null);
 
   const { editingWaste, wasteInput, wasteInputRef, handleTxnTap, saveWaste, cancelWaste, setWasteInput } = useWastage(onUpdateTransaction);
 
@@ -31,12 +32,58 @@ export default function HistoryTab({
     waste:   filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + (t.wasteAmount || 0), 0),
   }), [filtTxns]);
 
-  function toggleGroup(label) {
-    setCollapsedGroups(prev => {
-      const next = new Set(prev);
-      next.has(label) ? next.delete(label) : next.add(label);
-      return next;
+  function isGroupCurrent(groupLabel) {
+    const todayIso = new Date().toISOString();
+    let isCurrent = false;
+
+    if (grouping === 'month') {
+      const currentMonthLabel = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+      isCurrent = groupLabel === currentMonthLabel;
+    } else if (grouping === 'week') {
+      const currentWeekLabel = `Week of ${formatDate(getWeekStart(todayIso).toISOString())}`;
+      isCurrent = groupLabel === currentWeekLabel;
+    } else {
+      const todayLabel = formatDate(todayIso);
+      isCurrent = groupLabel === todayLabel;
+    }
+
+    if (isCurrent) return true;
+
+    // Fallback: If current day/period is not present in grouped list, expand the top/first group
+    const hasCurrentGroupInList = grouped.some(g => {
+      if (grouping === 'month') return g.label === new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+      if (grouping === 'week') return g.label === `Week of ${formatDate(getWeekStart(todayIso).toISOString())}`;
+      return g.label === formatDate(todayIso);
     });
+
+    if (!hasCurrentGroupInList && grouped.length > 0 && grouped[0].label === groupLabel) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function isGroupExpanded(groupLabel) {
+    if (customToggles[groupLabel] !== undefined) {
+      return customToggles[groupLabel];
+    }
+    if (expandAll) {
+      return true;
+    }
+    return isGroupCurrent(groupLabel);
+  }
+
+  function toggleGroup(label) {
+    const currentlyExpanded = isGroupExpanded(label);
+    setCustomToggles(prev => ({
+      ...prev,
+      [label]: !currentlyExpanded,
+    }));
+  }
+
+  function handleToggleExpandAll(checked) {
+    setExpandAll(checked);
+    setCustomToggles({});
   }
 
   const groupLabel = grouping === 'month' ? 'Grouped by month'
@@ -83,9 +130,42 @@ export default function HistoryTab({
             <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
               History
             </h1>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-              {groupLabel} · {filtTxns.length} transactions
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
+                {groupLabel} · {filtTxns.length} transactions
+              </p>
+              <label
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '3px 8px',
+                  borderRadius: 8,
+                  background: expandAll ? 'var(--accent-bg)' : 'var(--surface2)',
+                  border: `1.5px solid ${expandAll ? 'var(--accent-border)' : 'var(--border)'}`,
+                  color: expandAll ? 'var(--accent)' : 'var(--text-secondary)',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={expandAll}
+                  onChange={e => handleToggleExpandAll(e.target.checked)}
+                  style={{
+                    accentColor: 'var(--accent)',
+                    cursor: 'pointer',
+                    width: 13,
+                    height: 13,
+                    margin: 0,
+                  }}
+                />
+                <span>Expand All</span>
+              </label>
+            </div>
           </div>
           {/* Load Past Data button */}
           {onAddTransaction && onAddIncome && (
@@ -147,7 +227,7 @@ export default function HistoryTab({
           </div>
         ) : (
           grouped.map(group => {
-            const isCollapsed = collapsedGroups.has(group.label);
+            const isCollapsed = !isGroupExpanded(group.label);
             const groupTotal  = group.entries.reduce((s, t) => s + t.amount, 0);
 
             return (
