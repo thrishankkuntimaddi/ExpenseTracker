@@ -289,6 +289,32 @@ export function useExternalTransactions(uid) {
     }
   }, []);
 
+  /* ── Archive session — hide but keep data intact ── */
+  const archiveSession = useCallback(async (id) => {
+    if (!uidRef.current) return;
+    // Store the previous status so we can restore it on unarchive
+    const prev_status = sessions.find((s) => s.id === id)?.status ?? 'closed';
+    setSessions((prev) => prev.map((s) => s.id === id ? { ...s, status: 'archived', _prevStatus: prev_status } : s));
+    try {
+      await upsertExternalTransaction(uidRef.current, { id, status: 'archived', _prevStatus: prev_status });
+    } catch (err) {
+      console.error('[archiveSession] Firestore write failed:', err);
+    }
+  }, [sessions]);
+
+  /* ── Unarchive session — restore to previous status ── */
+  const unarchiveSession = useCallback(async (id) => {
+    if (!uidRef.current) return;
+    const session = sessions.find((s) => s.id === id);
+    const restoreStatus = session?._prevStatus ?? 'closed';
+    setSessions((prev) => prev.map((s) => s.id === id ? { ...s, status: restoreStatus, _prevStatus: undefined } : s));
+    try {
+      await upsertExternalTransaction(uidRef.current, { id, status: restoreStatus, _prevStatus: null });
+    } catch (err) {
+      console.error('[unarchiveSession] Firestore write failed:', err);
+    }
+  }, [sessions]);
+
   return {
     sessions,
     saving,
@@ -299,5 +325,7 @@ export function useExternalTransactions(uid) {
     closeSession,
     deleteSession,
     reopenSession,
+    archiveSession,
+    unarchiveSession,
   };
 }

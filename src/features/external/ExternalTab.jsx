@@ -4,6 +4,7 @@ import {
   ChevronRight, IndianRupee, User, ShoppingBag, TrendingUp,
   TrendingDown, AlertCircle, Clock, X, Loader2, Package,
   ReceiptText, ArrowLeft, Save, FileEdit, Calendar, PenLine, Pencil,
+  Archive, ArchiveRestore,
 } from 'lucide-react';
 import { useExternalTransactions } from '../../hooks/useExternalTransactions';
 import { generateId } from '../../utils/storage';
@@ -215,19 +216,21 @@ function ConfirmCloseModal({ totalReceived, totalSpent, netBalance, sessionName,
   );
 }
 
-/* ─── Session History Card ───────────────────────────────────────── */
-function HistoryCard({ session, onEdit, onDelete }) {
+/* ─── Session History Card ────────────────────────────────────── */
+function HistoryCard({ session, onEdit, onDelete, onArchive, onUnarchive }) {
   const [open, setOpen] = useState(false);
-  const net      = session.net_balance ?? 0;
-  const isProfit = net > 0;
-  const isLoss   = net < 0;
-  const persons  = (session.received ?? []).filter(r => r.person?.trim() && r.amount > 0).map(r => r.person).join(', ') || 'Unknown';
+  const net       = session.net_balance ?? 0;
+  const isProfit  = net > 0;
+  const isLoss    = net < 0;
+  const isArchived = session.status === 'archived';
+  const persons   = (session.received ?? []).filter(r => r.person?.trim() && r.amount > 0).map(r => r.person).join(', ') || 'Unknown';
 
   return (
     <div style={{
-      border: '1px solid var(--border)', borderRadius: 14,
-      overflow: 'hidden', background: 'var(--surface)',
+      border: `1px solid ${isArchived ? 'var(--border)' : 'var(--border)'}`,
+      borderRadius: 14, overflow: 'hidden', background: 'var(--surface)',
       boxShadow: 'var(--shadow-sm)',
+      opacity: isArchived ? 0.75 : 1,
     }}>
       {/* Header row */}
       <button
@@ -243,8 +246,17 @@ function HistoryCard({ session, onEdit, onDelete }) {
           {open ? <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                 : <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {session.name || persons}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {isArchived && (
+                <span style={{
+                  fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4,
+                  background: 'var(--surface2)', color: 'var(--text-muted)',
+                  border: '1px solid var(--border)', letterSpacing: '0.05em', textTransform: 'uppercase',
+                }}>Archived</span>
+              )}
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {session.name || persons}
+              </div>
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
               {session.date ? formatDate(session.date) : '—'} · {session.status?.toUpperCase() ?? 'CLOSED'}
@@ -258,9 +270,10 @@ function HistoryCard({ session, onEdit, onDelete }) {
           }}>
             {net >= 0 ? '+' : ''}{formatAmount(net)}
           </span>
-          {onEdit && (
+          {onEdit && !isArchived && (
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(session.id); }}
+              title="Edit session"
               style={{
                 width: 26, height: 26, borderRadius: 6, background: 'var(--surface2)', border: '1px solid var(--border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -272,9 +285,40 @@ function HistoryCard({ session, onEdit, onDelete }) {
               <Pencil size={12} />
             </button>
           )}
+          {onUnarchive && isArchived && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onUnarchive(session.id); }}
+              title="Unarchive — restore to history"
+              style={{
+                width: 26, height: 26, borderRadius: 6, background: 'var(--surface2)', border: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--text-muted)', cursor: 'pointer',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--savings)'; e.currentTarget.style.background = 'var(--savings-bg)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--surface2)'; }}
+            >
+              <ArchiveRestore size={12} />
+            </button>
+          )}
+          {onArchive && !isArchived && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onArchive(session.id); }}
+              title="Archive — hide from main list"
+              style={{
+                width: 26, height: 26, borderRadius: 6, background: 'transparent', border: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--text-muted)', cursor: 'pointer',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--surface2)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+            >
+              <Archive size={12} />
+            </button>
+          )}
           {onDelete && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(session.id); }}
+              title="Delete permanently"
               style={{
                 width: 26, height: 26, borderRadius: 6, background: 'transparent', border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -332,6 +376,7 @@ function HistoryCard({ session, onEdit, onDelete }) {
   );
 }
 
+
 /* ═══════════════════════════════════════════════════════════════
    MAIN ExternalTab
    Supports multiple sessions (Active, Drafts, History), name & date!
@@ -347,6 +392,7 @@ export default function ExternalTab({
     sessions, saving,
     createSession, updateSession, saveDraftSession,
     discardSession, closeSession, deleteSession, reopenSession,
+    archiveSession, unarchiveSession,
   } = useExternalTransactions(user?.uid);
 
   const [activeSessionId, setActiveSessionId] = useState(null);
@@ -354,6 +400,7 @@ export default function ExternalTab({
   const [showCloseModal, setShowCloseModal]   = useState(false);
   const [deletingId, setDeletingId]           = useState(null);
   const [closing, setClosing]                 = useState(false);
+  const [showArchived, setShowArchived]       = useState(false);
 
   // Active session object currently opened in editor
   const currentSession = useMemo(() =>
@@ -539,9 +586,10 @@ export default function ExternalTab({
   }
 
   /* ── Filter sessions ── */
-  const activeSessions = sessions.filter(s => s.status === 'open');
-  const draftSessions  = sessions.filter(s => s.status === 'draft');
-  const closedSessions = selectedPeriod
+  const activeSessions   = sessions.filter(s => s.status === 'open');
+  const draftSessions    = sessions.filter(s => s.status === 'draft');
+  const archivedSessions = sessions.filter(s => s.status === 'archived');
+  const closedSessions   = selectedPeriod
     ? filterItemsByPeriod(sessions.filter(s => s.status === 'closed'), selectedPeriod)
     : sessions.filter(s => s.status === 'closed');
 
@@ -713,20 +761,37 @@ export default function ExternalTab({
                   {draftSessions.map(s => (
                     <div
                       key={s.id}
-                      onClick={() => setActiveSessionId(s.id)}
                       style={{
                         padding: '14px 16px', borderRadius: 14, background: 'var(--surface)',
-                        border: '1px solid var(--border)', cursor: 'pointer',
+                        border: '1px solid var(--border)',
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       }}
                     >
-                      <div>
+                      <div onClick={() => setActiveSessionId(s.id)} style={{ flex: 1, cursor: 'pointer' }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{s.name}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
                           {formatDate(s.date)} · Saved as draft
                         </div>
                       </div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>Resume →</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span
+                          onClick={() => setActiveSessionId(s.id)}
+                          style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', cursor: 'pointer' }}
+                        >Resume →</span>
+                        <button
+                          onClick={() => archiveSession(s.id)}
+                          title="Archive this draft"
+                          style={{
+                            width: 26, height: 26, borderRadius: 6, background: 'transparent', border: 'none',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: 'var(--text-muted)', cursor: 'pointer',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--surface2)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <Archive size={13} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -754,11 +819,55 @@ export default function ExternalTab({
                       session={s}
                       onEdit={handleEditSession}
                       onDelete={setDeletingId}
+                      onArchive={archiveSession}
                     />
                   ))}
                 </div>
               )}
             </div>
+
+            {/* ─── Archived Sessions ─── */}
+            {archivedSessions.length > 0 && (
+              <div>
+                {/* Toggle header */}
+                <button
+                  onClick={() => setShowArchived(v => !v)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                    padding: '10px 14px', borderRadius: 12,
+                    background: showArchived ? 'var(--surface2)' : 'transparent',
+                    border: '1px dashed var(--border)',
+                    cursor: 'pointer', fontFamily: 'inherit', marginBottom: showArchived ? 10 : 0,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <Archive size={13} style={{ color: 'var(--text-muted)' }} />
+                  <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+                    Archived ({archivedSessions.length})
+                  </span>
+                  <span style={{ marginLeft: 'auto' }}>
+                    {showArchived
+                      ? <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} />
+                      : <ChevronRight size={13} style={{ color: 'var(--text-muted)' }} />
+                    }
+                  </span>
+                </button>
+
+                {showArchived && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {archivedSessions.map(s => (
+                      <HistoryCard
+                        key={s.id}
+                        session={s}
+                        onDelete={setDeletingId}
+                        onUnarchive={unarchiveSession}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
         )}
 
