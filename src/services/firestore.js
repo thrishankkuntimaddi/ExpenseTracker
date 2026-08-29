@@ -154,13 +154,15 @@ export async function migrateFromLocalStorage(uid) {
    so we fetch all doc refs then delete them in parallel.
 ─────────────────────────────────────────────────────────────────── */
 export async function deleteAllUserData(uid) {
-  const [txnSnap, incSnap] = await Promise.all([
+  const [txnSnap, incSnap, recSnap] = await Promise.all([
     getDocs(query(txnsRef(uid))),
     getDocs(query(incRef(uid))),
+    getDocs(query(recentlyDeletedRef(uid))),
   ]);
   await Promise.all([
     ...txnSnap.docs.map((d) => deleteDoc(d.ref)),
     ...incSnap.docs.map((d) => deleteDoc(d.ref)),
+    ...recSnap.docs.map((d) => deleteDoc(d.ref)),
   ]);
 }
 
@@ -222,3 +224,67 @@ export async function closeExternalTransaction(uid, id, patch) {
 export async function deleteExternalTransaction(uid, id) {
   await deleteDoc(extDocRef(uid, id));
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   RECENTLY DELETED (Trash collection)
+   Collection: users/{uid}/recently_deleted
+═══════════════════════════════════════════════════════════════════ */
+
+const recentlyDeletedRef    = (uid)     => collection(db, "users", uid, "recently_deleted");
+const recentlyDeletedDocRef = (uid, id) => doc(db, "users", uid, "recently_deleted", id);
+
+export function subscribeToRecentlyDeleted(uid, onData) {
+  return onSnapshot(
+    query(recentlyDeletedRef(uid)),
+    { includeMetadataChanges: false },
+    (snap) => {
+      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // Sort newest deleted first
+      items.sort((a, b) => new Date(b.deletedAt || 0) - new Date(a.deletedAt || 0));
+      onData(items);
+    },
+    (err) => console.error("[Firestore] recently_deleted error", err)
+  );
+}
+
+export async function moveToRecentlyDeleted(uid, itemType, originalData) {
+  if (!uid || !originalData?.id) return;
+  const id = originalData.id;
+  const name = originalData.name || originalData.title || originalData.person || 'Unnamed Item';
+  const amount =
+    originalData.amount !== undefined && originalData.amount !== null
+      ? Number(originalData.amount)
+      : originalData.net_balance !== undefined && originalData.net_balance !== null
+      ? Math.abs(Number(originalData.net_balance))
+      : originalData.total_spent !== undefined && originalData.total_spent !== null
+      ? Number(originalData.total_spent)
+      : 0;
+
+  const date = originalData.date || originalData.createdAt || new Date().toISOString();
+  const category = originalData.category || originalData.type || itemType;
+
+  const item = {
+    id,
+    itemType, // 'expense' | 'income' | 'billing'
+    name,
+    amount,
+    date,
+    category,
+    originalData,
+    deletedAt: new Date().toISOString(),
+  };
+
+  await setDoc(recentlyDeletedDocRef(uid, id), clean(item));
+}
+
+export async function permanentlyDeleteFromRecentlyDeleted(uid, id) {
+  if (!uid || !id) return;
+  await deleteDoc(recentlyDeletedDocRef(uid, id));
+}
+
+export async function emptyRecentlyDeleted(uid) {
+  if (!uid) return;
+  const snap = await getDocs(query(recentlyDeletedRef(uid)));
+  await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+}
+

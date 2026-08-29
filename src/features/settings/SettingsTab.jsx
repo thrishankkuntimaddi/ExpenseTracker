@@ -2,17 +2,22 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Download, Upload, Trash2, Info,
   ChevronRight, Moon, Sun, FileSpreadsheet,
-  Database, Palette, LogOut, Link, RefreshCw, CloudUpload, ArrowDownToLine,
+  Database, Palette, LogOut, Link, RefreshCw, CloudUpload, ArrowDownToLine, RotateCcw,
 } from 'lucide-react';
 import { clearState, generateId } from '../../utils/storage';
 import { migrateFromLocalStorage, updateSettings as fsUpdateSettings, deleteAllUserData, purgeCarryForwardData } from '../../services/firestore';
 import { pushToSheet, pullFromSheet, validateSheet, checkServerHealth } from '../../services/googleSheets';
+import RecentlyDeletedModal from '../../components/RecentlyDeletedModal';
 
 export default function SettingsTab({
   onDataChange, onThemeChange, onSignOut,
   settings, theme, user,
   transactions = [], income = [],
   addTransaction, addIncome,
+  recentlyDeleted = [],
+  restoreDeletedItem,
+  permanentlyDeleteRecentlyDeletedItem,
+  emptyTrash,
 }) {
   const [feedback, setFeedback]       = useState(null);
   const [sheetUrl, setSheetUrl]       = useState(settings?.googleSheetUrl || '');
@@ -21,6 +26,7 @@ export default function SettingsTab({
   const [syncing, setSyncing]         = useState(false);
   const [pulling, setPulling]         = useState(false);
   const [serverOnline, setServerOnline] = useState(null); // null=unchecked, true, false
+  const [showTrashModal, setShowTrashModal] = useState(false);
   const fileInputRef = useRef(null);
   const csvInputRef  = useRef(null);
   const isMonoflow   = theme === 'monoflow';
@@ -270,6 +276,7 @@ export default function SettingsTab({
             {/* ── Data Management ── */}
             <SectionLabel Icon={Database}>Data Management</SectionLabel>
             <Card>
+              <ActionRow id="btn-recently-deleted" Icon={RotateCcw} label="Recently Deleted" sub={`${recentlyDeleted.length} ${recentlyDeleted.length === 1 ? 'item' : 'items'} in trash — view or revert`} iconColor="var(--expense)" onClick={() => setShowTrashModal(true)} />
               <ActionRow id="btn-export" Icon={Download} label="Export Data"    sub={`Download JSON — ${transactions.length} txns, ${income.length} income`} iconColor="var(--savings)" onClick={handleExport} />
               <ActionRow id="btn-import" Icon={Upload}   label={importing ? 'Importing…' : 'Import Data'}   sub="Restore from JSON backup file (writes to cloud)"          iconColor="var(--accent)"  onClick={() => !importing && fileInputRef.current?.click()} />
               <ActionRow id="btn-csv"    Icon={FileSpreadsheet} label={importing ? 'Importing…' : 'Import CSV'}  sub="Import .csv file (date,name,amount,type) → cloud"    iconColor="var(--income)"  onClick={() => !importing && csvInputRef.current?.click()} />
@@ -395,6 +402,15 @@ export default function SettingsTab({
 
         </div>
       </div>
+
+      <RecentlyDeletedModal
+        isOpen={showTrashModal}
+        onClose={() => setShowTrashModal(false)}
+        recentlyDeleted={recentlyDeleted}
+        onRestoreItem={restoreDeletedItem}
+        onPermanentlyDeleteItem={permanentlyDeleteRecentlyDeletedItem}
+        onEmptyTrash={emptyTrash}
+      />
 
       <style>{`
         @media (min-width: 1024px) { .settings-layout { display: flex; align-items: flex-start; gap: 24px; } }

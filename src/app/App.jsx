@@ -52,10 +52,11 @@ function AuthenticatedApp({ user, signOut }) {
   const isDesktop = useIsDesktop();
 
   const {
-    transactions, income, settings,
+    transactions, income, settings, recentlyDeleted,
     addTransaction, updateTransaction, deleteTransaction,
     addIncome, updateIncome, deleteIncome,
     saveSettings, handleDataChange,
+    restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   } = useFirestoreData(user.uid);
 
   const theme = settings?.theme || 'light';
@@ -90,7 +91,8 @@ function AuthenticatedApp({ user, signOut }) {
   }, [addTransaction, addIncome]);
 
   const commonProps = {
-    transactions, income, settings,
+    transactions, income, settings, recentlyDeleted,
+    restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
     selectedPeriod, onPeriodChange: setSelectedPeriod,
     theme, user,
   };

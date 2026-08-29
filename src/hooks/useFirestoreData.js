@@ -9,6 +9,11 @@ import {
   updateIncome as fsUpdateIncome,
   deleteIncome as fsDeleteIncome,
   updateSettings as fsUpdateSettings,
+  subscribeToRecentlyDeleted,
+  moveToRecentlyDeleted,
+  permanentlyDeleteFromRecentlyDeleted,
+  emptyRecentlyDeleted,
+  upsertExternalTransaction,
 } from "../services/firestore";
 import { saveState, loadState } from "../utils/storage";
 
@@ -22,17 +27,19 @@ export function useFirestoreData(uid) {
   const [transactions, setTransactions] = useState(cached.transactions);
   const [income, setIncome]             = useState(cached.income);
   const [settings, setSettings]         = useState(cached.settings);
+  const [recentlyDeleted, setRecentlyDeleted] = useState([]);
 
   const uidRef = useRef(uid);
   uidRef.current = uid;
 
   // Internal ref for optimistic delete rollback
   const deletedTxnRef = useRef(null);
+  const deletedIncRef = useRef(null);
 
   useEffect(() => {
     if (!uid) return;
 
-    const unsub = subscribeToUserData(uid, ({ transactions: t, income: i, settings: s }) => {
+    const unsubUser = subscribeToUserData(uid, ({ transactions: t, income: i, settings: s }) => {
       setTransactions(t);
       setIncome(i);
       if (s && Object.keys(s).length) setSettings(prev => ({ ...prev, ...s }));
@@ -40,7 +47,14 @@ export function useFirestoreData(uid) {
       saveState({ transactions: t, income: i, settings: s });
     });
 
-    return unsub;
+    const unsubRecently = subscribeToRecentlyDeleted(uid, (items) => {
+      setRecentlyDeleted(items);
+    });
+
+    return () => {
+      unsubUser();
+      unsubRecently();
+    };
   }, [uid]);
 
   /* ── Mutation handlers ── */
@@ -71,12 +85,16 @@ export function useFirestoreData(uid) {
 
   const deleteTransaction = useCallback(async (id) => {
     if (!uidRef.current) return;
+    let found = null;
     setTransactions(prev => {
-      const found = prev.find(t => t.id === id);
+      found = prev.find(t => t.id === id);
       if (found) deletedTxnRef.current = found;
       return prev.filter(t => t.id !== id);
     });
     try {
+      if (found) {
+        await moveToRecentlyDeleted(uidRef.current, 'expense', found);
+      }
       await fsDeleteTxn(uidRef.current, id);
     } catch (err) {
       console.error('[deleteTransaction] Firestore write failed:', err?.code, err?.message, err);
@@ -109,11 +127,22 @@ export function useFirestoreData(uid) {
 
   const deleteIncome = useCallback(async (id) => {
     if (!uidRef.current) return;
-    setIncome(prev => prev.filter(i => i.id !== id));
+    let found = null;
+    setIncome(prev => {
+      found = prev.find(i => i.id === id);
+      if (found) deletedIncRef.current = found;
+      return prev.filter(i => i.id !== id);
+    });
     try {
+      if (found) {
+        await moveToRecentlyDeleted(uidRef.current, 'income', found);
+      }
       await fsDeleteIncome(uidRef.current, id);
     } catch (err) {
       console.error('[deleteIncome] Firestore write failed:', err?.code, err?.message, err);
+      setIncome(prev =>
+        deletedIncRef.current ? [...prev, deletedIncRef.current] : prev
+      );
     }
   }, []);
 
@@ -129,6 +158,44 @@ export function useFirestoreData(uid) {
     }
   }, []);
 
+  /* ── Recently Deleted Handlers ── */
+
+  const restoreDeletedItem = useCallback(async (item) => {
+    if (!uidRef.current || !item) return;
+    const { itemType, originalData, id } = item;
+    try {
+      if (itemType === 'income') {
+        await fsAddIncome(uidRef.current, originalData);
+      } else if (itemType === 'billing') {
+        await upsertExternalTransaction(uidRef.current, originalData);
+      } else {
+        // default: expense / transaction
+        await fsAddTxn(uidRef.current, originalData);
+      }
+      await permanentlyDeleteFromRecentlyDeleted(uidRef.current, id);
+    } catch (err) {
+      console.error('[restoreDeletedItem] Restore failed:', err);
+    }
+  }, []);
+
+  const permanentlyDeleteRecentlyDeletedItem = useCallback(async (id) => {
+    if (!uidRef.current || !id) return;
+    try {
+      await permanentlyDeleteFromRecentlyDeleted(uidRef.current, id);
+    } catch (err) {
+      console.error('[permanentlyDeleteRecentlyDeletedItem] Failed:', err);
+    }
+  }, []);
+
+  const emptyTrash = useCallback(async () => {
+    if (!uidRef.current) return;
+    try {
+      await emptyRecentlyDeleted(uidRef.current);
+    } catch (err) {
+      console.error('[emptyTrash] Failed:', err);
+    }
+  }, []);
+
   // Batch update (used by import/reset)
   const handleDataChange = useCallback(({ transactions: t, income: i }) => {
     setTransactions(t);
@@ -136,9 +203,11 @@ export function useFirestoreData(uid) {
   }, []);
 
   return {
-    transactions, income, settings,
+    transactions, income, settings, recentlyDeleted,
     addTransaction, updateTransaction, deleteTransaction,
     addIncome, updateIncome, deleteIncome,
     saveSettings, handleDataChange,
+    restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   };
 }
+

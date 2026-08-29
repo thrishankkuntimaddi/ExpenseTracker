@@ -5,6 +5,7 @@ import {
   upsertExternalTransaction,
   closeExternalTransaction,
   deleteExternalTransaction,
+  moveToRecentlyDeleted,
 } from "../services/firestore";
 import { generateId } from "../utils/storage";
 import { todayInputValue, dateInputToISO, isoToMonth } from "../utils/dateHelpers";
@@ -121,6 +122,9 @@ export function useExternalTransactions(uid) {
 
       setSessions((prev) => prev.filter((s) => s.id !== id));
       try {
+        if (session) {
+          await moveToRecentlyDeleted(uidRef.current, 'billing', session);
+        }
         await deleteExternalTransaction(uidRef.current, id);
       } catch (err) {
         console.error('[discardSession] Firestore delete failed:', err);
@@ -270,6 +274,9 @@ export function useExternalTransactions(uid) {
 
       setSessions((prev) => prev.filter((s) => s.id !== id));
       try {
+        if (session) {
+          await moveToRecentlyDeleted(uidRef.current, 'billing', session);
+        }
         await deleteExternalTransaction(uidRef.current, id);
       } catch (err) {
         console.error('[deleteSession] Firestore delete failed:', err);

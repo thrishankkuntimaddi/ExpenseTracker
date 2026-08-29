@@ -138,12 +138,13 @@ function SummaryTile({ label, value, color, bg, border, Icon, gradient }) {
 
 /* ═══════════════════════════════════════════════════════════════ */
 export default function DesktopDashboard({
-  transactions, income, settings,
+  transactions, income, settings, recentlyDeleted = [],
   selectedPeriod, onPeriodChange,
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
   onAddIncome, onUpdateIncome, onDeleteIncome,
   onDataChange, onThemeChange,
   onSignOut, theme, user,
+  restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
 }) {
   const isMonoflow = theme === 'monoflow';
   // Use shared hooks
@@ -449,6 +450,10 @@ export default function DesktopDashboard({
             onDataChange={onDataChange}
             onThemeChange={onThemeChange}
             onSignOut={onSignOut}
+            recentlyDeleted={recentlyDeleted}
+            restoreDeletedItem={restoreDeletedItem}
+            permanentlyDeleteRecentlyDeletedItem={permanentlyDeleteRecentlyDeletedItem}
+            emptyTrash={emptyTrash}
           />
         </div>
       )}
