@@ -4,13 +4,14 @@ import {
   ChevronRight, IndianRupee, User, ShoppingBag, TrendingUp,
   TrendingDown, AlertCircle, Clock, X, Loader2, Package,
   ReceiptText, ArrowLeft, Save, FileEdit, Calendar, PenLine, Pencil,
-  Archive, ArchiveRestore, GripVertical,
+  Archive, ArchiveRestore, GripVertical, Share2,
 } from 'lucide-react';
 import { useExternalTransactions } from '../../hooks/useExternalTransactions';
 import { generateId } from '../../utils/storage';
 import { formatAmount, formatDate, todayInputValue, dateInputToISO, isoToDateInput, isoToMonth } from '../../utils/dateHelpers';
 import { filterItemsByPeriod, getPeriodLabel } from '../../utils/periodHelpers';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
+import ShareBillingModal from './ShareBillingModal';
 
 /* ─── Pure helpers ─────────────────────────────────────────────── */
 function calcTotals(items, received) {
@@ -217,7 +218,7 @@ function ConfirmCloseModal({ totalReceived, totalSpent, netBalance, sessionName,
 }
 
 /* ─── Session History Card ────────────────────────────────────── */
-function HistoryCard({ session, onEdit, onDelete, onArchive, onUnarchive }) {
+function HistoryCard({ session, onEdit, onDelete, onArchive, onUnarchive, onShare }) {
   const [open, setOpen] = useState(false);
   const net       = session.net_balance ?? 0;
   const isProfit  = net > 0;
@@ -270,6 +271,21 @@ function HistoryCard({ session, onEdit, onDelete, onArchive, onUnarchive }) {
           }}>
             {net >= 0 ? '+' : ''}{formatAmount(net)}
           </span>
+          {onShare && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onShare(session); }}
+              title="Share session summary & receipt"
+              style={{
+                width: 26, height: 26, borderRadius: 6, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--accent)', cursor: 'pointer',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = '0.8'; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+            >
+              <Share2 size={12} />
+            </button>
+          )}
           {onEdit && !isArchived && (
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(session.id); }}
@@ -402,6 +418,7 @@ export default function ExternalTab({
   const [closing, setClosing]                 = useState(false);
   const [showArchived, setShowArchived]       = useState(false);
   const [showHistory, setShowHistory]         = useState(false);
+  const [sharingSession, setSharingSession]   = useState(null);
 
   // Active session object currently opened in editor
   const currentSession = useMemo(() =>
@@ -414,6 +431,25 @@ export default function ExternalTab({
   const [sessionDate, setSessionDate]   = useState(todayInputValue());
   const [items, setItemRows]            = useState([newItemRow()]);
   const [received, setReceivedRows]     = useState([newReceivedRow()]);
+
+  const { totalSpent, totalReceived, netBalance } = useMemo(
+    () => calcTotals(items, received),
+    [items, received]
+  );
+
+  function handleShareCurrentSession() {
+    if (!currentSession) return;
+    setSharingSession({
+      ...currentSession,
+      name: sessionName || currentSession.name || 'Billing Session',
+      date: dateInputToISO(sessionDate),
+      items: items,
+      received: received,
+      total_spent: totalSpent,
+      total_received: totalReceived,
+      net_balance: netBalance,
+    });
+  }
 
   /* ── Sync local rows when active session changes ── */
   useEffect(() => {
@@ -434,11 +470,6 @@ export default function ExternalTab({
   }, [currentSession?.id]);
 
   /* ── Totals ── */
-  const { totalSpent, totalReceived, netBalance } = useMemo(
-    () => calcTotals(items, received),
-    [items, received]
-  );
-
   const isProfit = netBalance > 0;
   const isLoss   = netBalance < 0;
 
@@ -677,6 +708,14 @@ export default function ExternalTab({
         />
       )}
 
+      {/* Share Billing Modal */}
+      {sharingSession && (
+        <ShareBillingModal
+          session={sharingSession}
+          onClose={() => setSharingSession(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="tab-header">
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -709,6 +748,23 @@ export default function ExternalTab({
                 <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
                 Saving…
               </div>
+            )}
+            {currentSession && (
+              <button
+                onClick={handleShareCurrentSession}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '7px 12px', borderRadius: 10,
+                  fontSize: 11, fontWeight: 700,
+                  background: 'var(--accent-bg)',
+                  color: 'var(--accent)',
+                  border: '1px solid var(--accent-border)',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <Share2 size={13} /> Share Session
+              </button>
             )}
             {!currentSession && (
               <button
@@ -767,13 +823,26 @@ export default function ExternalTab({
                           Started {formatDate(s.date)} · Spend: {formatAmount(s.total_spent ?? 0)}
                         </div>
                       </div>
-                      <button style={{
-                        padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
-                        background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)',
-                        cursor: 'pointer', fontFamily: 'inherit',
-                      }}>
-                        Open Workspace →
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSharingSession(s); }}
+                          title="Share session summary & receipt"
+                          style={{
+                            padding: '8px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                            background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)',
+                            cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5,
+                          }}
+                        >
+                          <Share2 size={13} /> Share
+                        </button>
+                        <button style={{
+                          padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                          background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)',
+                          cursor: 'pointer', fontFamily: 'inherit',
+                        }}>
+                          Open Workspace →
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -807,6 +876,17 @@ export default function ExternalTab({
                           onClick={() => setActiveSessionId(s.id)}
                           style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', cursor: 'pointer' }}
                         >Resume →</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSharingSession(s); }}
+                          title="Share draft session"
+                          style={{
+                            width: 26, height: 26, borderRadius: 6, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: 'var(--accent)', cursor: 'pointer',
+                          }}
+                        >
+                          <Share2 size={12} />
+                        </button>
                         <button
                           onClick={() => archiveSession(s.id)}
                           title="Archive this draft"
@@ -867,6 +947,7 @@ export default function ExternalTab({
                         onEdit={handleEditSession}
                         onDelete={setDeletingId}
                         onArchive={archiveSession}
+                        onShare={setSharingSession}
                       />
                     ))}
                   </div>
@@ -909,6 +990,7 @@ export default function ExternalTab({
                         session={s}
                         onDelete={setDeletingId}
                         onUnarchive={unarchiveSession}
+                        onShare={setSharingSession}
                       />
                     ))}
                   </div>
@@ -1233,6 +1315,13 @@ export default function ExternalTab({
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}>
                   Discard
+                </button>
+                <button onClick={handleShareCurrentSession} style={{
+                  padding: '9px 14px', borderRadius: 11, fontSize: 12, fontWeight: 700,
+                  background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)',
+                  cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5,
+                }}>
+                  <Share2 size={13} /> Share
                 </button>
                 <button onClick={handleSaveDraft} style={{
                   padding: '9px 14px', borderRadius: 11, fontSize: 12, fontWeight: 700,
