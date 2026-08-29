@@ -2,12 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Download, Upload, Trash2, Info,
   ChevronRight, Moon, Sun, FileSpreadsheet,
-  Database, Palette, LogOut, Link, RefreshCw, CloudUpload, ArrowDownToLine, RotateCcw,
+  Database, Palette, LogOut, Link, RefreshCw, CloudUpload, ArrowDownToLine, RotateCcw, Smartphone,
 } from 'lucide-react';
 import { clearState, generateId } from '../../utils/storage';
 import { migrateFromLocalStorage, updateSettings as fsUpdateSettings, deleteAllUserData, purgeCarryForwardData } from '../../services/firestore';
 import { pushToSheet, pullFromSheet, validateSheet, checkServerHealth } from '../../services/googleSheets';
 import RecentlyDeletedModal from '../../components/RecentlyDeletedModal';
+import PWAInstallModal from '../../components/PWAInstallModal';
 
 export default function SettingsTab({
   onDataChange, onThemeChange, onSignOut,
@@ -18,6 +19,9 @@ export default function SettingsTab({
   restoreDeletedItem,
   permanentlyDeleteRecentlyDeletedItem,
   emptyTrash,
+  isStandalone,
+  canInstallNative,
+  onTriggerInstall,
 }) {
   const [feedback, setFeedback]       = useState(null);
   const [sheetUrl, setSheetUrl]       = useState(settings?.googleSheetUrl || '');
@@ -27,6 +31,7 @@ export default function SettingsTab({
   const [pulling, setPulling]         = useState(false);
   const [serverOnline, setServerOnline] = useState(null); // null=unchecked, true, false
   const [showTrashModal, setShowTrashModal] = useState(false);
+  const [showInstallGuideModal, setShowInstallGuideModal] = useState(false);
   const fileInputRef = useRef(null);
   const csvInputRef  = useRef(null);
   const isMonoflow   = theme === 'monoflow';
@@ -231,6 +236,17 @@ export default function SettingsTab({
   /* ── Theme ── */
   function toggleTheme() { onThemeChange(isMonoflow ? 'light' : 'monoflow'); }
 
+  async function handleInstallClick() {
+    if (onTriggerInstall) {
+      const res = await onTriggerInstall();
+      if (!res.success && !res.native) {
+        setShowInstallGuideModal(true);
+      }
+    } else {
+      setShowInstallGuideModal(true);
+    }
+  }
+
   return (
     <div className="tab-root">
       <div className="tab-header">
@@ -368,6 +384,24 @@ export default function SettingsTab({
               </div>
             </Card>
 
+            {/* ── Install App (Visible only when visiting website via browser, hidden when running in standalone installed app) ── */}
+            {!isStandalone && (
+              <>
+                <SectionLabel Icon={Smartphone}>Mobile App</SectionLabel>
+                <Card>
+                  <ActionRow
+                    id="btn-install-app"
+                    Icon={Smartphone}
+                    label="Install App"
+                    sub="Add to home screen for native mobile app experience"
+                    iconColor="var(--accent)"
+                    onClick={handleInstallClick}
+                    lastRow
+                  />
+                </Card>
+              </>
+            )}
+
             {/* ── Account ── */}
             <SectionLabel Icon={LogOut}>Account</SectionLabel>
             <Card>
@@ -410,6 +444,11 @@ export default function SettingsTab({
         onRestoreItem={restoreDeletedItem}
         onPermanentlyDeleteItem={permanentlyDeleteRecentlyDeletedItem}
         onEmptyTrash={emptyTrash}
+      />
+
+      <PWAInstallModal
+        isOpen={showInstallGuideModal}
+        onClose={() => setShowInstallGuideModal(false)}
       />
 
       <style>{`

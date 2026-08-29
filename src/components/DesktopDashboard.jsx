@@ -145,6 +145,7 @@ export default function DesktopDashboard({
   onDataChange, onThemeChange,
   onSignOut, theme, user,
   restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
+  isStandalone, canInstallNative, onTriggerInstall,
 }) {
   const isMonoflow = theme === 'monoflow';
   // Use shared hooks
@@ -454,6 +455,9 @@ export default function DesktopDashboard({
             restoreDeletedItem={restoreDeletedItem}
             permanentlyDeleteRecentlyDeletedItem={permanentlyDeleteRecentlyDeletedItem}
             emptyTrash={emptyTrash}
+            isStandalone={isStandalone}
+            canInstallNative={canInstallNative}
+            onTriggerInstall={onTriggerInstall}
           />
         </div>
       )}

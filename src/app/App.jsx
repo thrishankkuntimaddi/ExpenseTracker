@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Home, List, Wallet, BarChart2, Settings, ReceiptText, Users } from 'lucide-react';
 import { useFirestoreData } from '../hooks/useFirestoreData';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 import { getDefaultPeriod } from '../utils/periodHelpers';
 import AuthGate from '../features/auth/AuthGate';
 import TodayTab         from '../features/transactions/TodayTab';
@@ -50,6 +51,7 @@ function AuthenticatedApp({ user, signOut }) {
   const [activeTab, setActiveTab]           = useState('today');
   const [selectedPeriod, setSelectedPeriod] = useState(() => getDefaultPeriod());
   const isDesktop = useIsDesktop();
+  const { isStandalone, canInstallNative, triggerInstall } = usePWAInstall();
 
   const {
     transactions, income, settings, recentlyDeleted,
@@ -93,6 +95,7 @@ function AuthenticatedApp({ user, signOut }) {
   const commonProps = {
     transactions, income, settings, recentlyDeleted,
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
+    isStandalone, canInstallNative, onTriggerInstall: triggerInstall,
     selectedPeriod, onPeriodChange: setSelectedPeriod,
     theme, user,
   };
