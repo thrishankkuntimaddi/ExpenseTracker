@@ -1,10 +1,10 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
-  ArrowLeftRight, Plus, Trash2, CheckCircle2, ChevronDown,
+  ArrowLeftRight, Plus, Trash2, CheckCircle2, ChevronDown, ChevronUp,
   ChevronRight, IndianRupee, User, ShoppingBag, TrendingUp,
   TrendingDown, AlertCircle, Clock, X, Loader2, Package,
   ReceiptText, ArrowLeft, Save, FileEdit, Calendar, PenLine, Pencil,
-  Archive, ArchiveRestore,
+  Archive, ArchiveRestore, GripVertical,
 } from 'lucide-react';
 import { useExternalTransactions } from '../../hooks/useExternalTransactions';
 import { generateId } from '../../utils/storage';
@@ -401,6 +401,7 @@ export default function ExternalTab({
   const [deletingId, setDeletingId]           = useState(null);
   const [closing, setClosing]                 = useState(false);
   const [showArchived, setShowArchived]       = useState(false);
+  const [showHistory, setShowHistory]         = useState(false);
 
   // Active session object currently opened in editor
   const currentSession = useMemo(() =>
@@ -520,6 +521,34 @@ export default function ExternalTab({
   function removeReceivedRow(id) {
     setReceivedRows(prev => {
       const next = prev.length > 1 ? prev.filter(r => r.id !== id) : prev;
+      triggerSave(sessionName, sessionDate, items, next);
+      return next;
+    });
+  }
+
+  /* ── Row Reordering Handlers ── */
+  const [draggedItemIdx, setDraggedItemIdx] = useState(null);
+  const [dragOverItemIdx, setDragOverItemIdx] = useState(null);
+  const [draggedReceivedIdx, setDraggedReceivedIdx] = useState(null);
+  const [dragOverReceivedIdx, setDragOverReceivedIdx] = useState(null);
+
+  function reorderItemRows(fromIndex, toIndex) {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= items.length || toIndex >= items.length) return;
+    setItemRows(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      triggerSave(sessionName, sessionDate, next, received);
+      return next;
+    });
+  }
+
+  function reorderReceivedRows(fromIndex, toIndex) {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= received.length || toIndex >= received.length) return;
+    setReceivedRows(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
       triggerSave(sessionName, sessionDate, items, next);
       return next;
     });
@@ -800,29 +829,48 @@ export default function ExternalTab({
 
             {/* Closed Session History */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                <Clock size={14} style={{ color: 'var(--text-muted)' }} />
+              <button
+                onClick={() => setShowHistory(v => !v)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                  padding: '10px 14px', borderRadius: 12,
+                  background: showHistory ? 'var(--surface2)' : 'transparent',
+                  border: '1px dashed var(--border)',
+                  cursor: 'pointer', fontFamily: 'inherit', marginBottom: showHistory ? 10 : 0,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <Clock size={13} style={{ color: 'var(--text-muted)' }} />
                 <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
                   Session History ({closedSessions.length})
                 </span>
-              </div>
-              {closedSessions.length === 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', gap: 12, textAlign: 'center' }}>
-                  <ReceiptText size={28} style={{ color: 'var(--text-muted)' }} />
-                  <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>No closed sessions yet</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {closedSessions.map(s => (
-                    <HistoryCard
-                      key={s.id}
-                      session={s}
-                      onEdit={handleEditSession}
-                      onDelete={setDeletingId}
-                      onArchive={archiveSession}
-                    />
-                  ))}
-                </div>
+                <span style={{ marginLeft: 'auto' }}>
+                  {showHistory
+                    ? <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} />
+                    : <ChevronRight size={13} style={{ color: 'var(--text-muted)' }} />
+                  }
+                </span>
+              </button>
+
+              {showHistory && (
+                closedSessions.length === 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', gap: 12, textAlign: 'center' }}>
+                    <ReceiptText size={28} style={{ color: 'var(--text-muted)' }} />
+                    <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>No closed sessions yet</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {closedSessions.map(s => (
+                      <HistoryCard
+                        key={s.id}
+                        session={s}
+                        onEdit={handleEditSession}
+                        onDelete={setDeletingId}
+                        onArchive={archiveSession}
+                      />
+                    ))}
+                  </div>
+                )
               )}
             </div>
 
@@ -933,16 +981,78 @@ export default function ExternalTab({
                 </div>
 
                 <div style={tableStyle}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 95px 32px' }}>
-                    <div style={thStyle}>Item Name</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr 95px 32px' }}>
+                    <div style={{ ...thStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Reorder Rows">
+                      <GripVertical size={13} style={{ color: 'var(--text-muted)' }} />
+                    </div>
+                    <div style={{ ...thStyle, borderLeft: '1px solid var(--border)' }}>Item Name</div>
                     <div style={{ ...thStyle, borderLeft: '1px solid var(--border)' }}>Amount (₹)</div>
                     <div style={{ ...thStyle, borderLeft: '1px solid var(--border)' }} />
                   </div>
                   {items.map((item, idx) => (
-                    <div key={item.id} style={{
-                      display: 'grid', gridTemplateColumns: '1fr 95px 32px',
-                      borderBottom: idx < items.length - 1 ? '1px solid var(--border)' : 'none',
-                    }}>
+                    <div
+                      key={item.id}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = 'move';
+                        setDraggedItemIdx(idx);
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragOverItemIdx(idx);
+                      }}
+                      onDragLeave={() => setDragOverItemIdx(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (draggedItemIdx !== null && draggedItemIdx !== idx) {
+                          reorderItemRows(draggedItemIdx, idx);
+                        }
+                        setDraggedItemIdx(null);
+                        setDragOverItemIdx(null);
+                      }}
+                      style={{
+                        display: 'grid', gridTemplateColumns: '36px 1fr 95px 32px',
+                        borderBottom: idx < items.length - 1 ? '1px solid var(--border)' : 'none',
+                        background: dragOverItemIdx === idx ? 'var(--accent-bg)' : 'transparent',
+                        transition: 'background 0.15s ease',
+                      }}
+                    >
+                      {/* Reorder Handle Column */}
+                      <div
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          borderRight: '1px solid var(--border)', cursor: 'grab', padding: '0 2px',
+                          gap: 1,
+                        }}
+                        title="Drag to reorder row"
+                      >
+                        <GripVertical size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); reorderItemRows(idx, idx - 1); }}
+                            disabled={idx === 0}
+                            title="Move Up"
+                            style={{
+                              border: 'none', background: 'transparent', cursor: idx === 0 ? 'default' : 'pointer',
+                              opacity: idx === 0 ? 0.25 : 0.7, padding: 0, display: 'flex', color: 'var(--text-muted)'
+                            }}
+                          >
+                            <ChevronUp size={11} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); reorderItemRows(idx, idx + 1); }}
+                            disabled={idx === items.length - 1}
+                            title="Move Down"
+                            style={{
+                              border: 'none', background: 'transparent', cursor: idx === items.length - 1 ? 'default' : 'pointer',
+                              opacity: idx === items.length - 1 ? 0.25 : 0.7, padding: 0, display: 'flex', color: 'var(--text-muted)'
+                            }}
+                          >
+                            <ChevronDown size={11} />
+                          </button>
+                        </div>
+                      </div>
+
                       <div style={{ borderRight: '1px solid var(--border)' }}>
                         <input type="text" value={item.name} placeholder="Item description"
                           onChange={e => updateItem(item.id, 'name', e.target.value)} style={inputStyle} />
@@ -962,8 +1072,8 @@ export default function ExternalTab({
                       </div>
                     </div>
                   ))}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 95px 32px', background: 'var(--surface2)', borderTop: '2px solid var(--border)' }}>
-                    <div style={{ padding: '9px 11px', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textAlign: 'right', borderRight: '1px solid var(--border)' }}>Total Spent</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr 95px 32px', background: 'var(--surface2)', borderTop: '2px solid var(--border)' }}>
+                    <div style={{ gridColumn: 'span 2', padding: '9px 11px', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textAlign: 'right', borderRight: '1px solid var(--border)' }}>Total Spent</div>
                     <div style={{ padding: '9px 11px', fontSize: 13, fontWeight: 800, color: 'var(--expense)', borderRight: '1px solid var(--border)' }}>{formatAmount(totalSpent)}</div>
                     <div />
                   </div>
@@ -990,16 +1100,78 @@ export default function ExternalTab({
                 </div>
 
                 <div style={tableStyle}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 95px 32px' }}>
-                    <div style={thStyle}>Person Name</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr 95px 32px' }}>
+                    <div style={{ ...thStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Reorder Rows">
+                      <GripVertical size={13} style={{ color: 'var(--text-muted)' }} />
+                    </div>
+                    <div style={{ ...thStyle, borderLeft: '1px solid var(--border)' }}>Person Name</div>
                     <div style={{ ...thStyle, borderLeft: '1px solid var(--border)' }}>Amount (₹)</div>
                     <div style={{ ...thStyle, borderLeft: '1px solid var(--border)' }} />
                   </div>
                   {received.map((row, idx) => (
-                    <div key={row.id} style={{
-                      display: 'grid', gridTemplateColumns: '1fr 95px 32px',
-                      borderBottom: idx < received.length - 1 ? '1px solid var(--border)' : 'none',
-                    }}>
+                    <div
+                      key={row.id}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = 'move';
+                        setDraggedReceivedIdx(idx);
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragOverReceivedIdx(idx);
+                      }}
+                      onDragLeave={() => setDragOverReceivedIdx(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (draggedReceivedIdx !== null && draggedReceivedIdx !== idx) {
+                          reorderReceivedRows(draggedReceivedIdx, idx);
+                        }
+                        setDraggedReceivedIdx(null);
+                        setDragOverReceivedIdx(null);
+                      }}
+                      style={{
+                        display: 'grid', gridTemplateColumns: '36px 1fr 95px 32px',
+                        borderBottom: idx < received.length - 1 ? '1px solid var(--border)' : 'none',
+                        background: dragOverReceivedIdx === idx ? 'var(--accent-bg)' : 'transparent',
+                        transition: 'background 0.15s ease',
+                      }}
+                    >
+                      {/* Reorder Handle Column */}
+                      <div
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          borderRight: '1px solid var(--border)', cursor: 'grab', padding: '0 2px',
+                          gap: 1,
+                        }}
+                        title="Drag to reorder row"
+                      >
+                        <GripVertical size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); reorderReceivedRows(idx, idx - 1); }}
+                            disabled={idx === 0}
+                            title="Move Up"
+                            style={{
+                              border: 'none', background: 'transparent', cursor: idx === 0 ? 'default' : 'pointer',
+                              opacity: idx === 0 ? 0.25 : 0.7, padding: 0, display: 'flex', color: 'var(--text-muted)'
+                            }}
+                          >
+                            <ChevronUp size={11} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); reorderReceivedRows(idx, idx + 1); }}
+                            disabled={idx === received.length - 1}
+                            title="Move Down"
+                            style={{
+                              border: 'none', background: 'transparent', cursor: idx === received.length - 1 ? 'default' : 'pointer',
+                              opacity: idx === received.length - 1 ? 0.25 : 0.7, padding: 0, display: 'flex', color: 'var(--text-muted)'
+                            }}
+                          >
+                            <ChevronDown size={11} />
+                          </button>
+                        </div>
+                      </div>
+
                       <div style={{ borderRight: '1px solid var(--border)' }}>
                         <input type="text" value={row.person} placeholder="Person name"
                           onChange={e => updateReceived(row.id, 'person', e.target.value)} style={inputStyle} />
@@ -1019,8 +1191,8 @@ export default function ExternalTab({
                       </div>
                     </div>
                   ))}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 95px 32px', background: 'var(--surface2)', borderTop: '2px solid var(--border)' }}>
-                    <div style={{ padding: '9px 11px', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textAlign: 'right', borderRight: '1px solid var(--border)' }}>Total Received</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr 95px 32px', background: 'var(--surface2)', borderTop: '2px solid var(--border)' }}>
+                    <div style={{ gridColumn: 'span 2', padding: '9px 11px', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textAlign: 'right', borderRight: '1px solid var(--border)' }}>Total Received</div>
                     <div style={{ padding: '9px 11px', fontSize: 13, fontWeight: 800, color: 'var(--income)', borderRight: '1px solid var(--border)' }}>{formatAmount(totalReceived)}</div>
                     <div />
                   </div>
