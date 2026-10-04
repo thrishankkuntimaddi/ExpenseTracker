@@ -10,6 +10,7 @@ import {
   trashIncome,
   updateSettings as fsUpdateSettings,
   subscribeToRecentlyDeleted,
+  ensureUserDoc,
   restoreFromRecentlyDeleted,
   permanentlyDeleteFromRecentlyDeleted,
   emptyRecentlyDeleted,
@@ -28,7 +29,7 @@ const DEFAULT_SETTINGS = { theme: getSavedTheme(), googleSheetUrl: "" };
  * Every mutation updates the UI optimistically and rolls back if the write
  * is rejected; the failure is surfaced through `writeError`.
  */
-export function useFirestoreData(uid) {
+export function useFirestoreData(uid, email) {
   const [transactions, setTransactions] = useState([]);
   const [income, setIncome]             = useState([]);
   const [settings, setSettings]         = useState(DEFAULT_SETTINGS);
@@ -44,6 +45,13 @@ export function useFirestoreData(uid) {
   useEffect(() => { txnsRef.current = transactions; }, [transactions]);
   useEffect(() => { incomeRef.current = income; }, [income]);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
+
+  // Repair accounts that never got a user doc (keep this device's theme)
+  useEffect(() => {
+    if (!uid) return;
+    ensureUserDoc(uid, email, { theme: getSavedTheme() })
+      .catch((err) => console.warn('[ensureUserDoc] failed:', err?.message));
+  }, [uid, email]);
 
   useEffect(() => {
     if (!uid) return;

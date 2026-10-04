@@ -88,16 +88,18 @@ export function subscribeToUserData(uid, onData) {
   return () => { unsubTxns(); unsubInc(); unsubUser(); };
 }
 
-/* ── Ensure user doc exists ── */
-export async function ensureUserDoc(uid, email) {
+/* ── Ensure user doc exists ──
+   Called at sign-up and on every sign-in: older accounts were created
+   without a user doc, which left their settings unsaveable. */
+export async function ensureUserDoc(uid, email, defaultSettings = {}) {
   const ref = userRef(uid);
   const snap = await getDoc(ref);
   if (!snap.exists()) {
     await setDoc(ref, {
-      email,
+      email: email ?? null,
       createdAt: serverTimestamp(),
-      settings: { theme: "light", googleSheetUrl: "" },
-    });
+      settings: { theme: "light", googleSheetUrl: "", ...defaultSettings },
+    }, { merge: true });
   }
 }
 
@@ -141,7 +143,9 @@ export async function deleteIncome(uid, entryId) {
 
 /* ── Settings ── */
 export async function updateSettings(uid, settings) {
-  await updateDoc(userRef(uid), { settings, updatedAt: serverTimestamp() });
+  // setDoc+merge (not updateDoc) so this also works for accounts whose user
+  // doc was never created, e.g. ones that predate ensureUserDoc().
+  await setDoc(userRef(uid), { settings, updatedAt: serverTimestamp() }, { merge: true });
 }
 
 /* ── Bulk import ──

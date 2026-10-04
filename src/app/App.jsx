@@ -64,7 +64,7 @@ function AuthenticatedApp({ user, signOut }) {
     addIncome, updateIncome, deleteIncome,
     saveSettings,
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
-  } = useFirestoreData(user.uid);
+  } = useFirestoreData(user.uid, user.email);
 
   const errorBanner = writeError && (
     <div role="alert" style={{
