@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import './styles/glass.css'
 import App from './app/App.jsx'
 
 function bootstrap() {
@@ -16,17 +17,18 @@ function bootstrap() {
     </StrictMode>,
   );
 
-  // Remove the preloader once React's first paint is done.
-  // rAF ensures we wait until the browser has committed the frame.
+  // Hand off from the 3D splash once React has painted — but let the intro
+  // play for a minimum time so it doesn't flash. Skipped for reduced motion.
   requestAnimationFrame(() => {
+    const splash = document.getElementById('app-splash');
+    if (!splash) return;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const MIN_MS = reduced ? 0 : 2600;
+    const wait = Math.max(0, MIN_MS - performance.now());
     setTimeout(() => {
-      const preloader = document.getElementById('app-preloader');
-      if (preloader) {
-        preloader.style.opacity = '0';
-        preloader.style.pointerEvents = 'none';
-        setTimeout(() => preloader.remove(), 260);
-      }
-    }, 50);
+      splash.classList.add('sp-exit');
+      setTimeout(() => splash.remove(), 800);
+    }, wait);
   });
 }
 
