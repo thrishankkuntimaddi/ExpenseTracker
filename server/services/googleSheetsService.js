@@ -40,11 +40,6 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
-/** Lightweight unique ID (mirrors the client-side generateId). */
-function generateId() {
-  return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-}
-
 /** Human-readable column letter from a 0-based index. */
 function colLetter(idx) {
   let result = '';
@@ -85,12 +80,14 @@ function parseSheetData(rawValues) {
   const isHeader  = firstRow.some(
     (cell) => typeof cell === 'string' && /name|desc|amount|income|expense|date|category|item|source/i.test(cell)
   );
-  const dataRows  = isHeader ? rawValues.slice(1) : rawValues;
+  const offset    = isHeader ? 1 : 0;
+  const dataRows  = rawValues.slice(offset);
 
-  const today     = new Date().toISOString();
-  const thisMonth = today.slice(0, 7);
-
-  dataRows.forEach((row) => {
+  /* Records carry their sheet position (row/col) instead of an id or date:
+     the client derives a stable id from it (so re-pulls don't duplicate)
+     and stamps the user's *local* date. */
+  dataRows.forEach((row, rowIdx) => {
+    const sheetRow = rowIdx + offset + 1;   // 1-based, as shown in Sheets
     if (!row || row.length === 0) return;
 
     /* ── Income: Columns A (0) + B (1) ── */
@@ -98,12 +95,11 @@ function parseSheetData(rawValues) {
     const incomeAmount = parseFloat(row[1]);
     if (incomeName && !isNaN(incomeAmount) && incomeAmount > 0) {
       income.push({
-        id:     generateId(),
         name:   incomeName,
         amount: incomeAmount,
         type:   'income',
-        date:   today,
-        month:  thisMonth,
+        row:    sheetRow,
+        col:    'A',
       });
     }
 
@@ -115,12 +111,11 @@ function parseSheetData(rawValues) {
       const expAmount = parseFloat(row[i + 1]);
       if (expName && !isNaN(expAmount) && expAmount > 0) {
         transactions.push({
-          id:     generateId(),
           name:   expName,
           amount: expAmount,
           type:   'expense',
-          date:   today,
-          month:  thisMonth,
+          row:    sheetRow,
+          col:    colLetter(i),
         });
       }
     }
@@ -175,6 +170,7 @@ export async function pullFromSheet(sheetUrl) {
     transactions,
     income,
     sheetTitle,
+    spreadsheetId,
     rowsRead: rawValues.length,
   };
 }

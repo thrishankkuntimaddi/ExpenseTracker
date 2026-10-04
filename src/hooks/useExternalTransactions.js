@@ -8,7 +8,8 @@ import {
   moveToRecentlyDeleted,
 } from "../services/firestore";
 import { generateId } from "../utils/storage";
-import { todayInputValue, dateInputToISO, isoToMonth } from "../utils/dateHelpers";
+import { findSettlementMatches } from "../utils/finance";
+import { dateInputToISO, isoToMonth } from "../utils/dateHelpers";
 
 const DEBOUNCE_MS = 600;
 
@@ -33,6 +34,7 @@ export function useExternalTransactions(uid) {
   const uidRef        = useRef(uid);
   uidRef.current      = uid;
   const debounceTimer = useRef(null);
+  const pendingPatches = useRef({});   // { [sessionId]: merged patch }
 
   /* ── Subscribe to Firestore ── */
   useEffect(() => {
@@ -72,6 +74,25 @@ export function useExternalTransactions(uid) {
     }
   }, []);
 
+  /* ── Write every pending patch (one merged patch per session) ── */
+  const flushPending = useCallback(async () => {
+    clearTimeout(debounceTimer.current);
+    const uid     = uidRef.current;
+    const patches = Object.values(pendingPatches.current);
+    pendingPatches.current = {};
+    if (!uid || patches.length === 0) return;
+    try {
+      await Promise.all(patches.map((p) => upsertExternalTransaction(uid, p)));
+    } catch (err) {
+      console.error('[updateSession] Firestore write failed:', err);
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
+  // Flush unsaved edits when the hook unmounts (e.g. switching tabs)
+  useEffect(() => () => { flushPending(); }, [flushPending]);
+
   /* ── Debounced update — merges patch into any session by id ── */
   const updateSession = useCallback((patch) => {
     if (!uidRef.current || !patch.id) return;
@@ -81,19 +102,15 @@ export function useExternalTransactions(uid) {
       prev.map((s) => (s.id === patch.id ? { ...s, ...patch } : s))
     );
 
+    // Accumulate patches per session so earlier edits within the debounce
+    // window (or edits to other sessions) are not dropped.
+    pendingPatches.current[patch.id] = { ...pendingPatches.current[patch.id], ...patch };
+
     // Debounce the Firestore write
     clearTimeout(debounceTimer.current);
     setSaving(true);
-    debounceTimer.current = setTimeout(async () => {
-      try {
-        await upsertExternalTransaction(uidRef.current, patch);
-      } catch (err) {
-        console.error('[updateSession] Firestore write failed:', err);
-      } finally {
-        setSaving(false);
-      }
-    }, DEBOUNCE_MS);
-  }, []);
+    debounceTimer.current = setTimeout(flushPending, DEBOUNCE_MS);
+  }, [flushPending]);
 
   /* ── Save as draft ── */
   const saveDraftSession = useCallback(async (id) => {
@@ -142,6 +159,9 @@ export function useExternalTransactions(uid) {
     ) => {
       if (!uidRef.current) return;
 
+      // Make sure no debounced edit lands after (and overwrites) the close
+      await flushPending();
+
       const session = sessions.find((s) => s.id === sessionId);
 
       // Build person label (comma-separated if multiple)
@@ -153,12 +173,10 @@ export function useExternalTransactions(uid) {
       const dateForEntry = sessionDate || new Date().toISOString();
       const month = isoToMonth(dateForEntry);
 
-      // Search for existing settlement entries matching this session
-      const matchingIncomes = income.filter(
-        (i) => i.externalSessionId === sessionId || i.id === session?.settlementId || (i.tag === 'External Settlement' && (i.name === persons || i.name === sessionName))
-      );
-      const matchingTxns = transactions.filter(
-        (t) => t.externalSessionId === sessionId || t.id === session?.settlementId || (t.category === 'External' && (t.name === `External – ${persons}` || t.name?.includes(persons)))
+      // Entries belonging to this session's settlement (see finance.js)
+      const { matchingIncomes, matchingTxns } = findSettlementMatches(
+        { sessionId, settlementId: session?.settlementId, persons, sessionName },
+        transactions, income
       );
 
       const primaryIncome = matchingIncomes.find((i) => i.id === session?.settlementId) || matchingIncomes[0];
@@ -255,7 +273,7 @@ export function useExternalTransactions(uid) {
         throw err;
       }
     },
-    [sessions]
+    [sessions, flushPending]
   );
 
   /* ── Delete session ── */

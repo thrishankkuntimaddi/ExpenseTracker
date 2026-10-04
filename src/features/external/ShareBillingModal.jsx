@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Share2, Copy, Download, Check, X, Image as ImageIcon, Loader2, Send } from 'lucide-react';
 import {
   formatSessionTextSummary,
@@ -19,15 +19,16 @@ export default function ShareBillingModal({ session, onClose }) {
 
   const textSummary = formatSessionTextSummary(session);
 
+  // The modal is mounted once per session, so loadingImage starts true.
   useEffect(() => {
     let active = true;
-    setLoadingImage(true);
+    let url = '';
 
     generateSessionReceiptBlob(session)
       .then(blob => {
         if (!active) return;
         setImageBlob(blob);
-        const url = URL.createObjectURL(blob);
+        url = URL.createObjectURL(blob);
         setImageUrl(url);
         setLoadingImage(false);
       })
@@ -38,7 +39,8 @@ export default function ShareBillingModal({ session, onClose }) {
 
     return () => {
       active = false;
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
+      // Revoke the URL created by *this* run (state would be stale here)
+      if (url) URL.revokeObjectURL(url);
     };
   }, [session]);
 

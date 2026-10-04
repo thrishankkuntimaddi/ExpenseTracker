@@ -3,38 +3,66 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ─── ExpenseTracker (nistha-passi-core) ─────────────────────────
-    // Strict user-scoped rules: each user can only access their own data.
+    // Strict user-scoped rules: each user can only access their own
+    // user doc and everything beneath it (transactions, income,
+    // external_transactions, recently_deleted).
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Money: a real number below ₹1 lakh crore in magnitude. Negatives are
+    // allowed because existing data uses them for corrections/refunds.
+    function validMoney(v) {
+      return (v is int || v is float) && v > -1000000000000 && v < 1000000000000;
+    }
+
+    // Shape check for transactions and income entries
+    function validEntry(d) {
+      return validMoney(d.amount)
+        && d.date is string && d.date.size() <= 40
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 500
+        && (!('wasteAmount' in d) || validMoney(d.wasteAmount));
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
 
       match /transactions/{txnId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId) && validEntry(request.resource.data);
       }
 
       match /income/{incId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId) && validEntry(request.resource.data);
       }
 
-      match /external_transactions/{extId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-
-      match /monthly_summaries/{monthId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+      // external_transactions, recently_deleted, and any future subcollection
+      match /{collection}/{rest=**} {
+        allow read, write: if isOwner(userId)
+          && !(collection in ['transactions', 'income']);
       }
     }
 
+    // ─── Nistha Meditation App ───────────────────────────────────────
+    // (Kept in sync with the deployed ruleset — this file is the single
+    //  source of truth for the whole shared project.)
+    match /sessions/{sessionId} {
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+    }
+
     // ─── Other Apps (shared Firebase project) ───────────────────────
-    // Catch-all: any authenticated user can access any document/collection
-    // NOT already matched above. This restores access for all other apps
-    // in this project (ClearMyMind, Chttrix, etc.) without affecting
-    // the ExpenseTracker's strict rules above.
+    // Catch-all for the other apps in this project (ClearMyMind, Chttrix, etc.).
+    // Firestore rules are OR'd — a broad match here would also grant access to
+    // /users/** above — so the `users` collection is explicitly excluded.
     //
     // ⚠️  ACTION REQUIRED: Replace this catch-all with app-specific rules
-    //     for each other app as you build/maintain them. A catch-all is safe
-    //     only while each app enforces its own auth checks in code.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    //     for each other app as you build/maintain them.
+    match /{collection}/{rest=**} {
+      allow read, write: if request.auth != null && collection != 'users';
     }
   }
 }

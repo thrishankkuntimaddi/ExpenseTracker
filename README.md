@@ -1,20 +1,20 @@
 # ⚡ Expense Tracker — Personal Finance, Reimagined
 
-> **Smart, cloud-synced personal finance tracking with month-to-month carry-forward rollover, wastage analytics, Google Sheets integration, and a fully responsive PWA experience.**
+> **Smart, cloud-synced personal finance tracking with person ledgers, wastage analytics, billing sessions, Google Sheets integration, and a fully responsive offline-capable PWA.**
 
 ---
 
 ## 📌 Description
 
-**Expense Tracker** is a production-grade personal finance web application built with React + Firebase. It solves the frustrating problem of losing track of where your money goes each month — and critically, what happens to the leftover balance when a new month begins.
+**Expense Tracker** is a production-grade personal finance web application built with React + Firebase. It solves the frustrating problem of losing track of where your money goes each month — including money lent to, borrowed from, or spent on behalf of other people.
 
 Unlike basic spreadsheet trackers, this app:
 
-- **Automatically carries forward** positive or negative closing balances from any past month into the next, using atomic Firestore transactions — so your financial history is always accurate, even if you miss a month.
+- **Tracks money with people** — lent, borrowed, repaid and gifted amounts roll up into all-time per-person balances.
 - **Tracks wastage** at the transaction level — mark any expense as wasted (single-tap) or set a partial waste amount (double-tap), giving you an instant "wastage percentage" of your spending.
 - **Manages external/proxy transactions** — record money you spend on behalf of someone else, log the settlement, and track net profit/loss per session.
-- Supports **Google Sheets two-way sync** (push all data to a sheet, pull data back), bridged through a local Express proxy so credentials never reach the browser.
-- Works as an installable **Progressive Web App (PWA)** with offline caching and a service worker that auto-updates on deploy.
+- Supports **Google Sheets two-way sync** (push all data to a sheet, pull data back), bridged through an authenticated Express proxy so credentials never reach the browser.
+- Works as an installable **Progressive Web App (PWA)** that keeps working offline (Firestore IndexedDB cache) and auto-updates on deploy.
 
 ---
 
@@ -24,7 +24,7 @@ The app is deployed via **GitHub Pages**:
 
 **🔗 [https://thrishankkuntimaddi.github.io/ExpenseTracker/](https://thrishankkuntimaddi.github.io/ExpenseTracker/)**
 
-> The Google Sheets sync feature requires the local Express proxy server (`server/`) to be running. All other features (transactions, income, stats, external, settings) are fully functional on the deployed version.
+> Google Sheets sync needs the Express proxy (`server/`). The deployed build hides the Sheets controls unless it was built with `VITE_SHEETS_PROXY_URL`; every other feature works on the deployed version.
 
 ---
 
@@ -34,7 +34,7 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 
 1. Click **"Create account"** on the login screen.
 2. Register with any valid email + a password of 6+ characters.
-3. All data is private and scoped strictly to your account (Firestore rules enforce `uid` isolation).
+3. All data is private and scoped strictly to your account — `firestore.rules` only lets a signed-in user read/write `users/{their uid}/**`, and validates transaction/income shapes.
 
 > There are no shared demo credentials — every user gets their own isolated data space.
 
@@ -50,14 +50,11 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 
 ### 📥 Income Management
 - Log multiple income sources per month (salary, freelance, dividends, etc.)
-- Income is displayed per-month with a live running balance
-- **Month locking**: once a month is "closed" by the rollover engine, it shows a locked badge
+- Three kinds of inflow: **income**, **borrowed** money, and **repayments received** from people you lent to
+- Income is displayed per-period with a live running balance
 
-### 🔄 Automatic Monthly Carry-Forward Rollover
-- On every login, the **rollover engine** (`useRollover`) bootstraps missing month summaries, identifies all unclosed past months, and processes them sequentially using atomic Firestore transactions
-- **Positive closing balance** → a `carry_forward` income entry is created in the next month
-- **Negative closing balance** → a `carry_forward_deficit` expense entry is created
-- Fully **idempotent**: the deterministic document ID (`cf_{fromMonth}_{toMonth}`) means re-running is safe with zero side effects
+### 👥 Person Ledgers
+- Lent / borrowed / repaid / gifted entries roll up into **all-time per-person balances** (what you owe, what you're owed)
 
 ### 🔗 External / Proxy Transactions
 - Record transactions where you pay on behalf of a client/person (e.g., buying materials for a freelance job)
@@ -85,10 +82,10 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 
 ### ⚙️ Settings & Data Management
 - **Export**: download full JSON backup of all transactions, income, and settings
-- **Import JSON**: restore from a backup — writes directly to Firestore
-- **Import CSV**: flexible CSV importer (`date, name, amount, type`) — maps income/expense/savings/person types
-- **Migrate localStorage → Cloud**: one-click migration for users who used the previous localStorage-only version
-- **Reset All Data**: permanently deletes all Firestore documents + clears local cache
+- **Import JSON**: restore from a backup — batched writes; records keep their ids, so re-importing never duplicates
+- **Import CSV**: RFC-4180 CSV importer (`date, name, amount, type`; quoted fields, `1,200`-style amounts, `DD/MM/YYYY` dates) with stable ids — importing the same file twice is safe
+- **Recently Deleted**: deletes move items to a trash (atomically) from which they can be restored
+- **Reset All Data**: permanently deletes all transactions, income, billings and trash
 - **Theme toggle**: Light and MonoFlow (dark, gold-accented) themes, persisted to Firestore
 
 ### 🌙 Theming
@@ -100,7 +97,7 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 - **Desktop** (≥1024px): a unified `DesktopDashboard` with a left-sidebar layout
 - Installable as a PWA on iOS and Android (Web App Manifest + Service Worker)
 - Service Worker auto-updates on new deploys (`SKIP_WAITING` + `controllerchange` reload)
-- Offline-capable: localStorage cache seeds the UI instantly while Firestore loads
+- Offline-capable: Firestore's persistent IndexedDB cache paints the UI instantly and queues writes while offline (cleared on sign-out)
 
 ---
 
@@ -120,6 +117,7 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 | **Build Tool** | Vite (base path `/ExpenseTracker/`) |
 | **Deployment** | GitHub Pages |
 | **Linting** | ESLint 9 (flat config) |
+| **Testing** | Vitest (unit tests for finance, date and import logic) |
 
 ---
 
@@ -128,68 +126,59 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 ```
 ExpenseTracker/
 ├── index.html                  # Entry point — preloader, PWA tags, SW registration
-├── vite.config.js              # Vite config (base: /ExpenseTracker/)
+├── vite.config.js              # Vite config (base: /ExpenseTracker/) + SW build-ID stamping
 ├── firebase.json               # Firebase Firestore rules + indexes config
-├── firestore.rules             # Security rules (strict uid-scoped access)
+├── firestore.rules             # Security rules for the WHOLE shared project (see below)
 ├── firestore.indexes.json      # Composite index definitions
+├── scripts/clear-db.mjs        # Maintenance: wipe one user's data (prompts for password)
 │
 ├── src/
 │   ├── main.jsx                # React 19 createRoot entry
 │   ├── index.css               # Global styles, CSS tokens (light + MonoFlow themes)
-│   │
-│   ├── app/
-│   │   └── App.jsx             # Root: AuthGate → AuthenticatedApp (mobile/desktop split)
+│   ├── app/App.jsx             # Root: AuthGate → AuthenticatedApp (mobile/desktop split)
 │   │
 │   ├── features/
-│   │   ├── auth/               # AuthGate — login/register form with Firebase Auth
-│   │   ├── transactions/
-│   │   │   ├── TodayTab.jsx    # Quick-add form + today's entry list
-│   │   │   └── HistoryTab.jsx  # Full history with search, filter, wastage, edit/delete
-│   │   ├── income/
-│   │   │   └── IncomeTab.jsx   # Income log with month grouping + lock indicators
-│   │   ├── external/
-│   │   │   └── ExternalTab.jsx # Proxy/billing session manager (open/closed sessions)
-│   │   ├── stats/
-│   │   │   └── StatsTab.jsx    # Analytics: pie, bar, area charts + key metrics
-│   │   └── settings/
-│   │       └── SettingsTab.jsx # Theme, data management, Google Sheets, account
+│   │   ├── auth/               # AuthGate, login and sign-up pages
+│   │   ├── transactions/       # TodayTab (quick add), HistoryTab (search, wastage, edit)
+│   │   ├── income/             # IncomeTab
+│   │   ├── external/           # Billing sessions (ExternalTab) + share receipt
+│   │   ├── persons/            # Person ledgers
+│   │   ├── stats/              # Charts + key metrics
+│   │   └── settings/           # Theme, import/export, Google Sheets, account
 │   │
-│   ├── components/
-│   │   ├── DesktopDashboard.jsx # Full desktop unified layout
-│   │   ├── LoadMonthlyData.jsx  # Month-selector aware data loader
-│   │   └── PeriodSelector.jsx   # Period filter UI component
+│   ├── components/             # DesktopDashboard, modals, PeriodSelector, LoadMonthlyData
 │   │
 │   ├── hooks/
-│   │   ├── useAuth.js           # Firebase Auth state with grace-period guard
-│   │   ├── useFirestoreData.js  # Real-time Firestore CRUD with optimistic UI
-│   │   ├── useRollover.js       # Monthly carry-forward rollover engine
-│   │   ├── useStats.js          # Financial KPIs + chart data (memoized)
-│   │   ├── useTransactions.js   # Transaction-specific derived state
-│   │   ├── useExternalTransactions.js # External sessions Firestore hook
-│   │   └── useWastage.js        # Tap/double-tap wastage interaction logic
+│   │   ├── useAuth.js               # Auth state (grace period) + sign-out cache wipe
+│   │   ├── useFirestoreData.js      # Real-time data + optimistic writes with rollback
+│   │   ├── useExternalTransactions.js # Billing sessions (per-session debounced autosave)
+│   │   ├── useStats.js              # Memoized wrapper around utils/finance.js
+│   │   ├── useTransactions.js       # Period filtering + grouping
+│   │   └── useWastage.js            # Tap/double-tap wastage interaction
 │   │
 │   ├── services/
-│   │   ├── firebase.js          # Firebase app + auth + db initialization
-│   │   ├── firestore.js         # All Firestore CRUD + rollover transactions
-│   │   └── googleSheets.js      # Push/pull/validate via proxy server
+│   │   ├── firebaseConfig.js   # Public Firebase web config (shared with scripts/)
+│   │   ├── firebase.js         # App, Auth, Firestore (persistent cache), optional App Check
+│   │   ├── firestore.js        # Firestore CRUD, batched import/reset, atomic trash/restore
+│   │   └── googleSheets.js     # Authenticated calls to the Sheets proxy
 │   │
 │   └── utils/
-│       ├── typeConfig.js        # Single source of truth for transaction types
-│       ├── periodHelpers.js     # Period filtering + default period logic
-│       ├── dateHelpers.js       # Date formatting utilities
-│       ├── storage.js           # localStorage cache helpers
-│       └── balanceHelpers.js    # Balance computation utilities
+│       ├── finance.js          # ALL money maths: balances, person debts, settlement matching
+│       ├── importHelpers.js    # CSV parser, stable import ids, sheet-record prep
+│       ├── dateHelpers.js      # Formatting + local-time date keys
+│       ├── periodHelpers.js    # Period filtering (local calendar)
+│       ├── typeConfig.js       # Transaction type metadata
+│       ├── storage.js          # Theme preference + id generation
+│       └── __tests__/          # Vitest unit tests
 │
 ├── public/
 │   ├── manifest.json           # PWA Web App Manifest
-│   ├── sw.js                   # Service Worker (caching + SKIP_WAITING)
-│   ├── favicon.svg             # SVG favicon
-│   └── icon-512.png            # PWA icon
+│   └── sw.js                   # Service Worker (cache name stamped per build)
 │
 └── server/                     # Google Sheets Proxy (Node.js / Express)
-    ├── index.js                # Express server entry (CORS, health, /api/sheets/*)
-    ├── .env.example            # Environment variable template
-    ├── api/                    # Route handlers (push, pull, validate)
+    ├── index.js                # Express entry (CORS, rate limit, auth, /api/sheets/*)
+    ├── middleware/auth.js      # Firebase ID-token verification (+ optional UID allow-list)
+    ├── api/sheets.js           # Route handlers (push, pull, validate)
     └── services/               # Google Sheets API wrapper (googleapis)
 ```
 
@@ -199,94 +188,73 @@ ExpenseTracker/
 
 ### Prerequisites
 
-- **Node.js** ≥ 18
+- **Node.js** ≥ 20.19 (required by Vite 8 / Vitest)
 - A **Firebase project** with Firestore and Authentication (Email/Password) enabled
 - *(Optional)* A Google Cloud service account with the Sheets API enabled, for the Sheets sync feature
 
----
-
-### 1. Clone the Repository
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/thrishankkuntimaddi/ExpenseTracker.git
 cd ExpenseTracker
-```
-
-### 2. Install Frontend Dependencies
-
-```bash
 npm install
 ```
 
-### 3. Configure Firebase
+### 2. Configure Firebase
 
-Create a `.env` file in the project root (copy from `.env.example` if present, or create it):
+The Firebase web config lives in `src/services/firebaseConfig.js`. These values are public identifiers, not secrets — to use your own project, replace them with the values from Firebase Console → Project Settings → Your apps → SDK setup.
 
-```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-```
-
-These values are found in your Firebase Console → Project Settings → Your apps → SDK setup.
-
-### 4. Deploy Firestore Rules & Indexes
+### 3. Deploy Firestore rules
 
 ```bash
-# Install Firebase CLI if you haven't
 npm install -g firebase-tools
 firebase login
-
-# Deploy rules and indexes
-firebase deploy --only firestore
+firebase deploy --only firestore:rules --project <your-project-id>
 ```
 
-### 5. Run the Frontend Locally
+> ⚠️ **Shared project:** `nistha-passi-core` also hosts other apps. `firestore.rules` is the single source of truth for the *entire* project — add other apps' rules to this file rather than deploying a different rules file from another repo, or you will overwrite them.
+
+### 4. Run locally
 
 ```bash
-npm run dev
+npm run dev      # http://localhost:5173/ExpenseTracker/
+npm run lint
+npm test         # runs in Asia/Kolkata timezone to exercise local-date edge cases
 ```
 
-The app will be available at `http://localhost:5173/ExpenseTracker/`.
-
-### 6. *(Optional)* Set Up the Google Sheets Proxy
+### 5. *(Optional)* Google Sheets proxy
 
 ```bash
 cd server
-cp .env.example .env
-# → Fill in GOOGLE_SERVICE_ACCOUNT_KEY, PORT, FRONTEND_URL
+cp .env.example .env   # fill in GOOGLE_SERVICE_ACCOUNT_KEY (see comments in the file)
 npm install
-npm run dev   # or: npm start
+npm run dev
 ```
 
-The proxy runs on `http://localhost:3001` by default. The frontend reads `VITE_SHEETS_PROXY_URL` (defaults to `http://localhost:3001`).
+The proxy listens on `127.0.0.1:3001`. Every `/api/sheets/*` call must carry the signed-in user's Firebase ID token (the app sends it automatically) and is rate-limited to 30 requests/minute. The service account needs **no** project IAM role — just share each sheet with its email.
 
 ---
 
 ## 🔑 Environment Variables
 
-### Frontend (`/.env`)
+### Frontend (build time, all optional)
 
 | Variable | Description |
 |---|---|
-| `VITE_FIREBASE_API_KEY` | Firebase project API key |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase Auth domain (`project.firebaseapp.com`) |
-| `VITE_FIREBASE_PROJECT_ID` | Firestore project ID |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase Storage bucket (if used) |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase Cloud Messaging sender ID |
-| `VITE_FIREBASE_APP_ID` | Firebase App ID |
-| `VITE_SHEETS_PROXY_URL` | *(Optional)* URL of the Sheets proxy server (default: `http://localhost:3001`) |
+| `VITE_SHEETS_PROXY_URL` | URL of the Sheets proxy. In dev it defaults to `http://localhost:3001`; a production build only shows Sheets sync when this is set. |
+| `VITE_APPCHECK_SITE_KEY` | reCAPTCHA v3 site key. When set, Firebase **App Check** is enabled so only this app can call your backend. Register the key in Firebase Console → App Check, then turn on enforcement for Firestore. |
 
-### Server (`/server/.env`)
+In CI these come from GitHub repository **variables** of the same name.
+
+### Server (`server/.env`)
 
 | Variable | Description |
 |---|---|
-| `GOOGLE_SERVICE_ACCOUNT_KEY` | The full JSON content of the GCP service account key, minified to a single line |
-| `PORT` | Port for the Express proxy server (default: `3001`) |
-| `FRONTEND_URL` | CORS origin for the frontend (e.g., `http://localhost:5173`) |
+| `GOOGLE_SERVICE_ACCOUNT_KEY` | Full JSON of the service-account key, minified to one line |
+| `PORT` / `HOST` | Listen port (default `3001`) and interface (default `127.0.0.1`) |
+| `FRONTEND_URL` | CORS origin for the frontend (e.g. `http://localhost:5173`) |
+| `FIREBASE_PROJECT_ID` | Project whose ID tokens are accepted (default `nistha-passi-core`) |
+| `ALLOWED_UIDS` | Optional comma-separated UIDs allowed to use the proxy — recommended if it is reachable by anyone else |
 
 ---
 
@@ -295,51 +263,40 @@ The proxy runs on `http://localhost:3001` by default. The frontend reads `VITE_S
 ### Data Flow
 
 ```
-User Action
-    │
-    ▼
-React Component (e.g., TodayTab)
-    │
-    ▼
-useFirestoreData hook
-    │   ├─ Optimistic UI update (setState immediately)
-    │   └─ Firestore write (addTransaction / updateTransaction / deleteTransaction)
-    │           │
-    │           └─ On error: rollback state (remove optimistic entry)
-    ▼
-Firestore real-time listener (subscribeToUserData)
-    │
-    └─ Fires onData → React state updated → localStorage cache written
+User action → component → useFirestoreData
+    ├─ optimistic setState
+    └─ Firestore write ──(rejected)──▶ roll back state + show error banner
+                     ──(offline)───▶ queued in IndexedDB, synced on reconnect
+Firestore listeners (subscribeToUserData) ─▶ React state
 ```
 
 ### Key Design Decisions
 
-1. **Client ID as Firestore Document ID**: Transaction IDs are generated client-side (`generateId()`) and used directly as Firestore document IDs. This means `d.id === txn.id` — no extra `_clientId` mapping needed.
-
-2. **Grace Period in Auth**: `useAuth` holds off marking the user as signed-out for 800ms after Firebase emits `null`, preventing false sign-outs during token refresh.
-
-3. **Rollover Atomicity**: The carry-forward engine uses `runTransaction()` with an idempotency guard (`rollover_processed === true` check) inside a deterministic document ID scheme. Even if the engine runs twice, the result is identical.
-
-4. **Monthly Summary as Source of Truth**: Every mutation (add/update/delete transaction or income) triggers an `upsertMonthlySummary` call for the affected month, keeping `total_income`, `total_expense`, and `closing_balance` perpetually current without a full recalculation scan.
-
-5. **FOUC Prevention**: A tiny inline `<script>` before React boots reads the theme from localStorage and sets `data-theme` on `<html>` and `background-color` on `<body>`, so there's never a flash of unstyled (wrong-theme) content.
-
-6. **Google Sheets Security**: The frontend `googleSheets.js` never calls the Google Sheets API directly. All calls go to the local Express proxy which holds the service account credentials securely in environment variables.
+1. **Client ID as document ID** — ids are generated client-side and used as Firestore document ids, so `d.id === txn.id`. Imports derive *deterministic* ids from the row content, so re-imports overwrite instead of duplicating.
+2. **Atomic trash** — deleting writes the item to `recently_deleted` and removes the original in one `writeBatch`; restoring is the reverse batch.
+3. **Local calendar everywhere** — dates are stored as UTC ISO strings but always bucketed with `localDateKey` / `localMonthKey`, so an entry made at 00:30 IST lands on the right day and month.
+4. **Money in paise** — totals are summed as integer paise (`sumAmounts`) and stored amounts are rounded to 2 decimals.
+5. **One home for the maths** — `utils/finance.js` holds every balance rule and is unit-tested; the hooks only memoize it.
+6. **Full history is loaded on purpose** — person ledgers and the month/year selectors need all-time data, so the app subscribes to every document. The persistent cache keeps this cheap: the first paint comes from disk and reconnects only download changed documents.
+7. **Grace period in auth** — `useAuth` waits 800 ms before treating a `null` user as signed out, avoiding false sign-outs during token refresh.
+8. **FOUC prevention** — an inline script applies the cached theme before React boots.
 
 ---
 
 ## 🗃️ Firestore Data Model
 
 ```
-users/{uid}                         ← User document (email, settings, createdAt)
-  ├── transactions/{txnId}          ← { name, amount, type, date, month, wasteAmount?, updatedAt }
-  ├── income/{incId}                ← { name, amount, type, date, month, updatedAt }
-  ├── external_transactions/{id}    ← { name, amount, settlement, status, date, externalSource?, updatedAt }
-  └── monthly_summaries/{YYYY-MM}   ← { total_income, total_expense, closing_balance, is_closed, rollover_processed }
+users/{uid}                         ← { email, settings, createdAt }
+  ├── transactions/{id}             ← { name, amount, type, date, month, direction?, wasteAmount?, … }
+  ├── income/{id}                   ← { name, amount, type, date, month, isBorrowed?, isRepaymentRec?, … }
+  ├── external_transactions/{id}    ← billing session { name, items[], received[], status, net_balance, settlementId?, … }
+  └── recently_deleted/{id}         ← { itemType, originalData, deletedAt, … }
 ```
 
-**Transaction types**: `expense`, `savings`, `person`, `external`, `carry_forward_deficit`  
-**Income types**: `income`, `carry_forward`
+**Transaction types**: `expense`, `savings`, `person` (with `direction`: lent / borrowed / repaid / repayment / given_gift), `external`
+**Income kinds** (see `incomeKind()`): `income`, `borrowed` (`isBorrowed`), `repayment` (`isRepaymentRec`)
+
+`firestore.rules` restricts every path under `users/{uid}` to that user and validates that transaction / income documents have a numeric `amount`, a string `date` and a non-empty `name`.
 
 ---
 
@@ -347,13 +304,13 @@ users/{uid}                         ← User document (email, settings, createdA
 
 | Challenge | Solution |
 |---|---|
-| Month-to-month carry-forward without a backend function | Client-side rollover engine using Firestore `runTransaction()` with idempotency guards and deterministic document IDs |
-| Flash of unstyled content (wrong theme on load) | Inline `<script>` before React hydrates reads theme from localStorage and applies `data-theme` immediately |
-| False sign-out during Firebase token refresh | 800ms grace-period timer in `useAuth` before committing `user = null` |
-| Service Worker causing blank screen on deploy | SW uses `SKIP_WAITING` + `controllerchange` listener to reload when a new SW activates, flushing stale asset references |
-| Google Sheets credentials in the browser | All API calls proxied through a local Express server; credentials live only in `server/.env` |
-| Optimistic UI with Firestore rollback | `addTransaction` updates state immediately, then on Firestore error, filters out the optimistic entry |
-| Concurrent rollover runs (React StrictMode) | `runningRef` and `doneRef` flags prevent duplicate or concurrent execution |
+| Shared Firebase project with other apps | One rules file for the whole project; the catch-all for other apps explicitly excludes `users/**` |
+| Duplicate records from repeated imports | Deterministic import ids + batched `set()` writes |
+| Dates landing on the wrong day near midnight | Local-calendar date keys instead of slicing UTC ISO strings |
+| Lost edits in billing autosave | Pending edits are merged per session and flushed on unmount / before close |
+| Flash of wrong theme on load | Inline script applies the cached theme before React mounts |
+| Service Worker serving stale assets | Cache name stamped with the build ID; `SKIP_WAITING` + `controllerchange` reload |
+| Google Sheets credentials in the browser | Calls go through the Express proxy, which verifies Firebase ID tokens; credentials live only in `server/.env` |
 
 ---
 
@@ -366,7 +323,7 @@ users/{uid}                         ← User document (email, settings, createdA
 - [ ] **Shared Budgets**: collaborative mode where two users (e.g., partners) share a budget workspace
 - [ ] **Native Mobile App**: React Native wrapper for full offline-first, camera, and push notification support
 - [ ] **AI Spending Insights**: weekly natural-language summaries ("You spent 23% more on food this week vs. last")
-- [ ] **Backend Deployment for Sheets Sync**: deploy the Express proxy to a cloud service (Railway, Render, Fly.io) so the Sheets sync works without running a local server
+- [ ] **Backend Deployment for Sheets Sync**: host the (already authenticated) Express proxy on a cloud service and build with `VITE_SHEETS_PROXY_URL` so Sheets sync works on the deployed site
 - [ ] **CSV Export**: in addition to JSON export, allow downloading data as a spreadsheet-compatible `.csv`
 
 ---
@@ -392,7 +349,7 @@ Contributions are welcome! Here's how to get started:
 1. **Fork** the repository
 2. **Create a feature branch**: `git checkout -b feature/my-feature`
 3. **Make your changes** and ensure the app builds: `npm run build`
-4. **Lint your code**: `npm run lint`
+4. **Lint and test your code**: `npm run lint && npm test`
 5. **Commit with a descriptive message**: `git commit -m "feat: add recurring transactions"`
 6. **Push** to your fork: `git push origin feature/my-feature`
 7. **Open a Pull Request** against `main`

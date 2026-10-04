@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'server/node_modules']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -23,7 +23,14 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Capitalised names are React components (used as <Icon />), which
+      // core no-unused-vars can't see through JSX.
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' }],
     },
+  },
+  {
+    // Node code: Express proxy, scripts, tests, tool configs
+    files: ['server/**/*.js', 'scripts/**/*.{js,mjs}', '**/*.test.{js,jsx}', '*.config.js'],
+    languageOptions: { globals: { ...globals.node } },
   },
 ])

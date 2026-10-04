@@ -115,8 +115,6 @@ export default function HistoryTab({
       {/* Load Past Data modal */}
       {showImport && onAddTransaction && onAddIncome && (
         <LoadMonthlyData
-          onAddTransaction={onAddTransaction}
-          onAddIncome={onAddIncome}
           onClose={() => setShowImport(false)}
           transactions={transactions}
           income={income}

@@ -6,15 +6,23 @@
 //
 // Flow:
 //   Push:  App state → POST /api/sheets/push  → Server → Google Sheets
-//   Pull:  GET  /api/sheets/pull  → Server → Google Sheets → App state → Firestore
+//   Pull:  POST /api/sheets/pull  → Server → Google Sheets → App state → Firestore
+
+import { auth } from './firebase';
 
 const PROXY = import.meta.env.VITE_SHEETS_PROXY_URL || 'http://localhost:3001';
 
-/* ── Internal fetch helper ── */
+/* Sync needs a running proxy. In dev it defaults to localhost; a production
+   build only offers Sheets sync when a proxy URL was configured at build time. */
+export const SHEETS_SYNC_AVAILABLE = import.meta.env.DEV || !!import.meta.env.VITE_SHEETS_PROXY_URL;
+
+/* ── Internal fetch helper — authenticates with the user's Firebase ID token ── */
 async function proxyPost(path, body) {
+  const idToken = await auth.currentUser?.getIdToken();
+  if (!idToken) throw new Error('You must be signed in to sync.');
   const res = await fetch(`${PROXY}${path}`, {
     method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
     body:    JSON.stringify(body),
   });
   if (!res.ok) {
@@ -78,6 +86,7 @@ export async function pullFromSheet(sheetUrl) {
     const json = await proxyPost('/api/sheets/pull', { sheetUrl });
     return {
       success:      true,
+      spreadsheetId: json.spreadsheetId,
       transactions: json.transactions ?? [],
       income:       json.income       ?? [],
       message:      `✅ Pulled ${json.transactions?.length ?? 0} transactions + ${json.income?.length ?? 0} income entries from "${json.sheetTitle}"`,

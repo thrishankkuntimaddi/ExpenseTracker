@@ -1,22 +1,36 @@
 /**
- * clear-db.mjs — Delete ALL Firestore data for a user (transactions + income)
+ * clear-db.mjs — Delete ALL ExpenseTracker Firestore data for a user
+ * (transactions, income, external_transactions, recently_deleted)
  *
  * Usage:
- *   node scripts/clear-db.mjs <email> <password>
+ *   node scripts/clear-db.mjs <email>
  *
- * Example:
- *   node scripts/clear-db.mjs user@example.com mypassword123
+ * The password is prompted for interactively (input hidden) so it never
+ * lands in shell history or the process list. For non-interactive use,
+ * set ET_PASSWORD in the environment instead.
  */
 
 import https from 'https';
+import readline from 'readline';
+import { firebaseConfig } from '../src/services/firebaseConfig.js';
 
-const PROJECT_ID = 'nistha-passi-core';
-const API_KEY    = 'AIzaSyALUloNt0HWTMeP4IARvRMS9JY-R5_NnFM';
+const PROJECT_ID = firebaseConfig.projectId;
+const API_KEY    = firebaseConfig.apiKey;
+const COLLECTIONS = ['transactions', 'income', 'external_transactions', 'recently_deleted'];
 
-const [,, email, password] = process.argv;
-if (!email || !password) {
-  console.error('Usage: node scripts/clear-db.mjs <email> <password>');
+const [,, email] = process.argv;
+if (!email) {
+  console.error('Usage: node scripts/clear-db.mjs <email>');
   process.exit(1);
+}
+
+/* ── Read a password from the TTY without echoing it ── */
+function promptHidden(question) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+    rl._writeToOutput = (s) => { if (s.includes(question)) rl.output.write(s); };
+    rl.question(question, (answer) => { rl.close(); process.stdout.write('\n'); resolve(answer); });
+  });
 }
 
 /* ── Tiny HTTPS fetch wrapper ── */
@@ -55,17 +69,26 @@ function del(url, idToken) {
 }
 
 async function listDocs(collection, uid, idToken) {
-  const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${uid}/${collection}?key=${API_KEY}`;
-  const u = new URL(url);
-  const res = await request(url, {
-    hostname: u.hostname, path: u.pathname + u.search,
-    method: 'GET',
-    headers: { Authorization: `Bearer ${idToken}` },
-  });
-  return res.body?.documents ?? [];
+  const docs = [];
+  let pageToken = '';
+  do {
+    const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${uid}/${collection}?key=${API_KEY}&pageSize=300${pageToken ? `&pageToken=${pageToken}` : ''}`;
+    const u = new URL(url);
+    const res = await request(url, {
+      hostname: u.hostname, path: u.pathname + u.search,
+      method: 'GET',
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    docs.push(...(res.body?.documents ?? []));
+    pageToken = res.body?.nextPageToken ?? '';
+  } while (pageToken);
+  return docs;
 }
 
 async function main() {
+  const password = process.env.ET_PASSWORD || await promptHidden(`Password for ${email}: `);
+  if (!password) { console.error('❌  No password given.'); process.exit(1); }
+
   /* 1. Sign in with email/password */
   console.log(`🔐  Signing in as ${email}…`);
   const authRes = await post(
@@ -79,27 +102,20 @@ async function main() {
   const { idToken, localId: uid } = authRes.body;
   console.log(`✅  Signed in. UID = ${uid}`);
 
-  /* 2. Delete all transactions */
-  console.log('🗑️   Fetching transactions…');
-  const txns = await listDocs('transactions', uid, idToken);
-  console.log(`   Found ${txns.length} transactions.`);
-  for (const doc of txns) {
-    const url = `https://firestore.googleapis.com/v1/${doc.name}`;
-    await del(url, idToken);
+  /* 2. Delete every document in each collection */
+  const counts = {};
+  for (const collection of COLLECTIONS) {
+    console.log(`🗑️   Fetching ${collection}…`);
+    const docs = await listDocs(collection, uid, idToken);
+    for (const doc of docs) {
+      const res = await del(`https://firestore.googleapis.com/v1/${doc.name}`, idToken);
+      if (res.status >= 400) throw new Error(`Delete failed (${res.status}) for ${doc.name}`);
+    }
+    counts[collection] = docs.length;
+    console.log(`   Deleted ${docs.length} ${collection}.`);
   }
-  if (txns.length) console.log(`   Deleted ${txns.length} transactions.`);
 
-  /* 3. Delete all income */
-  console.log('🗑️   Fetching income…');
-  const inc = await listDocs('income', uid, idToken);
-  console.log(`   Found ${inc.length} income entries.`);
-  for (const doc of inc) {
-    const url = `https://firestore.googleapis.com/v1/${doc.name}`;
-    await del(url, idToken);
-  }
-  if (inc.length) console.log(`   Deleted ${inc.length} income entries.`);
-
-  console.log('\n✅  Database cleared. Transactions:', txns.length, '| Income:', inc.length);
+  console.log('\n✅  Database cleared.', counts);
   console.log('   The app will update in real-time via Firestore listener.');
 }
 

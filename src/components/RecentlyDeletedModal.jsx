@@ -320,7 +320,6 @@ export default function RecentlyDeletedModal({
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {filteredItems.map((item) => {
-                const isExpense = item.itemType === 'expense' || item.itemType === 'transaction';
                 const isIncome = item.itemType === 'income';
                 const isBilling = item.itemType === 'billing';
 

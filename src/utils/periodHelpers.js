@@ -1,4 +1,5 @@
 // ─── Period Helpers ────────────────────────────────────────────────
+import { localDateKey, localMonthKey, localYearKey } from './dateHelpers';
 
 /* Returns YYYY-MM for today */
 export function getCurrentMonthValue() {
@@ -48,17 +49,17 @@ export function filterItemsByPeriod(items, period) {
   switch (period.type) {
     case 'current_month':
     case 'select_month':
-      return items.filter(item => item.date?.slice(0, 7) === period.value);
+      return items.filter(item => localMonthKey(item.date) === period.value);
     case 'year':
-      return items.filter(item => item.date?.slice(0, 4) === period.value);
+      return items.filter(item => localYearKey(item.date) === period.value);
     case 'last_3_months': {
       const months = getLast3Months();
-      return items.filter(item => months.includes(item.date?.slice(0, 7)));
+      return items.filter(item => months.includes(localMonthKey(item.date)));
     }
     case 'custom_range':
       return items.filter(item => {
-        const d = item.date?.slice(0, 10);
-        return d >= period.start && d <= period.end;
+        const d = localDateKey(item.date);
+        return d && d >= period.start && d <= period.end;
       });
     default:
       return items;
@@ -87,7 +88,7 @@ export function getSmartGrouping(period) {
 export function getAvailableMonths(transactions, income) {
   const months = new Set([getCurrentMonthValue()]);
   [...transactions, ...income].forEach(item => {
-    if (item.date) months.add(item.date.slice(0, 7));
+    if (item.date) months.add(localMonthKey(item.date));
   });
   return Array.from(months).sort().reverse();
 }
@@ -96,7 +97,7 @@ export function getAvailableMonths(transactions, income) {
 export function getAvailableYears(transactions, income) {
   const years = new Set([String(new Date().getFullYear())]);
   [...transactions, ...income].forEach(item => {
-    if (item.date) years.add(item.date.slice(0, 4));
+    if (item.date) years.add(localYearKey(item.date));
   });
   return Array.from(years).sort().reverse();
 }

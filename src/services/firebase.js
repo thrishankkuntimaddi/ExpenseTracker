@@ -5,25 +5,44 @@ import {
   browserLocalPersistence,
   setPersistence,
 } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyALUloNt0HWTMeP4IARvRMS9JY-R5_NnFM",
-  authDomain: "nistha-passi-core.firebaseapp.com",
-  projectId: "nistha-passi-core",
-  storageBucket: "nistha-passi-core.firebasestorage.app",
-  messagingSenderId: "299692286010",
-  appId: "1:299692286010:web:4710e80698e055afaa5503",
-  measurementId: "G-TSJLLWLE6K",
-};
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  terminate,
+  clearIndexedDbPersistence,
+} from "firebase/firestore";
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
+import { firebaseConfig } from "./firebaseConfig";
 
 const app = initializeApp(firebaseConfig);
+
+// App Check — blocks requests that don't come from this app (scripts, bots).
+// Enabled when a reCAPTCHA v3 site key is provided at build time.
+const appCheckKey = import.meta.env.VITE_APPCHECK_SITE_KEY;
+if (appCheckKey) {
+  initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider(appCheckKey),
+    isTokenAutoRefreshEnabled: true,
+  });
+}
 
 // Auth with IndexedDB persistence (survives tab close + token refresh)
 export const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence).catch(() => {});
 
-// Firestore
-export const db = getFirestore(app);
+// Firestore with IndexedDB offline cache: instant first paint from disk,
+// offline reads/writes, and only changed docs re-downloaded on reconnect.
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+});
+
+/* Wipe the on-device Firestore cache (call on sign-out so the next person on
+   a shared device can't read the previous user's data from IndexedDB).
+   The Firestore instance is unusable afterwards — reload the page. */
+export async function clearLocalFirestoreCache() {
+  await terminate(db);
+  await clearIndexedDbPersistence(db);
+}
 
 export default app;

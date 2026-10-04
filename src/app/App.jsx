@@ -3,6 +3,7 @@ import { Home, List, Wallet, BarChart2, Settings, ReceiptText, Users } from 'luc
 import { useFirestoreData } from '../hooks/useFirestoreData';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { getDefaultPeriod } from '../utils/periodHelpers';
+import { clearLegacyDataCache } from '../utils/storage';
 import AuthGate from '../features/auth/AuthGate';
 import TodayTab         from '../features/transactions/TodayTab';
 import HistoryTab       from '../features/transactions/HistoryTab';
@@ -37,14 +38,17 @@ const THEME_KEY = 'et_theme';
 function applyTheme(theme) {
   const t = theme || 'light';
   document.documentElement.setAttribute('data-theme', t);
-  try { localStorage.setItem(THEME_KEY, t); } catch {}
+  try { localStorage.setItem(THEME_KEY, t); } catch { /* storage unavailable */ }
 }
+
+// Older versions kept a plaintext copy of all data in localStorage — remove it.
+clearLegacyDataCache();
 
 // Apply cached theme IMMEDIATELY on module load — before React even mounts.
 try {
   const cached = localStorage.getItem(THEME_KEY);
   if (cached) document.documentElement.setAttribute('data-theme', cached);
-} catch {}
+} catch { /* storage unavailable — default theme */ }
 
 /* ── Inner app rendered when user is authenticated ── */
 function AuthenticatedApp({ user, signOut }) {
@@ -55,11 +59,25 @@ function AuthenticatedApp({ user, signOut }) {
 
   const {
     transactions, income, settings, recentlyDeleted,
+    writeError, clearWriteError,
     addTransaction, updateTransaction, deleteTransaction,
     addIncome, updateIncome, deleteIncome,
-    saveSettings, handleDataChange,
+    saveSettings,
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   } = useFirestoreData(user.uid);
+
+  const errorBanner = writeError && (
+    <div role="alert" style={{
+      position: 'fixed', left: 16, right: 16, bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))',
+      zIndex: 1000, maxWidth: 480, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10,
+      padding: '10px 14px', borderRadius: 10, background: '#B91C1C', color: '#fff',
+      fontSize: 12, fontWeight: 600, boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+    }}>
+      <span style={{ flex: 1 }}>{writeError}</span>
+      <button onClick={clearWriteError} aria-label="Dismiss"
+        style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 16, cursor: 'pointer' }}>×</button>
+    </div>
+  );
 
   const theme = settings?.theme || 'light';
 
@@ -112,11 +130,11 @@ function AuthenticatedApp({ user, signOut }) {
           onAddIncome={addIncome}
           onUpdateIncome={updateIncome}
           onDeleteIncome={deleteIncome}
-          onDataChange={handleDataChange}
           onThemeChange={handleThemeChange}
           onSignOut={signOut}
           onSmartAdd={smartAddEntry}
         />
+        {errorBanner}
       </div>
     );
   }
@@ -178,14 +196,13 @@ function AuthenticatedApp({ user, signOut }) {
         {activeTab === 'settings' && (
           <SettingsTab
             {...commonProps}
-            onDataChange={handleDataChange}
             onThemeChange={handleThemeChange}
             onSignOut={signOut}
-            addTransaction={addTransaction}
-            addIncome={addIncome}
           />
         )}
       </div>
+
+      {errorBanner}
 
       {/* ── Mobile Navbar ── */}
       <nav style={{ flexShrink: 0, display: 'flex', background: 'var(--nav-bg)', borderTop: '1px solid var(--nav-border)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>

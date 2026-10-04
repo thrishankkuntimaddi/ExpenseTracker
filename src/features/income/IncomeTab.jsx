@@ -1,7 +1,8 @@
 import { useRef, useState, useMemo } from 'react';
 import { PenLine, IndianRupee, Wallet, Trash2, TrendingUp, CalendarDays, Calendar, Pencil } from 'lucide-react';
 import { generateId } from '../../utils/storage';
-import { formatAmount, groupByDay, todayInputValue, dateInputToISO, isoToMonth } from '../../utils/dateHelpers';
+import { formatAmount, groupByDay, todayInputValue, dateInputToISO, isoToMonth, localMonthKey } from '../../utils/dateHelpers';
+import { incomeKindFlags, sumAmounts } from '../../utils/finance';
 import { filterItemsByPeriod, getCurrentMonthValue } from '../../utils/periodHelpers';
 import PeriodSelector from '../../components/PeriodSelector';
 import EditIncomeModal from '../../components/EditIncomeModal';
@@ -11,7 +12,7 @@ import { useStats } from '../../hooks/useStats';
 export default function IncomeTab({
   income = [], onAddIncome, onUpdateIncome, onDeleteIncome,
   selectedPeriod, onPeriodChange,
-  transactions = [], onAddTransaction, onDeleteTransaction, theme,
+  transactions = [], onDeleteTransaction, theme,
 }) {
   const { stats } = useStats(transactions, income, selectedPeriod, theme);
   const [incMode, setIncMode]         = useState('income'); // 'income' | 'borrowed' | 'repaymentRec'
@@ -45,10 +46,7 @@ export default function IncomeTab({
 
   const currentMonth = getCurrentMonthValue();
 
-  const totalIncome = filtInc.reduce((s, i) => s + i.amount, 0);
-  const pureIncome  = filtInc.filter(i => !i.isBorrowed && !i.isRepaymentRec).reduce((s, i) => s + i.amount, 0);
-  const borrowedInc = filtInc.filter(i => i.isBorrowed).reduce((s, i) => s + i.amount, 0);
-  const repaymentRecInc = filtInc.filter(i => i.isRepaymentRec).reduce((s, i) => s + i.amount, 0);
+  const totalIncome = sumAmounts(filtInc);
 
   const borrowedTxns = useMemo(
     () => filtTxns.filter(t => t.type === 'person' && t.direction === 'borrowed'),
@@ -63,9 +61,7 @@ export default function IncomeTab({
 
   const grouped = useMemo(() => groupByDay(combinedItems), [combinedItems]);
 
-  const thisMonthIncome = income
-    .filter(i => i.date?.slice(0, 7) === currentMonth)
-    .reduce((s, i) => s + i.amount, 0);
+  const thisMonthIncome = sumAmounts(income.filter(i => localMonthKey(i.date) === currentMonth));
 
   function handleNameKey(e)   { if (e.key === 'Enter') { e.preventDefault(); amountRef.current?.focus(); } }
   function handleAmountKey(e) { if (e.key === 'Enter') { e.preventDefault(); save(); } }
@@ -83,8 +79,7 @@ export default function IncomeTab({
       name: n,
       amount: a,
       type: 'income',
-      isBorrowed: incMode === 'borrowed',
-      isRepaymentRec: incMode === 'repaymentRec',
+      ...incomeKindFlags(incMode === 'repaymentRec' ? 'repayment' : incMode),
       date: isoDate,
       month: isoToMonth(isoDate),
     });
@@ -351,7 +346,7 @@ export default function IncomeTab({
                 <input
                   type="date"
                   value={dateInput}
-                  max={new Date().toISOString().slice(0, 10)}
+                  max={todayInputValue()}
                   onChange={e => setDateInput(e.target.value)}
                   style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 10, paddingBottom: 10, borderRadius: 10, fontSize: 13, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
                   onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2')}

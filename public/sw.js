@@ -1,6 +1,7 @@
 // ─── Service Worker — Expense Tracker PWA ────────────────────────
-// IMPORTANT: Bump CACHE_NAME on every deploy to bust stale caches.
-const CACHE_NAME = 'et-v8';
+// The build ID is stamped in by vite.config.js at build time, so every
+// deploy gets a fresh cache name automatically (no manual bumping).
+const CACHE_NAME = 'et-__BUILD_ID__';
 const BASE = '/ExpenseTracker/';
 
 // ── Install: skip waiting immediately so new SW takes over right away ──

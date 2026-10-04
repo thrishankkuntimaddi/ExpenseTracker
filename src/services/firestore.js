@@ -2,10 +2,9 @@
 import {
   doc, collection, updateDoc, deleteDoc,
   onSnapshot, query, orderBy, serverTimestamp, setDoc, getDoc,
-  deleteField, getDocs,
+  deleteField, getDocs, writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { loadState } from "../utils/storage";
 
 /* ── Document refs ── */
 const userRef      = (uid)          => doc(db, "users", uid);
@@ -14,11 +13,29 @@ const txnRef       = (uid, id)      => doc(db, "users", uid, "transactions", id)
 const incRef       = (uid)          => collection(db, "users", uid, "income");
 const incDocRef    = (uid, id)      => doc(db, "users", uid, "income", id);
 
-/* ── Strip undefined values — Firestore rejects them ── */
+/* ── Strip undefined values (Firestore rejects them) and normalise money ── */
+const MONEY_FIELDS = ["amount", "wasteAmount", "settlement"];
+
+export function roundMoney(n) {
+  return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+}
+
 function clean(obj) {
   return Object.fromEntries(
-    Object.entries(obj).filter(([, v]) => v !== undefined)
+    Object.entries(obj)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, MONEY_FIELDS.includes(k) && typeof v === "number" ? roundMoney(v) : v])
   );
+}
+
+/* Firestore batches are capped at 500 writes — commit in chunks. */
+const BATCH_LIMIT = 450;
+async function commitInChunks(ops) {
+  for (let i = 0; i < ops.length; i += BATCH_LIMIT) {
+    const batch = writeBatch(db);
+    ops.slice(i, i + BATCH_LIMIT).forEach((op) => op(batch));
+    await batch.commit();
+  }
 }
 
 /* ── Real-time listener ───────────────────────────────────────────
@@ -98,7 +115,7 @@ export async function updateTransaction(uid, txn) {
   // Use deleteField() when wasteAmount is undefined so Firestore removes the field (not just skips it)
   await updateDoc(txnRef(uid, id), {
     ...clean(data),
-    wasteAmount: wasteAmount === undefined ? deleteField() : wasteAmount,
+    wasteAmount: wasteAmount === undefined ? deleteField() : roundMoney(wasteAmount),
     updatedAt: serverTimestamp(),
   });
 }
@@ -127,56 +144,34 @@ export async function updateSettings(uid, settings) {
   await updateDoc(userRef(uid), { settings, updatedAt: serverTimestamp() });
 }
 
-/* ── Migration helper ── */
-export async function migrateFromLocalStorage(uid) {
-  const local = loadState();
-  const batch = [];
-
-  for (const txn of local.transactions) {
-    const { id, ...data } = txn;
-    batch.push(setDoc(txnRef(uid, id), { ...data, updatedAt: serverTimestamp() }));
-  }
-  for (const entry of local.income) {
-    const { id, ...data } = entry;
-    batch.push(setDoc(incDocRef(uid, id), { ...data, updatedAt: serverTimestamp() }));
-  }
-  if (local.settings) {
-    batch.push(updateDoc(userRef(uid), { settings: { ...local.settings, password: null }, updatedAt: serverTimestamp() }));
-  }
-
-  await Promise.all(batch);
-  return { transactions: local.transactions.length, income: local.income.length };
+/* ── Bulk import ──
+   Writes many transactions / income entries in batched commits (≤450 per
+   batch). Uses set() so re-importing records with the same id overwrites
+   instead of duplicating. Throws if any batch fails.
+─────────────────────────────────────────────────────────────────── */
+export async function bulkImport(uid, { transactions = [], income = [] }) {
+  const ops = [
+    ...transactions.map(({ id, ...data }) => (b) =>
+      b.set(txnRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() })),
+    ...income.map(({ id, ...data }) => (b) =>
+      b.set(incDocRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() })),
+  ];
+  await commitInChunks(ops);
 }
 
 /* ── Delete ALL documents for a user (Reset All Data) ──
-   Enumerates both subcollections and deletes every document.
-   Firestore client SDK does not support collection-level delete,
-   so we fetch all doc refs then delete them in parallel.
+   Enumerates every ExpenseTracker subcollection and deletes all docs in
+   batched commits. The client SDK has no collection-level delete.
 ─────────────────────────────────────────────────────────────────── */
 export async function deleteAllUserData(uid) {
-  const [txnSnap, incSnap, recSnap] = await Promise.all([
+  const snaps = await Promise.all([
     getDocs(query(txnsRef(uid))),
     getDocs(query(incRef(uid))),
+    getDocs(query(extRef(uid))),
     getDocs(query(recentlyDeletedRef(uid))),
   ]);
-  await Promise.all([
-    ...txnSnap.docs.map((d) => deleteDoc(d.ref)),
-    ...incSnap.docs.map((d) => deleteDoc(d.ref)),
-    ...recSnap.docs.map((d) => deleteDoc(d.ref)),
-  ]);
-}
-
-/* ── One-time cleanup: delete all legacy carry_forward income entries ──
-   Run once from Settings to remove any stale carry-forward docs
-   that were created before the feature was removed.
-─────────────────────────────────────────────────────────────────── */
-export async function purgeCarryForwardData(uid) {
-  const { where } = await import('firebase/firestore');
-  const snap = await getDocs(query(incRef(uid), where('type', '==', 'carry_forward')));
-  if (snap.empty) return 0;
-  await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
-  console.info(`[purgeCarryForwardData] Removed ${snap.size} carry_forward entry/entries.`);
-  return snap.size;
+  const ops = snaps.flatMap((snap) => snap.docs.map((d) => (b) => b.delete(d.ref)));
+  await commitInChunks(ops);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -247,8 +242,7 @@ export function subscribeToRecentlyDeleted(uid, onData) {
   );
 }
 
-export async function moveToRecentlyDeleted(uid, itemType, originalData) {
-  if (!uid || !originalData?.id) return;
+function buildTrashItem(itemType, originalData) {
   const id = originalData.id;
   const name = originalData.name || originalData.title || originalData.person || 'Unnamed Item';
   const amount =
@@ -274,7 +268,45 @@ export async function moveToRecentlyDeleted(uid, itemType, originalData) {
     deletedAt: new Date().toISOString(),
   };
 
-  await setDoc(recentlyDeletedDocRef(uid, id), clean(item));
+  return clean(item);
+}
+
+export async function moveToRecentlyDeleted(uid, itemType, originalData) {
+  if (!uid || !originalData?.id) return;
+  await setDoc(recentlyDeletedDocRef(uid, originalData.id), buildTrashItem(itemType, originalData));
+}
+
+/* ── Atomically copy a doc to the trash and delete the original ──
+   Both writes succeed or neither does, so an item can never vanish
+   without landing in Recently Deleted.
+─────────────────────────────────────────────────────────────────── */
+async function deleteToTrash(uid, itemType, originalData, originalRef) {
+  const batch = writeBatch(db);
+  batch.set(recentlyDeletedDocRef(uid, originalData.id), buildTrashItem(itemType, originalData));
+  batch.delete(originalRef);
+  await batch.commit();
+}
+
+export async function trashTransaction(uid, txn) {
+  await deleteToTrash(uid, 'expense', txn, txnRef(uid, txn.id));
+}
+
+export async function trashIncome(uid, entry) {
+  await deleteToTrash(uid, 'income', entry, incDocRef(uid, entry.id));
+}
+
+/* ── Restore from trash atomically: re-create original + remove trash entry ── */
+export async function restoreFromRecentlyDeleted(uid, item) {
+  const { itemType, originalData, id } = item;
+  const { id: originalId, ...data } = originalData;
+  const target =
+    itemType === "income"  ? incDocRef(uid, originalId) :
+    itemType === "billing" ? extDocRef(uid, originalId) :
+                             txnRef(uid, originalId);
+  const batch = writeBatch(db);
+  batch.set(target, { ...clean(data), updatedAt: serverTimestamp() }, { merge: itemType === "billing" });
+  batch.delete(recentlyDeletedDocRef(uid, id));
+  await batch.commit();
 }
 
 export async function permanentlyDeleteFromRecentlyDeleted(uid, id) {
@@ -285,6 +317,6 @@ export async function permanentlyDeleteFromRecentlyDeleted(uid, id) {
 export async function emptyRecentlyDeleted(uid) {
   if (!uid) return;
   const snap = await getDocs(query(recentlyDeletedRef(uid)));
-  await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+  await commitInChunks(snap.docs.map((d) => (b) => b.delete(d.ref)));
 }
 

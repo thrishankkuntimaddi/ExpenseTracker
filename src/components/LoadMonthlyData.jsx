@@ -1,8 +1,11 @@
 // ─── Load Monthly Data — Manual Historical Import ─────────────────
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { X, Upload, CheckCircle2, AlertCircle, Calendar, FileText, ChevronDown } from 'lucide-react';
-import { generateId } from '../utils/storage';
 import { getCurrentMonthValue, formatMonthLabel } from '../utils/periodHelpers';
+import { dateInputToISO, localMonthKey } from '../utils/dateHelpers';
+import { importId } from '../utils/importHelpers';
+import { bulkImport } from '../services/firestore';
+import { auth } from '../services/firebase';
 
 /* ── Parse text block: "[Day/Date] Name Amount" per line ── */
 function parseEntries(text, selectedMonth) {
@@ -42,8 +45,8 @@ function parseEntries(text, selectedMonth) {
           nameTokens = nameTokens.slice(1);
         }
         // Match DD/MM/YYYY or DD-MM-YYYY
-        else if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(first)) {
-          const p = first.split(/[\/\-]/);
+        else if (/^\d{1,2}[/-]\d{1,2}[/-]\d{4}$/.test(first)) {
+          const p = first.split(/[/-]/);
           const dd = p[0].padStart(2, '0');
           const mm = p[1].padStart(2, '0');
           const yyyy = p[2];
@@ -57,12 +60,12 @@ function parseEntries(text, selectedMonth) {
 
       let finalIsoDate, finalMonth;
       if (exactDateStr) {
-        finalIsoDate = `${exactDateStr}T12:00:00.000Z`;
+        finalIsoDate = dateInputToISO(exactDateStr);
         finalMonth = exactDateStr.slice(0, 7);
       } else {
         const padDay = String(dayNum).padStart(2, '0');
         const padMonth = String(defaultMonth).padStart(2, '0');
-        finalIsoDate = `${defaultYear}-${padMonth}-${padDay}T12:00:00.000Z`;
+        finalIsoDate = dateInputToISO(`${defaultYear}-${padMonth}-${padDay}`);
         finalMonth = selectedMonth;
       }
 
@@ -73,7 +76,7 @@ function parseEntries(text, selectedMonth) {
 
 /* ═══════════════════════════════════════════════════════════════ */
 export default function LoadMonthlyData({
-  onAddTransaction, onAddIncome, onClose,
+  onClose,
   transactions = [], income = [],
 }) {
   const currentMonth = getCurrentMonthValue();
@@ -83,20 +86,19 @@ export default function LoadMonthlyData({
   const [expenseText,   setExpenseText]   = useState('');
   const [status,        setStatus]        = useState('idle');
   const [errorMsg,      setErrorMsg]      = useState('');
-  const [preview,       setPreview]       = useState(null);
   const overlayRef = useRef(null);
 
-  /* ── Live preview ── */
-  useEffect(() => {
+  /* ── Live preview (derived — no effect/state needed) ── */
+  const preview = useMemo(() => {
     const incEntries = parseEntries(incomeText, selectedMonth);
     const expEntries = parseEntries(expenseText, selectedMonth);
-    setPreview({
+    return {
       income:   incEntries.length,
       expense:  expEntries.length,
       total:    incEntries.length + expEntries.length,
       incTotal: incEntries.reduce((s, e) => s + e.amount, 0),
       expTotal: expEntries.reduce((s, e) => s + e.amount, 0),
-    });
+    };
   }, [incomeText, expenseText, selectedMonth]);
 
   /* ── Escape key ── */
@@ -110,7 +112,7 @@ export default function LoadMonthlyData({
   const alreadyImported = useMemo(() => {
     if (!selectedMonth) return false;
     return [...transactions, ...income].some(
-      item => item.date?.slice(0, 7) === selectedMonth
+      item => localMonthKey(item.date) === selectedMonth
     );
   }, [selectedMonth, transactions, income]);
 
@@ -125,39 +127,37 @@ export default function LoadMonthlyData({
       return;
     }
 
+    const uid = auth.currentUser?.uid;
+    if (!uid) { setErrorMsg('You must be signed in to import.'); return; }
+
+    // Stable ids → importing the same text twice overwrites, never duplicates
+    const seen = {};
+    const toRecord = (entry, type) => {
+      const key = [type, entry.date.slice(0, 10), entry.name.toLowerCase(), entry.amount];
+      const occ = seen[key.join('|')] = (seen[key.join('|')] ?? -1) + 1;
+      return {
+        id:     importId('monthly', key, occ),
+        name:   entry.name,
+        amount: entry.amount,
+        type,
+        date:   entry.date,
+        month:  entry.month || selectedMonth,
+      };
+    };
+
     setStatus('importing');
     try {
-      // ── Save income entries ──
-      for (const entry of incEntries) {
-        await onAddIncome({
-          id:     generateId(),
-          name:   entry.name,
-          amount: entry.amount,
-          type:   'income',
-          date:   entry.date,
-          month:  entry.month || selectedMonth,
-        });
-      }
-
-      // ── Save expense entries ──
-      for (const entry of expEntries) {
-        await onAddTransaction({
-          id:     generateId(),
-          name:   entry.name,
-          amount: entry.amount,
-          type:   'expense',
-          date:   entry.date,
-          month:  entry.month || selectedMonth,
-        });
-      }
-
+      await bulkImport(uid, {
+        income:       incEntries.map((e) => toRecord(e, 'income')),
+        transactions: expEntries.map((e) => toRecord(e, 'expense')),
+      });
       setStatus('success');
     } catch (err) {
       console.error('[LoadMonthlyData] Import failed:', err);
-      setErrorMsg('Import failed. Please try again.');
+      setErrorMsg(`Import failed: ${err.message}. Re-running the import is safe (no duplicates).`);
       setStatus('error');
     }
-  }, [selectedMonth, incomeText, expenseText, onAddIncome, onAddTransaction]);
+  }, [selectedMonth, incomeText, expenseText]);
 
   const f = n => new Intl.NumberFormat('en-IN', {
     style: 'currency', currency: 'INR',

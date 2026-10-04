@@ -6,8 +6,9 @@ import {
   createUserWithEmailAndPassword,
   signOut as fbSignOut,
 } from "firebase/auth";
-import { auth } from "../services/firebase";
+import { auth, clearLocalFirestoreCache } from "../services/firebase";
 import { ensureUserDoc } from "../services/firestore";
+import { clearLegacyDataCache } from "../utils/storage";
 
 /**
  * Provides Firebase Auth state with a 5-second grace period to
@@ -72,7 +73,15 @@ export function useAuth() {
 
   const signOut = useCallback(async () => {
     await fbSignOut(auth);
-    setUser(null);
+    // Wipe this user's data from the device (shared-device privacy).
+    // The Firestore instance can't be reused after clearing, so reload.
+    clearLegacyDataCache();
+    try {
+      await clearLocalFirestoreCache();
+    } catch (err) {
+      console.warn("[signOut] Could not clear offline cache:", err);
+    }
+    window.location.reload();
   }, []);
 
   return { user, loading, signIn, signUp, signOut, error, setError };

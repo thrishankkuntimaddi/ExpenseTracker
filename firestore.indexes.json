@@ -1,13 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "monthly_summaries",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "is_closed",          "order": "ASCENDING" },
-        { "fieldPath": "rollover_processed",  "order": "ASCENDING" }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }

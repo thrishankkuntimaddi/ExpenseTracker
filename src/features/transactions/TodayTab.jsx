@@ -2,6 +2,7 @@ import { useRef, useState, useMemo } from 'react';
 import { PenLine, IndianRupee, Zap, TrendingDown, Coins, Briefcase, ShoppingCart, PiggyBank, Users, Calendar } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount, todayInputValue, dateInputToISO, isoToMonth } from '../../utils/dateHelpers';
+import { getCurrentMonthValue } from '../../utils/periodHelpers';
 import { TRANSACTION_TYPES as TYPES, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType, getDirectionMeta } from '../../utils/typeConfig';
 import { useStats } from '../../hooks/useStats';
 
@@ -34,12 +35,11 @@ function AppHeader() {
 }
 
 export default function TodayTab({ transactions = [], income = [], onAdd, theme }) {
-  const { stats } = useStats(transactions, income, { type: 'select_month', month: new Date().toISOString().slice(0, 7) }, theme);
+  const { stats } = useStats(transactions, income, { type: 'current_month', value: getCurrentMonthValue() }, theme);
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [dateInput, setDateInput] = useState(todayInputValue());
   const [settlement, setSettlement] = useState('');
-  const [externalSource, setExtSource] = useState('');
   const [type, setType] = useState('expense');
   const [direction, setDirection] = useState('lent');
   const [savingsType, setSavingsType] = useState('cash');
@@ -50,7 +50,6 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
   const nameRef = useRef(null);
   const amountRef = useRef(null);
   const settlementRef = useRef(null);
-  const extSourceRef = useRef(null);
 
   const debtPersons = useMemo(() => {
     const all = Object.keys(stats?.personDebts || {});
@@ -109,7 +108,7 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
     }
 
     onAdd(entry);
-    setName(''); setAmount(''); setSettlement(''); setExtSource(''); setPlatform('');
+    setName(''); setAmount(''); setSettlement(''); setPlatform('');
     setDateInput(todayInputValue());
     nameRef.current?.focus();
   }
@@ -440,7 +439,7 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
           <input
             type="date"
             value={dateInput}
-            max={new Date().toISOString().slice(0, 10)}
+            max={todayInputValue()}
             onChange={e => setDateInput(e.target.value)}
             style={{
               width: '100%', paddingLeft: 38, paddingRight: 14,
@@ -490,8 +489,6 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
             const t = txn.type === 'person'
               ? getDirectionMeta(txn.direction)
               : (TYPES.find(x => x.key === txn.type) || TYPES[0]);
-            const isExternal = txn.type === 'external';
-            const extProfit = isExternal ? (txn.settlement ?? txn.amount) - txn.amount : 0;
             const dirMeta = txn.type === 'person' ? getDirectionMeta(txn.direction) : null;
             return (
               <div key={txn.id} style={{

@@ -3,8 +3,8 @@
 
 import { useState } from 'react';
 import { X, PenLine, IndianRupee, Calendar, Check, Trash2 } from 'lucide-react';
-import { TRANSACTION_TYPES, TYPE_META, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType, getPersonDirection } from '../utils/typeConfig';
-import { isoToDateInput, dateInputToISO, isoToMonth } from '../utils/dateHelpers';
+import { TRANSACTION_TYPES, TYPE_META, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType } from '../utils/typeConfig';
+import { isoToDateInput, dateInputToISO, isoToMonth, todayInputValue } from '../utils/dateHelpers';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 export default function EditTransactionModal({ txn, onSave, onDelete, onClose }) {
@@ -193,7 +193,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose })
             <Calendar size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
             <input
               type="date" value={dateInput} onChange={e => setDateInput(e.target.value)}
-              max={new Date().toISOString().slice(0, 10)}
+              max={todayInputValue()}
               style={{
                 width: '100%', paddingLeft: 34, paddingRight: 12,
                 paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 13,

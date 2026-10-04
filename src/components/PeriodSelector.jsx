@@ -1,4 +1,5 @@
 import { ChevronDown, Calendar } from 'lucide-react';
+import { todayInputValue } from '../utils/dateHelpers';
 import {
   getCurrentMonthValue, getAvailableMonths, getAvailableYears, formatMonthLabel,
 } from '../utils/periodHelpers';
@@ -34,7 +35,7 @@ const dateInputStyle = {
 export default function PeriodSelector({ period, onChange, transactions = [], income = [] }) {
   const months = getAvailableMonths(transactions, income);
   const years  = getAvailableYears(transactions, income);
-  const today  = new Date().toISOString().slice(0, 10);
+  const today  = todayInputValue();
 
   function handleTypeChange(type) {
     switch (type) {

@@ -39,10 +39,34 @@ export function isoToDateInput(isoString) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/** Derive the YYYY-MM month string from an ISO date string */
+/* ── Local-time calendar keys ───────────────────────────────────
+   Dates are stored as UTC ISO strings, so slicing the string gives the
+   *UTC* day/month — wrong for anything recorded near local midnight
+   (e.g. 00:00–05:30 in India). Always bucket by the user's local calendar.
+─────────────────────────────────────────────────────────────────── */
+const pad2 = (n) => String(n).padStart(2, '0');
+
+/** YYYY-MM-DD in local time (null for missing/invalid input) */
+export function localDateKey(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/** YYYY-MM in local time */
+export function localMonthKey(iso) {
+  return localDateKey(iso)?.slice(0, 7) ?? null;
+}
+
+/** YYYY in local time */
+export function localYearKey(iso) {
+  return localDateKey(iso)?.slice(0, 4) ?? null;
+}
+
+/** Derive the YYYY-MM month string (local time) from an ISO date string */
 export function isoToMonth(isoString) {
-  if (!isoString) return new Date().toISOString().slice(0, 7);
-  return isoString.slice(0, 7);
+  return localMonthKey(isoString || new Date().toISOString());
 }
 
 export function getWeekStart(dateStr) {
