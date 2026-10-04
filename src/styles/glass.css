@@ -1,18 +1,20 @@
 /* ══════════════════════════════════════════════════════════════════
-   LIQUID GLASS LAYER  (in the spirit of macOS Tahoe / iOS 26)
-   A clear, barely-tinted glass material on top of the base design system
-   in index.css. Delete the import in main.jsx to switch it off.
+   LIQUID GLASS LAYER — modelled on macOS Tahoe's Control Center
+   A material + shape layer on top of the base design system in
+   index.css. Layouts are untouched. Delete the import in main.jsx to
+   switch it off.
 
-   Ingredients
-   • Clear glass: low-tint translucent fill + backdrop blur & saturation.
-   • Specular rim: bright top/left edge light, softer bottom/right, faint
-     inner glow — the "liquid" highlight that makes it read as glass.
-   • Lensing: in Chromium browsers, controls bend the content behind them
-     at the edges (SVG displacement filter #liquid-lens in index.html).
-     Other browsers fall back to plain blur.
-   • Floating capsules: top bar and mobile tab bar float as rounded pills.
-   • Neutral backdrop: soft monochrome light, so the glass — not colour —
-     is the focus.
+   Reference traits
+   • Material: translucent glass, heavy blur, no outline. Dark mode uses
+     near-black smoked glass (the reference's grey fill reads as dull grey).
+   • Rim: a curved specular edge — brightest at the top-left and
+     bottom-right corners, fading along the sides (a gradient border).
+   • Shape: large continuous radii on tiles, capsules for controls,
+     circles for icon-only buttons.
+   • Active state (dark): solid white with a dark glyph.
+   • Type: San Francisco, bold primary, ~60% secondary.
+   • Bars (top toolbar, tab bar) use denser glass than tiles so labels
+     stay legible over content scrolling beneath them.
 
    Components set backgrounds inline (style={{ background: 'var(--surface)' }}),
    so surfaces are matched with attribute selectors on those token names.
@@ -21,250 +23,251 @@
 /* ── Tokens ─────────────────────────────────────────────────────── */
 :root,
 [data-theme="light"] {
+  /* Glass */
+  --glass-fill:   rgba(255, 255, 255, 0.55);
+  --glass-bar:    rgba(246, 246, 248, 0.82);
+  --glass-blur:   blur(30px) saturate(180%);
+  --glass-rim:    linear-gradient(135deg,
+                    rgba(255,255,255,1) 0%, rgba(255,255,255,.55) 18%,
+                    rgba(255,255,255,.12) 42%, rgba(255,255,255,.12) 58%,
+                    rgba(255,255,255,.55) 82%, rgba(255,255,255,.95) 100%);
+  --glass-inner:  inset 0 1px 0 rgba(255,255,255,.7), inset 0 0 0 0.5px rgba(0,0,0,.04);
+  --glass-float:  0 8px 28px -12px rgba(0,0,0,.18), 0 1px 2px rgba(0,0,0,.05);
+
+  /* Surfaces / text (Apple system colours) */
   --bg:        transparent;
-  --surface:   rgba(255, 255, 255, 0.34);
-  --surface2:  rgba(255, 255, 255, 0.22);
-  --surface3:  rgba(255, 255, 255, 0.16);
-  --glass-bg:  rgba(255, 255, 255, 0.34);
-  --input-bg:  rgba(255, 255, 255, 0.30);
-  --nav-bg:    rgba(255, 255, 255, 0.36);
-  --tooltip-bg: rgba(255, 255, 255, 0.72);
+  --surface:   rgba(255, 255, 255, 0.55);
+  --surface2:  rgba(120, 120, 128, 0.10);
+  --surface3:  rgba(120, 120, 128, 0.08);
+  --glass-bg:  rgba(255, 255, 255, 0.55);
+  --nav-bg:    rgba(255, 255, 255, 0.62);
+  --tooltip-bg: rgba(255, 255, 255, 0.92);
+  --input-bg:  rgba(255, 255, 255, 0.6);
 
-  --border:       rgba(255, 255, 255, 0.55);
-  --border-dark:  rgba(0, 0, 0, 0.10);
-  --input-border: rgba(255, 255, 255, 0.6);
-  --nav-border:   rgba(255, 255, 255, 0.55);
+  --text:           #1D1D1F;
+  --text-secondary: rgba(60, 60, 67, 0.78);
+  --text-muted:     rgba(60, 60, 67, 0.55);
 
-  --lg-blur:   blur(16px) saturate(190%) brightness(1.04);
-  /* Specular rim: top edge brightest, then left, faint right/bottom, inner glow */
-  --lg-rim:
-    inset 0 1px 0.5px rgba(255, 255, 255, 0.95),
-    inset 1px 0 0.5px rgba(255, 255, 255, 0.55),
-    inset -1px 0 0.5px rgba(255, 255, 255, 0.28),
-    inset 0 -1px 0.5px rgba(255, 255, 255, 0.35),
-    inset 0 0 18px rgba(255, 255, 255, 0.28);
-  --lg-float:  0 10px 30px -10px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.06);
-  /* Glossy sheen: light pooling near the top edge */
-  --lg-sheen:  linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.10) 22%, rgba(255, 255, 255, 0) 45%);
+  --border:       rgba(60, 60, 67, 0.12);   /* hairline separators */
+  --border-dark:  rgba(60, 60, 67, 0.2);
+  --input-border: rgba(60, 60, 67, 0.12);
+  --nav-border:   transparent;
 
-  --backdrop-base: #E6E8EC;
-  --backdrop-light: rgba(255, 255, 255, 0.95);
-  --backdrop-shade: rgba(160, 166, 178, 0.45);
+  --backdrop-base: #E4E5EA;
+  --backdrop-a: rgba(255, 255, 255, 0.95);
+  --backdrop-b: rgba(178, 182, 196, 0.55);
 }
 
 [data-theme="monoflow"] {
-  /* Dark glass = smoked glass: near-black tint, never a white wash (that turns grey) */
+  /* Smoked glass: near-black tint over a deep black scene — never a grey wash */
+  --glass-fill:   rgba(20, 20, 24, 0.66);
+  --glass-bar:    rgba(16, 16, 20, 0.84);
+  --glass-blur:   blur(30px) saturate(150%);
+  --glass-rim:    linear-gradient(135deg,
+                    rgba(255,255,255,.42) 0%, rgba(255,255,255,.14) 16%,
+                    rgba(255,255,255,.04) 40%, rgba(255,255,255,.03) 60%,
+                    rgba(255,255,255,.12) 84%, rgba(255,255,255,.36) 100%);
+  --glass-inner:  inset 0 1px 0 rgba(255,255,255,.07);
+  --glass-float:  0 18px 44px -18px rgba(0,0,0,.9), 0 2px 6px rgba(0,0,0,.5);
+
   --bg:        transparent;
-  --surface:   rgba(14, 15, 20, 0.58);
-  --surface2:  rgba(8, 9, 13, 0.40);
-  --surface3:  rgba(8, 9, 13, 0.30);
-  --glass-bg:  rgba(14, 15, 20, 0.58);
-  --input-bg:  rgba(0, 0, 0, 0.35);
-  --nav-bg:    rgba(14, 15, 20, 0.55);
-  --tooltip-bg: rgba(14, 15, 20, 0.9);
+  --surface:   rgba(20, 20, 24, 0.66);
+  --surface2:  rgba(255, 255, 255, 0.05);
+  --surface3:  rgba(255, 255, 255, 0.04);
+  --glass-bg:  rgba(20, 20, 24, 0.66);
+  --nav-bg:    rgba(16, 16, 20, 0.84);
+  --tooltip-bg: rgba(20, 20, 24, 0.95);
+  --input-bg:  rgba(0, 0, 0, 0.4);
 
-  --border:       rgba(255, 255, 255, 0.10);
-  --border-dark:  rgba(255, 255, 255, 0.16);
-  --input-border: rgba(255, 255, 255, 0.08);
-  --nav-border:   rgba(255, 255, 255, 0.12);
+  --text:           #FFFFFF;
+  --text-secondary: rgba(235, 235, 245, 0.64);
+  --text-muted:     rgba(235, 235, 245, 0.42);
 
-  --lg-blur:   blur(22px) saturate(160%);
-  /* Crisp specular edge on top, almost nothing elsewhere — keeps the body clear and dark */
-  --lg-rim:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 1px 0 0 rgba(255, 255, 255, 0.06),
-    inset -1px 0 0 rgba(255, 255, 255, 0.03),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
-  --lg-float:  0 20px 50px -18px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.6);
-  /* Thin wet reflection along the top edge only */
-  --lg-sheen:  linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.015) 14%, rgba(255, 255, 255, 0) 30%);
+  --border:       rgba(255, 255, 255, 0.08);
+  --border-dark:  rgba(255, 255, 255, 0.14);
+  --input-border: rgba(255, 255, 255, 0.07);
+  --nav-border:   transparent;
 
-  --backdrop-base: #030305;
-  --backdrop-light: rgba(70, 80, 110, 0.22);   /* faint cool rim light behind the glass */
-  --backdrop-shade: rgba(0, 0, 0, 0.8);
+  --backdrop-base: #040405;
+  --backdrop-a: rgba(46, 52, 74, 0.32);   /* faint cool light, just enough depth */
+  --backdrop-b: rgba(0, 0, 0, 0.85);
 }
 
-/* ── Neutral backdrop: soft studio light, no hue ────────────────── */
+/* ── Typography: San Francisco on Apple devices, Inter elsewhere ── */
+html, body, #root, button, input, select, textarea {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+               "Inter", "Helvetica Neue", system-ui, sans-serif !important;
+}
+body { letter-spacing: -0.01em; }
+
+/* ── Backdrop: a soft blurred "scene" for the glass to sit on ───── */
 html, body { background-color: var(--backdrop-base) !important; }
 #root { background: transparent !important; position: relative; z-index: 1; }
-
 body::before {
   content: '';
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    radial-gradient(70vmax 50vmax at 18% 8%,  var(--backdrop-light), transparent 60%),
-    radial-gradient(60vmax 45vmax at 92% 30%, var(--backdrop-light), transparent 62%),
-    radial-gradient(70vmax 55vmax at 60% 110%, var(--backdrop-shade), transparent 65%),
-    radial-gradient(50vmax 40vmax at 0% 80%,  var(--backdrop-shade), transparent 65%);
+    radial-gradient(60vmax 45vmax at 15% 5%,   var(--backdrop-a), transparent 62%),
+    radial-gradient(55vmax 40vmax at 95% 35%,  var(--backdrop-a), transparent 62%),
+    radial-gradient(70vmax 55vmax at 55% 115%, var(--backdrop-b), transparent 65%),
+    radial-gradient(45vmax 40vmax at -5% 80%,  var(--backdrop-b), transparent 65%);
 }
 
-/* ── Glass surfaces (cards, panels, bars) ───────────────────────── */
+/* ── Glass tiles (top-level cards, panels, bars) ───────────────── */
+/* Nested surfaces are excluded — a row inside a tile is part of that tile. */
+:is(.card, .tab-header,
+    [style*="background: var(--surface)"],
+    [style*="background: var(--glass-bg)"],
+    [style*="background: var(--tooltip-bg)"]):not(.card *):not([style*="background: var(--surface)"] *) {
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  /* fill inside, curved specular rim as a gradient border */
+  background:
+    linear-gradient(var(--glass-fill), var(--glass-fill)) padding-box,
+    var(--glass-rim) border-box !important;
+  border: 1px solid transparent !important;
+  box-shadow: var(--glass-inner), var(--glass-float) !important;
+}
+
+/* Rows / sub-panels inside a tile: no second pane, no double tint */
+.card [style*="background: var(--surface)"],
+[style*="background: var(--surface)"] [style*="background: var(--surface)"] {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Continuous large radii on tiles */
 .card,
-.tab-header,
-[style*="background: var(--surface)"],
-[style*="background: var(--glass-bg)"],
-[style*="background: var(--nav-bg)"],
-[style*="background: var(--tooltip-bg)"] {
-  -webkit-backdrop-filter: var(--lg-blur);
-  backdrop-filter: var(--lg-blur);
-  background-image: var(--lg-sheen) !important;
-  border-color: var(--border) !important;
-  box-shadow: var(--lg-rim), var(--lg-float) !important;
+:is([style*="border-radius: 14px"], [style*="border-radius: 16px"],
+    [style*="border-radius: 18px"], [style*="border-radius: 20px"]):is([style*="var(--surface)"], [style*="var(--glass-bg)"], [style*="-bg)"]) {
+  border-radius: 26px !important;
 }
-
-/* Nested fills (rows, tracks, chips): clear glass, rim only */
-[style*="background: var(--surface2)"]:not(:empty),
-[style*="background: var(--surface3)"]:not(:empty) {
-  box-shadow: var(--lg-rim) !important;
+:is([style*="border-radius: 10px"], [style*="border-radius: 12px"])[style*="var(--surface"] {
+  border-radius: 18px !important;
 }
 
 /* Info boxes some screens always render, even with nothing in them */
 [style*="background: var(--surface2)"][style*="padding"]:empty { display: none; }
 
-/* Rows inside a glass card are part of the same pane, not new panes */
-.card [style*="background: var(--surface)"],
-[style*="background: var(--surface)"] [style*="background: var(--surface)"] {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  background-image: none !important;
-  box-shadow: none !important;
+/* ── Controls: capsules and circles ─────────────────────────────── */
+button { border-radius: 999px !important; }
+/* Segmented-control tracks become capsules too */
+div:has(> button + button)[style*="background: var(--surface2)"],
+div:has(> button + button)[style*="background: var(--surface3)"] {
+  border-radius: 999px !important;
+  border-color: transparent !important;
 }
 
-/* ── Inputs: recessed clear wells ───────────────────────────────── */
+/* Fields: soft recessed wells */
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 select,
-textarea,
-.input-base {
-  -webkit-backdrop-filter: blur(10px) saturate(160%);
-  backdrop-filter: blur(10px) saturate(160%);
-  box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.08),
-    inset 0 -1px 0.5px rgba(255, 255, 255, 0.6);
+textarea {
+  border-radius: 14px !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06) !important;
 }
-[data-theme="monoflow"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
-[data-theme="monoflow"] select,
-[data-theme="monoflow"] textarea {
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+[data-theme="monoflow"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35) !important;
 }
 
-/* ── Glossy tinted buttons: coloured glass with a wet highlight ─── */
-button[style*="background: var(--accent)"],
-button[style*="background: var(--income)"],
-button[style*="background: var(--expense)"],
-button[style*="background: var(--savings)"],
-button[style*="background: var(--person)"],
-button[style*="background: var(--lent)"],
-button[style*="background: var(--borrowed)"],
-button[style*="background: var(--external)"],
-button[style*="background: var(--repayment-rec)"],
-button[style*="background: var(--given)"] {
-  background-image:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0) 55%, rgba(255, 255, 255, 0.10) 100%) !important;
-  box-shadow:
-    inset 0 1px 0.5px rgba(255, 255, 255, 0.75),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.15),
-    inset 0 0 12px rgba(255, 255, 255, 0.18),
-    0 6px 16px -6px rgba(0, 0, 0, 0.35) !important;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+/* Filled (category-tinted) buttons: tinted glass with a soft top light */
+button:is([style*="background: var(--accent)"], [style*="background: var(--income)"],
+          [style*="background: var(--expense)"], [style*="background: var(--savings)"],
+          [style*="background: var(--person)"], [style*="background: var(--lent)"],
+          [style*="background: var(--borrowed)"], [style*="background: var(--external)"],
+          [style*="background: var(--repayment-rec)"], [style*="background: var(--given)"]) {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0) 55%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 4px 12px -4px rgba(0,0,0,.28) !important;
 }
 
-/* Press: glass squishes slightly, like Liquid Glass controls */
-button { transition: transform .18s cubic-bezier(.3,1.6,.5,1), filter .15s, background-color .2s, box-shadow .2s !important; }
+/* Dark: the primary/selected state is solid white with a dark glyph */
+[data-theme="monoflow"] button[style*="background: var(--accent)"] {
+  background: #FFFFFF !important;
+  color: #1C1C1E !important;
+  box-shadow: 0 4px 14px -4px rgba(0,0,0,.6) !important;
+}
+[data-theme="monoflow"] button[style*="background: var(--accent)"] svg { color: #1C1C1E !important; stroke: currentColor; }
+
+/* Press feedback: controls give slightly, like Liquid Glass */
+button { transition: transform .2s cubic-bezier(.3,1.5,.5,1), filter .15s, background-color .2s, box-shadow .2s !important; }
 button:not(:disabled):active { transform: scale(0.96); }
-button:not(:disabled):hover { filter: brightness(1.04); }
+button:not(:disabled):hover  { filter: brightness(1.06); }
 
 /* ── Floating capsule bars ──────────────────────────────────────── */
-/* Mobile tab bar → floating pill above the content */
 nav {
-  margin: 0 12px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
-  padding-bottom: 0 !important;
-  border: 1px solid var(--nav-border) !important;
-  border-radius: 28px !important;
-  -webkit-backdrop-filter: var(--lg-blur);
-  backdrop-filter: var(--lg-blur);
-  background: var(--nav-bg) !important;
-  background-image: var(--lg-sheen) !important;
-  box-shadow: var(--lg-rim), var(--lg-float) !important;
+  margin: 0 14px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  padding: 4px 0 !important;
+  border: 1px solid transparent !important;
+  border-radius: 30px !important;
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  background:
+    linear-gradient(var(--glass-bar), var(--glass-bar)) padding-box,
+    var(--glass-rim) border-box !important;
+  box-shadow: var(--glass-inner), var(--glass-float) !important;
   overflow: hidden;
 }
-/* The bar floats OVER the content (content scrolls behind the glass) */
+/* The tab bar floats OVER the content (content scrolls behind the glass) */
 nav[style*="flex-shrink: 0"] {
   position: fixed !important;
   left: 0; right: 0; bottom: 0;
   z-index: 50;
 }
-/* …so whichever element scrolls needs room at the bottom for it:
-   screens with a .tab-body scroll that; the rest scroll the outer wrapper */
 div:has(> nav[style*="flex-shrink: 0"]) .tab-body,
 div:has(> nav[style*="flex-shrink: 0"]) > div[style*="overflow: auto"]:not(:has(.tab-body)) {
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
 }
-/* Active-tab indicator: drop the top line, the coloured icon is enough */
+/* Active tab: a glass lozenge behind the icon instead of a top line */
 nav button[style*="position: relative"] > span[style*="position: absolute"] { display: none; }
+nav button { margin: 0 4px; }
+nav button:has(svg[stroke-width="2.3"]) { background: var(--surface2) !important; }
 
-/* Desktop top bar (sticky) → floating rounded toolbar */
+/* Desktop top bar → floating toolbar */
 [style*="position: sticky"][style*="top: 0"] {
-  margin: 10px 14px 0 !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 18px !important;
-  top: 10px !important;
+  margin: 12px 16px 0 !important;
+  top: 12px !important;
+  border-radius: 24px !important;
+  background:
+    linear-gradient(var(--glass-bar), var(--glass-bar)) padding-box,
+    var(--glass-rim) border-box !important;
+  border: 1px solid transparent !important;
 }
 
-/* Desktop sections (History / Billings / People / Settings): page header as a rounded glass panel */
+/* Desktop sections: page header as a glass tile aligned with content */
 .desktop-history-host .tab-header,
 .desktop-external-host .tab-header,
 .desktop-people-host .tab-header,
 .desktop-settings-host .tab-header {
-  margin: 4px 20px 8px;
-  border: 1px solid var(--border) !important;
-  border-radius: 18px;
+  margin: 4px 20px 10px;
+  border-radius: 26px;
 }
 
-/* ── Lensing (Chromium): edges of glass bars bend what's behind ──── */
-@supports (backdrop-filter: url(#liquid-lens)) {
-  nav,
-  [style*="position: sticky"][style*="top: 0"] {
-    backdrop-filter: url(#liquid-lens) blur(14px) saturate(190%) brightness(1.05);
-  }
-  [data-theme="monoflow"] nav,
-  [data-theme="monoflow"] [style*="position: sticky"][style*="top: 0"] {
-    backdrop-filter: url(#liquid-lens) blur(18px) saturate(160%);
-  }
-}
-
-/* ── Modal overlays: frosted dim ────────────────────────────────── */
+/* ── Dialogs ────────────────────────────────────────────────────── */
 [style*="position: fixed"][style*="inset: 0"] {
-  -webkit-backdrop-filter: blur(8px) saturate(140%);
-  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
 }
-/* Dialogs sit on a dimmed backdrop, where clear glass turns muddy —
-   give glass inside them a denser body so text and inputs stay crisp. */
+/* On the dimmed backdrop, clear glass turns muddy — use a denser body */
 :root [style*="position: fixed"][style*="inset: 0"],
 [data-theme="light"] [style*="position: fixed"][style*="inset: 0"] {
-  --surface:  rgba(255, 255, 255, 0.86);
-  --surface2: rgba(255, 255, 255, 0.62);
-  --surface3: rgba(255, 255, 255, 0.5);
-  --input-bg: rgba(255, 255, 255, 0.75);
-  --input-border: rgba(15, 23, 42, 0.08);
-  --border:   rgba(255, 255, 255, 0.95);
+  --glass-fill: rgba(255, 255, 255, 0.86);
+  --surface:    rgba(255, 255, 255, 0.86);
+  --input-bg:   rgba(255, 255, 255, 0.8);
 }
 [data-theme="monoflow"] [style*="position: fixed"][style*="inset: 0"] {
-  --surface:  rgba(18, 20, 26, 0.86);
-  --surface2: rgba(255, 255, 255, 0.04);
-  --surface3: rgba(255, 255, 255, 0.03);
-  --input-bg: rgba(0, 0, 0, 0.35);
-  --border:   rgba(255, 255, 255, 0.12);
+  --glass-fill: rgba(22, 22, 26, 0.92);
+  --surface:    rgba(22, 22, 26, 0.92);
+  --input-bg:   rgba(0, 0, 0, 0.4);
 }
 
-::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.18); }
-[data-theme="monoflow"] ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); }
+::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.18); border-radius: 99px; }
+[data-theme="monoflow"] ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); }
 
 /* ── Accessibility / fallbacks ──────────────────────────────────── */
 @media (prefers-reduced-transparency: reduce) {
-  :root, [data-theme="light"] { --surface: rgba(255, 255, 255, 0.92); --surface2: rgba(255, 255, 255, 0.86); --nav-bg: rgba(255, 255, 255, 0.94); }
-  [data-theme="monoflow"]     { --surface: rgba(28, 30, 36, 0.95);   --surface2: rgba(34, 36, 44, 0.92);   --nav-bg: rgba(28, 30, 36, 0.96); }
+  :root, [data-theme="light"] { --glass-fill: rgba(255,255,255,.94); --glass-bar: rgba(255,255,255,.96); }
+  [data-theme="monoflow"]     { --glass-fill: rgba(22,22,26,.97);    --glass-bar: rgba(18,18,22,.98); }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root, [data-theme="light"] { --surface: rgba(255, 255, 255, 0.9); --surface2: rgba(255, 255, 255, 0.82); }
-  [data-theme="monoflow"]     { --surface: rgba(28, 30, 36, 0.94);   --surface2: rgba(34, 36, 44, 0.9); }
+  :root, [data-theme="light"] { --glass-fill: rgba(255,255,255,.92); --glass-bar: rgba(255,255,255,.94); }
+  [data-theme="monoflow"]     { --glass-fill: rgba(22,22,26,.95);    --glass-bar: rgba(18,18,22,.96); }
 }
