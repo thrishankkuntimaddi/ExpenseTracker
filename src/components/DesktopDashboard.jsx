@@ -40,7 +40,7 @@ export default function DesktopDashboard({
   onSignOut, theme, user,
   restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   isStandalone, canInstallNative, onTriggerInstall,
-  recurring, onPatchSettings, onLearnCategory,
+  recurring, onPatchSettings, onLearnCategory, reportError,
 }) {
   const isMonoflow = theme === 'monoflow';
   // Use shared hooks
@@ -227,6 +227,7 @@ export default function DesktopDashboard({
             onDeleteTransaction={onDeleteTransaction}
             selectedPeriod={selectedPeriod}
             theme={theme}
+            reportError={reportError}
           />
         </div>
       )}

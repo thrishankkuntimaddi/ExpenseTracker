@@ -1,9 +1,9 @@
 import { Plus, Loader2, ArrowLeft, Share2 } from 'lucide-react';
 
-export default function BillingsHeader({ currentSession, saving, onBack, onShare, onNew }) {
+export default function BillingsHeader({ currentSession, saving, onBack, onShare, onNew, extra }) {
   return (
     <div className="tab-header">
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: extra ? 10 : 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {currentSession && (
             <button
@@ -70,6 +70,7 @@ export default function BillingsHeader({ currentSession, saving, onBack, onShare
           )}
         </div>
       </div>
+      {extra}
     </div>
   );
 }

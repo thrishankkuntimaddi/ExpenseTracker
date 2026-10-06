@@ -12,6 +12,7 @@
 
 import https from 'https';
 import readline from 'readline';
+// Run with:  node --env-file=.env scripts/clear-db.mjs   (reads VITE_FIREBASE_* from .env)
 import { firebaseConfig } from '../src/services/firebaseConfig.js';
 
 const PROJECT_ID = firebaseConfig.projectId;

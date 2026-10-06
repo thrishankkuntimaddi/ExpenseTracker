@@ -106,6 +106,13 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 - Full session management: open, track, close, and view closed sessions in separate tabs
 - External sessions are stored in a dedicated `external_transactions` Firestore sub-collection
 
+### 🧳 Trips & Splits (group expenses)
+- Inside **Billings**, switch to *Trips & Splits*: add the people on a trip, log who paid for what, and choose whether each expense is split among everyone or a subset
+- **Pay as one wallet**: mark two people as "pays with" each other (a couple, a family) and their spending and dues are combined
+- Live **who-pays-whom plan** with the minimum number of transfers ("Dev pays Arjun ₹2,400"), per-person paid vs share, and what is still outstanding; tap **Paid** to record a settlement and the plan shrinks
+- **Share** a WhatsApp-ready text summary; **Close** the trip to lock it and, in one step, log *your* share as a Travel expense and record what others still owe you as Lent (or what you owe as Borrowed) in your own ledger. Reopening removes those entries again
+- Trips live in `users/{uid}/trips`, bounded by the Firestore rules
+
 ### 🗑️ Wastage Tracking
 - **Single-tap** any expense in History to toggle it as 100% wasted
 - **Double-tap** to enter a custom partial waste amount
@@ -185,7 +192,8 @@ ExpenseTracker/
 │   │   ├── auth/               # AuthGate, login and sign-up pages
 │   │   ├── transactions/       # TodayTab (quick add, safe-to-spend, due recurring), HistoryTab (search, filters, wastage, edit)
 │   │   ├── income/             # IncomeTab
-│   │   ├── external/           # Billing sessions (ExternalTab) + share receipt
+│   │   ├── external/           # Billing sessions (ExternalTab) + share receipt, Billings ⇄ Trips switch
+│   │   ├── trips/              # Trips & Splits: members, expenses, settle-up plan, close → ledger
 │   │   ├── persons/            # Person ledgers
 │   │   ├── plan/               # PlanTab: budget editor, recurring rules, savings goals (+ reusable cards)
 │   │   ├── stats/              # Charts, key metrics, InsightsCard, CategoryBreakdown, SpendingCalendar
@@ -211,6 +219,7 @@ ExpenseTracker/
 │   └── utils/
 │       ├── finance.js          # ALL money maths: balances, person debts, settlement matching
 │       ├── categories.js       # Category list, keyword inference, learned rules, per-category totals
+│       ├── split.js            # Trip splitting: shares, pay-groups as one wallet, minimal who-pays-whom transfers
 │       ├── carryForward.js     # Month-to-month leftover chain → synthetic "carried forward" income lines
 │       ├── budget.js           # Budget status: spent vs limit, pace, projection, safe-to-spend-today
 │       ├── recurring.js        # Occurrence generation, due/next, deterministic ids, entry builder
@@ -256,7 +265,11 @@ npm install
 
 ### 2. Configure Firebase
 
-The Firebase web config lives in `src/services/firebaseConfig.js`. These values are public identifiers, not secrets — to use your own project, replace them with the values from Firebase Console → Project Settings → Your apps → SDK setup.
+```bash
+cp .env.example .env     # then fill in VITE_FIREBASE_* from Firebase Console → Project settings → Your apps
+```
+
+The config is read from environment variables (`src/services/firebaseConfig.js`) and never committed. The values are public identifiers, not secrets, but the API key must be **restricted by HTTP referrer** and the project should use **App Check** — see [SECURITY.md](SECURITY.md).
 
 ### 3. Deploy Firestore rules
 
@@ -295,6 +308,7 @@ The proxy listens on `127.0.0.1:3001`. Every `/api/sheets/*` call must carry the
 
 | Variable | Description |
 |---|---|
+| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID` | **Required.** Firebase web config (see `.env.example`). In CI these are GitHub repository *variables*. |
 | `VITE_SHEETS_PROXY_URL` | URL of the Sheets proxy. In dev it defaults to `http://localhost:3001`; a production build only shows Sheets sync when this is set. |
 | `VITE_APPCHECK_SITE_KEY` | reCAPTCHA v3 site key. When set, Firebase **App Check** is enabled so only this app can call your backend. Register the key in Firebase Console → App Check, then turn on enforcement for Firestore. |
 
@@ -349,6 +363,7 @@ users/{uid}                         ← { email, settings, createdAt }
   ├── transactions/{id}             ← { name, amount, type, date, month, category?, direction?, wasteAmount?, recurringId?, … }
   ├── income/{id}                   ← { name, amount, type, date, month, isBorrowed?, isRepaymentRec?, recurringId?, … }
   ├── recurring/{id}                ← { name, amount, kind, frequency, dayOfMonth?/weekday?, startDate, endDate?, autoPost, active, lastHandledKey?, category?, … }
+  ├── trips/{id}                    ← { name, startDate, endDate?, status, meMemberId?, members[{id,name,groupId?}], expenses[{id,title,amount,paidBy,splitAmong[],date}], settlements[{id,fromUnit,toUnit,amount,date}], postedEntryIds[] }
   ├── external_transactions/{id}    ← billing session { name, items[], received[], status, net_balance, settlementId?, … }
   └── recently_deleted/{id}         ← { itemType, originalData, deletedAt, … }
 ```

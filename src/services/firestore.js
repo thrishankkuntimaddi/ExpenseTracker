@@ -174,6 +174,7 @@ export async function deleteAllUserData(uid) {
     getDocs(query(extRef(uid))),
     getDocs(query(recentlyDeletedRef(uid))),
     getDocs(query(recurringRef(uid))),
+    getDocs(query(tripsRef(uid))),
   ]);
   const ops = snaps.flatMap((snap) => snap.docs.map((d) => (b) => b.delete(d.ref)));
   await commitInChunks(ops);
@@ -361,4 +362,35 @@ export async function patchRecurringRule(uid, id, patch) {
 
 export async function deleteRecurringRule(uid, id) {
   await deleteDoc(recurringDocRef(uid, id));
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TRIPS (group expense splitting)
+   Collection: users/{uid}/trips — one document per trip, holding its
+   members, expenses and settlements (bounded by firestore.rules).
+═══════════════════════════════════════════════════════════════════ */
+
+const tripsRef   = (uid)     => collection(db, "users", uid, "trips");
+const tripDocRef = (uid, id) => doc(db, "users", uid, "trips", id);
+
+export function subscribeToTrips(uid, onData) {
+  return onSnapshot(
+    query(tripsRef(uid)),
+    { includeMetadataChanges: false },
+    (snap) => {
+      const trips = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      trips.sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
+      onData(trips);
+    },
+    (err) => console.error("[Firestore] trips error", err)
+  );
+}
+
+export async function upsertTrip(uid, trip) {
+  const { id, ...data } = trip;
+  await setDoc(tripDocRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() });
+}
+
+export async function deleteTrip(uid, id) {
+  await deleteDoc(tripDocRef(uid, id));
 }

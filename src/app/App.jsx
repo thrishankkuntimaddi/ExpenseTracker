@@ -146,7 +146,7 @@ function AuthenticatedApp({ user, signOut }) {
     isStandalone, canInstallNative, onTriggerInstall: triggerInstall,
     selectedPeriod, onPeriodChange: setSelectedPeriod,
     theme, user,
-    recurring, onPatchSettings: patchSettings, onLearnCategory: learnCategory,
+    recurring, onPatchSettings: patchSettings, onLearnCategory: learnCategory, reportError,
   };
 
   /* ── DESKTOP ── */
@@ -225,6 +225,7 @@ function AuthenticatedApp({ user, signOut }) {
             onDeleteTransaction={deleteTransaction}
             selectedPeriod={selectedPeriod}
             theme={theme}
+            reportError={reportError}
           />
         )}
         {activeTab === 'plan' && (

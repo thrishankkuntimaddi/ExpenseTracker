@@ -37,10 +37,30 @@ service cloud.firestore {
         allow create, update: if isOwner(userId) && validEntry(request.resource.data);
       }
 
+      // Recurring rules: must carry a name and sane amount
+      match /recurring/{ruleId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && validMoney(request.resource.data.amount)
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 200
+          && request.resource.data.kind in ['expense', 'savings', 'income'];
+      }
+
+      // Trips (group expense splitting): bounded name, bounded member/expense lists
+      match /trips/{tripId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 200
+          && request.resource.data.members is list && request.resource.data.members.size() <= 50
+          && request.resource.data.expenses is list && request.resource.data.expenses.size() <= 1000;
+      }
+
       // external_transactions, recently_deleted, and any future subcollection
       match /{collection}/{rest=**} {
         allow read, write: if isOwner(userId)
-          && !(collection in ['transactions', 'income']);
+          && !(collection in ['transactions', 'income', 'recurring', 'trips']);
       }
     }
 

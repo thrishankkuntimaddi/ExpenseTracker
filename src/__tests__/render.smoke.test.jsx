@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 vi.mock('../services/firebase', () => ({ auth: {}, db: {}, clearLocalFirestoreCache: async () => {}, default: {} }));
 vi.mock('../services/firestore', () => ({
+  subscribeToTrips: () => () => {}, upsertTrip: async () => {}, deleteTrip: async () => {},
   updateSettings: async () => {}, deleteAllUserData: async () => {}, bulkImport: async () => {},
   subscribeToExternalTransactions: () => () => {}, upsertExternalTransaction: async () => {},
   closeExternalTransaction: async () => {}, deleteExternalTransaction: async () => {},
@@ -28,6 +29,11 @@ const { default: EditTransactionModal } = await import('../components/EditTransa
 const { default: RecurringRuleModal } = await import('../features/plan/RecurringRuleModal');
 const { default: BudgetEditorModal } = await import('../features/plan/BudgetEditorModal');
 const { default: GoalModal } = await import('../features/plan/GoalModal');
+const { default: TripDetail } = await import('../features/trips/TripDetail');
+const { default: TripModal } = await import('../features/trips/TripModal');
+const { default: TripCloseModal } = await import('../features/trips/TripCloseModal');
+const { default: TripsPanel } = await import('../features/trips/TripsPanel');
+const { computeTripSummary } = await import('../utils/split');
 
 const now = new Date();
 const iso = (daysAgo, hour = 12) => { const d = new Date(now); d.setDate(d.getDate() - daysAgo); d.setHours(hour, 0, 0, 0); return d.toISOString(); };
@@ -152,6 +158,31 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Insights');
     expect(html).toContain('Spending Calendar');
     expect(html).toContain('Safe to spend today');
+  });
+
+  it('Trips: detail shows the settle-up plan, close modal offers ledger posting', () => {
+    const trip = {
+      id: 'trip1', name: 'Goa road trip', status: 'open', meMemberId: 'p1', startDate: '2026-10-01', endDate: '2026-10-03',
+      members: [{ id: 'p1', name: 'Arjun' }, { id: 'p2', name: 'Bala', groupId: 'g1' }, { id: 'p3', name: 'Chitra' }, { id: 'p4', name: 'Dev' }, { id: 'p5', name: 'Esha', groupId: 'g1' }],
+      expenses: [
+        { id: 'e1', title: 'Fuel', amount: 11000, paidBy: 'p1', splitAmong: [], date: '2026-10-01' },
+        { id: 'e2', title: 'Hotel', amount: 8000, paidBy: 'p2', splitAmong: [], date: '2026-10-02' },
+        { id: 'e3', title: 'Food', amount: 3000, paidBy: 'p3', splitAmong: [], date: '2026-10-02' },
+        { id: 'e4', title: 'Drinks', amount: 2500, paidBy: 'p4', splitAmong: [], date: '2026-10-03' },
+      ],
+      settlements: [],
+    };
+    const html = render(<TripDetail trip={trip} onChange={noop} onEdit={noop} onShare={noop} onClose={noop} onReopen={noop} />);
+    expect(html).toContain('Who pays whom');
+    expect(html).toContain('Bala &amp; Esha');
+    expect(html).toContain('24,500');
+    expect(html).toContain('2,400');   // Dev → Arjun
+    expect(html).toContain('one wallet');
+    const close = render(<TripCloseModal trip={trip} summary={computeTripSummary(trip)} onConfirm={noop} onClose={noop} />);
+    expect(close).toContain('Log my share as an expense');
+    expect(close).toContain('4,900');
+    expect(render(<TripModal trip={trip} onSave={noop} onDelete={noop} onClose={noop} />)).toContain('Pays with');
+    expect(render(<TripsPanel user={{ uid: 'u' }} onAddTransaction={noop} onDeleteTransaction={noop} />)).toContain('No trips yet');
   });
 
   it('modals render for new and existing records', () => {

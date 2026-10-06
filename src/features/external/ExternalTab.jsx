@@ -10,6 +10,8 @@ import ConfirmCloseModal from './components/ConfirmCloseModal';
 import SessionsList from './components/SessionsList';
 import SessionEditor from './components/SessionEditor';
 import BillingsHeader from './components/BillingsHeader';
+import ModeToggle from './components/ModeToggle';
+import TripsPanel from '../trips/TripsPanel';
 
 
 /* ═══════════════════════════════════════════════════════════════
@@ -21,8 +23,9 @@ export default function ExternalTab({
   transactions = [], income = [],
   onAddIncome, onUpdateIncome, onDeleteIncome,
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
-  selectedPeriod,
+  selectedPeriod, reportError,
 }) {
+  const [mode, setMode] = useState('billings');   // 'billings' | 'trips'
   const {
     sessions, saving,
     createSession, updateSession, saveDraftSession,
@@ -277,6 +280,18 @@ export default function ExternalTab({
 
 
 
+  if (mode === 'trips') {
+    return (
+      <TripsPanel
+        user={user}
+        onAddTransaction={onAddTransaction}
+        onDeleteTransaction={onDeleteTransaction}
+        reportError={reportError}
+        headerExtra={<ModeToggle mode={mode} onChange={setMode} />}
+      />
+    );
+  }
+
   return (
     <div className="tab-root">
       {/* New Billing Modal */}
@@ -326,6 +341,7 @@ export default function ExternalTab({
         onBack={() => setActiveSessionId(null)}
         onShare={handleShareCurrentSession}
         onNew={() => setShowNewModal(true)}
+        extra={!currentSession ? <ModeToggle mode={mode} onChange={setMode} /> : null}
       />
 
       {/* Body */}
