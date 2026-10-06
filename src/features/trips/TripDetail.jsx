@@ -24,29 +24,33 @@ const isValidRow = (r) => r.paidBy && r.title.trim() && Number(r.amount) > 0;
 export default function TripDetail({ trip, onChange, onEdit, onShare, onClose, onReopen }) {
   const closed = trip.status === 'closed';
   const members = trip.members ?? [];
-  const [step, setStep] = useState(closed ? 2 : 1);
-  useEffect(() => { if (closed) setStep(2); }, [closed]);
+  const [stepState, setStep] = useState(1);
+  const step = closed ? 2 : stepState;   // a closed trip always shows the settlement
 
   /* ── Table rows: local, debounced autosave (one Firestore write per pause, not per keystroke) ── */
   const [rows, setRows] = useState(() => (trip.expenses?.length ? trip.expenses : [newRow(trip.meMemberId ?? members[0]?.id, trip.startDate)]));
-  const dirty = useRef(false);
+  const [dirty, setDirty] = useState(false);     // unsaved local edits (render-visible)
+  const dirtyRef = useRef(false);                // same flag for the unmount flush
   const timer = useRef(null);
   const latest = useRef({ trip, rows });
   useEffect(() => { latest.current = { trip, rows }; }, [trip, rows]);
 
-  useEffect(() => {
-    if (!dirty.current && trip.expenses?.length) setRows(trip.expenses);
-  }, [trip.expenses]);
+  // Adopt rows arriving from the server (another device) unless we are mid-edit
+  const [syncedFrom, setSyncedFrom] = useState(trip.expenses);
+  if (trip.expenses !== syncedFrom) {
+    setSyncedFrom(trip.expenses);
+    if (!dirty && trip.expenses?.length) setRows(trip.expenses);
+  }
 
   const persist = () => {
     clearTimeout(timer.current);
     const { trip: t, rows: r } = latest.current;
     const kept = r.filter((x) => x.title.trim() || x.amount !== '' || x.paidBy);
     onChange({ ...t, expenses: kept.map((x) => ({ ...x, amount: x.amount === '' ? '' : Number(x.amount) })) });
-    dirty.current = false;
+    dirtyRef.current = false; setDirty(false);
   };
-  const scheduleSave = () => { dirty.current = true; clearTimeout(timer.current); timer.current = setTimeout(persist, 700); };
-  useEffect(() => () => { if (dirty.current) persist(); clearTimeout(timer.current); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const scheduleSave = () => { dirtyRef.current = true; setDirty(true); clearTimeout(timer.current); timer.current = setTimeout(persist, 700); };
+  useEffect(() => () => { if (dirtyRef.current) persist(); clearTimeout(timer.current); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateRow = (id, patch) => { setRows((p) => p.map((r) => (r.id === id ? { ...r, ...patch } : r))); scheduleSave(); };
   const removeRow = (id) => { setRows((p) => (p.length > 1 ? p.filter((r) => r.id !== id) : [newRow(trip.meMemberId ?? members[0]?.id, trip.startDate)])); scheduleSave(); };
