@@ -152,6 +152,53 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 
 ---
 
+## 📲 Native App (Android APK / iOS) — no store account needed
+
+The same code ships as a real app through **Capacitor**. Nothing is published to a store; you install it directly.
+
+### Android — the APK is built for you by GitHub Actions
+
+1. Make sure the `VITE_FIREBASE_*` repository variables are set (same ones the web deploy uses).
+2. Push to `main` (or run **Build Android APK** from the Actions tab). The workflow builds the app and attaches `ExpenseTracker.apk` to a release named **android-latest**:
+   `https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/tag/android-latest`
+3. On the phone, open that link, download the APK, tap it, allow *Install unknown apps* for your browser when asked, and install. Updates: download the new APK and install over the old one (same package id, so data is kept).
+4. The web app links to the same file: **Settings → Mobile App → Install Android App** (and *Copy Android App Link* to share it). Point it elsewhere with `VITE_ANDROID_APK_URL`.
+
+Share the release link with anyone who should have the app. The build is debug-signed, which is fine for direct installs; only the Play Store requires a release keystore.
+
+### Building the APK on your own machine instead
+
+Install Android Studio (which brings the SDK and a JDK), then:
+
+```bash
+npm run android:apk      # → android/app/build/outputs/apk/debug/app-debug.apk
+npm run android          # or: build, sync and open the project in Android Studio
+```
+
+### iOS — on your own iPhone with a free Apple ID
+
+Apple does not allow sideloading an IPA, but Xcode can install straight onto your device with a free account (the app must be re-installed every 7 days; a paid developer account lifts that to a year).
+
+```bash
+xcode-select --install && brew install cocoapods     # once
+npx cap add ios                                       # once — creates ios/
+npm run ios                                           # builds, syncs, opens Xcode
+```
+
+In Xcode: select your iPhone, set *Signing & Capabilities → Team* to your personal team, press Run. On the phone, trust the developer under *Settings → General → VPN & Device Management*.
+
+### How the native build differs from the web build
+
+| | Web / PWA | Native |
+|---|---|---|
+| Base path | `/ExpenseTracker/` | `/` (`CAPACITOR=1 vite build`) |
+| Service worker | registered, auto-updates | skipped — Capacitor serves the bundle |
+| Install prompt | shown in Settings | hidden (already an app) |
+| Android back button | browser default | closes the More sheet → returns to Expenses → minimises |
+| Icons / splash | `public/manifest.json` | generated in CI from `assets/logo.png` by `@capacitor/assets` |
+
+Firebase works unchanged (email/password auth, Firestore with offline cache). Add the native origins to the API-key referrer restriction — see [SECURITY.md](SECURITY.md).
+
 ## 🏗️ Tech Stack
 
 | Layer | Technology |
@@ -164,6 +211,7 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 | **Fonts** | Inter (Google Fonts) |
 | **CSS** | Vanilla CSS with CSS Custom Properties (design tokens) |
 | **PWA** | Web App Manifest + custom Service Worker |
+| **Native apps** | Capacitor 8 (Android APK via GitHub Actions; iOS via Xcode) |
 | **Google Sheets Proxy** | Node.js + Express + `googleapis` |
 | **Build Tool** | Vite (base path `/ExpenseTracker/`) |
 | **Deployment** | GitHub Pages |
@@ -233,6 +281,10 @@ ExpenseTracker/
 │       ├── typeConfig.js       # Transaction type metadata
 │       ├── storage.js          # Theme preference + id generation
 │       └── __tests__/          # Vitest unit tests
+│
+├── capacitor.config.json       # Native app id / name / webDir
+├── android/                    # Capacitor Android project (generated web assets are gitignored)
+├── assets/                     # logo.png — source for native icons & splash screens
 │
 ├── public/
 │   ├── manifest.json           # PWA Web App Manifest
@@ -309,6 +361,7 @@ The proxy listens on `127.0.0.1:3001`. Every `/api/sheets/*` call must carry the
 | Variable | Description |
 |---|---|
 | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID` | **Required.** Firebase web config (see `.env.example`). In CI these are GitHub repository *variables*. |
+| `VITE_ANDROID_APK_URL` | Where Settings → *Install Android App* links. Defaults to the `android-latest` GitHub Release asset. |
 | `VITE_SHEETS_PROXY_URL` | URL of the Sheets proxy. In dev it defaults to `http://localhost:3001`; a production build only shows Sheets sync when this is set. |
 | `VITE_APPCHECK_SITE_KEY` | reCAPTCHA v3 site key. When set, Firebase **App Check** is enabled so only this app can call your backend. Register the key in Firebase Console → App Check, then turn on enforcement for Firestore. |
 
@@ -402,7 +455,7 @@ Posted recurring occurrences are ordinary transaction / income documents whose i
 - [ ] **Multi-currency Support**: record transactions in foreign currencies with exchange rate conversion
 - [ ] **Receipt OCR**: upload a photo of a receipt and auto-extract the amount and merchant name
 - [ ] **Shared Budgets**: collaborative mode where two users (e.g., partners) share a budget workspace
-- [ ] **Native Mobile App**: React Native wrapper for full offline-first, camera, and push notification support
+- [x] **Native Mobile App**: Capacitor wrapper — direct-install Android APK built in CI, iOS via Xcode
 - [ ] **LLM-powered insights**: a natural-language layer over the rule-based engine (e.g. ask "why was October expensive?")
 - [ ] **Backend Deployment for Sheets Sync**: host the (already authenticated) Express proxy on a cloud service and build with `VITE_SHEETS_PROXY_URL` so Sheets sync works on the deployed site
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ANDROID_APK_URL } from '../utils/appLinks';
 import { X, Smartphone, Share, PlusSquare, MoreVertical, Download, CheckCircle2 } from 'lucide-react';
 
 export default function PWAInstallModal({ isOpen, onClose }) {
@@ -257,6 +258,22 @@ export default function PWAInstallModal({ isOpen, onClose }) {
             </>
           ) : (
             <>
+              {/* Real Android app — direct APK install */}
+              <a
+                href={ANDROID_APK_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  padding: '12px 14px', borderRadius: 14, textDecoration: 'none',
+                  background: 'var(--income)', color: '#fff', fontWeight: 800, fontSize: 13,
+                }}
+              >
+                ⬇ Download the Android app (APK)
+              </a>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.55, marginTop: -6 }}>
+                Open the downloaded file and tap <strong>Install</strong>. If the phone asks, allow “Install unknown apps” for your browser. No Play Store account needed. Prefer the lighter web app? Follow the steps below instead.
+              </div>
               <div
                 style={{
                   padding: 14,

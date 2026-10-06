@@ -1,0 +1,84 @@
+name: Build Android APK
+
+# Builds an installable APK (no Play Store needed) and publishes it to a
+# rolling GitHub Release called "android-latest". Runs on every push to main
+# and on demand from the Actions tab.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app for the native shell
+        run: npm run build:native
+        env:
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ vars.VITE_FIREBASE_MEASUREMENT_ID }}
+          VITE_APPCHECK_SITE_KEY: ${{ vars.VITE_APPCHECK_SITE_KEY }}
+          VITE_SHEETS_PROXY_URL: ${{ vars.VITE_SHEETS_PROXY_URL }}
+
+      - name: Generate app icons and splash screens
+        run: npx --yes @capacitor/assets generate --android --iconBackgroundColor '#0A0D14' --iconBackgroundColorDark '#0A0D14' --splashBackgroundColor '#0A0D14' --splashBackgroundColorDark '#0A0D14'
+
+      - name: Copy web assets into the Android project
+        run: npx cap sync android
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../ExpenseTracker.apk
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ExpenseTracker-apk
+          path: ExpenseTracker.apk
+
+      - name: Publish to the "android-latest" release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Android app (latest build)
+          body: |
+            Direct-install Android build of Expense Tracker (not from the Play Store).
+            Download **ExpenseTracker.apk** on your phone, open it, allow "install unknown apps" for your browser if asked, and tap Install.
+            Built from commit ${{ github.sha }}.
+          files: ExpenseTracker.apk
+          prerelease: false

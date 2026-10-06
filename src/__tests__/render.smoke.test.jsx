@@ -131,6 +131,13 @@ describe('screens render with planning features', () => {
     expect(html).toContain('settings-carry-start');
   });
 
+  it('Settings links to the Android APK when not already installed', () => {
+    const html = render(<SettingsTab {...common} onThemeChange={noop} onSignOut={noop} isStandalone={false} />);
+    expect(html).toContain('btn-download-apk');
+    expect(html).toContain('Copy Android App Link');
+    expect(html).toContain('Add to Home Screen');
+  });
+
   it('Income tab shows last month\'s leftover as a non-editable carry-forward line', () => {
     const html = render(<IncomeTab {...common} onAddIncome={noop} onUpdateIncome={noop} onDeleteIncome={noop} onDeleteTransaction={noop} />);
     expect(html).toContain('Carried forward from');

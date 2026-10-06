@@ -20,6 +20,10 @@ function swBuildId() {
   }
 }
 
+// Native (Capacitor) builds are served from the app's own origin, so they use
+// base '/'. The GitHub Pages build keeps '/ExpenseTracker/'.
+const isNative = process.env.CAPACITOR === '1';
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -39,6 +43,6 @@ export default defineConfig({
       },
     },
   ],
-  base: '/ExpenseTracker/',
+  base: isNative ? '/' : '/ExpenseTracker/',
 })
 

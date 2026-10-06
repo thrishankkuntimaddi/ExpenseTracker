@@ -18,8 +18,9 @@ restricting what the key may be used for. Do all of the following once:
    locally and in the GitHub repository variable `VITE_FIREBASE_API_KEY`.
 2. **Restrict it** on the same page:
    - *Application restrictions → HTTP referrers*:
-     `https://thrishankkuntimaddi.github.io/*`, `http://localhost:5173/*`
-     (add any other origin you serve from).
+     `https://thrishankkuntimaddi.github.io/*`, `http://localhost:5173/*`,
+     and for the native (Capacitor) apps `https://localhost/*` (Android) and
+     `capacitor://localhost/*` (iOS). Add any other origin you serve from.
    - *API restrictions → Restrict key* to: Identity Toolkit API, Token Service
      API, Cloud Firestore API, Firebase Installations API, Firebase App Check API.
 3. **Close the GitHub alert** as *"Used in tests / Won't fix"* with a note that it

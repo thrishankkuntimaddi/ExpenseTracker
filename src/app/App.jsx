@@ -140,6 +140,21 @@ function AuthenticatedApp({ user, signOut }) {
   }, [activeTab]);
   const swipe = useSwipeNavigation({ order: PAGE_ORDER, active: activeTab, onChange: goTo, enabled: !isDesktop && !moreOpen });
 
+  /* Native shell (Capacitor): Android back button closes the More sheet, then
+     steps back to Expenses, and only then leaves the app. */
+  useEffect(() => {
+    if (!window.Capacitor?.isNativePlatform?.()) return undefined;
+    let handle;
+    import('@capacitor/app').then(({ App: CapApp }) => {
+      handle = CapApp.addListener('backButton', () => {
+        if (moreOpen) { setMoreOpen(false); return; }
+        if (activeTab !== 'today') { goTo('today', 'right'); return; }
+        CapApp.minimizeApp();
+      });
+    }).catch(() => {});
+    return () => { handle?.then?.((h) => h.remove()); };
+  }, [moreOpen, activeTab, goTo]);
+
   const commonProps = {
     transactions, income, settings, recentlyDeleted,
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,

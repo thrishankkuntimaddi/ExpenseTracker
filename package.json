@@ -10,9 +10,19 @@
     "preview": "vite preview",
     "server": "node server/index.js",
     "server:dev": "node --watch server/index.js",
-    "test": "TZ=Asia/Kolkata vitest run"
+    "test": "TZ=Asia/Kolkata vitest run",
+    "build:native": "CAPACITOR=1 vite build",
+    "cap:sync": "npm run build:native && npx cap sync",
+    "android": "npm run cap:sync && npx cap open android",
+    "ios": "npm run cap:sync && npx cap open ios",
+    "android:apk": "npm run cap:sync && npm run assets:generate -- --android && cd android && ./gradlew assembleDebug",
+    "assets:generate": "npx --yes @capacitor/assets generate --iconBackgroundColor '#0A0D14' --iconBackgroundColorDark '#0A0D14' --splashBackgroundColor '#0A0D14' --splashBackgroundColorDark '#0A0D14'"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "firebase": "^12.12.0",
     "lucide-react": "^1.7.0",
     "react": "^19.2.4",
