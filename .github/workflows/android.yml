@@ -23,17 +23,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Capacitor 8 needs Node ≥ 22 for its CLI and Java 21 for the Android library
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Install dependencies
         run: npm ci

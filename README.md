@@ -168,7 +168,7 @@ Share the release link with anyone who should have the app. The build is debug-s
 
 ### Building the APK on your own machine instead
 
-Install Android Studio (which brings the SDK and a JDK), then:
+Install Android Studio (which brings the SDK and a JDK — Capacitor 8 needs **JDK 21**), then:
 
 ```bash
 npm run android:apk      # → android/app/build/outputs/apk/debug/app-debug.apk
@@ -303,7 +303,7 @@ ExpenseTracker/
 
 ### Prerequisites
 
-- **Node.js** ≥ 20.19 (required by Vite 8 / Vitest)
+- **Node.js** ≥ 22 (Vite 8 / Vitest need 20.19+; the Capacitor 8 CLI needs 22)
 - A **Firebase project** with Firestore and Authentication (Email/Password) enabled
 - *(Optional)* A Google Cloud service account with the Sheets API enabled, for the Sheets sync feature
 
