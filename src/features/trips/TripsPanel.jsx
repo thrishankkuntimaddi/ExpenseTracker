@@ -1,7 +1,8 @@
 // ─── TripsPanel ───────────────────────────────────────────────────
 // Group expense splitting ("Trips") inside Billings: list → detail.
 import { useMemo, useState } from 'react';
-import { Plus, Map, ArrowLeft, Lock, ChevronRight } from 'lucide-react';
+import { Plus, Map, ArrowLeft, Lock, ChevronRight, Trash2 } from 'lucide-react';
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { useTrips } from '../../hooks/useTrips';
 import { computeTripSummary } from '../../utils/split';
 import { formatAmount, formatDateShort, dateInputToISO, isoToMonth, todayInputValue } from '../../utils/dateHelpers';
@@ -16,6 +17,8 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
   const [activeId, setActiveId] = useState(null);
   const [modal, setModal] = useState(null);       // 'new' | 'edit' | 'close' | 'share' | null
   const [showClosed, setShowClosed] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  async function deleteTripById(id) { await removeTrip(id); if (activeId === id) setActiveId(null); }
 
   const active = useMemo(() => trips.find((t) => t.id === activeId) ?? null, [trips, activeId]);
   const open = trips.filter((t) => t.status !== 'closed');
@@ -75,12 +78,16 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
       {modal === 'edit' && active && <TripModal trip={active} onSave={saveTrip} onDelete={(id) => { removeTrip(id); setActiveId(null); }} onClose={() => setModal(null)} />}
       {modal === 'close' && active && <TripCloseModal trip={active} summary={computeTripSummary(active)} onConfirm={closeTrip} onClose={() => setModal(null)} />}
       {modal === 'share' && active && <TripShareModal trip={active} onClose={() => setModal(null)} />}
+      {deletingId && (
+        <ConfirmDeleteModal title="Delete this trip?" message="All its rows and settlements are removed. Entries already posted to your ledger stay."
+          onConfirm={() => { const id = deletingId; setDeletingId(null); deleteTripById(id); }} onCancel={() => setDeletingId(null)} />
+      )}
 
       {header}
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
         {active ? (
-          <TripDetail trip={active} onChange={saveTrip} onEdit={() => setModal('edit')} onShare={() => setModal('share')} onClose={() => setModal('close')} onReopen={reopenTrip} />
+          <TripDetail trip={active} onChange={saveTrip} onEdit={() => setModal('edit')} onShare={() => setModal('share')} onClose={() => setModal('close')} onReopen={reopenTrip} onDelete={deleteTripById} />
         ) : trips.length === 0 ? (
           <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 10 }}>
             <div style={{ width: 52, height: 52, borderRadius: 16, background: 'var(--external-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Map size={24} style={{ color: 'var(--external)' }} /></div>
@@ -92,14 +99,14 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
           </div>
         ) : (
           <>
-            <TripList title={`Open · ${open.length}`} trips={open} onOpen={setActiveId} empty="No open trips." />
+            <TripList title={`Open · ${open.length}`} trips={open} onOpen={setActiveId} onDelete={setDeletingId} empty="No open trips." />
             {closed.length > 0 && (
               <>
                 <button onClick={() => setShowClosed((v) => !v)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 10, border: 'none', background: 'var(--surface2)', cursor: 'pointer', fontFamily: 'inherit', marginTop: 14, marginBottom: 8 }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}><Lock size={12} /> Closed · {closed.length}</span>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{showClosed ? 'hide' : 'show'}</span>
                 </button>
-                {showClosed && <TripList trips={closed} onOpen={setActiveId} />}
+                {showClosed && <TripList trips={closed} onOpen={setActiveId} onDelete={setDeletingId} />}
               </>
             )}
           </>
@@ -109,7 +116,7 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
   );
 }
 
-function TripList({ title, trips, onOpen, empty }) {
+function TripList({ title, trips, onOpen, onDelete, empty }) {
   return (
     <div>
       {title && <p className="section-label" style={{ marginBottom: 8 }}>{title}</p>}
@@ -118,7 +125,8 @@ function TripList({ title, trips, onOpen, empty }) {
           {trips.map((t, i) => {
             const s = computeTripSummary(t);
             return (
-              <button key={t.id} onClick={() => onOpen(t.id)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: i < trips.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', fontFamily: 'inherit', borderRadius: 0 }}>
+              <div key={t.id} style={{ display: 'flex', alignItems: 'stretch', borderBottom: i < trips.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <button onClick={() => onOpen(t.id)} style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', borderRadius: 0 }}>
                 <div style={{ width: 38, height: 38, borderRadius: 11, background: 'var(--external-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Map size={16} style={{ color: 'var(--external)' }} /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
@@ -132,6 +140,12 @@ function TripList({ title, trips, onOpen, empty }) {
                 </div>
                 <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
               </button>
+              {onDelete && (
+                <button onClick={() => onDelete(t.id)} aria-label={`Delete ${t.name}`} title="Delete trip" style={{ width: 44, border: 'none', borderLeft: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 0 }}>
+                  <Trash2 size={14} />
+                </button>
+              )}
+              </div>
             );
           })}
         </div>

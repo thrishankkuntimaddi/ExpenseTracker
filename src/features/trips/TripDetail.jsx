@@ -3,7 +3,8 @@
 //   1. The table — Person | What | Amount — fill it in as the trip goes.
 //   2. Settle up — totals, paid vs share per wallet, who pays whom, mark paid, close.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Trash2, Check, ArrowRight, ArrowLeft, Users, Share2, Lock, Unlock, Pencil, CheckCircle2, Receipt, UserPlus } from 'lucide-react';
+import { Plus, Trash2, Check, ArrowRight, ArrowLeft, Users, Share2, Lock, Unlock, Pencil, CheckCircle2, Receipt, UserPlus, GripVertical, X } from 'lucide-react';
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { formatAmount, formatDateShort } from '../../utils/dateHelpers';
 import { computeTripSummary } from '../../utils/split';
 import { generateId } from '../../utils/storage';
@@ -21,9 +22,11 @@ const cellInput = {
 const newRow = (paidBy = '', date) => ({ id: generateId(), title: '', amount: '', paidBy, splitAmong: [], date });
 const isValidRow = (r) => r.paidBy && r.title.trim() && Number(r.amount) > 0;
 
-export default function TripDetail({ trip, onChange, onEdit, onShare, onClose, onReopen }) {
+export default function TripDetail({ trip, onChange, onEdit, onShare, onClose, onReopen, onDelete }) {
   const closed = trip.status === 'closed';
   const members = trip.members ?? [];
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editingMember, setEditingMember] = useState(null);   // member id whose inline editor is open
   const [stepState, setStep] = useState(1);
   const step = closed ? 2 : stepState;   // a closed trip always shows the settlement
 
@@ -55,6 +58,52 @@ export default function TripDetail({ trip, onChange, onEdit, onShare, onClose, o
   const updateRow = (id, patch) => { setRows((p) => p.map((r) => (r.id === id ? { ...r, ...patch } : r))); scheduleSave(); };
   const removeRow = (id) => { setRows((p) => (p.length > 1 ? p.filter((r) => r.id !== id) : [newRow(trip.meMemberId ?? members[0]?.id, trip.startDate)])); scheduleSave(); };
   const addRow = () => setRows((p) => [...p, newRow(p[p.length - 1]?.paidBy ?? trip.meMemberId ?? members[0]?.id, trip.startDate)]);
+  const moveRow = (from, to) => {
+    if (from === to) return;
+    setRows((p) => { const n = p.slice(); const [r] = n.splice(from, 1); n.splice(to, 0, r); return n; });
+    scheduleSave();
+  };
+
+  /* Drag-to-reorder via pointer events (mouse + touch). The grip has
+     touch-action: none so the page does not scroll while dragging. */
+  const drag = useRef(null);
+  const [draggingId, setDraggingId] = useState(null);
+  function gripDown(e, index, id) {
+    const rowEl = e.currentTarget.closest('[data-row]');
+    drag.current = { startY: e.clientY, from: index, cur: index, rowH: rowEl?.offsetHeight || 40, count: rows.length };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    setDraggingId(id);
+  }
+  function gripMove(e) {
+    const d = drag.current; if (!d) return;
+    const target = Math.max(0, Math.min(d.count - 1, d.from + Math.round((e.clientY - d.startY) / d.rowH)));
+    if (target !== d.cur) { moveRow(d.cur, target); d.cur = target; }
+  }
+  function gripUp() { drag.current = null; setDraggingId(null); }
+  function gripKey(e, index) {
+    if (e.key === 'ArrowUp' && index > 0) { e.preventDefault(); moveRow(index, index - 1); }
+    if (e.key === 'ArrowDown' && index < rows.length - 1) { e.preventDefault(); moveRow(index, index + 1); }
+  }
+
+  /* People: inline editing (me / pays together / remove) */
+  const usedBy = (id) => rows.some((r) => r.paidBy === id);
+  function updateMembers(nextMembers, extra = {}) { onChange({ ...trip, members: nextMembers, ...extra }); }
+  function renameMember(id, name) { updateMembers(members.map((m) => (m.id === id ? { ...m, name } : m))); }
+  function setMe(id) { onChange({ ...trip, meMemberId: trip.meMemberId === id ? undefined : id }); }
+  function setPaysWith(id, otherId) {
+    const other = members.find((m) => m.id === otherId);
+    if (!other) { updateMembers(members.map((m) => (m.id === id ? { ...m, groupId: undefined } : m))); return; }
+    const gid = other.groupId ?? generateId();
+    updateMembers(members.map((m) => (m.id === id || m.id === otherId ? { ...m, groupId: gid } : m)));
+  }
+  function removeMember(id) {
+    if (usedBy(id)) return;
+    const left = members.filter((m) => m.id !== id);
+    const counts = {}; left.forEach((m) => { if (m.groupId) counts[m.groupId] = (counts[m.groupId] ?? 0) + 1; });
+    updateMembers(left.map((m) => (m.groupId && counts[m.groupId] < 2 ? { id: m.id, name: m.name } : m)),
+      { meMemberId: trip.meMemberId === id ? undefined : trip.meMemberId });
+    setEditingMember(null);
+  }
 
   /* ── People quick-add (grouping + "me" live in Edit trip) ── */
   const [newPerson, setNewPerson] = useState('');
@@ -117,16 +166,51 @@ export default function TripDetail({ trip, onChange, onEdit, onShare, onClose, o
               <Pencil size={10} /> Who is me · pays together
             </button>
           </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Tap a person to set “this is me”, who they pay together with, or remove them.</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
             {members.map((m) => {
               const partner = m.groupId ? members.find((o) => o.id !== m.id && o.groupId === m.groupId) : null;
+              const active = editingMember === m.id;
               return (
-                <span key={m.id} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}>
-                  {m.name}{m.id === trip.meMemberId && <span style={{ color: 'var(--external)' }}> · me</span>}{partner && <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}> · pays with {partner.name}</span>}
-                </span>
+                <button key={m.id} type="button" onClick={() => setEditingMember(active ? null : m.id)} style={{
+                  padding: '5px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
+                  background: active ? 'var(--external)' : 'var(--surface2)', border: `1.5px solid ${active ? 'var(--external)' : 'var(--border)'}`,
+                  color: active ? '#fff' : 'var(--text)', display: 'inline-flex', alignItems: 'center', gap: 4,
+                }}>
+                  {m.name}{m.id === trip.meMemberId && <span style={{ color: active ? '#fff' : 'var(--external)' }}>· me</span>}{partner && <span style={{ color: active ? 'rgba(255,255,255,.8)' : 'var(--text-muted)', fontWeight: 500 }}>· with {partner.name}</span>}
+                  <Pencil size={9} style={{ opacity: 0.7 }} />
+                </button>
               );
             })}
           </div>
+          {editingMember && members.some((m) => m.id === editingMember) && (() => {
+            const m = members.find((x) => x.id === editingMember);
+            const partner = m.groupId ? members.find((o) => o.id !== m.id && o.groupId === m.groupId) : null;
+            const others = members.filter((o) => o.id !== m.id);
+            return (
+              <div style={{ padding: 12, borderRadius: 12, border: '1.5px solid var(--external-border)', background: 'var(--external-bg)', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="text" value={m.name} onChange={(e) => renameMember(m.id, e.target.value)} style={{ flex: 1, padding: '8px 10px', borderRadius: 9, fontSize: 13, fontWeight: 700, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }} />
+                  <button onClick={() => setEditingMember(null)} aria-label="Done" style={{ width: 32, height: 32, borderRadius: 9, border: 'none', background: 'var(--external)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={14} /></button>
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={trip.meMemberId === m.id} onChange={() => setMe(m.id)} style={{ width: 16, height: 16, accentColor: 'var(--external)' }} />
+                  This is me (my share and dues go to my ledger on close)
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
+                  <span>Pays together with</span>
+                  <select value={partner?.id ?? ''} onChange={(e) => setPaysWith(m.id, e.target.value)} style={{ flex: '0 1 170px', padding: '7px 8px', borderRadius: 9, fontSize: 12, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit' }}>
+                    <option value="">Nobody — pays alone</option>
+                    {others.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                  </select>
+                </label>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Two people who pay together count as one wallet: their spending and dues are combined (e.g. a couple).</div>
+                <button onClick={() => removeMember(m.id)} disabled={usedBy(m.id)} title={usedBy(m.id) ? 'Has rows in the table — reassign them first' : 'Remove from trip'} style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: usedBy(m.id) ? 'not-allowed' : 'pointer', opacity: usedBy(m.id) ? 0.5 : 1, background: 'var(--expense-bg)', color: 'var(--expense)', border: '1px solid var(--expense-border)' }}>
+                  <X size={12} /> Remove {m.name}{usedBy(m.id) ? ' (has rows)' : ''}
+                </button>
+              </div>
+            );
+          })()}
           <div style={{ display: 'flex', gap: 6 }}>
             <input type="text" value={newPerson} placeholder="Add people — comma separated" onChange={(e) => setNewPerson(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPeople(newPerson); } }}
@@ -143,15 +227,21 @@ export default function TripDetail({ trip, onChange, onEdit, onShare, onClose, o
           </button>
         </div>
         <div style={{ border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: 'var(--surface)', boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(96px, 1.1fr) minmax(90px, 1.6fr) 92px 32px' }}>
-            <div style={thStyle}>Person</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '34px minmax(90px, 1.1fr) minmax(80px, 1.6fr) 88px 32px' }}>
+            <div style={{ ...thStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Drag to reorder"><GripVertical size={12} /></div>
+            <div style={{ ...thStyle, borderLeft: '1px solid var(--border)' }}>Person</div>
             <div style={{ ...thStyle, borderLeft: '1px solid var(--border)' }}>What paid</div>
             <div style={{ ...thStyle, borderLeft: '1px solid var(--border)' }}>Amount (₹)</div>
             <div style={thStyle} />
           </div>
           {rows.map((r, i) => (
-            <div key={r.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(96px, 1.1fr) minmax(90px, 1.6fr) 92px 32px', alignItems: 'center', borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none', background: isValidRow(r) ? 'transparent' : 'var(--surface2)' }}>
-              <select value={r.paidBy} onChange={(e) => updateRow(r.id, { paidBy: e.target.value })} style={{ ...cellInput, fontWeight: 600, appearance: 'auto' }}>
+            <div key={r.id} data-row style={{ display: 'grid', gridTemplateColumns: '34px minmax(90px, 1.1fr) minmax(80px, 1.6fr) 88px 32px', alignItems: 'center', borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none', background: draggingId === r.id ? 'var(--external-bg)' : isValidRow(r) ? 'transparent' : 'var(--surface2)', boxShadow: draggingId === r.id ? 'inset 0 0 0 1.5px var(--external)' : 'none', transition: 'background 0.12s' }}>
+              <button type="button" aria-label="Drag to reorder (or use arrow keys)" title="Drag to reorder · ↑/↓ keys"
+                onPointerDown={(e) => gripDown(e, i, r.id)} onPointerMove={gripMove} onPointerUp={gripUp} onPointerCancel={gripUp} onKeyDown={(e) => gripKey(e, i)}
+                style={{ width: 34, height: 38, border: 'none', background: 'transparent', color: draggingId === r.id ? 'var(--external)' : 'var(--text-muted)', cursor: draggingId === r.id ? 'grabbing' : 'grab', touchAction: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 0 }}>
+                <GripVertical size={14} />
+              </button>
+              <select value={r.paidBy} onChange={(e) => updateRow(r.id, { paidBy: e.target.value })} style={{ ...cellInput, fontWeight: 600, appearance: 'auto', borderLeft: '1px solid var(--border)' }}>
                 <option value="">Who?</option>
                 {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
@@ -184,6 +274,18 @@ export default function TripDetail({ trip, onChange, onEdit, onShare, onClose, o
         <button onClick={() => { persist(); setStep(2); }} disabled={!canContinue} style={{ width: '100%', marginTop: 14, padding: 12, borderRadius: 12, border: 'none', background: canContinue ? 'var(--external)' : 'var(--surface2)', color: canContinue ? '#fff' : 'var(--text-muted)', fontWeight: 800, fontSize: 13, cursor: canContinue ? 'pointer' : 'not-allowed', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
           {canContinue ? 'Done — see who pays whom' : members.length < 2 ? 'Add at least two people' : 'Fill in at least one row'} <ArrowRight size={15} />
         </button>
+
+        {onDelete && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
+            <button onClick={() => setConfirmDelete(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: 'var(--expense-bg)', color: 'var(--expense)', border: '1px solid var(--expense-border)' }}>
+              <Trash2 size={13} /> Delete trip
+            </button>
+          </div>
+        )}
+        {confirmDelete && (
+          <ConfirmDeleteModal title={`Delete “${trip.name}”?`} message="All its rows and settlements are removed. Entries already posted to your ledger stay."
+            onConfirm={() => { setConfirmDelete(false); onDelete(trip.id); }} onCancel={() => setConfirmDelete(false)} />
+        )}
       </div>
     );
   }
@@ -210,8 +312,13 @@ export default function TripDetail({ trip, onChange, onEdit, onShare, onClose, o
             {closed
               ? <Btn onClick={onReopen} Icon={Unlock}>Reopen</Btn>
               : <Btn onClick={onClose} Icon={Lock} filled disabled={!s.count}>Close trip</Btn>}
+            {onDelete && <Btn onClick={() => setConfirmDelete(true)} Icon={Trash2} danger>Delete</Btn>}
           </div>
         </div>
+        {confirmDelete && (
+          <ConfirmDeleteModal title={`Delete “${trip.name}”?`} message="All its rows and settlements are removed. Entries already posted to your ledger stay."
+            onConfirm={() => { setConfirmDelete(false); onDelete(trip.id); }} onCancel={() => setConfirmDelete(false)} />
+        )}
         {closed && (
           <div style={{ marginTop: 10, padding: '7px 10px', borderRadius: 9, background: 'var(--surface2)', fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Lock size={11} /> Closed{trip.closedAt ? ` on ${formatDateShort(trip.closedAt)}` : ''} — reopen to change anything.
@@ -309,9 +416,10 @@ export default function TripDetail({ trip, onChange, onEdit, onShare, onClose, o
   );
 }
 
-function Btn({ children, onClick, Icon, filled, disabled }) {
+function Btn({ children, onClick, Icon, filled, disabled, danger }) {
+  const tone = danger ? 'expense' : 'external';
   return (
-    <button onClick={onClick} disabled={disabled} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 11px', borderRadius: 9, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, background: filled ? 'var(--external)' : 'var(--external-bg)', color: filled ? '#fff' : 'var(--external)', border: filled ? 'none' : '1px solid var(--external-border)' }}>
+    <button onClick={onClick} disabled={disabled} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 11px', borderRadius: 9, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, background: filled ? `var(--${tone})` : `var(--${tone}-bg)`, color: filled ? '#fff' : `var(--${tone})`, border: filled ? 'none' : `1px solid var(--${tone}-border)` }}>
       <Icon size={12} /> {children}
     </button>
   );
