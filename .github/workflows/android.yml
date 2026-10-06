@@ -39,6 +39,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify Firebase configuration is present
+        run: |
+          if [ -z "${{ vars.VITE_FIREBASE_API_KEY }}" ] || [ -z "${{ vars.VITE_FIREBASE_PROJECT_ID }}" ]; then
+            echo "::error::VITE_FIREBASE_* repository variables are not set. Add them under Settings → Secrets and variables → Actions → Variables (see .env.example), then re-run."
+            exit 1
+          fi
+
       - name: Build web app for the native shell
         run: npm run build:native
         env:

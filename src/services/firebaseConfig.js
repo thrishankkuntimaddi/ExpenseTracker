@@ -20,9 +20,10 @@ export const firebaseConfig = {
 };
 
 const missing = ['apiKey', 'authDomain', 'projectId', 'appId'].filter((k) => !firebaseConfig[k]);
-if (missing.length) {
-  throw new Error(
-    `Firebase config is incomplete (${missing.join(', ')}). ` +
-    'Copy .env.example to .env and fill in the VITE_FIREBASE_* values from Firebase Console → Project settings → Your apps.',
-  );
-}
+
+/** Non-null when the build was made without the VITE_FIREBASE_* variables. */
+export const firebaseConfigError = missing.length
+  ? `This build has no Firebase configuration (missing ${missing.join(', ')}). ` +
+    'Locally: copy .env.example to .env and fill in the VITE_FIREBASE_* values. ' +
+    'On GitHub: add them as repository variables (Settings → Secrets and variables → Actions → Variables) and redeploy.'
+  : null;

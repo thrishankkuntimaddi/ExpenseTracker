@@ -17,12 +17,14 @@ import { clearLegacyDataCache } from "../utils/storage";
  * Returns: { user, loading, signIn, signUp, signOut, error }
  */
 export function useAuth() {
-  const [user, setUser]       = useState(undefined); // undefined = still loading
-  const [loading, setLoading] = useState(true);
+  // With no Firebase handle (unconfigured build) start resolved: no user, not loading
+  const [user, setUser]       = useState(auth ? undefined : null); // undefined = still loading
+  const [loading, setLoading] = useState(!!auth);
   const [error, setError]     = useState(null);
   const graceTimer = useRef(null);
 
   useEffect(() => {
+    if (!auth) return undefined;
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       // Clear any pending grace timer
       if (graceTimer.current) {

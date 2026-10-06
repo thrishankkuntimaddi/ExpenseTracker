@@ -223,6 +223,29 @@
     </div>
 
     <div id="root"></div>
+    <!-- Startup watchdog: if the app bundle fails to load or crashes before React
+         mounts, dismiss the splash and say what happened instead of looping. -->
+    <script>
+      (function () {
+        var firstError = null;
+        window.addEventListener('error', function (e) { if (!firstError) firstError = (e.error && e.error.message) || e.message || String(e); });
+        window.addEventListener('unhandledrejection', function (e) { if (!firstError) firstError = (e.reason && e.reason.message) || String(e.reason); });
+        setTimeout(function () {
+          var root = document.getElementById('root');
+          var splash = document.getElementById('app-splash');
+          if (!splash || (root && root.children.length > 0)) return;
+          splash.className = '';
+          splash.innerHTML =
+            '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#0A0D14;color:#F1F5F9;font-family:-apple-system,Inter,system-ui,sans-serif">' +
+              '<div style="max-width:440px;background:#121723;border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:22px">' +
+                '<div style="font-size:16px;font-weight:800;margin-bottom:6px">The app could not start</div>' +
+                '<div style="font-size:13px;color:#94A3B8;line-height:1.6">' + (firstError ? ('<code style="word-break:break-word">' + String(firstError).replace(/</g, '&lt;') + '</code>') : 'The script did not load. Check your connection, then reload.') + '</div>' +
+                '<button onclick="location.reload()" style="margin-top:14px;padding:10px 16px;border-radius:10px;border:none;background:#6366F1;color:#fff;font-weight:700;font-size:13px;cursor:pointer">Reload</button>' +
+              '</div>' +
+            '</div>';
+        }, 12000);
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
     <script>
       var isNativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
