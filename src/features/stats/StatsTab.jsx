@@ -218,11 +218,6 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
             {/* ── LEFT COLUMN ── */}
             <div className="stats-left">
 
-              {/* Insights — always about the current month */}
-              <div style={{ marginBottom: 14 }}>
-                <InsightsCard insights={insights} />
-              </div>
-
               {/* Balance Hero */}
               <div style={{
                 borderRadius: 16, padding: '20px 22px', marginBottom: 14,
@@ -238,15 +233,6 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                 <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
                   Income − Expense − Savings − Given
                 </p>
-              </div>
-
-              {/* Budget for the viewed month */}
-              <div style={{ marginBottom: 14 }}>
-                <BudgetStatusCard
-                  status={budgetStatus}
-                  onEdit={onPatchSettings ? () => setBudgetOpen(true) : undefined}
-                  title={isMonthPeriod ? 'Budget · this month' : 'Budget · current month'}
-                />
               </div>
 
               {/* Waste block */}
@@ -296,6 +282,22 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                   <AvgCard label="Per Month" value={stats.avgMonth} Icon={Scale}        />
                 </div>
               </Section>
+
+              {/* Calendar heat-map */}
+              <Section title="Spending Calendar">
+                <div style={{ marginTop: 8 }}>
+                  <SpendingCalendar key={budgetMonth} transactions={transactions} initialMonth={budgetMonth} rules={categoryRules} theme={theme} />
+                </div>
+              </Section>
+
+              {/* Budget for the viewed month */}
+              <div style={{ marginBottom: 14 }}>
+                <BudgetStatusCard
+                  status={budgetStatus}
+                  onEdit={onPatchSettings ? () => setBudgetOpen(true) : undefined}
+                  title={isMonthPeriod ? 'Budget · this month' : 'Budget · current month'}
+                />
+              </div>
 
               {goals.length > 0 && (
                 <Section title="Savings Goals">
@@ -402,13 +404,6 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                   </div>
                 </Section>
               )}
-
-              {/* Calendar heat-map */}
-              <Section title="Spending Calendar">
-                <div style={{ marginTop: 8 }}>
-                  <SpendingCalendar key={budgetMonth} transactions={transactions} initialMonth={budgetMonth} rules={categoryRules} theme={theme} />
-                </div>
-              </Section>
 
               {/* Donut Chart */}
               <Section title="Distribution (Donut)">
@@ -537,6 +532,11 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                   </div>
                 </div>
               </Section>
+
+              {/* Insights — always about the current month (kept last on purpose) */}
+              <div style={{ marginBottom: 14 }}>
+                <InsightsCard insights={insights} />
+              </div>
 
             </div>
           </div>
