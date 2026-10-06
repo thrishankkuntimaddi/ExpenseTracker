@@ -161,7 +161,7 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Safe to spend today');
   });
 
-  it('Trips: detail shows the settle-up plan, close modal offers ledger posting', () => {
+  it('Trips: detail shows the settle-up plan, close modal offers ledger posting', async () => {
     const trip = {
       id: 'trip1', name: 'Goa road trip', status: 'open', meMemberId: 'p1', startDate: '2026-10-01', endDate: '2026-10-03',
       members: [{ id: 'p1', name: 'Arjun' }, { id: 'p2', name: 'Bala', groupId: 'g1' }, { id: 'p3', name: 'Chitra' }, { id: 'p4', name: 'Dev' }, { id: 'p5', name: 'Esha', groupId: 'g1' }],
@@ -194,6 +194,14 @@ describe('screens render with planning features', () => {
     expect(close).toContain('4,900');
     expect(render(<TripModal trip={trip} onSave={noop} onDelete={noop} onClose={noop} />)).toContain('Pays with');
     expect(render(<TripsPanel user={{ uid: 'u' }} onAddTransaction={noop} onDeleteTransaction={noop} />)).toContain('No trips yet');
+    const { default: TripsList } = await import('../features/trips/components/TripsList');
+    const list = render(<TripsList activeTrips={[trip]} closedTrips={[{ ...trip, id: 'c1', status: 'closed' }]} archivedTrips={[{ ...trip, id: 'a1', status: 'archived' }]}
+      showHistory setShowHistory={noop} showArchived setShowArchived={noop} onOpen={noop} onShare={noop} onEdit={noop} onDelete={noop} onArchive={noop} onUnarchive={noop} onNew={noop} />);
+    expect(list).toContain('Active Trips (1)');
+    expect(list).toContain('Trip History (1)');
+    expect(list).toContain('Archived (1)');
+    expect(list).toContain('Share summary');
+    expect(list).toContain('Unarchive');
   });
 
   it('modals render for new and existing records', () => {

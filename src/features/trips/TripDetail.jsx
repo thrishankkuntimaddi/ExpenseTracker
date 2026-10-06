@@ -23,7 +23,7 @@ const newRow = (paidBy = '', date) => ({ id: generateId(), title: '', amount: ''
 const isValidRow = (r) => r.paidBy && r.title.trim() && Number(r.amount) > 0;
 
 export default function TripDetail({ trip, onChange, onEdit, onShare, onClose, onReopen, onDelete }) {
-  const closed = trip.status === 'closed';
+  const closed = trip.status === 'closed' || trip.status === 'archived';
   const members = trip.members ?? [];
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editingMember, setEditingMember] = useState(null);   // member id whose inline editor is open

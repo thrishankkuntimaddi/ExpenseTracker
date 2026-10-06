@@ -1,155 +1,115 @@
 // ─── TripsPanel ───────────────────────────────────────────────────
-// Group expense splitting ("Trips") inside Billings: list → detail.
+// Group expense splitting ("Trips & Splits") inside Billings. Same shape as
+// the billing sessions: active list → history → archived, each with
+// share / edit / archive / delete, and a detail workspace.
 import { useMemo, useState } from 'react';
-import { Plus, Map, ArrowLeft, Lock, ChevronRight, Trash2 } from 'lucide-react';
-import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
+import { Plus, ArrowLeft } from 'lucide-react';
 import { useTrips } from '../../hooks/useTrips';
 import { computeTripSummary } from '../../utils/split';
-import { formatAmount, formatDateShort, dateInputToISO, isoToMonth, todayInputValue } from '../../utils/dateHelpers';
+import { dateInputToISO, isoToMonth, todayInputValue } from '../../utils/dateHelpers';
 import { toKey } from '../../utils/recurring';
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import TripModal from './TripModal';
 import TripDetail from './TripDetail';
 import TripCloseModal from './TripCloseModal';
 import TripShareModal from './TripShareModal';
+import TripsList from './components/TripsList';
 
 export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction, reportError, headerExtra }) {
   const { trips, saveTrip, removeTrip } = useTrips(user?.uid, reportError);
   const [activeId, setActiveId] = useState(null);
-  const [modal, setModal] = useState(null);       // 'new' | 'edit' | 'close' | 'share' | null
-  const [showClosed, setShowClosed] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
+  const [editingTrip, setEditingTrip] = useState(null);
+  const [sharingTrip, setSharingTrip] = useState(null);
+  const [closingTrip, setClosingTrip] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-  async function deleteTripById(id) { await removeTrip(id); if (activeId === id) setActiveId(null); }
+  const [showHistory, setShowHistory] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const active = useMemo(() => trips.find((t) => t.id === activeId) ?? null, [trips, activeId]);
-  const open = trips.filter((t) => t.status !== 'closed');
-  const closed = trips.filter((t) => t.status === 'closed');
+  const activeTrips   = trips.filter((t) => t.status !== 'closed' && t.status !== 'archived');
+  const closedTrips   = trips.filter((t) => t.status === 'closed');
+  const archivedTrips = trips.filter((t) => t.status === 'archived');
 
-  async function closeTrip({ logShare, logLent, logBorrowed }) {
-    const s = computeTripSummary(active);
-    const dateKey = active.endDate && active.endDate <= todayInputValue() ? active.endDate : (active.startDate || todayInputValue());
+  async function deleteTripById(id) { await removeTrip(id); if (activeId === id) setActiveId(null); }
+  const archiveTrip   = (t) => saveTrip({ ...t, status: 'archived', archivedFrom: t.status ?? 'open' });
+  const unarchiveTrip = (t) => saveTrip({ ...t, status: t.archivedFrom === 'closed' || t.closedAt ? 'closed' : 'open', archivedFrom: undefined });
+
+  async function closeTrip(trip, { logShare, logLent, logBorrowed }) {
+    const s = computeTripSummary(trip);
+    const dateKey = trip.endDate && trip.endDate <= todayInputValue() ? trip.endDate : (trip.startDate || todayInputValue());
     const date = dateInputToISO(dateKey), month = isoToMonth(date);
     const posted = [];
     const post = async (entry) => { if (await onAddTransaction?.(entry)) posted.push(entry.id); };
     if (logShare && s.myShare > 0) {
-      await post({ id: `trip_${active.id}_share`, name: `Trip: ${active.name}`, amount: s.myShare, type: 'expense', category: 'travel', date, month, tripId: active.id });
+      await post({ id: `trip_${trip.id}_share`, name: `Trip: ${trip.name}`, amount: s.myShare, type: 'expense', category: 'travel', date, month, tripId: trip.id });
     }
     if (logLent) for (const t of s.owedToMe) {
-      await post({ id: `trip_${active.id}_lent_${t.from}`, name: t.fromName, amount: t.amount, type: 'person', direction: 'lent', note: `Trip: ${active.name}`, date, month, tripId: active.id });
+      await post({ id: `trip_${trip.id}_lent_${t.from}`, name: t.fromName, amount: t.amount, type: 'person', direction: 'lent', note: `Trip: ${trip.name}`, date, month, tripId: trip.id });
     }
     if (logBorrowed) for (const t of s.iOwe) {
-      await post({ id: `trip_${active.id}_borrowed_${t.to}`, name: t.toName, amount: t.amount, type: 'person', direction: 'borrowed', note: `Trip: ${active.name}`, date, month, tripId: active.id });
+      await post({ id: `trip_${trip.id}_borrowed_${t.to}`, name: t.toName, amount: t.amount, type: 'person', direction: 'borrowed', note: `Trip: ${trip.name}`, date, month, tripId: trip.id });
     }
-    await saveTrip({ ...active, status: 'closed', closedAt: toKey(new Date()), postedEntryIds: posted });
-    setModal(null);
+    await saveTrip({ ...trip, status: 'closed', closedAt: toKey(new Date()), postedEntryIds: posted });
+    setClosingTrip(null);
   }
 
-  async function reopenTrip() {
-    for (const id of active.postedEntryIds ?? []) await onDeleteTransaction?.(id);
-    await saveTrip({ ...active, status: 'open', closedAt: undefined, postedEntryIds: [] });
+  async function reopenTrip(trip) {
+    for (const id of trip.postedEntryIds ?? []) await onDeleteTransaction?.(id);
+    await saveTrip({ ...trip, status: 'open', closedAt: undefined, postedEntryIds: [] });
   }
-
-  const header = (
-    <div className="tab-header">
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: headerExtra ? 10 : 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          {active && (
-            <button onClick={() => setActiveId(null)} aria-label="Back" style={{ width: 32, height: 32, borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexShrink: 0 }}>
-              <ArrowLeft size={16} />
-            </button>
-          )}
-          <div style={{ minWidth: 0 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{active ? active.name : 'Trips & Splits'}</h1>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{active ? `${active.members?.length ?? 0} people` : 'Shared spending, settled fairly'}</p>
-          </div>
-        </div>
-        {!active && (
-          <button onClick={() => setModal('new')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, fontSize: 11, fontWeight: 700, background: 'var(--external-bg)', color: 'var(--external)', border: '1px solid var(--external-border)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-            <Plus size={13} /> New Trip
-          </button>
-        )}
-      </div>
-      {headerExtra}
-    </div>
-  );
 
   return (
     <div className="tab-root">
-      {modal === 'new' && <TripModal onSave={async (t) => { const saved = await saveTrip(t); if (saved) setActiveId(saved.id); }} onClose={() => setModal(null)} />}
-      {modal === 'edit' && active && <TripModal trip={active} onSave={saveTrip} onDelete={(id) => { removeTrip(id); setActiveId(null); }} onClose={() => setModal(null)} />}
-      {modal === 'close' && active && <TripCloseModal trip={active} summary={computeTripSummary(active)} onConfirm={closeTrip} onClose={() => setModal(null)} />}
-      {modal === 'share' && active && <TripShareModal trip={active} onClose={() => setModal(null)} />}
+      {newOpen && <TripModal onSave={async (t) => { const saved = await saveTrip(t); if (saved) setActiveId(saved.id); }} onClose={() => setNewOpen(false)} />}
+      {editingTrip && <TripModal trip={editingTrip} onSave={saveTrip} onDelete={deleteTripById} onClose={() => setEditingTrip(null)} />}
+      {closingTrip && <TripCloseModal trip={closingTrip} summary={computeTripSummary(closingTrip)} onConfirm={(opts) => closeTrip(closingTrip, opts)} onClose={() => setClosingTrip(null)} />}
+      {sharingTrip && <TripShareModal trip={sharingTrip} onClose={() => setSharingTrip(null)} />}
       {deletingId && (
         <ConfirmDeleteModal title="Delete this trip?" message="All its rows and settlements are removed. Entries already posted to your ledger stay."
           onConfirm={() => { const id = deletingId; setDeletingId(null); deleteTripById(id); }} onCancel={() => setDeletingId(null)} />
       )}
 
-      {header}
+      {/* Header */}
+      <div className="tab-header">
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: headerExtra ? 10 : 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            {active && (
+              <button onClick={() => setActiveId(null)} aria-label="Back" style={{ width: 32, height: 32, borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexShrink: 0 }}>
+                <ArrowLeft size={16} />
+              </button>
+            )}
+            <div style={{ minWidth: 0 }}>
+              <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{active ? active.name : 'Trips & Splits'}</h1>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{active ? `${active.members?.length ?? 0} people · ${active.status === 'closed' ? 'closed' : active.status === 'archived' ? 'archived' : 'open'}` : 'Shared spending, settled fairly'}</p>
+            </div>
+          </div>
+          {!active && (
+            <button onClick={() => setNewOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, fontSize: 11, fontWeight: 700, background: 'var(--external-bg)', color: 'var(--external)', border: '1px solid var(--external-border)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+              <Plus size={13} /> New Trip
+            </button>
+          )}
+        </div>
+        {headerExtra}
+      </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
         {active ? (
-          <TripDetail trip={active} onChange={saveTrip} onEdit={() => setModal('edit')} onShare={() => setModal('share')} onClose={() => setModal('close')} onReopen={reopenTrip} onDelete={deleteTripById} />
-        ) : trips.length === 0 ? (
-          <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 10 }}>
-            <div style={{ width: 52, height: 52, borderRadius: 16, background: 'var(--external-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Map size={24} style={{ color: 'var(--external)' }} /></div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>No trips yet</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55, maxWidth: 320 }}>
-              Road trip, weekend away, a shared dinner. Add the people, log who paid for what, and get a fair "who pays whom" plan — couples can pay as one wallet.
-            </div>
-            <button onClick={() => setModal('new')} style={{ marginTop: 4, padding: '9px 16px', borderRadius: 10, border: 'none', background: 'var(--external)', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}><Plus size={13} /> Start a trip</button>
-          </div>
+          <TripDetail
+            trip={active} onChange={saveTrip}
+            onEdit={() => setEditingTrip(active)} onShare={() => setSharingTrip(active)}
+            onClose={() => setClosingTrip(active)} onReopen={() => reopenTrip(active)} onDelete={deleteTripById}
+          />
         ) : (
-          <>
-            <TripList title={`Open · ${open.length}`} trips={open} onOpen={setActiveId} onDelete={setDeletingId} empty="No open trips." />
-            {closed.length > 0 && (
-              <>
-                <button onClick={() => setShowClosed((v) => !v)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 10, border: 'none', background: 'var(--surface2)', cursor: 'pointer', fontFamily: 'inherit', marginTop: 14, marginBottom: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}><Lock size={12} /> Closed · {closed.length}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{showClosed ? 'hide' : 'show'}</span>
-                </button>
-                {showClosed && <TripList trips={closed} onOpen={setActiveId} onDelete={setDeletingId} />}
-              </>
-            )}
-          </>
+          <TripsList
+            activeTrips={activeTrips} closedTrips={closedTrips} archivedTrips={archivedTrips}
+            showHistory={showHistory} setShowHistory={setShowHistory}
+            showArchived={showArchived} setShowArchived={setShowArchived}
+            onOpen={setActiveId} onShare={setSharingTrip} onEdit={setEditingTrip} onDelete={setDeletingId}
+            onArchive={archiveTrip} onUnarchive={unarchiveTrip} onNew={() => setNewOpen(true)}
+          />
         )}
       </div>
-    </div>
-  );
-}
-
-function TripList({ title, trips, onOpen, onDelete, empty }) {
-  return (
-    <div>
-      {title && <p className="section-label" style={{ marginBottom: 8 }}>{title}</p>}
-      {trips.length === 0 ? <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '4px 2px' }}>{empty}</div> : (
-        <div className="card">
-          {trips.map((t, i) => {
-            const s = computeTripSummary(t);
-            return (
-              <div key={t.id} style={{ display: 'flex', alignItems: 'stretch', borderBottom: i < trips.length - 1 ? '1px solid var(--border)' : 'none' }}>
-              <button onClick={() => onOpen(t.id)} style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', borderRadius: 0 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 11, background: 'var(--external-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Map size={16} style={{ color: 'var(--external)' }} /></div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                    {t.members?.length ?? 0} people · {s.count} expense{s.count === 1 ? '' : 's'}{t.startDate ? ` · ${formatDateShort(t.startDate)}` : ''}
-                    {s.count > 0 && <> · <span style={{ color: s.isSettled ? 'var(--income)' : 'var(--expense)', fontWeight: 600 }}>{s.isSettled ? 'settled' : `${formatAmount(s.outstanding)} to settle`}</span></>}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>{formatAmount(s.total)}</div>
-                </div>
-                <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-              </button>
-              {onDelete && (
-                <button onClick={() => onDelete(t.id)} aria-label={`Delete ${t.name}`} title="Delete trip" style={{ width: 44, border: 'none', borderLeft: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 0 }}>
-                  <Trash2 size={14} />
-                </button>
-              )}
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
