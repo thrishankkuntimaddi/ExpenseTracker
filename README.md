@@ -269,7 +269,12 @@ npm install
 cp .env.example .env     # then fill in VITE_FIREBASE_* from Firebase Console → Project settings → Your apps
 ```
 
-The config is read from environment variables (`src/services/firebaseConfig.js`) and never committed. The values are public identifiers, not secrets, but the API key must be **restricted by HTTP referrer** and the project should use **App Check** — see [SECURITY.md](SECURITY.md).
+The config is read from `VITE_FIREBASE_*` (see `src/services/firebaseConfig.js`). For the GitHub Pages deploy, give it to the build **one** of two ways:
+
+1. **Repository variables** (keeps the key out of git): repo *Settings → Secrets and variables → Actions*, add the seven `VITE_FIREBASE_*` entries (Variables or Secrets tab both work).
+2. **Commit `.env`** (simplest): `git add -f .env && git commit -m "firebase config" && git push`. Firebase web config values are public identifiers that ship in every browser bundle anyway; GitHub's secret scanner will flag the key once — close the alert as a false positive, or add a `.github/secret_scanning.yml` with `paths-ignore: [".env"]`.
+
+Either way the API key must be **restricted by HTTP referrer** and the project should use **App Check** — see [SECURITY.md](SECURITY.md). The deploy refuses to publish if the config is missing (`scripts/check-config.mjs`), so a bundle without a backend can never reach the live site.
 
 ### 3. Deploy Firestore rules
 

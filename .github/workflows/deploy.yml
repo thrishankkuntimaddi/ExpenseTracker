@@ -37,21 +37,10 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Verify Firebase configuration is present
+      # Repository variables/secrets are exported only when they are set, so an
+      # unset one can never override a value coming from a committed .env file.
+      - name: Load Firebase config from repository variables (if set)
         env:
-          KEY: ${{ vars.VITE_FIREBASE_API_KEY || secrets.VITE_FIREBASE_API_KEY }}
-          PROJECT: ${{ vars.VITE_FIREBASE_PROJECT_ID || secrets.VITE_FIREBASE_PROJECT_ID }}
-        run: |
-          if [ -z "$KEY" ] || [ -z "$PROJECT" ]; then
-            echo "::error::Firebase config missing. In the repo go to Settings → Secrets and variables → Actions and add VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID, VITE_FIREBASE_STORAGE_BUCKET, VITE_FIREBASE_MESSAGING_SENDER_ID, VITE_FIREBASE_APP_ID, VITE_FIREBASE_MEASUREMENT_ID — either tab (Variables or Secrets) works. Values are in your local .env file."
-            exit 1
-          fi
-
-      - name: Build
-        run: npm run build
-        env:
-          # Required — Firebase web config, set as repository variables
-          # (Settings → Secrets and variables → Actions → Variables)
           VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY || secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN || secrets.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID || secrets.VITE_FIREBASE_PROJECT_ID }}
@@ -59,9 +48,19 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID || secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID || secrets.VITE_FIREBASE_APP_ID }}
           VITE_FIREBASE_MEASUREMENT_ID: ${{ vars.VITE_FIREBASE_MEASUREMENT_ID || secrets.VITE_FIREBASE_MEASUREMENT_ID }}
-          # Optional — set as repository variables to enable these features
-          VITE_APPCHECK_SITE_KEY: ${{ vars.VITE_APPCHECK_SITE_KEY || secrets.VITE_APPCHECK_SITE_KEY }}
-          VITE_SHEETS_PROXY_URL: ${{ vars.VITE_SHEETS_PROXY_URL || secrets.VITE_SHEETS_PROXY_URL }}
+          VITE_APPCHECK_SITE_KEY: ${{ vars.VITE_APPCHECK_SITE_KEY }}
+          VITE_SHEETS_PROXY_URL: ${{ vars.VITE_SHEETS_PROXY_URL }}
+        run: |
+          for name in VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_STORAGE_BUCKET VITE_FIREBASE_MESSAGING_SENDER_ID VITE_FIREBASE_APP_ID VITE_FIREBASE_MEASUREMENT_ID VITE_APPCHECK_SITE_KEY VITE_SHEETS_PROXY_URL; do
+            value="${!name}"
+            if [ -n "$value" ]; then echo "$name=$value" >> "$GITHUB_ENV"; fi
+          done
+
+      - name: Verify Firebase configuration is present
+        run: node scripts/check-config.mjs
+
+      - name: Build
+        run: npm run build
 
       - name: Setup Pages
         if: github.event_name != 'pull_request'
