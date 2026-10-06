@@ -13,8 +13,7 @@ export function usePWAInstall() {
       const isStandaloneMedia = window.matchMedia('(display-mode: standalone)').matches;
       const isIOSStandalone = window.navigator.standalone === true;
       const isTWA = document.referrer.includes('android-app://');
-      const isNative = !!window.Capacitor?.isNativePlatform?.();
-      setIsStandalone(isStandaloneMedia || isIOSStandalone || isTWA || isNative);
+      setIsStandalone(isStandaloneMedia || isIOSStandalone || isTWA);
     };
 
     checkStandalone();

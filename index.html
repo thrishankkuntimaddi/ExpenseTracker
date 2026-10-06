@@ -248,8 +248,7 @@
     </script>
     <script type="module" src="/src/main.jsx"></script>
     <script>
-      var isNativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-      if ('serviceWorker' in navigator && !isNativeApp) {
+      if ('serviceWorker' in navigator) {
         // Use hostname-only check — port can be '' in installed PWA mode on production.
         var isDev = (
           location.hostname === 'localhost' ||

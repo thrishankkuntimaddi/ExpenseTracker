@@ -2,14 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Download, Upload, Trash2, Info,
   ChevronRight, Moon, Sun, FileSpreadsheet,
-  Database, Palette, LogOut, Link, RefreshCw, ArrowDownToLine, RotateCcw, Smartphone, ArrowRightLeft, Copy, Globe,
+  Database, Palette, LogOut, Link, RefreshCw, ArrowDownToLine, RotateCcw, Smartphone, ArrowRightLeft,
 } from 'lucide-react';
 import { updateSettings as fsUpdateSettings, deleteAllUserData, bulkImport } from '../../services/firestore';
 import { pushToSheet, pullFromSheet, validateSheet, checkServerHealth, SHEETS_SYNC_AVAILABLE } from '../../services/googleSheets';
 import { csvToRecords, prepareSheetRecords } from '../../utils/importHelpers';
 import { recordsToCSV } from '../../utils/exportHelpers';
 import { getCarrySettings } from '../../utils/carryForward';
-import { ANDROID_APK_URL, detectPlatform } from '../../utils/appLinks';
 import { formatMonthLabel } from '../../utils/periodHelpers';
 import { todayInputValue } from '../../utils/dateHelpers';
 import RecentlyDeletedModal from '../../components/RecentlyDeletedModal';
@@ -194,20 +193,6 @@ export default function SettingsTab({
 
   /* ── Theme ── */
   function toggleTheme() { onThemeChange(isMonoflow ? 'light' : 'monoflow'); }
-
-  const platform = detectPlatform();
-
-  function handleDownloadApk() {
-    window.open(ANDROID_APK_URL, '_blank', 'noopener');
-  }
-  async function handleCopyApkLink() {
-    try {
-      await navigator.clipboard.writeText(ANDROID_APK_URL);
-      showFeedback('Android app link copied — paste it in WhatsApp or any chat.');
-    } catch {
-      showFeedback(ANDROID_APK_URL, false);
-    }
-  }
 
   async function handleInstallClick() {
     if (onTriggerInstall) {
@@ -416,31 +401,11 @@ export default function SettingsTab({
                 <SectionLabel Icon={Smartphone}>Mobile App</SectionLabel>
                 <Card>
                   <ActionRow
-                    id="btn-download-apk"
-                    Icon={Smartphone}
-                    label={platform === 'android' ? 'Install Android App' : 'Download Android App (APK)'}
-                    sub={platform === 'android'
-                      ? 'Downloads the APK — open it and tap Install (no Play Store needed)'
-                      : platform === 'ios'
-                        ? 'For Android phones — share the link, or add to home screen below for iPhone'
-                        : 'Real app for Android phones — open the link on the phone or share it'}
-                    iconColor="var(--income)"
-                    onClick={handleDownloadApk}
-                  />
-                  <ActionRow
-                    id="btn-copy-apk-link"
-                    Icon={Copy}
-                    label="Copy Android App Link"
-                    sub="Send it to friends so they can install the app too"
-                    iconColor="var(--accent)"
-                    onClick={handleCopyApkLink}
-                  />
-                  <ActionRow
                     id="btn-install-app"
-                    Icon={Globe}
-                    label={platform === 'ios' ? 'Add to Home Screen (iPhone)' : 'Add to Home Screen (web app)'}
-                    sub={platform === 'ios' ? 'Installs the web app from Safari — works offline' : 'Lightweight web-app install, no download'}
-                    iconColor="var(--text-secondary)"
+                    Icon={Smartphone}
+                    label="Install App"
+                    sub="Add to home screen — works offline, opens like an app"
+                    iconColor="var(--accent)"
                     onClick={handleInstallClick}
                     lastRow
                   />
