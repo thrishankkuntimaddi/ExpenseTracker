@@ -47,8 +47,8 @@ export function subscribeToUserData(uid, onData) {
   let incomes  = [];
   let settings = {};
 
-  function emit() {
-    onData({ transactions: txns, income: incomes, settings });
+  function emit(source) {
+    onData({ transactions: txns, income: incomes, settings, source });
   }
 
   // Transactions sub-collection
@@ -57,7 +57,7 @@ export function subscribeToUserData(uid, onData) {
     { includeMetadataChanges: false },
     (snap) => {
       txns = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      emit();
+      emit('transactions');
     },
     (err) => console.error("[Firestore] txns error", err)
   );
@@ -68,7 +68,7 @@ export function subscribeToUserData(uid, onData) {
     { includeMetadataChanges: false },
     (snap) => {
       incomes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      emit();
+      emit('income');
     },
     (err) => console.error("[Firestore] income error", err)
   );
@@ -80,7 +80,7 @@ export function subscribeToUserData(uid, onData) {
     (snap) => {
       if (!snap.exists()) return;
       settings = snap.data()?.settings || {};
-      emit();
+      emit('settings');
     },
     (err) => console.error("[Firestore] user error", err)
   );
@@ -173,6 +173,7 @@ export async function deleteAllUserData(uid) {
     getDocs(query(incRef(uid))),
     getDocs(query(extRef(uid))),
     getDocs(query(recentlyDeletedRef(uid))),
+    getDocs(query(recurringRef(uid))),
   ]);
   const ops = snaps.flatMap((snap) => snap.docs.map((d) => (b) => b.delete(d.ref)));
   await commitInChunks(ops);
@@ -324,3 +325,40 @@ export async function emptyRecentlyDeleted(uid) {
   await commitInChunks(snap.docs.map((d) => (b) => b.delete(d.ref)));
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════
+   RECURRING RULES (rent, SIP, salary, subscriptions)
+   Collection: users/{uid}/recurring — covered by the catch-all rule.
+   Posting an occurrence writes an ordinary transaction / income doc with a
+   deterministic id (see utils/recurring.js), so it is idempotent.
+═══════════════════════════════════════════════════════════════════ */
+
+const recurringRef    = (uid)     => collection(db, "users", uid, "recurring");
+const recurringDocRef = (uid, id) => doc(db, "users", uid, "recurring", id);
+
+export function subscribeToRecurring(uid, onData) {
+  return onSnapshot(
+    query(recurringRef(uid)),
+    { includeMetadataChanges: false },
+    (snap) => {
+      const rules = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      rules.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      onData(rules);
+    },
+    (err) => console.error("[Firestore] recurring error", err)
+  );
+}
+
+export async function upsertRecurringRule(uid, rule) {
+  const { id, ...data } = rule;
+  await setDoc(recurringDocRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() }, { merge: true });
+}
+
+/** Partial update (e.g. advance lastHandledKey after posting/skipping). */
+export async function patchRecurringRule(uid, id, patch) {
+  await updateDoc(recurringDocRef(uid, id), { ...clean(patch), updatedAt: serverTimestamp() });
+}
+
+export async function deleteRecurringRule(uid, id) {
+  await deleteDoc(recurringDocRef(uid, id));
+}

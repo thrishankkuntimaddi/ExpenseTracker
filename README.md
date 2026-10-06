@@ -1,6 +1,6 @@
 # ⚡ Expense Tracker — Personal Finance, Reimagined
 
-> **Smart, cloud-synced personal finance tracking with person ledgers, wastage analytics, billing sessions, Google Sheets integration, and a fully responsive offline-capable PWA.**
+> **Smart, cloud-synced personal finance tracking with auto-categorised spending, monthly budgets with a daily "safe to spend", recurring entries, savings goals, plain-language insights, person ledgers, wastage analytics, billing sessions, Google Sheets integration, and a fully responsive offline-capable PWA.**
 
 ---
 
@@ -10,6 +10,10 @@
 
 Unlike basic spreadsheet trackers, this app:
 
+- **Categorises spending automatically** — "Swiggy", "petrol", "Netflix" are tagged Food / Fuel / Subscriptions as you type, using an India-aware keyword engine. Override once and it remembers.
+- **Budgets with pace, not just a cap** — a monthly limit (optionally per category) gives you a *safe-to-spend-today* number, a projected month end, and warnings when the run-rate will overshoot.
+- **Logs recurring entries for you** — rent, EMIs, SIPs, salary and subscriptions post on schedule, either silently or with a one-tap confirm.
+- **Explains your month in plain language** — an offline insights engine surfaces things like "Food is up 32% vs this time last month" and "5 no-spend days".
 - **Tracks money with people** — lent, borrowed, repaid and gifted amounts roll up into all-time per-person balances.
 - **Tracks wastage** at the transaction level — mark any expense as wasted (single-tap) or set a partial waste amount (double-tap), giving you an instant "wastage percentage" of your spending.
 - **Manages external/proxy transactions** — record money you spend on behalf of someone else, log the settlement, and track net profit/loss per session.
@@ -44,14 +48,53 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 
 ### 💸 Transaction Management
 - Add **Expense**, **Savings** (personal savings deposits), and **Person** (money given to someone) entries
-- Full transaction history with **search, filter by type, and period selector** (Today / This Week / This Month / custom)
+- **Quick entry**: type `chai 20` (or `250 swiggy`) in the description and press `Enter` — name and amount are split and saved in one go
+- Full transaction history with **search, type and category filters**, and a period selector (This Month / Select Month / Year / Last 3 Months / Custom)
 - Edit and delete any past transaction with optimistic UI updates
 - Keyboard-first form: press `Enter` to jump between fields and save
+
+### 🏷️ Smart Categories
+- 16 spending categories (Food & Dining, Groceries, Transport, Fuel, Shopping, Bills & Utilities, Rent & Home, Health, Entertainment, Subscriptions, Education, Travel, Personal Care, Gifts & Donations, Family, Other)
+- The category is **inferred from the description** with an India-aware keyword list (Swiggy, Zomato, Blinkit, Rapido, IRCTC, BESCOM, Jio, D-Mart, PVR …) — the suggestion is marked ✦ and can be overridden with one tap
+- Overrides are **learned** (`settings.categoryRules`), so the next identical name is tagged your way; picking the inferred category again forgets the rule
+- Older, untagged entries are categorised on the fly, so analytics cover your whole history without a migration
+- Category breakdown bars on Stats and the desktop dashboard; category chips filter History
+
+### 🎯 Monthly Budget
+- Set a **total monthly cap** and/or **per-category caps** (Plan tab, or the pencil on any budget card); *Suggest from history* pre-fills them from your last three months
+- Every budget bar carries a **pace marker** showing where the month is today, so "40% spent at 60% of the month" reads at a glance
+- **Safe to spend today** — what's left, spread over the remaining days — shown on the Expenses tab header, Stats and the dashboard
+- Status: on track · pace too fast (projected to exceed) · nearly spent (≥85%) · over budget, with a projected month-end figure
+
+### 🔁 Recurring Entries
+- Rules for **expenses, savings or income** that repeat daily / weekly / monthly / yearly (day-of-month clamps to short months: the 31st becomes the 28th in February)
+- **Auto-post** rules are logged silently on their due date when you open the app; **ask-me** rules show a *Log / Skip* card on the Expenses tab, dashboard and Plan tab — handy when the amount varies
+- Posted occurrences use a **deterministic id** (`rec_<rule>_<date>`), so two devices or a retry can never double-log
+- Pause / resume, end dates, "next on …", and a monthly committed total ("₹18,649/mo goes to recurring expenses")
+
+### 🏁 Savings Goals
+- Goals (emergency fund, a trip, a laptop) with a target, optional deadline and a start date
+- Progress is **derived from your savings entries** — optionally only one savings type (SIP, Mutual Fund …) or entries matching a keyword — so there is nothing to log twice
+- Shows ₹/month needed to hit the deadline, on-track / behind-pace, or an ETA at the current rate
+
+### 💡 Insights
+- A rule-based, fully offline engine turns the ledger into short observations for the current month: month-to-date vs the same point last month, projected month end, biggest category and sharp category jumps, most frequent merchant, no-spend days, this week vs last, weekend vs weekday, wastage, savings rate, biggest single expense, money still owed to you, budget alerts and recurring commitments
+- Sorted by what matters most (budget overruns first); shown on Stats and the dashboard
+
+### 📅 Spending Calendar
+- A month heat-map — each day shaded by how much was spent; tap a day for its entries, browse earlier months, and see no-spend days and the peak day at a glance
 
 ### 📥 Income Management
 - Log multiple income sources per month (salary, freelance, dividends, etc.)
 - Three kinds of inflow: **income**, **borrowed** money, and **repayments received** from people you lent to
 - Income is displayed per-period with a live running balance
+
+### ↪ Month Carry Forward
+- From a start month (default **November 2026**), whatever was left at the end of a month appears as an **auto** income line in the next: "Carried forward from October 2026"
+- The chain is cumulative — November's remainder (which already includes October's carry) rolls into December
+- Nothing is stored: the line is recomputed from the ledger on every render, so a late edit to October corrects November automatically. It cannot be edited or deleted, only switched off
+- Settings → *Month Carry Forward*: toggle on/off, pick the first month that receives a carry, and choose whether a **deficit** (negative leftover) is carried too (off by default — an overspent month simply carries nothing)
+- Counted in that month's total income, remaining balance and the 6-month trend; **not** counted by budgets or the savings-rate insight, which look at real spending and earned income
 
 ### 👥 Person Ledgers
 - Lent / borrowed / repaid / gifted entries roll up into **all-time per-person balances** (what you owe, what you're owed)
@@ -81,7 +124,8 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 - Live server-health indicator in Settings (green dot = online, red = offline with run command shown)
 
 ### ⚙️ Settings & Data Management
-- **Export**: download full JSON backup of all transactions, income, and settings
+- **Export JSON**: download a full backup of all transactions, income, and settings (budgets, goals, category rules included)
+- **Export CSV**: a spreadsheet with categories that the app's own CSV importer accepts — round-trips cleanly
 - **Import JSON**: restore from a backup — batched writes; records keep their ids, so re-importing never duplicates
 - **Import CSV**: RFC-4180 CSV importer (`date, name, amount, type`; quoted fields, `1,200`-style amounts, `DD/MM/YYYY` dates) with stable ids — importing the same file twice is safe
 - **Recently Deleted**: deletes move items to a trash (atomically) from which they can be restored
@@ -93,8 +137,8 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 - **MonoFlow**: dark background (`#0c0c0c`) with gold accents — FOUC-free via a pre-React inline script
 
 ### 📱 Responsive PWA
-- **Mobile**: bottom navigation bar with 6 tabs (Today, History, Income, External, Stats, Settings)
-- **Desktop** (≥1024px): a unified `DesktopDashboard` with a left-sidebar layout
+- **Mobile**: a five-slot bottom bar (Expenses, History, Income, Stats, More). Plan, Billings and Settings live behind **More**, which shows a badge when recurring entries are waiting. **Swipe left or right** anywhere to move between all seven pages; the bar's last slot takes the name and icon of whichever More page you are on. Swipes are ignored inside chip rows, wide charts and dialogs, and near the screen edges so the OS back gesture keeps working
+- **Desktop** (≥1024px): a unified `DesktopDashboard` with Dashboard / History / Billings / People / Plan / Settings sections and a planning row (insights · budget · categories · calendar)
 - Installable as a PWA on iOS and Android (Web App Manifest + Service Worker)
 - Service Worker auto-updates on new deploys (`SKIP_WAITING` + `controllerchange` reload)
 - Offline-capable: Firestore's persistent IndexedDB cache paints the UI instantly and queues writes while offline (cleared on sign-out)
@@ -117,7 +161,7 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 | **Build Tool** | Vite (base path `/ExpenseTracker/`) |
 | **Deployment** | GitHub Pages |
 | **Linting** | ESLint 9 (flat config) |
-| **Testing** | Vitest (unit tests for finance, date and import logic) |
+| **Testing** | Vitest (unit tests for finance, categories, budget, recurring, insights, goals, dates and import/export; server-render smoke tests for every screen) |
 
 ---
 
@@ -139,21 +183,23 @@ ExpenseTracker/
 │   │
 │   ├── features/
 │   │   ├── auth/               # AuthGate, login and sign-up pages
-│   │   ├── transactions/       # TodayTab (quick add), HistoryTab (search, wastage, edit)
+│   │   ├── transactions/       # TodayTab (quick add, safe-to-spend, due recurring), HistoryTab (search, filters, wastage, edit)
 │   │   ├── income/             # IncomeTab
 │   │   ├── external/           # Billing sessions (ExternalTab) + share receipt
 │   │   ├── persons/            # Person ledgers
-│   │   ├── stats/              # Charts + key metrics
-│   │   └── settings/           # Theme, import/export, Google Sheets, account
+│   │   ├── plan/               # PlanTab: budget editor, recurring rules, savings goals (+ reusable cards)
+│   │   ├── stats/              # Charts, key metrics, InsightsCard, CategoryBreakdown, SpendingCalendar
+│   │   └── settings/           # Theme, import/export (JSON + CSV), Google Sheets, account
 │   │
-│   ├── components/             # DesktopDashboard, modals, PeriodSelector, LoadMonthlyData
+│   ├── components/             # DesktopDashboard, modals, CategoryPicker, ModalShell, PeriodSelector, LoadMonthlyData
 │   │
 │   ├── hooks/
 │   │   ├── useAuth.js               # Auth state (grace period) + sign-out cache wipe
-│   │   ├── useFirestoreData.js      # Real-time data + optimistic writes with rollback
+│   │   ├── useFirestoreData.js      # Real-time data + optimistic writes with rollback (+ patchSettings)
+│   │   ├── useRecurring.js          # Recurring rules, due occurrences, auto-post, post/skip
 │   │   ├── useExternalTransactions.js # Billing sessions (per-session debounced autosave)
 │   │   ├── useStats.js              # Memoized wrapper around utils/finance.js
-│   │   ├── useTransactions.js       # Period filtering + grouping
+│   │   ├── useTransactions.js       # Period filtering + grouping (+ optional predicate)
 │   │   └── useWastage.js            # Tap/double-tap wastage interaction
 │   │
 │   ├── services/
@@ -164,6 +210,14 @@ ExpenseTracker/
 │   │
 │   └── utils/
 │       ├── finance.js          # ALL money maths: balances, person debts, settlement matching
+│       ├── categories.js       # Category list, keyword inference, learned rules, per-category totals
+│       ├── carryForward.js     # Month-to-month leftover chain → synthetic "carried forward" income lines
+│       ├── budget.js           # Budget status: spent vs limit, pace, projection, safe-to-spend-today
+│       ├── recurring.js        # Occurrence generation, due/next, deterministic ids, entry builder
+│       ├── goals.js            # Savings-goal progress, needed-per-month, ETA
+│       ├── insights.js         # Rule-based insights engine (pure, offline)
+│       ├── smartInput.js       # "chai 20" quick-entry parsing
+│       ├── exportHelpers.js    # CSV export (round-trips through importHelpers)
 │       ├── importHelpers.js    # CSV parser, stable import ids, sheet-record prep
 │       ├── dateHelpers.js      # Formatting + local-time date keys
 │       ├── periodHelpers.js    # Period filtering (local calendar)
@@ -287,11 +341,19 @@ Firestore listeners (subscribeToUserData) ─▶ React state
 
 ```
 users/{uid}                         ← { email, settings, createdAt }
-  ├── transactions/{id}             ← { name, amount, type, date, month, direction?, wasteAmount?, … }
-  ├── income/{id}                   ← { name, amount, type, date, month, isBorrowed?, isRepaymentRec?, … }
+  │                                    settings = { theme, googleSheetUrl,
+  │                                                 carryForward: { enabled, startMonth: 'YYYY-MM', includeNegative },
+  │                                                 budgets: { total, categories: { food: 6000, … } },
+  │                                                 categoryRules: { "swiggy": "food", … },
+  │                                                 goals: [{ id, name, target, deadline?, startDate, savingsType?, keyword? }] }
+  ├── transactions/{id}             ← { name, amount, type, date, month, category?, direction?, wasteAmount?, recurringId?, … }
+  ├── income/{id}                   ← { name, amount, type, date, month, isBorrowed?, isRepaymentRec?, recurringId?, … }
+  ├── recurring/{id}                ← { name, amount, kind, frequency, dayOfMonth?/weekday?, startDate, endDate?, autoPost, active, lastHandledKey?, category?, … }
   ├── external_transactions/{id}    ← billing session { name, items[], received[], status, net_balance, settlementId?, … }
   └── recently_deleted/{id}         ← { itemType, originalData, deletedAt, … }
 ```
+
+Posted recurring occurrences are ordinary transaction / income documents whose id is `rec_<ruleId>_<YYYY-MM-DD>`, which is what makes posting idempotent.
 
 **Transaction types**: `expense`, `savings`, `person` (with `direction`: lent / borrowed / repaid / repayment / given_gift), `external`
 **Income kinds** (see `incomeKind()`): `income`, `borrowed` (`isBorrowed`), `repayment` (`isRepaymentRec`)
@@ -316,15 +378,18 @@ users/{uid}                         ← { email, settings, createdAt }
 
 ## 🔮 Future Improvements
 
-- [ ] **Budget Goals**: set monthly spending caps per category and get visual warnings when approaching limits
-- [ ] **Recurring Transactions**: auto-log fixed monthly expenses (rent, subscriptions) without manual entry
+- [x] **Budget Goals**: monthly caps (total + per category) with pace markers and safe-to-spend-today
+- [x] **Recurring Transactions**: auto-post or one-tap confirm for rent, SIPs, salary, subscriptions
+- [x] **Spending Categories**: auto-inferred, learnable, with breakdowns and filters
+- [x] **Savings Goals**: progress derived from savings entries
+- [x] **Insights**: rule-based, offline plain-language summaries
+- [x] **CSV Export**
 - [ ] **Multi-currency Support**: record transactions in foreign currencies with exchange rate conversion
 - [ ] **Receipt OCR**: upload a photo of a receipt and auto-extract the amount and merchant name
 - [ ] **Shared Budgets**: collaborative mode where two users (e.g., partners) share a budget workspace
 - [ ] **Native Mobile App**: React Native wrapper for full offline-first, camera, and push notification support
-- [ ] **AI Spending Insights**: weekly natural-language summaries ("You spent 23% more on food this week vs. last")
+- [ ] **LLM-powered insights**: a natural-language layer over the rule-based engine (e.g. ask "why was October expensive?")
 - [ ] **Backend Deployment for Sheets Sync**: host the (already authenticated) Express proxy on a cloud service and build with `VITE_SHEETS_PROXY_URL` so Sheets sync works on the deployed site
-- [ ] **CSV Export**: in addition to JSON export, allow downloading data as a spreadsheet-compatible `.csv`
 
 ---
 
@@ -332,13 +397,14 @@ users/{uid}                         ← { email, settings, createdAt }
 
 | Screen | Description |
 |---|---|
-| **Today Tab** | Quick-add form with type selector (Expense / Person / Savings) + today's entries list with live totals |
-| **History Tab** | Full transaction log with search, period filter, inline wastage marking, swipe-to-delete, and edit modal |
+| **Expenses Tab** | Quick-add form with type selector, auto-suggested category chips, "chai 20" quick entry, safe-to-spend-today, due recurring card, today's entries |
+| **History Tab** | Full transaction log with search, type and category filters, period selector, inline wastage marking, and edit modal |
 | **Income Tab** | Month-grouped income entries with lock badges for closed months; add income with category |
-| **External Tab** | Proxy session manager — open sessions with amount paid + settlement; closed session ledger |
-| **Stats Tab** | Pie, 14-day bar, and 6-month area charts + KPI cards (balance, waste %, averages) |
-| **Settings Tab** | Theme toggle, export/import (JSON + CSV), Google Sheets link + push/pull, account sign-out |
-| **Desktop Dashboard** | Unified sidebar layout showing Today + History + Stats simultaneously |
+| **Billings Tab** | Proxy session manager — open sessions with amount paid + settlement; closed session ledger |
+| **Plan Tab** | Monthly budget (total + per category), recurring rules with due / upcoming, savings goals |
+| **Stats Tab** | Insights, budget, category breakdown, spending calendar, pie, 14-day bar and 6-month area charts + KPI cards |
+| **Settings Tab** | Theme toggle, export (JSON + CSV) / import (JSON + CSV), Google Sheets link + push/pull, account sign-out |
+| **Desktop Dashboard** | Summary strip, quick entry, entries, income, analytics, plus a planning row (insights · budget · categories · calendar) |
 
 ---
 

@@ -2,11 +2,14 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Download, Upload, Trash2, Info,
   ChevronRight, Moon, Sun, FileSpreadsheet,
-  Database, Palette, LogOut, Link, RefreshCw, ArrowDownToLine, RotateCcw, Smartphone,
+  Database, Palette, LogOut, Link, RefreshCw, ArrowDownToLine, RotateCcw, Smartphone, ArrowRightLeft,
 } from 'lucide-react';
 import { updateSettings as fsUpdateSettings, deleteAllUserData, bulkImport } from '../../services/firestore';
 import { pushToSheet, pullFromSheet, validateSheet, checkServerHealth, SHEETS_SYNC_AVAILABLE } from '../../services/googleSheets';
 import { csvToRecords, prepareSheetRecords } from '../../utils/importHelpers';
+import { recordsToCSV } from '../../utils/exportHelpers';
+import { getCarrySettings } from '../../utils/carryForward';
+import { formatMonthLabel } from '../../utils/periodHelpers';
 import { todayInputValue } from '../../utils/dateHelpers';
 import RecentlyDeletedModal from '../../components/RecentlyDeletedModal';
 import PWAInstallModal from '../../components/PWAInstallModal';
@@ -21,8 +24,11 @@ export default function SettingsTab({
   emptyTrash,
   isStandalone,
   onTriggerInstall,
+  onPatchSettings,
 }) {
   const [feedback, setFeedback]       = useState(null);
+  const carry = getCarrySettings(settings);
+  const setCarry = (patch) => onPatchSettings?.({ carryForward: { ...carry, ...patch } });
   const [sheetUrl, setSheetUrl]       = useState(settings?.googleSheetUrl || '');
   const [importing, setImporting]     = useState(false);
   const [syncing, setSyncing]         = useState(false);
@@ -70,6 +76,18 @@ export default function SettingsTab({
     a.click();
     URL.revokeObjectURL(url);
     showFeedback(`Exported ${transactions.length} transactions & ${income.length} income entries.`);
+  }
+
+  function handleExportCSV() {
+    const csv = recordsToCSV({ transactions, income }, settings?.categoryRules ?? {});
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }); // BOM so Excel reads ₹ names correctly
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `expense-tracker-${todayInputValue()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showFeedback(`Exported ${transactions.length + income.length} rows to CSV (opens in Excel / Sheets).`);
   }
 
   /* ── Import helpers ──
@@ -229,11 +247,56 @@ export default function SettingsTab({
               </div>
             </Card>
 
+            {/* ── Carry forward ── */}
+            <SectionLabel Icon={ArrowRightLeft}>Month Carry Forward</SectionLabel>
+            <Card>
+              <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <ArrowRightLeft size={16} style={{ color: 'var(--accent)' }} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Roll leftover into next month</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                      {carry.enabled
+                        ? `From ${formatMonthLabel(carry.startMonth)}: each month's remaining balance appears as income in the next`
+                        : 'Off — every month starts from zero'}
+                    </div>
+                  </div>
+                </div>
+                <button className={`toggle-track ${carry.enabled ? 'on' : ''}`} onClick={() => setCarry({ enabled: !carry.enabled })} aria-label="Toggle carry forward">
+                  <span className="toggle-thumb" />
+                </button>
+              </div>
+              {carry.enabled && (
+                <div style={{ padding: '10px 16px 14px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    <span>First month that receives a carry</span>
+                    <input
+                      id="settings-carry-start"
+                      type="month"
+                      value={carry.startMonth}
+                      onChange={e => { if (/^\d{4}-\d{2}$/.test(e.target.value)) setCarry({ startMonth: e.target.value }); }}
+                      style={{ padding: '6px 10px', borderRadius: 9, fontSize: 12, fontWeight: 600, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }}
+                    />
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer' }}>
+                    <span>Also carry a deficit (negative leftover)</span>
+                    <input type="checkbox" checked={!!carry.includeNegative} onChange={e => setCarry({ includeNegative: e.target.checked })} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                  </label>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.55 }}>
+                    The carried amount is computed live from the previous month, so a late edit to {formatMonthLabel(carry.startMonth === '2026-11' ? '2026-10' : carry.startMonth)} updates it automatically. It is shown as an <strong>auto</strong> line on the Income tab and counted in that month's income and balance.
+                  </div>
+                </div>
+              )}
+            </Card>
+
             {/* ── Data Management ── */}
             <SectionLabel Icon={Database}>Data Management</SectionLabel>
             <Card>
               <ActionRow id="btn-recently-deleted" Icon={RotateCcw} label="Recently Deleted" sub={`${recentlyDeleted.length} ${recentlyDeleted.length === 1 ? 'item' : 'items'} in trash — view or revert`} iconColor="var(--expense)" onClick={() => setShowTrashModal(true)} />
-              <ActionRow id="btn-export" Icon={Download} label="Export Data"    sub={`Download JSON — ${transactions.length} txns, ${income.length} income`} iconColor="var(--savings)" onClick={handleExport} />
+              <ActionRow id="btn-export" Icon={Download} label="Export Backup (JSON)" sub={`Full backup — ${transactions.length} txns, ${income.length} income, settings`} iconColor="var(--savings)" onClick={handleExport} />
+              <ActionRow id="btn-export-csv" Icon={FileSpreadsheet} label="Export Spreadsheet (CSV)" sub="With categories — opens in Excel / Google Sheets; re-importable" iconColor="var(--income)" onClick={handleExportCSV} />
               <ActionRow id="btn-import" Icon={Upload}   label={importing ? 'Importing…' : 'Import Data'}   sub="Restore from JSON backup file (writes to cloud)"          iconColor="var(--accent)"  onClick={() => !importing && fileInputRef.current?.click()} />
               <ActionRow id="btn-csv"    Icon={FileSpreadsheet} label={importing ? 'Importing…' : 'Import CSV'}  sub="Import .csv file (date,name,amount,type) → cloud"    iconColor="var(--income)"  onClick={() => !importing && csvInputRef.current?.click()} />
               <ActionRow id="btn-reset"  Icon={Trash2}   label="Reset All Data" sub="Permanently deletes all transactions, income, billings and trash"      iconColor="var(--expense)" onClick={handleResetData} danger lastRow />

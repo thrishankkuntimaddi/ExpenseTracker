@@ -4,7 +4,17 @@
 import { useState, useMemo } from 'react';
 import { useStats } from '../hooks/useStats';
 import { useWastage } from '../hooks/useWastage';
+import { computeBudgetStatus } from '../utils/budget';
+import { generateInsights } from '../utils/insights';
+import { categoryTotals, EMPTY_RULES } from '../utils/categories';
+import { getCurrentMonthValue } from '../utils/periodHelpers';
 import SettingsTab from '../features/settings/SettingsTab';
+import PlanTab from '../features/plan/PlanTab';
+import BudgetStatusCard from '../features/plan/components/BudgetStatusCard';
+import DueRecurringCard from '../features/plan/components/DueRecurringCard';
+import InsightsCard from '../features/stats/components/InsightsCard';
+import CategoryBreakdown from '../features/stats/components/CategoryBreakdown';
+import SpendingCalendar from '../features/stats/components/SpendingCalendar';
 import ExternalTab from '../features/external/ExternalTab';
 import HistoryTab from '../features/transactions/HistoryTab';
 import PersonsPanel from '../features/persons/PersonsPanel';
@@ -30,11 +40,23 @@ export default function DesktopDashboard({
   onSignOut, theme, user,
   restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   isStandalone, canInstallNative, onTriggerInstall,
+  recurring, onPatchSettings, onLearnCategory,
 }) {
   const isMonoflow = theme === 'monoflow';
   // Use shared hooks
-  const { stats, filtTxns, filtInc, pieData, areaData, C } = useStats(transactions, income, selectedPeriod, theme);
+  const { stats, filtTxns, filtInc, pieData, areaData, C } = useStats(transactions, income, selectedPeriod, theme, settings);
   const wastage = useWastage(onUpdateTransaction);
+  const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
+
+  const budgetStatus = useMemo(
+    () => computeBudgetStatus({ budgets: settings?.budgets, transactions, monthKey: getCurrentMonthValue(), rules: categoryRules }),
+    [settings?.budgets, transactions, categoryRules],
+  );
+  const insights = useMemo(
+    () => generateInsights({ transactions, income, rules: categoryRules, budgetStatus, recurringRules: recurring?.rules ?? [], limit: 6 }),
+    [transactions, income, categoryRules, budgetStatus, recurring?.rules],
+  );
+  const catTotals = useMemo(() => categoryTotals(filtTxns, categoryRules), [filtTxns, categoryRules]);
 
   /* ── UI state ── */
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -46,7 +68,7 @@ export default function DesktopDashboard({
   const [deletingIncId, setDeletingIncId] = useState(null);
 
   // Entry-form state stays here so it persists across section switches
-  const quickForm  = useQuickEntryForm({ onAddTransaction, personDebts: stats.personDebts });
+  const quickForm  = useQuickEntryForm({ onAddTransaction, personDebts: stats.personDebts, categoryRules, onLearnCategory });
   const incomeForm = useIncomeEntryForm({ onAddIncome, personDebts: stats.personDebts });
 
   /* ── Today's entries ── */
@@ -71,6 +93,8 @@ export default function DesktopDashboard({
           onSave={onUpdateTransaction}
           onDelete={onDeleteTransaction}
           onClose={() => setEditingTxn(null)}
+          categoryRules={categoryRules}
+          onLearnCategory={onLearnCategory}
         />
       )}
 
@@ -125,7 +149,15 @@ export default function DesktopDashboard({
         positive={positive}
         isMonoflow={isMonoflow}
         onThemeChange={onThemeChange}
+        dueCount={recurring?.manualDue.length ?? 0}
       />
+
+      {/* ══ PLAN VIEW ══ */}
+      {activeSection === 'plan' && (
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 28px' }}>
+          <PlanTab transactions={transactions} settings={settings} onPatchSettings={onPatchSettings} recurring={recurring} embedded />
+        </div>
+      )}
 
       {/* ══ SETTINGS VIEW ══ */}
       {activeSection === 'settings' && (
@@ -159,6 +191,7 @@ export default function DesktopDashboard({
             isStandalone={isStandalone}
             canInstallNative={canInstallNative}
             onTriggerInstall={onTriggerInstall}
+            onPatchSettings={onPatchSettings}
           />
         </div>
       )}
@@ -175,6 +208,8 @@ export default function DesktopDashboard({
             onDeleteTransaction={onDeleteTransaction}
             onAddTransaction={onAddTransaction}
             onAddIncome={onAddIncome}
+            settings={settings}
+            onLearnCategory={onLearnCategory}
           />
         </div>
       )}
@@ -219,6 +254,11 @@ export default function DesktopDashboard({
 
           {/* LEFT: Entry form + Today's entries */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {recurring && recurring.manualDue.length > 0 && (
+              <div style={{ marginBottom: -14 }}>
+                <DueRecurringCard due={recurring.manualDue} onPost={recurring.post} onSkip={recurring.skip} onSkipAll={recurring.skipAllFor} compact />
+              </div>
+            )}
             <QuickEntryCard
               form={quickForm}
               stats={stats}
@@ -235,6 +275,7 @@ export default function DesktopDashboard({
               setEditingTxn={setEditingTxn}
               setDeletingTxnId={setDeletingTxnId}
               onDeleteTransaction={onDeleteTransaction}
+              categoryRules={categoryRules}
             />
           </div>
 
@@ -261,6 +302,18 @@ export default function DesktopDashboard({
               selectedPeriod={selectedPeriod}
             />
           </div>
+        </div>
+
+        {/* ── PLANNING ROW: insights · budget · categories · calendar ── */}
+        <div style={{ padding: '14px 28px 28px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, alignItems: 'start' }}>
+          <InsightsCard insights={insights} compact />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <BudgetStatusCard status={budgetStatus} compact onEdit={() => setActiveSection('plan')} />
+          </div>
+          {catTotals.length > 0
+            ? <CategoryBreakdown totals={catTotals} theme={theme} compact max={6} />
+            : <div className="card" style={{ padding: 14, fontSize: 12, color: 'var(--text-muted)' }}>No expenses in this period yet.</div>}
+          <SpendingCalendar transactions={transactions} rules={categoryRules} theme={theme} />
         </div>
       </>)}
     </div>

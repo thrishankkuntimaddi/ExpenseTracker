@@ -2,11 +2,13 @@
 import { ShoppingCart, Flame, Pencil, Trash2 } from 'lucide-react';
 import { formatAmount } from '../../utils/dateHelpers';
 import { TYPE_META } from '../../utils/typeConfig';
+import { categoryOf } from '../../utils/categories';
 import { DCard, CardHeader } from './ui';
+import { CategoryBadge } from '../CategoryPicker';
 
 export default function EntriesCard({
   dashTxnView, setDashTxnView, todayTxns, filtTxns, setActiveSection,
-  wastage, setEditingTxn, setDeletingTxnId, onDeleteTransaction,
+  wastage, setEditingTxn, setDeletingTxnId, onDeleteTransaction, categoryRules = {},
 }) {
   const { editingWaste, wasteInput, wasteInputRef, handleTxnTap, saveWaste, cancelWaste, setWasteInput } = wastage;
   const displayTxns = dashTxnView === 'today' ? todayTxns : filtTxns;
@@ -76,9 +78,11 @@ export default function EntriesCard({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 5, fontWeight: 700, background: badgeBg, color: badgeColor, flexShrink: 0 }}>
-                    {badgeLabel}
-                  </span>
+                  {txn.type === 'expense'
+                    ? <CategoryBadge category={categoryOf(txn, categoryRules)} compact />
+                    : <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 5, fontWeight: 700, background: badgeBg, color: badgeColor, flexShrink: 0 }}>
+                        {badgeLabel}
+                      </span>}
                   <div style={{ minWidth: 0 }}>
                     <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {txn.name}

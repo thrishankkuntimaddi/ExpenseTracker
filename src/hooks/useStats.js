@@ -4,6 +4,17 @@ import { useMemo } from "react";
 import { filterItemsByPeriod } from "../utils/periodHelpers";
 import { localDateKey, localMonthKey } from "../utils/dateHelpers";
 import { computePersonDebts, computeStats, incomeKind, sumAmounts } from "../utils/finance";
+import { withCarryForward } from "../utils/carryForward";
+import { getCurrentMonthValue } from "../utils/periodHelpers";
+
+/** Latest month the carry chain must reach for a given period. */
+function carryHorizon(period) {
+  const cur = getCurrentMonthValue();
+  const v = period?.type === 'custom_range' ? (period.end || '').slice(0, 7)
+    : period?.type === 'year' ? `${period.value}-12`
+    : period?.value || '';
+  return v > cur ? v : cur;
+}
 
 // ─── Color palettes keyed by type/direction ───────────────────────────────────
 // These are used for chart fills (Recharts doesn't support CSS vars in SVG attrs).
@@ -29,8 +40,16 @@ const C_DARK = {
   external:     '#8B5CF6', // --external
 };
 
-export function useStats(transactions, income, selectedPeriod, theme) {
+export function useStats(transactions, rawIncome, selectedPeriod, theme, settings) {
   const C = theme === "monoflow" ? C_DARK : C_LIGHT;
+
+  /* Income + synthetic "Carried forward from <month>" entries (see utils/carryForward.js) */
+  const carryCfg = settings?.carryForward;
+  const horizon = carryHorizon(selectedPeriod);
+  const income = useMemo(
+    () => withCarryForward(rawIncome || [], transactions || [], { carryForward: carryCfg }, horizon),
+    [rawIncome, transactions, carryCfg, horizon]
+  );
 
   const filtTxns = useMemo(
     () => filterItemsByPeriod(transactions, selectedPeriod),
@@ -109,5 +128,5 @@ export function useStats(transactions, income, selectedPeriod, theme) {
 
   const areaData4 = useMemo(() => areaData.slice(-4), [areaData]);
 
-  return { stats, filtTxns, filtInc, pieData, barData, areaData, areaData4, C };
+  return { stats, filtTxns, filtInc, pieData, barData, areaData, areaData4, C, income };
 }

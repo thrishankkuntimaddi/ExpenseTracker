@@ -15,10 +15,14 @@ import { groupByDay, groupByWeek, groupByMonth } from '../utils/dateHelpers';
  *   grouped  — filtTxns bucketed by day | week | month (auto-chosen by grouping)
  *   grouping — 'day' | 'week' | 'month'  (for label rendering)
  */
-export function useTransactions(transactions, selectedPeriod) {
-  const filtTxns = useMemo(
+export function useTransactions(transactions, selectedPeriod, predicate = null) {
+  const periodTxns = useMemo(
     () => filterItemsByPeriod(transactions, selectedPeriod),
     [transactions, selectedPeriod],
+  );
+  const filtTxns = useMemo(
+    () => (predicate ? periodTxns.filter(predicate) : periodTxns),
+    [periodTxns, predicate],
   );
 
   const grouping = getSmartGrouping(selectedPeriod);
@@ -29,5 +33,5 @@ export function useTransactions(transactions, selectedPeriod) {
     return groupByDay(filtTxns);
   }, [filtTxns, grouping]);
 
-  return { filtTxns, grouped, grouping };
+  return { filtTxns, periodTxns, grouped, grouping };
 }

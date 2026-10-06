@@ -7,11 +7,15 @@ import { generateId } from '../../utils/storage';
 import { todayInputValue, dateInputToISO, isoToMonth } from '../../utils/dateHelpers';
 import { incomeKindFlags } from '../../utils/finance';
 import { TRANSACTION_TYPES } from '../../utils/typeConfig';
+import { inferCategory } from '../../utils/categories';
+import { parseQuickEntry } from '../../utils/smartInput';
 
 /* ── Quick entry: expense / person / savings ── */
-export function useQuickEntryForm({ onAddTransaction, personDebts }) {
+export function useQuickEntryForm({ onAddTransaction, personDebts, categoryRules = {}, onLearnCategory }) {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState(null);
+  const [categoryTouched, setCategoryTouched] = useState(false);
   const [dateInput, setDateInput] = useState(todayInputValue());
   const [type, setType] = useState('expense');
   const [direction, setDirection] = useState('lent');
@@ -31,15 +35,30 @@ export function useQuickEntryForm({ onAddTransaction, personDebts }) {
   const hasDebtPersons = debtPersons.length > 0;
   const isRepayDirection = type === 'person' && direction === 'repaid';
   const sel = TRANSACTION_TYPES.find(t => t.key === type);
+  const suggestedCategory = type === 'expense' ? inferCategory(name, categoryRules) : null;
+  const effectiveCategory = type === 'expense' ? (categoryTouched && category ? category : suggestedCategory) : null;
+  const pickCategory = (c) => { setCategory(c); setCategoryTouched(true); };
 
-  function saveEntry() {
-    const n = name.trim(), a = parseFloat(amount);
+  /** Enter in the name field: "chai 20" saves straight away, otherwise jump to amount. */
+  function handleNameEnter() {
+    if (!amount) {
+      const parsed = parseQuickEntry(name);
+      if (parsed) { saveEntry({ name: parsed.name, amount: String(parsed.amount) }); return; }
+    }
+    amountRef.current?.focus();
+  }
+
+  function saveEntry(override = {}) {
+    const rawName = override.name ?? name, rawAmount = override.amount ?? amount;
+    const n = rawName.trim(), a = parseFloat(rawAmount);
     if (!n || isNaN(a) || a <= 0) return;
 
     const isoDate = dateInputToISO(dateInput);
     if (type === 'expense') {
+      const cat = categoryTouched && category ? category : inferCategory(n, categoryRules);
+      if (categoryTouched) onLearnCategory?.(n, cat);
       onAddTransaction({
-        id: generateId(), name: n, amount: a, type: 'expense',
+        id: generateId(), name: n, amount: a, type: 'expense', category: cat,
         date: isoDate, month: isoToMonth(isoDate),
       });
     } else if (type === 'person') {
@@ -55,6 +74,7 @@ export function useQuickEntryForm({ onAddTransaction, personDebts }) {
     }
 
     setName(''); setAmount(''); setPlatform(''); setIsFullPayment(false); setIsCustomName(false);
+    setCategory(null); setCategoryTouched(false);
     setTimeout(() => nameRef.current?.focus(), 50);
   }
 
@@ -63,6 +83,7 @@ export function useQuickEntryForm({ onAddTransaction, personDebts }) {
     type, setType, direction, setDirection, savingsType, setSavingsType,
     platform, setPlatform, isFullPayment, setIsFullPayment, isCustomName, setIsCustomName,
     nameRef, amountRef, debtPersons, hasDebtPersons, isRepayDirection, sel, saveEntry,
+    suggestedCategory, effectiveCategory, pickCategory, handleNameEnter,
   };
 }
 

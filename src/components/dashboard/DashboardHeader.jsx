@@ -1,12 +1,12 @@
 // ─── Desktop dashboard: sticky header (logo, section tabs, period, balance, theme) ───
-import { Moon, Sun, List, ReceiptText } from 'lucide-react';
+import { Moon, Sun, List, ReceiptText, Target, Users } from 'lucide-react';
 import { formatAmount } from '../../utils/dateHelpers';
 import PeriodSelector from '../PeriodSelector';
 
 export default function DashboardHeader({
   activeSection, setActiveSection,
   selectedPeriod, onPeriodChange, transactions, income,
-  stats, positive, isMonoflow, onThemeChange,
+  stats, positive, isMonoflow, onThemeChange, dueCount = 0,
 }) {
   return (
     <div style={{
@@ -45,6 +45,8 @@ export default function DashboardHeader({
           { key: 'dashboard', label: 'Dashboard' },
           { key: 'history', label: 'History', icon: <List size={12} /> },
           { key: 'external', label: 'Billings', icon: <ReceiptText size={12} /> },
+          { key: 'people', label: 'People', icon: <Users size={12} /> },
+          { key: 'plan', label: 'Plan', icon: <Target size={12} />, badge: dueCount },
           { key: 'settings', label: 'Settings' },
         ].map(tab => (
           <button
@@ -62,6 +64,11 @@ export default function DashboardHeader({
           >
             {tab.icon}
             {tab.label}
+            {tab.badge > 0 && (
+              <span style={{ minWidth: 16, height: 16, padding: '0 4px', borderRadius: 99, background: activeSection === tab.key ? '#fff' : 'var(--expense)', color: activeSection === tab.key ? 'var(--accent)' : '#fff', fontSize: 9, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                {tab.badge > 9 ? '9+' : tab.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>

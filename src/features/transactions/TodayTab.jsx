@@ -5,6 +5,11 @@ import { formatAmount, todayInputValue, dateInputToISO, isoToMonth } from '../..
 import { getCurrentMonthValue } from '../../utils/periodHelpers';
 import { TRANSACTION_TYPES as TYPES, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType, getDirectionMeta } from '../../utils/typeConfig';
 import { useStats } from '../../hooks/useStats';
+import { inferCategory, categoryOf, EMPTY_RULES } from '../../utils/categories';
+import { parseQuickEntry } from '../../utils/smartInput';
+import { computeBudgetStatus } from '../../utils/budget';
+import CategoryPicker, { CategoryBadge } from '../../components/CategoryPicker';
+import DueRecurringCard from '../plan/components/DueRecurringCard';
 
 function AppHeader() {
   return (
@@ -34,10 +39,12 @@ function AppHeader() {
   );
 }
 
-export default function TodayTab({ transactions = [], income = [], onAdd, theme }) {
-  const { stats } = useStats(transactions, income, { type: 'current_month', value: getCurrentMonthValue() }, theme);
+export default function TodayTab({ transactions = [], income = [], onAdd, theme, settings, recurring, onLearnCategory }) {
+  const { stats } = useStats(transactions, income, { type: 'current_month', value: getCurrentMonthValue() }, theme, settings);
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState(null);
+  const [categoryTouched, setCategoryTouched] = useState(false);
   const [dateInput, setDateInput] = useState(todayInputValue());
   const [settlement, setSettlement] = useState('');
   const [type, setType] = useState('expense');
@@ -60,6 +67,16 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
   const hasDebtPersons = debtPersons.length > 0;
   const isRepayDirection = type === 'person' && direction === 'repaid';
 
+  const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
+  const suggestedCategory = type === 'expense' ? inferCategory(name, categoryRules) : null;
+  const effectiveCategory = type === 'expense' ? (categoryTouched && category ? category : suggestedCategory) : null;
+
+  const budgetStatus = useMemo(
+    () => computeBudgetStatus({ budgets: settings?.budgets, transactions, monthKey: getCurrentMonthValue(), rules: categoryRules }),
+    [settings?.budgets, transactions, categoryRules],
+  );
+  const safeToday = budgetStatus.hasBudget && budgetStatus.total.limit ? budgetStatus.total : null;
+
   const now = new Date();
   const todayTxns = transactions.filter(t => {
     const d = new Date(t.date);
@@ -73,7 +90,16 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
   const todayPerson = todayTxns.filter(t => t.type === 'person').reduce((s, t) => s + t.amount, 0);
   const todayTotal = todayExpense + todaySavings + todayPerson;
 
-  function handleNameKey(e) { if (e.key === 'Enter') { e.preventDefault(); amountRef.current?.focus(); } }
+  function handleNameKey(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    // "chai 20" ⏎ → name "chai", amount 20, saved in one go
+    if (!amount) {
+      const parsed = parseQuickEntry(name);
+      if (parsed) { save({ name: parsed.name, amount: String(parsed.amount) }); return; }
+    }
+    amountRef.current?.focus();
+  }
   function handleAmountKey(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -85,9 +111,10 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
     if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v);
   }
 
-  function save() {
-    const n = name.trim(), a = parseFloat(amount);
-    if (!n || !amount || isNaN(a) || a <= 0) return;
+  function save(override = {}) {
+    const rawName = override.name ?? name, rawAmount = override.amount ?? amount;
+    const n = rawName.trim(), a = parseFloat(rawAmount);
+    if (!n || !rawAmount || isNaN(a) || a <= 0) return;
 
     const isoDate = dateInputToISO(dateInput);
     const entry = {
@@ -99,6 +126,11 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
     if (type === 'person') {
       entry.direction = direction;
     }
+    if (type === 'expense') {
+      const cat = categoryTouched && category ? category : inferCategory(n, categoryRules);
+      entry.category = cat;
+      if (categoryTouched) onLearnCategory?.(n, cat);
+    }
     if (type === 'savings') {
       entry.savingsType = savingsType;
       const st = getSavingsType(savingsType);
@@ -109,6 +141,7 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
 
     onAdd(entry);
     setName(''); setAmount(''); setSettlement(''); setPlatform('');
+    setCategory(null); setCategoryTouched(false);
     setDateInput(todayInputValue());
     nameRef.current?.focus();
   }
@@ -150,6 +183,25 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
           )}
         </div>
 
+        {/* ── Safe to spend today (from the monthly budget) ── */}
+        {safeToday && (
+          <div style={{
+            marginTop: 10, padding: '8px 12px', borderRadius: 10,
+            background: safeToday.status === 'over' ? 'var(--expense-bg)' : 'var(--income-bg)',
+            border: `1px solid ${safeToday.status === 'over' ? 'var(--expense-border)' : 'var(--income-border)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: safeToday.status === 'over' ? 'var(--expense)' : 'var(--income)' }}>
+              {safeToday.status === 'over'
+                ? `Over budget by ${formatAmount(safeToday.spent - safeToday.limit)}`
+                : `Safe to spend today · ${formatAmount(safeToday.remaining)} left this month`}
+            </span>
+            {safeToday.status !== 'over' && (
+              <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--income)', flexShrink: 0 }}>{formatAmount(safeToday.safeToday)}</span>
+            )}
+          </div>
+        )}
+
         {/* ── Summary Chips — placed right under date ── */}
         {(todayExpense > 0 || todaySavings > 0 || todayPerson > 0) && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
@@ -165,6 +217,10 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
 
         {/* Entry Form Column */}
         <div className="today-form-col" style={{ flex: '0 0 100%', padding: '16px 20px 0' }}>
+
+          {recurring && (
+            <DueRecurringCard due={recurring.manualDue} onPost={recurring.post} onSkip={recurring.skip} onSkipAll={recurring.skipAllFor} compact />
+          )}
 
           {/* Type Selector */}
           <div style={{
@@ -365,7 +421,7 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
               id="input-name"
               ref={nameRef}
               type="text"
-              placeholder={type === 'person' ? 'Person Name' : 'Description…'}
+              placeholder={type === 'person' ? 'Person Name' : type === 'expense' ? 'Description… (tip: “chai 20” ⏎)' : 'Description…'}
               value={name}
               onChange={e => setName(e.target.value)}
               onKeyDown={handleNameKey}
@@ -395,6 +451,19 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
                 List 📋
               </button>
             )}
+          </div>
+        )}
+
+        {/* Category (expenses only) — auto-suggested from the name */}
+        {type === 'expense' && (
+          <div style={{ marginBottom: 12 }}>
+            <CategoryPicker
+              size="sm"
+              value={effectiveCategory}
+              suggested={suggestedCategory}
+              onChange={(c) => { setCategory(c); setCategoryTouched(true); }}
+              theme={theme}
+            />
           </div>
         )}
 
@@ -458,7 +527,7 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
         {/* Save Button */}
         <button
           id="btn-save-entry"
-          onClick={save}
+          onClick={() => save()}
           disabled={!canSave}
           style={{
             width: '100%', padding: '13px',
@@ -515,14 +584,19 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme 
                     }}>
                       {txn.name}
                     </span>
-                    <span style={{ fontSize: 11, color: t.color, fontWeight: 600 }}>
-                      {txn.type === 'person'
-                        ? dirMeta?.label ?? 'Person'
-                        : txn.type === 'savings'
-                          ? `${txn.savingsType ? txn.savingsType.toUpperCase() : 'Savings'}${txn.platform ? ' · ' + txn.platform : ''}`
-                          : t.label
-                      }
-                    </span>
+                    {txn.type === 'expense' ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                        <CategoryBadge category={categoryOf(txn, categoryRules)} compact theme={theme} />
+                        {txn.recurringId && <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>recurring</span>}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 11, color: t.color, fontWeight: 600 }}>
+                        {txn.type === 'person'
+                          ? dirMeta?.label ?? 'Person'
+                          : `${txn.savingsType ? txn.savingsType.toUpperCase() : 'Savings'}${txn.platform ? ' · ' + txn.platform : ''}`
+                        }
+                      </span>
+                    )}
                   </div>
                 </div>
                 <span style={{

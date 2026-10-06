@@ -5,10 +5,14 @@ import { useState } from 'react';
 import { X, PenLine, IndianRupee, Calendar, Check, Trash2 } from 'lucide-react';
 import { TRANSACTION_TYPES, TYPE_META, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType } from '../utils/typeConfig';
 import { isoToDateInput, dateInputToISO, isoToMonth, todayInputValue } from '../utils/dateHelpers';
+import { inferCategory } from '../utils/categories';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
+import CategoryPicker from './CategoryPicker';
 
-export default function EditTransactionModal({ txn, onSave, onDelete, onClose }) {
+export default function EditTransactionModal({ txn, onSave, onDelete, onClose, categoryRules = {}, onLearnCategory }) {
   const [name, setName]           = useState(txn.name ?? '');
+  const [category, setCategory]   = useState(txn.category ?? null);
+  const [categoryTouched, setCategoryTouched] = useState(false);
   const [amount, setAmount]       = useState(String(txn.amount ?? ''));
   const [dateInput, setDateInput] = useState(isoToDateInput(txn.date));
   const [type, setType]           = useState(txn.type ?? 'expense');
@@ -18,6 +22,8 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose })
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const sel     = TRANSACTION_TYPES.find(t => t.key === type) ?? TRANSACTION_TYPES[0];
+  const suggestedCategory = type === 'expense' ? inferCategory(name, categoryRules) : null;
+  const effectiveCategory = type === 'expense' ? (category ?? suggestedCategory) : null;
   const amtNum  = parseFloat(amount);
   const canSave = name.trim() && !isNaN(amtNum) && amtNum > 0 && dateInput;
 
@@ -33,6 +39,12 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose })
       month:   isoToMonth(isoDate),
     };
     if (type === 'person')   updated.direction = direction;
+    if (type === 'expense') {
+      updated.category = effectiveCategory;
+      if (categoryTouched) onLearnCategory?.(updated.name, effectiveCategory);
+    } else {
+      delete updated.category;
+    }
     if (type === 'savings') {
       updated.savingsType = savingsType;
       const st = getSavingsType(savingsType);
@@ -169,6 +181,13 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose })
               onBlur={e => e.target.style.borderColor = 'var(--input-border)'}
             />
           </div>
+
+          {type === 'expense' && (
+            <div style={{ marginBottom: 12 }}>
+              <CategoryPicker size="sm" value={effectiveCategory} suggested={suggestedCategory}
+                onChange={(c) => { setCategory(c); setCategoryTouched(true); }} />
+            </div>
+          )}
 
           {/* Amount */}
           <div style={{ position: 'relative', marginBottom: 10 }}>

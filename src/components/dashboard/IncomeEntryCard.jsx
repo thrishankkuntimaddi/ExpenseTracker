@@ -235,7 +235,7 @@ export default function IncomeEntryCard({
                     color: entry.isRepaymentRec ? '#0891B2' : entry.isBorrowed ? 'var(--person)' : 'var(--income)',
                     flexShrink: 0,
                   }}>
-                    {entry.isRepaymentRec ? '⮐ Repay Rec.' : entry.isBorrowed ? 'Borrowed' : 'Income'}
+                    {entry.isCarryForward ? '↪ Carry fwd' : entry.isRepaymentRec ? '⮐ Repay Rec.' : entry.isBorrowed ? 'Borrowed' : 'Income'}
                   </span>
                   <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                     {entry.name}
@@ -246,8 +246,11 @@ export default function IncomeEntryCard({
                     +{formatAmount(entry.amount)}
                   </span>
 
+                  {entry.isCarryForward && (
+                    <span title="Computed from the previous month's remaining balance" style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, padding: '1px 5px', borderRadius: 5, background: 'var(--surface2)' }}>auto</span>
+                  )}
                   {/* Pencil Edit button for all Income entries */}
-                  {onUpdateIncome && (
+                  {onUpdateIncome && !entry.isCarryForward && (
                     <button
                       onClick={() => setEditingInc(entry)}
                       style={{ width: 20, height: 20, borderRadius: 4, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}
@@ -257,7 +260,7 @@ export default function IncomeEntryCard({
                       <Pencil size={10} />
                     </button>
                   )}
-                  {(onDeleteIncome || onDeleteTransaction) && (
+                  {(onDeleteIncome || onDeleteTransaction) && !entry.isCarryForward && (
                     <button
                       onClick={() => {
                         if (income.some(i => i.id === entry.id)) {

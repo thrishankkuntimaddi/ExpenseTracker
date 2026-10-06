@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   TrendingUp, TrendingDown, PiggyBank, Users,
   Scale, Flame, CalendarDays,
@@ -10,8 +10,18 @@ import {
   PieChart, Pie, Cell, AreaChart, Area, CartesianGrid,
 } from 'recharts';
 import { formatAmount } from '../../utils/dateHelpers';
+import { getCurrentMonthValue } from '../../utils/periodHelpers';
+import { computeBudgetStatus } from '../../utils/budget';
+import { generateInsights } from '../../utils/insights';
+import { categoryTotals, EMPTY_RULES } from '../../utils/categories';
 import PeriodSelector from '../../components/PeriodSelector';
 import { useStats } from '../../hooks/useStats';
+import InsightsCard from './components/InsightsCard';
+import CategoryBreakdown from './components/CategoryBreakdown';
+import SpendingCalendar from './components/SpendingCalendar';
+import BudgetStatusCard from '../plan/components/BudgetStatusCard';
+import GoalsCard from '../plan/components/GoalsCard';
+import BudgetEditorModal from '../plan/BudgetEditorModal';
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
@@ -116,9 +126,29 @@ function AvgCard({ label, value, Icon }) {
   );
 }
 
-export default function StatsTab({ transactions, income, selectedPeriod, onPeriodChange, theme }) {
-  const { stats, filtTxns, filtInc, pieData, barData, areaData, areaData4, C } = useStats(transactions, income, selectedPeriod, theme);
+export default function StatsTab({ transactions, income, selectedPeriod, onPeriodChange, theme, settings, recurring, onPatchSettings }) {
+  const { stats, filtTxns, filtInc, pieData, barData, areaData, areaData4, C } = useStats(transactions, income, selectedPeriod, theme, settings);
   const isMobile = useIsMobile();
+  const [budgetOpen, setBudgetOpen] = useState(false);
+
+  const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
+  const isMonthPeriod = selectedPeriod.type === 'current_month' || selectedPeriod.type === 'select_month';
+  const budgetMonth = isMonthPeriod ? selectedPeriod.value : getCurrentMonthValue();
+
+  const budgetStatus = useMemo(
+    () => computeBudgetStatus({ budgets: settings?.budgets, transactions, monthKey: budgetMonth, rules: categoryRules }),
+    [settings?.budgets, transactions, budgetMonth, categoryRules],
+  );
+  const currentBudgetStatus = useMemo(
+    () => (budgetMonth === getCurrentMonthValue() ? budgetStatus : computeBudgetStatus({ budgets: settings?.budgets, transactions, monthKey: getCurrentMonthValue(), rules: categoryRules })),
+    [budgetStatus, budgetMonth, settings?.budgets, transactions, categoryRules],
+  );
+  const insights = useMemo(
+    () => generateInsights({ transactions, income, rules: categoryRules, budgetStatus: currentBudgetStatus, recurringRules: recurring?.rules ?? [] }),
+    [transactions, income, categoryRules, currentBudgetStatus, recurring?.rules],
+  );
+  const catTotals = useMemo(() => categoryTotals(filtTxns, categoryRules), [filtTxns, categoryRules]);
+  const goals = settings?.goals ?? [];
 
   const trendData = isMobile ? (areaData4 || areaData.slice(-4)) : areaData;
   const trendTitle = isMobile ? "4-Month Trend — All Financials" : "6-Month Trend — All Financials";
@@ -188,6 +218,10 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
             {/* ── LEFT COLUMN ── */}
             <div className="stats-left">
 
+              {/* Insights — always about the current month */}
+              <div style={{ marginBottom: 14 }}>
+                <InsightsCard insights={insights} />
+              </div>
 
               {/* Balance Hero */}
               <div style={{
@@ -204,6 +238,15 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                 <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
                   Income − Expense − Savings − Given
                 </p>
+              </div>
+
+              {/* Budget for the viewed month */}
+              <div style={{ marginBottom: 14 }}>
+                <BudgetStatusCard
+                  status={budgetStatus}
+                  onEdit={onPatchSettings ? () => setBudgetOpen(true) : undefined}
+                  title={isMonthPeriod ? 'Budget · this month' : 'Budget · current month'}
+                />
               </div>
 
               {/* Waste block */}
@@ -253,6 +296,14 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                   <AvgCard label="Per Month" value={stats.avgMonth} Icon={Scale}        />
                 </div>
               </Section>
+
+              {goals.length > 0 && (
+                <Section title="Savings Goals">
+                  <div style={{ marginTop: 8 }}>
+                    <GoalsCard goals={goals} transactions={transactions} compact emptyHint={false} />
+                  </div>
+                </Section>
+              )}
             </div>
 
             {/* ── RIGHT COLUMN ── */}
@@ -340,6 +391,22 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                     sub={stats.allTimeNetLent > 0 ? 'Others still owe you' : 'All returned ✓'}
                   />
 
+                </div>
+              </Section>
+
+              {/* Where the money went, by category */}
+              {catTotals.length > 0 && (
+                <Section title="Spending by Category">
+                  <div style={{ marginTop: 8 }}>
+                    <CategoryBreakdown totals={catTotals} theme={theme} />
+                  </div>
+                </Section>
+              )}
+
+              {/* Calendar heat-map */}
+              <Section title="Spending Calendar">
+                <div style={{ marginTop: 8 }}>
+                  <SpendingCalendar key={budgetMonth} transactions={transactions} initialMonth={budgetMonth} rules={categoryRules} theme={theme} />
                 </div>
               </Section>
 
@@ -475,6 +542,11 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
           </div>
         )}
       </div>
+
+      {budgetOpen && (
+        <BudgetEditorModal budgets={settings?.budgets} transactions={transactions} rules={categoryRules}
+          onSave={(b) => onPatchSettings({ budgets: b })} onClose={() => setBudgetOpen(false)} />
+      )}
 
       <style>{`
         @media (min-width: 1024px) {

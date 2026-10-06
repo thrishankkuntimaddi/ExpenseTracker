@@ -408,3 +408,12 @@ button:disabled { cursor: not-allowed; }
     gap: 8px !important;
   }
 }
+
+/* ══ MOBILE PAGE TRANSITIONS (swipe / tab change) ═══════════════ */
+@keyframes pageSlideLeft  { from { opacity: 0; transform: translateX(28px);  } to { opacity: 1; transform: none; } }
+@keyframes pageSlideRight { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+.page-slide-left  { animation: pageSlideLeft  0.22s cubic-bezier(0.16, 1, 0.3, 1); }
+.page-slide-right { animation: pageSlideRight 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .page-slide-left, .page-slide-right { animation: none; }
+}

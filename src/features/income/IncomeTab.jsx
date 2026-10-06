@@ -1,5 +1,6 @@
 import { useRef, useState, useMemo } from 'react';
-import { PenLine, IndianRupee, Wallet, Trash2, TrendingUp, CalendarDays, Calendar, Pencil } from 'lucide-react';
+import { PenLine, IndianRupee, Wallet, Trash2, TrendingUp, CalendarDays, Calendar, Pencil, ArrowRightLeft } from 'lucide-react';
+import { isCarryForward } from '../../utils/carryForward';
 import { generateId } from '../../utils/storage';
 import { formatAmount, groupByDay, todayInputValue, dateInputToISO, isoToMonth, localMonthKey } from '../../utils/dateHelpers';
 import { incomeKindFlags, sumAmounts } from '../../utils/finance';
@@ -10,11 +11,12 @@ import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { useStats } from '../../hooks/useStats';
 
 export default function IncomeTab({
-  income = [], onAddIncome, onUpdateIncome, onDeleteIncome,
+  income: rawIncome = [], onAddIncome, onUpdateIncome, onDeleteIncome,
   selectedPeriod, onPeriodChange,
-  transactions = [], onDeleteTransaction, theme,
+  transactions = [], onDeleteTransaction, theme, settings,
 }) {
-  const { stats } = useStats(transactions, income, selectedPeriod, theme);
+  // `income` here includes the synthetic carry-forward lines; rawIncome is what is stored
+  const { stats, income } = useStats(transactions, rawIncome, selectedPeriod, theme, settings);
   const [incMode, setIncMode]         = useState('income'); // 'income' | 'borrowed' | 'repaymentRec'
   const [name, setName]               = useState('');
   const [amount, setAmount]           = useState('');
@@ -407,19 +409,21 @@ export default function IncomeTab({
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <div style={{
                               width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-                              background: entry.isBorrowed ? 'var(--person-bg)' : 'var(--income-bg)',
+                              background: isCarryForward(entry) ? 'var(--accent-bg)' : entry.isBorrowed ? 'var(--person-bg)' : 'var(--income-bg)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                              <TrendingUp size={14} style={{ color: entry.isBorrowed ? 'var(--person)' : 'var(--income)' }} />
+                              {isCarryForward(entry)
+                                ? <ArrowRightLeft size={14} style={{ color: 'var(--accent)' }} />
+                                : <TrendingUp size={14} style={{ color: entry.isBorrowed ? 'var(--person)' : 'var(--income)' }} />}
                             </div>
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{
                                   fontSize: 9, padding: '2px 6px', borderRadius: 4, fontWeight: 700,
-                                  background: entry.isRepaymentRec ? '#d1fae5' : entry.isBorrowed ? 'var(--person-bg)' : 'var(--income-bg)',
-                                  color: entry.isRepaymentRec ? '#059669' : entry.isBorrowed ? 'var(--person)' : 'var(--income)',
+                                  background: isCarryForward(entry) ? 'var(--accent-bg)' : entry.isRepaymentRec ? '#d1fae5' : entry.isBorrowed ? 'var(--person-bg)' : 'var(--income-bg)',
+                                  color: isCarryForward(entry) ? 'var(--accent)' : entry.isRepaymentRec ? '#059669' : entry.isBorrowed ? 'var(--person)' : 'var(--income)',
                                 }}>
-                                  {entry.isRepaymentRec ? '⮐ Repayment Rec.' : entry.isBorrowed ? 'Borrowed' : 'Income'}
+                                  {isCarryForward(entry) ? '↪ Carry forward' : entry.isRepaymentRec ? '⮐ Repayment Rec.' : entry.isBorrowed ? 'Borrowed' : 'Income'}
                                 </span>
                                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
                                   {entry.name}
@@ -428,12 +432,16 @@ export default function IncomeTab({
                             </div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: entry.isRepaymentRec ? '#059669' : entry.isBorrowed ? 'var(--person)' : 'var(--income)' }}>
-                              +{formatAmount(entry.amount)}
+                            <span style={{ fontSize: 13, fontWeight: 700, color: isCarryForward(entry) ? 'var(--accent)' : entry.isRepaymentRec ? '#059669' : entry.isBorrowed ? 'var(--person)' : 'var(--income)' }}>
+                              {entry.amount < 0 ? '−' : '+'}{formatAmount(Math.abs(entry.amount))}
                             </span>
 
+                            {isCarryForward(entry) && (
+                              <span title="Computed from the previous month's remaining balance. Change it in Settings → Carry forward." style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, padding: '2px 6px', borderRadius: 6, background: 'var(--surface2)' }}>auto</span>
+                            )}
+
                             {/* Edit button for all entries (Income, Borrowed, Repayment Rec) */}
-                            {onUpdateIncome && (
+                            {onUpdateIncome && !isCarryForward(entry) && (
                               <button onClick={() => setEditingEntry(entry)}
                                 style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
                                 onMouseEnter={e => { e.currentTarget.style.color = 'var(--income)'; e.currentTarget.style.background = 'var(--income-bg)'; }}
@@ -441,7 +449,7 @@ export default function IncomeTab({
                                 <Pencil size={12} />
                               </button>
                             )}
-                            <button
+                            {!isCarryForward(entry) && <button
                               onClick={() => {
                                 if (income.some(i => i.id === entry.id)) {
                                   setDeletingId(entry.id);
@@ -455,7 +463,7 @@ export default function IncomeTab({
                               onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
                               onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
                               <Trash2 size={12} />
-                            </button>
+                            </button>}
                           </div>
                         </div>
                       ))}

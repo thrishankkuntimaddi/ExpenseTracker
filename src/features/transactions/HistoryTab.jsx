@@ -1,10 +1,13 @@
-import { useState, useMemo } from 'react';
-import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Upload, Pencil } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Upload, Pencil, Search, X } from 'lucide-react';
 import { formatAmount, formatDate, getWeekStart } from '../../utils/dateHelpers';
 import PeriodSelector from '../../components/PeriodSelector';
 import { useWastage } from '../../hooks/useWastage';
 import { useTransactions } from '../../hooks/useTransactions';
 import { TYPE_META, getDirectionMeta } from '../../utils/typeConfig';
+import { categoryOf, categoryTotals, categoryColor, EMPTY_RULES } from '../../utils/categories';
+import { CategoryBadge, CategoryIcon } from '../../components/CategoryPicker';
+import { currentTheme } from '../../utils/theme';
 import LoadMonthlyData from '../../components/LoadMonthlyData';
 import EditTransactionModal from '../../components/EditTransactionModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
@@ -13,8 +16,14 @@ export default function HistoryTab({
   transactions, income = [], selectedPeriod, onPeriodChange,
   onUpdateTransaction, onDeleteTransaction,
   onAddTransaction, onAddIncome,
+  settings, onLearnCategory,
 }) {
   const [expandAll, setExpandAll]         = useState(false);
+  const [search, setSearch]               = useState('');
+  const [catFilter, setCatFilter]         = useState(null);
+  const [typeFilter, setTypeFilter]       = useState(null); // 'expense' | 'savings' | 'person' | null
+  const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
+  const theme = currentTheme();
   const [customToggles, setCustomToggles] = useState({});
   const [showImport, setShowImport]       = useState(false);
   const [editingTxn, setEditingTxn]     = useState(null);
@@ -23,14 +32,25 @@ export default function HistoryTab({
   const { editingWaste, wasteInput, wasteInputRef, handleTxnTap, saveWaste, cancelWaste, setWasteInput } = useWastage(onUpdateTransaction);
 
   /* ─ Filter & group ─ */
-  const { filtTxns, grouped, grouping } = useTransactions(transactions, selectedPeriod);
+  const q = search.trim().toLowerCase();
+  const predicate = useCallback((t) => {
+    if (typeFilter && t.type !== typeFilter) return false;
+    if (catFilter && categoryOf(t, categoryRules) !== catFilter) return false;
+    if (q && !`${t.name ?? ''} ${t.platform ?? ''} ${t.note ?? ''}`.toLowerCase().includes(q) && !String(t.amount).includes(q)) return false;
+    return true;
+  }, [typeFilter, catFilter, q, categoryRules]);
+  const hasFilter = !!(q || catFilter || typeFilter);
+  const { filtTxns, periodTxns, grouped, grouping } = useTransactions(transactions, selectedPeriod, hasFilter ? predicate : null);
+
+  // Category chips for this period (from every expense in the period, not the filtered subset)
+  const periodCats = useMemo(() => categoryTotals(periodTxns, categoryRules), [periodTxns, categoryRules]);
 
   const periodTotals = useMemo(() => ({
-    expense: filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
-    savings: filtTxns.filter(t => t.type === 'savings').reduce((s, t) => s + t.amount, 0),
-    person:  filtTxns.filter(t => t.type === 'person').reduce((s, t) => s + t.amount, 0),
-    waste:   filtTxns.filter(t => t.type === 'expense').reduce((s, t) => s + (t.wasteAmount || 0), 0),
-  }), [filtTxns]);
+    expense: periodTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+    savings: periodTxns.filter(t => t.type === 'savings').reduce((s, t) => s + t.amount, 0),
+    person:  periodTxns.filter(t => t.type === 'person').reduce((s, t) => s + t.amount, 0),
+    waste:   periodTxns.filter(t => t.type === 'expense').reduce((s, t) => s + (t.wasteAmount || 0), 0),
+  }), [periodTxns]);
 
   function isGroupCurrent(groupLabel) {
     const todayIso = new Date().toISOString();
@@ -67,7 +87,7 @@ export default function HistoryTab({
     if (customToggles[groupLabel] !== undefined) {
       return customToggles[groupLabel];
     }
-    if (expandAll) {
+    if (effectiveExpandAll) {
       return true;
     }
     return isGroupCurrent(groupLabel);
@@ -90,6 +110,9 @@ export default function HistoryTab({
     : grouping === 'week' ? 'Grouped by week'
     : 'Grouped by day';
 
+  // Expand everything while searching/filtering so matches are visible
+  const effectiveExpandAll = expandAll || hasFilter;
+
   return (
     <div className="tab-root">
       {/* Edit modal */}
@@ -99,6 +122,8 @@ export default function HistoryTab({
           onSave={onUpdateTransaction}
           onDelete={onDeleteTransaction}
           onClose={() => setEditingTxn(null)}
+          categoryRules={categoryRules}
+          onLearnCategory={onLearnCategory}
         />
       )}
 
@@ -130,7 +155,7 @@ export default function HistoryTab({
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
-                {groupLabel} · {filtTxns.length} transactions
+                {groupLabel} · {filtTxns.length}{hasFilter ? ` of ${periodTxns.length}` : ''} transactions
               </p>
               <label
                 style={{
@@ -203,15 +228,65 @@ export default function HistoryTab({
           income={income}
         />
 
-        {/* Period Totals Summary */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'auto', paddingBottom: 2 }}>
-          <StatPill label="Expense" value={periodTotals.expense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" />
-          <StatPill label="Savings" value={periodTotals.savings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" />
-          <StatPill label="Person"  value={periodTotals.person}  color="var(--person)"  bg="var(--person-bg)"  border="var(--person-border)"  />
+        {/* Search */}
+        <div style={{ position: 'relative', marginTop: 12 }}>
+          <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+          <input
+            id="history-search"
+            type="search"
+            placeholder="Search name, platform or amount…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              width: '100%', paddingLeft: 32, paddingRight: 32, paddingTop: 9, paddingBottom: 9,
+              borderRadius: 10, fontSize: 13, border: '1.5px solid var(--input-border)',
+              background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit',
+              WebkitAppearance: 'none', appearance: 'none',
+            }}
+          />
+          {search && (
+            <button onClick={() => setSearch('')} aria-label="Clear search" style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', width: 24, height: 24, borderRadius: 7, border: 'none', background: 'var(--surface2)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X size={12} />
+            </button>
+          )}
+        </div>
+
+        {/* Period Totals Summary — tap to filter by type */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, overflowX: 'auto', paddingBottom: 2 }}>
+          <StatPill label="Expense" value={periodTotals.expense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" active={typeFilter === 'expense'} onClick={() => setTypeFilter(f => f === 'expense' ? null : 'expense')} />
+          <StatPill label="Savings" value={periodTotals.savings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" active={typeFilter === 'savings'} onClick={() => setTypeFilter(f => f === 'savings' ? null : 'savings')} />
+          <StatPill label="Person"  value={periodTotals.person}  color="var(--person)"  bg="var(--person-bg)"  border="var(--person-border)"  active={typeFilter === 'person'}  onClick={() => setTypeFilter(f => f === 'person' ? null : 'person')} />
           {periodTotals.waste > 0 && (
             <StatPill label="Waste"   value={periodTotals.waste}   color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={Flame} />
           )}
         </div>
+
+        {/* Category chips — tap to filter */}
+        {periodCats.length > 1 && (
+          <div className="cat-scroll" style={{ display: 'flex', gap: 6, marginTop: 8, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
+            {periodCats.map(c => {
+              const color = categoryColor(c.key, theme);
+              const active = catFilter === c.key;
+              return (
+                <button key={c.key} onClick={() => setCatFilter(f => f === c.key ? null : c.key)} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
+                  padding: '4px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
+                  border: `1.5px solid ${active ? color : 'var(--border)'}`,
+                  background: active ? color + '22' : 'transparent', color: active ? color : 'var(--text-secondary)',
+                }}>
+                  <CategoryIcon category={c.key} size={10} />
+                  {c.label}
+                  <span style={{ opacity: 0.75, fontWeight: 600 }}>{formatAmount(c.amount)}</span>
+                </button>
+              );
+            })}
+            {hasFilter && (
+              <button onClick={() => { setCatFilter(null); setTypeFilter(null); setSearch(''); }} style={{ flexShrink: 0, padding: '4px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: '1.5px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-muted)' }}>
+                Clear filters
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Body */}
@@ -220,7 +295,7 @@ export default function HistoryTab({
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12 }}>
             <LayoutList size={32} style={{ color: 'var(--text-muted)' }} />
             <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
-              No transactions in this period
+              {hasFilter ? 'Nothing matches these filters' : 'No transactions in this period'}
             </p>
           </div>
         ) : (
@@ -283,13 +358,17 @@ export default function HistoryTab({
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                              <span style={{
-                                fontSize: 10, padding: '2px 7px', borderRadius: 6, fontWeight: 700,
-                                background: m.bg, color: m.color, border: `1px solid ${m.border}`,
-                                flexShrink: 0,
-                              }}>
-                                {txn.type === 'person' ? m.label : m.label}
-                              </span>
+                              {txn.type === 'expense' ? (
+                                <CategoryBadge category={categoryOf(txn, categoryRules)} compact theme={theme} />
+                              ) : (
+                                <span style={{
+                                  fontSize: 10, padding: '2px 7px', borderRadius: 6, fontWeight: 700,
+                                  background: m.bg, color: m.color, border: `1px solid ${m.border}`,
+                                  flexShrink: 0,
+                                }}>
+                                  {m.label}
+                                </span>
+                              )}
                               <div style={{ minWidth: 0 }}>
                                 <span style={{
                                   fontSize: 13, fontWeight: 600, color: 'var(--text)',
@@ -396,16 +475,19 @@ export default function HistoryTab({
   );
 }
 
-function StatPill({ label, value, color, bg, border, Icon }) {
+function StatPill({ label, value, color, bg, border, Icon, active, onClick }) {
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div style={{
+    <Tag onClick={onClick} aria-pressed={onClick ? !!active : undefined} style={{
       padding: '5px 10px', borderRadius: 20,
-      background: bg, border: `1px solid ${border}`,
+      background: bg, border: `${active ? 2 : 1}px solid ${active ? color : border}`,
       display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
+      cursor: onClick ? 'pointer' : 'default', fontFamily: 'inherit',
+      boxShadow: active ? `0 0 0 2px ${bg}` : 'none',
     }}>
       {Icon && <Icon size={11} style={{ color }} />}
       <span style={{ fontSize: 11, fontWeight: 600, color }}>{label}:</span>
       <span style={{ fontSize: 11, fontWeight: 800, color }}>{formatAmount(value)}</span>
-    </div>
+    </Tag>
   );
 }

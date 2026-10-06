@@ -6,6 +6,7 @@ import { formatAmount, todayInputValue } from '../../utils/dateHelpers';
 import { TRANSACTION_TYPES, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType } from '../../utils/typeConfig';
 import { DCard, CardHeader } from './ui';
 import { inputStyle, focusHandlers } from './formStyles';
+import CategoryPicker from '../CategoryPicker';
 
 export default function QuickEntryCard({ form, stats, todayTotal, todayCount }) {
   const {
@@ -13,6 +14,7 @@ export default function QuickEntryCard({ form, stats, todayTotal, todayCount }) 
     type, setType, direction, setDirection, savingsType, setSavingsType,
     platform, setPlatform, isFullPayment, setIsFullPayment, isCustomName, setIsCustomName,
     nameRef, amountRef, debtPersons, hasDebtPersons, isRepayDirection, sel, saveEntry,
+    suggestedCategory, effectiveCategory, pickCategory, handleNameEnter,
   } = form;
 
   return (
@@ -194,10 +196,10 @@ export default function QuickEntryCard({ form, stats, todayTotal, todayCount }) 
             <PenLine size={12} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
             <input
               id="desktop-input-name" ref={nameRef} type="text"
-              placeholder={type === 'person' ? 'Person Name' : 'Description…'}
+              placeholder={type === 'person' ? 'Person Name' : type === 'expense' ? 'Description… (tip: “chai 20” ⏎)' : 'Description…'}
               value={name}
               onChange={e => setName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), amountRef.current?.focus())}
+              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleNameEnter())}
               autoComplete="off"
               style={{ ...inputStyle, paddingRight: isRepayDirection ? 70 : 12 }}
               {...focusHandlers(sel.color)}
@@ -216,6 +218,13 @@ export default function QuickEntryCard({ form, stats, todayTotal, todayCount }) 
                 List 📋
               </button>
             )}
+          </div>
+        )}
+
+        {/* Category — expenses only */}
+        {type === 'expense' && (
+          <div style={{ marginBottom: 8 }}>
+            <CategoryPicker size="sm" value={effectiveCategory} suggested={suggestedCategory} onChange={pickCategory} label={null} />
           </div>
         )}
 
@@ -248,7 +257,7 @@ export default function QuickEntryCard({ form, stats, todayTotal, todayCount }) 
 
         <button
           id="desktop-btn-save"
-          onClick={saveEntry}
+          onClick={() => saveEntry()}
           disabled={!name.trim() || !amount || parseFloat(amount) <= 0}
           style={{
             width: '100%', padding: '10px', borderRadius: 10,

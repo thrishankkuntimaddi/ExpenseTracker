@@ -35,6 +35,7 @@ export function useFirestoreData(uid, email) {
   const [settings, setSettings]         = useState(DEFAULT_SETTINGS);
   const [recentlyDeleted, setRecentlyDeleted] = useState([]);
   const [writeError, setWriteError]     = useState(null);
+  const [loaded, setLoaded]             = useState(false); // first ledger snapshot received
 
   // Latest values, readable from stable callbacks without re-creating them
   const uidRef      = useRef(uid);
@@ -56,9 +57,13 @@ export function useFirestoreData(uid, email) {
   useEffect(() => {
     if (!uid) return;
 
-    const unsubUser = subscribeToUserData(uid, ({ transactions: t, income: i, settings: s }) => {
+    let gotTxns = false, gotIncome = false;
+    const unsubUser = subscribeToUserData(uid, ({ transactions: t, income: i, settings: s, source }) => {
       setTransactions(t);
       setIncome(i);
+      if (source === 'transactions') gotTxns = true;
+      if (source === 'income') gotIncome = true;
+      if (gotTxns && gotIncome) setLoaded(true);
       if (s && Object.keys(s).length) {
         setSettings(prev => ({ ...prev, ...s }));
         if (s.theme) saveTheme(s.theme);
@@ -70,6 +75,7 @@ export function useFirestoreData(uid, email) {
     return () => {
       unsubUser();
       unsubRecently();
+      setLoaded(false);
     };
   }, [uid]);
 
@@ -186,6 +192,21 @@ export function useFirestoreData(uid, email) {
     }
   }, [reportError]);
 
+  /** Merge a partial update into settings (budgets, categoryRules, goals …). */
+  const patchSettings = useCallback(async (patch) => {
+    const previous = settingsRef.current;
+    const next = { ...previous, ...patch };
+    setSettings(next);
+    try {
+      await fsUpdateSettings(uidRef.current, next);
+      return true;
+    } catch (err) {
+      reportError('save settings', err);
+      setSettings(previous);
+      return false;
+    }
+  }, [reportError]);
+
   /* ── Recently Deleted ── */
 
   const restoreDeletedItem = useCallback(async (item) => {
@@ -223,11 +244,11 @@ export function useFirestoreData(uid, email) {
   }, [reportError]);
 
   return {
-    transactions, income, settings, recentlyDeleted,
-    writeError, clearWriteError,
+    transactions, income, settings, recentlyDeleted, loaded,
+    writeError, clearWriteError, reportError,
     addTransaction, updateTransaction, deleteTransaction,
     addIncome, updateIncome, deleteIncome,
-    saveSettings,
+    saveSettings, patchSettings,
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   };
 }
