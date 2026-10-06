@@ -173,7 +173,14 @@ describe('screens render with planning features', () => {
       ],
       settlements: [],
     };
-    const html = render(<TripDetail trip={trip} onChange={noop} onEdit={noop} onShare={noop} onClose={noop} onReopen={noop} />);
+    // open trip → step 1: the Person | What | Amount table comes first
+    const step1 = render(<TripDetail trip={trip} onChange={noop} onEdit={noop} onShare={noop} onClose={noop} onReopen={noop} />);
+    expect(step1).toContain('What paid');
+    expect(step1).toContain('Add Row');
+    expect(step1).toContain('Done — see who pays whom');
+    expect(step1).toContain('24,500');
+    // closed trip → step 2: the settlement
+    const html = render(<TripDetail trip={{ ...trip, status: 'closed' }} onChange={noop} onEdit={noop} onShare={noop} onClose={noop} onReopen={noop} />);
     expect(html).toContain('Who pays whom');
     expect(html).toContain('Bala &amp; Esha');
     expect(html).toContain('24,500');

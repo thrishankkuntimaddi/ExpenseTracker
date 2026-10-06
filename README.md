@@ -107,7 +107,7 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 - External sessions are stored in a dedicated `external_transactions` Firestore sub-collection
 
 ### 🧳 Trips & Splits (group expenses)
-- Inside **Billings**, switch to *Trips & Splits*: add the people on a trip, log who paid for what, and choose whether each expense is split among everyone or a subset
+- Inside **Billings**, switch to *Trips & Splits*. Step 1 is the paper table you'd draw after a trip — **Person | What paid | Amount** — with the people as chips above it. Step 2 is the settlement
 - **Pay as one wallet**: mark two people as "pays with" each other (a couple, a family) and their spending and dues are combined
 - Live **who-pays-whom plan** with the minimum number of transfers ("Dev pays Arjun ₹2,400"), per-person paid vs share, and what is still outstanding; tap **Paid** to record a settlement and the plan shrinks
 - **Share** a WhatsApp-ready text summary; **Close** the trip to lock it and, in one step, log *your* share as a Travel expense and record what others still owe you as Lent (or what you owe as Borrowed) in your own ledger. Reopening removes those entries again

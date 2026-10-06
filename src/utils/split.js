@@ -71,7 +71,8 @@ export function settleTransfers(balances) {
 
 export function computeTripSummary(trip) {
   const members = trip?.members ?? [];
-  const expenses = trip?.expenses ?? [];
+  // Unfinished table rows (no payer / no amount) are ignored
+  const expenses = (trip?.expenses ?? []).filter((e) => e.paidBy && Number(e.amount) > 0);
   const settlements = trip?.settlements ?? [];
   const units = buildUnits(members);
   const unitOfMember = Object.fromEntries(members.map((m) => [m.id, unitIdOf(m)]));
