@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import './styles/glass.css'
 import App from './app/App.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 function bootstrap() {
   const rootEl = document.getElementById('root');
@@ -13,7 +14,9 @@ function bootstrap() {
   }
   createRoot(rootEl).render(
     <StrictMode>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </StrictMode>,
   );
 
