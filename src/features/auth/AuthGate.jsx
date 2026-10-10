@@ -71,7 +71,7 @@ function LoadingScreen() {
  * - user     → children
  */
 export default function AuthGate({ children }) {
-  const { user, loading, signIn, signUp, signInWithGoogle, resetPassword, resendVerification, signOut, error, setError } = useAuth();
+  const { user, loading, signIn, signUp, signInWithGoogle, resetPassword, resendVerification, signOut, deleteAccount, error, setError } = useAuth();
   const [authLoading, setAuthLoading] = useState(false);
 
   if (firebaseConfigError) return <SetupRequired />;
@@ -98,5 +98,5 @@ export default function AuthGate({ children }) {
   }
 
   // Inject signOut into children via cloneElement
-  return children({ user, signOut, resetPassword, resendVerification });
+  return children({ user, signOut, deleteAccount, resetPassword, resendVerification });
 }

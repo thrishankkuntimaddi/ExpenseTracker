@@ -6,6 +6,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { BACKUP_COLLECTIONS, buildBackup } from "../utils/backup";
+import { noteSnapshot, reportListenError } from "./sync";
 
 /* ── Document refs ── */
 const userRef      = (uid)          => doc(db, "users", uid);
@@ -39,6 +40,22 @@ async function commitInChunks(ops) {
   }
 }
 
+/* Every live listener goes through here: snapshot metadata feeds the sync
+   status, and errors (e.g. permission-denied) are reported instead of
+   only reaching the console. */
+function listen(target, what, onSnap, options = { includeMetadataChanges: false }) {
+  try {
+    return onSnapshot(target, options,
+      (snap) => { noteSnapshot(snap.metadata); onSnap(snap); },
+      (err) => reportListenError(err, what));
+  } catch (err) {
+    // A Firestore client that has failed internally throws synchronously
+    // here; inside a React effect that would unmount the whole app.
+    reportListenError(err, what);
+    return () => {};
+  }
+}
+
 /* ── Real-time listener ───────────────────────────────────────────
    Fires onData({ transactions[], income[], settings{} }) on change.
    Returns unsubscribe fn.
@@ -53,37 +70,37 @@ export function subscribeToUserData(uid, onData) {
   }
 
   // Transactions sub-collection
-  const unsubTxns = onSnapshot(
+  const unsubTxns = listen(
     query(txnsRef(uid)),
-    { includeMetadataChanges: false },
+    "transactions",
     (snap) => {
       txns = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       emit('transactions');
-    },
-    (err) => console.error("[Firestore] txns error", err)
+    }
   );
 
   // Income sub-collection
-  const unsubInc = onSnapshot(
+  const unsubInc = listen(
     query(incRef(uid)),
-    { includeMetadataChanges: false },
+    "income",
     (snap) => {
       incomes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       emit('income');
-    },
-    (err) => console.error("[Firestore] income error", err)
+    }
   );
 
   // User document (settings)
-  const unsubUser = onSnapshot(
+  const unsubUser = listen(
     userRef(uid),
-    { includeMetadataChanges: false },
+    "settings",
     (snap) => {
       if (!snap.exists()) return;
-      settings = snap.data()?.settings || {};
+      const next = snap.data()?.settings || {};
+      if (JSON.stringify(next) === JSON.stringify(settings)) return; // metadata-only change
+      settings = next;
       emit('settings');
     },
-    (err) => console.error("[Firestore] user error", err)
+    { includeMetadataChanges: true }, // tiny doc: lets the sync status see the server confirm
   );
 
   return () => { unsubTxns(); unsubInc(); unsubUser(); };
@@ -144,9 +161,15 @@ export async function deleteIncome(uid, entryId) {
 
 /* ── Settings ── */
 export async function updateSettings(uid, settings) {
-  // setDoc+merge (not updateDoc) so this also works for accounts whose user
-  // doc was never created, e.g. ones that predate ensureUserDoc().
-  await setDoc(userRef(uid), { settings, updatedAt: serverTimestamp() }, { merge: true });
+  // updateDoc replaces the whole `settings` map, so a removed budget or
+  // category rule is really removed (setDoc+merge deep-merges and kept
+  // deleted keys forever). Accounts without a user doc fall back to setDoc.
+  try {
+    await updateDoc(userRef(uid), { settings, updatedAt: serverTimestamp() });
+  } catch (err) {
+    if (err?.code !== "not-found") throw err;
+    await setDoc(userRef(uid), { settings, updatedAt: serverTimestamp() }, { merge: true });
+  }
 }
 
 /* ── Bulk import ──
@@ -206,21 +229,49 @@ export async function restoreBackup(uid, backup) {
   await commitInChunks(ops);
 }
 
-/* ── Delete ALL documents for a user (Reset All Data) ──
-   Enumerates every ExpenseTracker subcollection and deletes all docs in
-   batched commits. The client SDK has no collection-level delete.
+/* ── Delete ALL of this user's ExpenseTracker data ──
+   Every subcollection (incl. the devices list) in batches of 450, then the
+   synced settings. Reads come from the server so nothing cached-only is
+   missed; fails with a readable error when offline.
 ─────────────────────────────────────────────────────────────────── */
 export async function deleteAllUserData(uid) {
-  const snaps = await Promise.all([
-    getDocs(query(txnsRef(uid))),
-    getDocs(query(incRef(uid))),
-    getDocs(query(extRef(uid))),
-    getDocs(query(recentlyDeletedRef(uid))),
-    getDocs(query(recurringRef(uid))),
-    getDocs(query(tripsRef(uid))),
-  ]);
+  let snaps;
+  try {
+    snaps = await Promise.all([...BACKUP_COLLECTIONS, "devices"].map((name) =>
+      getDocsFromServer(collection(db, "users", uid, name))));
+  } catch (err) {
+    if (err?.code === "unavailable") throw new Error("You're offline. Connect to delete your data from the cloud.");
+    throw err;
+  }
   const ops = snaps.flatMap((snap) => snap.docs.map((d) => (b) => b.delete(d.ref)));
+  ops.push((b) => b.set(userRef(uid), { settings: {}, updatedAt: serverTimestamp() }, { merge: true }));
   await commitInChunks(ops);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DEVICES (presence) — users/{uid}/devices/{deviceId}
+   Each open app heartbeats lastSeen every few minutes; Settings lists
+   them as "open now" / "last seen …".
+═══════════════════════════════════════════════════════════════════ */
+
+const devicesRef   = (uid)     => collection(db, "users", uid, "devices");
+const deviceDocRef = (uid, id) => doc(db, "users", uid, "devices", id);
+
+export function subscribeToDevices(uid, onData) {
+  return listen(query(devicesRef(uid)), "devices", (snap) => {
+    onData(snap.docs.map((d) => {
+      const data = d.data();
+      return { id: d.id, ...data, lastSeen: data.lastSeen?.toMillis?.() ?? null };
+    }));
+  });
+}
+
+export function touchDevice(uid, id, info) {
+  return setDoc(deviceDocRef(uid, id), { ...clean(info), lastSeen: serverTimestamp() }, { merge: true });
+}
+
+export function removeDevice(uid, id) {
+  return deleteDoc(deviceDocRef(uid, id));
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -238,14 +289,13 @@ const extDocRef = (uid, id) => doc(db, "users", uid, "external_transactions", id
 ─────────────────────────────────────────────────────────────────── */
 export function subscribeToExternalTransactions(uid, onData) {
   const q = query(extRef(uid), orderBy("date", "desc"));
-  return onSnapshot(
+  return listen(
     q,
-    { includeMetadataChanges: false },
+    "billings",
     (snap) => {
       const sessions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       onData(sessions);
-    },
-    (err) => console.error("[Firestore] external_transactions error", err)
+    }
   );
 }
 
@@ -278,16 +328,15 @@ const recentlyDeletedRef    = (uid)     => collection(db, "users", uid, "recentl
 const recentlyDeletedDocRef = (uid, id) => doc(db, "users", uid, "recently_deleted", id);
 
 export function subscribeToRecentlyDeleted(uid, onData) {
-  return onSnapshot(
+  return listen(
     query(recentlyDeletedRef(uid)),
-    { includeMetadataChanges: false },
+    "trash",
     (snap) => {
       const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       // Sort newest deleted first
       items.sort((a, b) => new Date(b.deletedAt || 0) - new Date(a.deletedAt || 0));
       onData(items);
-    },
-    (err) => console.error("[Firestore] recently_deleted error", err)
+    }
   );
 }
 
@@ -381,15 +430,14 @@ const recurringRef    = (uid)     => collection(db, "users", uid, "recurring");
 const recurringDocRef = (uid, id) => doc(db, "users", uid, "recurring", id);
 
 export function subscribeToRecurring(uid, onData) {
-  return onSnapshot(
+  return listen(
     query(recurringRef(uid)),
-    { includeMetadataChanges: false },
+    "recurring rules",
     (snap) => {
       const rules = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       rules.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       onData(rules);
-    },
-    (err) => console.error("[Firestore] recurring error", err)
+    }
   );
 }
 
@@ -417,15 +465,14 @@ const tripsRef   = (uid)     => collection(db, "users", uid, "trips");
 const tripDocRef = (uid, id) => doc(db, "users", uid, "trips", id);
 
 export function subscribeToTrips(uid, onData) {
-  return onSnapshot(
+  return listen(
     query(tripsRef(uid)),
-    { includeMetadataChanges: false },
+    "trips",
     (snap) => {
       const trips = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       trips.sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
       onData(trips);
-    },
-    (err) => console.error("[Firestore] trips error", err)
+    }
   );
 }
 

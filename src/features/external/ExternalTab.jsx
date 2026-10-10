@@ -31,7 +31,7 @@ export default function ExternalTab({
     createSession, updateSession, saveDraftSession,
     discardSession, closeSession, deleteSession, reopenSession,
     archiveSession, unarchiveSession,
-  } = useExternalTransactions(user?.uid);
+  } = useExternalTransactions(user?.uid, reportError);
 
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [showNewModal, setShowNewModal]       = useState(false);

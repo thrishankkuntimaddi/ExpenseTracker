@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { subscribeToTrips, upsertTrip, deleteTrip } from '../services/firestore';
 import { generateId } from '../utils/storage';
+import { background } from '../services/sync';
 
 export function useTrips(uid, reportError) {
   const [trips, setTrips] = useState([]);
@@ -25,16 +26,16 @@ export function useTrips(uid, reportError) {
       const i = prev.findIndex((t) => t.id === full.id);
       return i === -1 ? [full, ...prev] : prev.map((t) => (t.id === full.id ? full : t));
     });
-    try { await upsertTrip(uid, full); return full; }
-    catch (err) { reportError?.('save the trip', err); return null; }
+    background(upsertTrip(uid, full), (err) => reportError?.('save the trip', err));
+    return full;
   }, [uid, reportError]);
 
   const removeTrip = useCallback(async (id) => {
     if (!uid) return false;
     const prev = trips;
     setTrips((p) => p.filter((t) => t.id !== id));
-    try { await deleteTrip(uid, id); return true; }
-    catch (err) { reportError?.('delete the trip', err); setTrips(prev); return false; }
+    background(deleteTrip(uid, id), (err) => { reportError?.('delete the trip', err); setTrips(prev); });
+    return true;
   }, [uid, trips, reportError]);
 
   return { trips, loaded, saveTrip, removeTrip };

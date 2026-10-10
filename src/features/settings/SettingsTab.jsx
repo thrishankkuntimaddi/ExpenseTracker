@@ -3,9 +3,12 @@ import {
   Download, Upload, Trash2, Info,
   ChevronRight, Moon, Sun, Monitor, FileSpreadsheet,
   Database, Palette, LogOut, RotateCcw, Smartphone, ArrowRightLeft, KeyRound, MailCheck,
+  Cloud, CloudOff, RefreshCw, AlertTriangle, Laptop, X, UserX, Eraser,
 } from 'lucide-react';
 import { deleteAllUserData, bulkImport, exportAllUserData, restoreBackup } from '../../services/firestore';
 import { parseBackup, describeBackup } from '../../utils/backup';
+import { useSyncStatus, describeSync, timeAgo } from '../../services/sync';
+import { OPEN_NOW_MS } from '../../hooks/useDevices';
 import { csvToRecords } from '../../utils/importHelpers';
 import { recordsToCSV } from '../../utils/exportHelpers';
 import { getCarrySettings } from '../../utils/carryForward';
@@ -26,7 +29,8 @@ export default function SettingsTab({
   isStandalone,
   onTriggerInstall,
   onPatchSettings,
-  onResetPassword, onResendVerification,
+  onResetPassword, onResendVerification, onDeleteAccount,
+  devices,
 }) {
   const [feedback, setFeedback]       = useState(null);
   const carry = getCarrySettings(settings);
@@ -34,7 +38,10 @@ export default function SettingsTab({
   const [importing, setImporting]     = useState(false);
   const [exporting, setExporting]     = useState(false);
   const [showTrashModal, setShowTrashModal] = useState(false);
-  const [confirming, setConfirming]   = useState(null); // 'reset' | 'signout'
+  const [confirming, setConfirming]   = useState(null); // 'clear' | 'delete' | 'account' | 'signout' | { kind: 'pending', … }
+  const [busyReset, setBusyReset]     = useState(false);
+  const sync = useSyncStatus();
+  const syncLine = describeSync(sync);
   const [showInstallGuideModal, setShowInstallGuideModal] = useState(false);
   const fileInputRef = useRef(null);
   const csvInputRef  = useRef(null);
@@ -46,18 +53,23 @@ export default function SettingsTab({
     setTimeout(() => setFeedback(null), 4000);
   }
 
-  /* ── Data ── */
-  async function handleResetData() {
-    if (!user?.uid) { showFeedback('You must be logged in to reset.', true); return; }
+  /* ── Reset ── */
+  async function handleDeleteAll({ andAccount = false } = {}) {
+    if (!user?.uid) { showFeedback('You must be logged in.', true); return; }
+    setBusyReset(true);
     try {
-      // Deletes transactions, income, billings and trash (batched).
-      // The live listeners update the UI and the offline cache.
       await deleteAllUserData(user.uid);
-      showFeedback('All data deleted.');
+      if (andAccount) { await onDeleteAccount(); return; }   // reloads to the sign-in screen
+      showFeedback('All your data was deleted from your account and every device.');
     } catch (err) {
-      showFeedback('Reset failed. See console.', true);
+      showFeedback(err.message, true);
       console.error('[Reset]', err);
-    }
+    } finally { setBusyReset(false); }
+  }
+
+  async function handleSignOut(opts) {
+    const res = await onSignOut(opts);
+    if (res?.pending) setConfirming({ kind: 'pending', pending: res.pending, opts });
   }
 
   /* Full backup: every collection, read from the server (see exportAllUserData) */
@@ -105,8 +117,11 @@ export default function SettingsTab({
     reader.readAsText(file);
   }
 
+  const OFFLINE_IMPORT = "You're offline. Importing needs a connection so every record reaches your account — try again when you're back online.";
+
   async function runImport(records, label) {
     if (!user?.uid) { showFeedback('You must be logged in to import.', true); return; }
+    if (!navigator.onLine) { showFeedback(OFFLINE_IMPORT, true); return; }
     setImporting(true);
     try {
       await bulkImport(user.uid, records);
@@ -122,6 +137,7 @@ export default function SettingsTab({
       let backup;
       try { backup = parseBackup(text); } catch (err) { showFeedback(err.message, true); return; }
       if (!user?.uid) { showFeedback('You must be logged in to import.', true); return; }
+      if (!navigator.onLine) { showFeedback(OFFLINE_IMPORT, true); return; }
       const skipped = Object.values(backup.skipped).reduce((a, b) => a + b, 0);
       setImporting(true);
       try {
@@ -175,6 +191,48 @@ export default function SettingsTab({
                 {feedback.msg}
               </div>
             )}
+
+            {/* ── Sync & devices ── */}
+            <SectionLabel Icon={Cloud}>Sync</SectionLabel>
+            <Card>
+              <div id="sync-status" data-tone={syncLine.tone} style={{ padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, borderBottom: '1px solid var(--border)' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `var(--${SYNC_TONE[syncLine.tone]}-bg)` }}>
+                  {syncLine.tone === 'offline' ? <CloudOff size={16} style={{ color: 'var(--text-muted)' }} />
+                    : syncLine.tone === 'problem' ? <AlertTriangle size={16} style={{ color: 'var(--expense)' }} />
+                    : syncLine.tone === 'busy' ? <RefreshCw size={16} style={{ color: 'var(--savings)', animation: 'spin 1.2s linear infinite' }} />
+                    : <Cloud size={16} style={{ color: 'var(--income)' }} />}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: syncLine.tone === 'problem' ? 'var(--expense)' : 'var(--text)' }}>{syncLine.label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.5 }}>{syncLine.detail}</div>
+                </div>
+              </div>
+              <div style={{ padding: '10px 16px 4px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your devices</div>
+              {(devices?.devices ?? []).slice().sort((a, b) => (b.id === devices.thisId) - (a.id === devices.thisId) || (b.lastSeen ?? 0) - (a.lastSeen ?? 0)).map((d, i, all) => {
+                const isThis = d.id === devices.thisId;
+                const openNow = isThis || (d.lastSeen && Date.now() - d.lastSeen < OPEN_NOW_MS);
+                return (
+                  <div key={d.id} className="device-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: i === all.length - 1 ? 'none' : '1px solid var(--border)' }}>
+                    <Laptop size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{d.name || 'Unknown device'}{isThis && <span style={{ color: 'var(--accent)', fontWeight: 700 }}> · this device</span>}</div>
+                      <div style={{ fontSize: 11, color: openNow ? 'var(--income)' : 'var(--text-muted)', marginTop: 1 }}>
+                        {openNow ? 'Open now' : d.lastSeen ? `Last seen ${timeAgo(d.lastSeen)}` : 'Not seen yet'}{d.kind ? ` · ${d.kind}` : ''}
+                      </div>
+                    </div>
+                    {!isThis && (
+                      <button onClick={() => devices.remove(d.id)} aria-label={`Remove ${d.name} from this list`} title="Remove from this list (it reappears if that device opens the app)"
+                        style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {!(devices?.devices ?? []).length && (
+                <div style={{ padding: '6px 16px 14px', fontSize: 11, color: 'var(--text-muted)' }}>This device appears here once it has synced.</div>
+              )}
+            </Card>
 
             {/* ── Theme (per device) ── */}
             <SectionLabel Icon={Palette}>Appearance</SectionLabel>
@@ -248,8 +306,7 @@ export default function SettingsTab({
               <ActionRow id="btn-export" Icon={Download} label={exporting ? 'Preparing backup…' : 'Export Backup (JSON)'} sub="Everything: transactions, income, billings, trips, recurring, trash, settings" iconColor="var(--savings)" onClick={() => !exporting && handleExport()} />
               <ActionRow id="btn-export-csv" Icon={FileSpreadsheet} label="Export Spreadsheet (CSV)" sub="With categories — opens in Excel / Google Sheets; re-importable" iconColor="var(--income)" onClick={handleExportCSV} />
               <ActionRow id="btn-import" Icon={Upload}   label={importing ? 'Importing…' : 'Import Data'}   sub="Restore a JSON backup — safe to re-run, never duplicates"          iconColor="var(--accent)"  onClick={() => !importing && fileInputRef.current?.click()} />
-              <ActionRow id="btn-csv"    Icon={FileSpreadsheet} label={importing ? 'Importing…' : 'Import CSV'}  sub="Import .csv file (date,name,amount,type) → cloud"    iconColor="var(--income)"  onClick={() => !importing && csvInputRef.current?.click()} />
-              <ActionRow id="btn-reset"  Icon={Trash2}   label="Reset All Data" sub="Deletes everything on all devices: transactions, income, billings, trips, recurring, trash"      iconColor="var(--expense)" onClick={() => setConfirming('reset')} danger lastRow />
+              <ActionRow id="btn-csv"    Icon={FileSpreadsheet} label={importing ? 'Importing…' : 'Import CSV'}  sub="Import .csv file (date,name,amount,type) → cloud"    iconColor="var(--income)"  onClick={() => !importing && csvInputRef.current?.click()} lastRow />
               <input ref={fileInputRef} type="file" accept=".json"     style={{ display: 'none' }} onChange={handleImport}    />
               <input ref={csvInputRef}  type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={handleCSVImport} />
             </Card>
@@ -313,6 +370,19 @@ export default function SettingsTab({
               />
             </Card>
 
+            {/* ── Reset ── */}
+            <SectionLabel Icon={Trash2}>Reset</SectionLabel>
+            <Card>
+              <ActionRow id="btn-clear-device" Icon={Eraser} label="Clear this device" sub="Sign out and remove all ExpenseTracker data and preferences from this device. Your account keeps everything."
+                iconColor="var(--lent)" onClick={() => setConfirming('clear')} />
+              <ActionRow id="btn-delete-all" Icon={Trash2} label={busyReset ? 'Deleting…' : 'Delete all my data'} sub="Every transaction, income entry, billing, trip and setting — on all devices. Keeps your sign-in."
+                iconColor="var(--expense)" onClick={() => !busyReset && setConfirming('delete')} danger />
+              {onDeleteAccount && (
+                <ActionRow id="btn-delete-account" Icon={UserX} label="Delete my account" sub="All your data, then the sign-in itself. You'd need to create a new account to come back."
+                  iconColor="var(--expense)" onClick={() => !busyReset && setConfirming('account')} danger lastRow />
+              )}
+            </Card>
+
             {/* About */}
             <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
               <img
@@ -330,16 +400,34 @@ export default function SettingsTab({
         </div>
       </div>
 
-      {confirming === 'reset' && (
+      {confirming === 'clear' && (
+        <ConfirmDeleteModal title="Clear this device?"
+          message="You'll be signed out and this device's copy of your data, theme and device name are removed. Everything stays in your account — sign in again to get it back."
+          confirmLabel="Clear & sign out" ConfirmIcon={Eraser}
+          onConfirm={() => { setConfirming(null); handleSignOut({ forgetDevice: true }); }} onCancel={() => setConfirming(null)} />
+      )}
+      {confirming === 'delete' && (
         <ConfirmDeleteModal title="Delete all your data?"
-          message="Every transaction, income entry, billing, trip, recurring rule and the trash are deleted from all your devices. This can't be undone — export a backup first if you might need it."
+          message="Every transaction, income entry, billing, trip, recurring rule, the trash and your settings are deleted from your account and all devices. This can't be undone — export a backup first if you might need it."
           confirmLabel="Delete everything"
-          onConfirm={() => { setConfirming(null); handleResetData(); }} onCancel={() => setConfirming(null)} />
+          onConfirm={() => { setConfirming(null); handleDeleteAll(); }} onCancel={() => setConfirming(null)} />
+      )}
+      {confirming === 'account' && (
+        <ConfirmDeleteModal title="Delete your account?"
+          message="All your data is deleted, then your sign-in. This can't be undone — export a backup first if you might need it."
+          confirmLabel="Delete account" ConfirmIcon={UserX}
+          onConfirm={() => { setConfirming(null); handleDeleteAll({ andAccount: true }); }} onCancel={() => setConfirming(null)} />
       )}
       {confirming === 'signout' && (
         <ConfirmDeleteModal title="Sign out?" message="Your data stays safe in your account. This device's offline copy is cleared."
           confirmLabel="Sign out" ConfirmIcon={LogOut}
-          onConfirm={() => { setConfirming(null); onSignOut(); }} onCancel={() => setConfirming(null)} />
+          onConfirm={() => { setConfirming(null); handleSignOut(); }} onCancel={() => setConfirming(null)} />
+      )}
+      {confirming?.kind === 'pending' && (
+        <ConfirmDeleteModal title="Changes haven't uploaded yet"
+          message={`${confirming.pending} change${confirming.pending === 1 ? ' is' : 's are'} saved only on this device${sync.online ? '' : ' (you’re offline)'}. Signing out now discards ${confirming.pending === 1 ? 'it' : 'them'}. Reconnect and wait for “Synced” in Settings to keep ${confirming.pending === 1 ? 'it' : 'them'}.`}
+          confirmLabel="Sign out anyway" ConfirmIcon={LogOut}
+          onConfirm={() => { const o = confirming.opts; setConfirming(null); handleSignOut({ ...o, force: true }); }} onCancel={() => setConfirming(null)} />
       )}
       <RecentlyDeletedModal
         isOpen={showTrashModal}
@@ -383,6 +471,8 @@ function signInMethods(user) {
   const names = [ids.includes('google.com') && 'Google', ids.includes('password') && 'Email & password'].filter(Boolean);
   return names.length ? `Signed in with ${names.join(' + ')}` : 'Signed in';
 }
+
+const SYNC_TONE = { ok: 'income', busy: 'savings', offline: 'surface2', problem: 'expense' };
 
 function ActionRow({ id, Icon, label, sub, iconColor, onClick, danger, lastRow }) {
   return (

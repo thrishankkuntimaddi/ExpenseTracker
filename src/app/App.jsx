@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react'
 import { Home, List, Wallet, BarChart2, Settings, ReceiptText, Target, LayoutGrid } from 'lucide-react';
 import { useFirestoreData } from '../hooks/useFirestoreData';
 import { useRecurring } from '../hooks/useRecurring';
+import { useDevices } from '../hooks/useDevices';
+import { useSyncStatus, clearSyncError } from '../services/sync';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { getDefaultPeriod } from '../utils/periodHelpers';
@@ -62,7 +64,7 @@ function useIsDesktop() {
 clearLegacyDataCache();
 
 /* ── Inner app rendered when user is authenticated ── */
-function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) {
+function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendVerification }) {
   const [activeTab, setActiveTab]           = useState('today');
   const [slideDir, setSlideDir]             = useState(null);   // 'left' | 'right' | null — page transition
   const [moreOpen, setMoreOpen]             = useState(false);
@@ -79,6 +81,9 @@ function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) 
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   } = useFirestoreData(user.uid, user.email);
 
+  // "Your devices" (presence heartbeat while the app is open)
+  const devices = useDevices(user.uid);
+
   // Recurring rules (rent, SIP, salary …) + what is due right now
   const recurring = useRecurring({ uid: user.uid, transactions, income, loaded, addTransaction, addIncome, reportError });
 
@@ -89,15 +94,20 @@ function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) 
     if (next !== current) patchSettings({ categoryRules: next });
   }, [settings?.categoryRules, patchSettings]);
 
-  const errorBanner = writeError && (
+  // Write failures, or a live listener stopped by the server (e.g. permission-denied)
+  const sync = useSyncStatus();
+  const bannerMessage = writeError || (sync.error?.kind === 'listen' ? sync.error.message : null);
+  const dismissBanner = () => { clearWriteError(); clearSyncError(); };
+
+  const errorBanner = bannerMessage && (
     <div role="alert" style={{
       position: 'fixed', left: 16, right: 16, bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))',
       zIndex: 1000, maxWidth: 480, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10,
       padding: '10px 14px', borderRadius: 10, background: '#B91C1C', color: '#fff',
       fontSize: 12, fontWeight: 600, boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
     }}>
-      <span style={{ flex: 1 }}>{writeError}</span>
-      <button onClick={clearWriteError} aria-label="Dismiss"
+      <span style={{ flex: 1 }}>{bannerMessage}</span>
+      <button onClick={dismissBanner} aria-label="Dismiss"
         style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 16, cursor: 'pointer' }}>×</button>
     </div>
   );
@@ -147,7 +157,7 @@ function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) 
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
     isStandalone, canInstallNative, onTriggerInstall: triggerInstall,
     selectedPeriod, onPeriodChange: setSelectedPeriod,
-    theme, themePref, onThemePrefChange: setThemePref, user,
+    theme, themePref, onThemePrefChange: setThemePref, user, devices,
     recurring, onPatchSettings: patchSettings, onLearnCategory: learnCategory, reportError,
   };
 
@@ -165,6 +175,7 @@ function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) 
           onUpdateIncome={updateIncome}
           onDeleteIncome={deleteIncome}
           onSignOut={signOut}
+          onDeleteAccount={deleteAccount}
           onResetPassword={resetPassword}
           onResendVerification={resendVerification}
           onSmartAdd={smartAddEntry}
@@ -248,6 +259,7 @@ function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) 
           <SettingsTab
             {...commonProps}
               onSignOut={signOut}
+            onDeleteAccount={deleteAccount}
             onResetPassword={resetPassword}
             onResendVerification={resendVerification}
           />

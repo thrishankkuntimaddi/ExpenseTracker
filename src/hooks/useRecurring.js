@@ -11,6 +11,7 @@ import {
 } from '../services/firestore';
 import { dueOccurrences, entryFromRule, nextOccurrence, toKey } from '../utils/recurring';
 import { generateId } from '../utils/storage';
+import { background } from '../services/sync';
 
 export function useRecurring({ uid, transactions, income, loaded, addTransaction, addIncome, reportError }) {
   const [rules, setRules] = useState([]);
@@ -49,31 +50,23 @@ export function useRecurring({ uid, transactions, income, loaded, addTransaction
     const { entry, target } = entryFromRule(rule, dateKey);
     const ok = target === 'income' ? await addIncome(entry) : await addTransaction(entry);
     if (!ok) return false;
-    try {
-      const last = rule.lastHandledKey && rule.lastHandledKey > dateKey ? rule.lastHandledKey : dateKey;
-      await patchRecurringRule(uid, rule.id, { lastHandledKey: last });
-    } catch (err) {
-      // The entry exists (idempotent id); only the bookkeeping failed. Surface it.
-      reportError?.('update the recurring rule', err);
-    }
+    const last = rule.lastHandledKey && rule.lastHandledKey > dateKey ? rule.lastHandledKey : dateKey;
+    // The entry exists (idempotent id); if only the bookkeeping fails, surface it.
+    background(patchRecurringRule(uid, rule.id, { lastHandledKey: last }), (err) => reportError?.('update the recurring rule', err));
     return true;
   }, [uid, addTransaction, addIncome, reportError]);
 
   const skip = useCallback(async ({ rule, dateKey }) => {
     if (!uid) return false;
-    try {
-      const last = rule.lastHandledKey && rule.lastHandledKey > dateKey ? rule.lastHandledKey : dateKey;
-      await patchRecurringRule(uid, rule.id, { lastHandledKey: last });
-      return true;
-    } catch (err) { reportError?.('skip the recurring entry', err); return false; }
+    const last = rule.lastHandledKey && rule.lastHandledKey > dateKey ? rule.lastHandledKey : dateKey;
+    background(patchRecurringRule(uid, rule.id, { lastHandledKey: last }), (err) => reportError?.('skip the recurring entry', err));
+    return true;
   }, [uid, reportError]);
 
   const skipAllFor = useCallback(async (rule) => {
     if (!uid) return false;
-    try {
-      await patchRecurringRule(uid, rule.id, { lastHandledKey: todayKey });
-      return true;
-    } catch (err) { reportError?.('skip the recurring entries', err); return false; }
+    background(patchRecurringRule(uid, rule.id, { lastHandledKey: todayKey }), (err) => reportError?.('skip the recurring entries', err));
+    return true;
   }, [uid, todayKey, reportError]);
 
   /* Auto-post: once per (rule, date) per session, only after both the ledger
@@ -105,16 +98,16 @@ export function useRecurring({ uid, transactions, income, loaded, addTransaction
       const i = prev.findIndex((r) => r.id === full.id);
       return i === -1 ? [...prev, full] : prev.map((r) => (r.id === full.id ? { ...r, ...full } : r));
     });
-    try { await upsertRecurringRule(uid, full); return true; }
-    catch (err) { reportError?.('save the recurring rule', err); return false; }
+    background(upsertRecurringRule(uid, full), (err) => reportError?.('save the recurring rule', err));
+    return true;
   }, [uid, reportError]);
 
   const removeRule = useCallback(async (id) => {
     if (!uid) return false;
     const prev = rules;
     setRules((p) => p.filter((r) => r.id !== id));
-    try { await deleteRecurringRule(uid, id); return true; }
-    catch (err) { reportError?.('delete the recurring rule', err); setRules(prev); return false; }
+    background(deleteRecurringRule(uid, id), (err) => { reportError?.('delete the recurring rule', err); setRules(prev); });
+    return true;
   }, [uid, rules, reportError]);
 
   const toggleActive = useCallback((rule) => saveRule({ ...rule, active: rule.active === false }), [saveRule]);

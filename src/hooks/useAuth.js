@@ -10,10 +10,13 @@ import {
   GoogleAuthProvider,
   sendPasswordResetEmail,
   sendEmailVerification,
+  deleteUser,
   signOut as fbSignOut,
 } from "firebase/auth";
 import { auth, clearLocalFirestoreCache } from "../services/firebase";
-import { ensureUserDoc } from "../services/firestore";
+import { ensureUserDoc, removeDevice } from "../services/firestore";
+import { getSyncState } from "../services/sync";
+import { getDeviceId, DEVICE_ID_KEY } from "./useDevices";
 import { clearLegacyDataCache } from "../utils/storage";
 
 /**
@@ -122,20 +125,54 @@ export function useAuth() {
     await sendEmailVerification(auth.currentUser);
   }, []);
 
-  const signOut = useCallback(async () => {
+  /**
+   * Sign out and wipe this device's copy of the data (shared-device privacy).
+   *  - Refuses (returns { pending: n }) while changes are still waiting to
+   *    upload, unless { force: true } — signing out would discard them.
+   *  - { forgetDevice: true } also clears this device's id and preferences
+   *    ("Clear this device").
+   */
+  const signOut = useCallback(async ({ force = false, forgetDevice = false } = {}) => {
+    const { pending } = getSyncState();
+    if (pending > 0 && !force) return { pending };
+    const uid = auth.currentUser?.uid;
+    // Drop this device from "Your devices" (best effort, don't hang offline)
+    if (uid && navigator.onLine) {
+      await Promise.race([removeDevice(uid, getDeviceId()).catch(() => {}), new Promise((r) => setTimeout(r, 1500))]);
+    }
     await fbSignOut(auth);
-    // Wipe this user's data from the device (shared-device privacy).
-    // The Firestore instance can't be reused after clearing, so reload.
     clearLegacyDataCache();
+    if (forgetDevice) {
+      try { Object.keys(localStorage).filter((k) => k.startsWith("et_")).forEach((k) => localStorage.removeItem(k)); } catch { /* storage unavailable */ }
+    } else {
+      try { localStorage.removeItem(DEVICE_ID_KEY); } catch { /* storage unavailable */ }
+    }
+    // The Firestore instance can't be reused after clearing, so reload.
     try {
       await clearLocalFirestoreCache();
     } catch (err) {
       console.warn("[signOut] Could not clear offline cache:", err);
     }
     window.location.reload();
+    return { ok: true };
   }, []);
 
-  return { user, loading, signIn, signUp, signInWithGoogle, resetPassword, resendVerification, signOut, error, setError };
+  /** Delete the sign-in account itself (call after deleting the data). */
+  const deleteAccount = useCallback(async () => {
+    try {
+      await deleteUser(auth.currentUser);
+    } catch (err) {
+      if (err?.code === "auth/requires-recent-login") {
+        throw new Error("For safety, Firebase needs a fresh sign-in before deleting an account. Sign out, sign in again, then delete it right away.");
+      }
+      throw new Error(friendlyError(err));
+    }
+    clearLegacyDataCache();
+    try { await clearLocalFirestoreCache(); } catch { /* best effort */ }
+    window.location.reload();
+  }, []);
+
+  return { user, loading, signIn, signUp, signInWithGoogle, resetPassword, resendVerification, signOut, deleteAccount, error, setError };
 }
 
 /* ── Map Firebase error codes to friendly messages ── */

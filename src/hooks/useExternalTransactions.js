@@ -8,6 +8,7 @@ import {
   moveToRecentlyDeleted,
 } from "../services/firestore";
 import { generateId } from "../utils/storage";
+import { background } from "../services/sync";
 import { findSettlementMatches } from "../utils/finance";
 import { dateInputToISO, isoToMonth } from "../utils/dateHelpers";
 
@@ -27,12 +28,15 @@ const DEBOUNCE_MS = 600;
  *   discardSession(id)             — sets status to 'discarded'
  *   deleteSession(id)              — moves to Recently Deleted
  */
-export function useExternalTransactions(uid) {
+export function useExternalTransactions(uid, reportError) {
+  // Failures go to the app's error banner (they used to reach only the console)
+  const reportRef = useRef(reportError);
+  useEffect(() => { reportRef.current = reportError; }, [reportError]);
   const [sessions, setSessions] = useState([]);
   const [saving, setSaving]     = useState(false);
 
   const uidRef        = useRef(uid);
-  uidRef.current      = uid;
+  useEffect(() => { uidRef.current = uid; }, [uid]);
   const debounceTimer = useRef(null);
   const pendingPatches = useRef({});   // { [sessionId]: merged patch }
 
@@ -64,14 +68,11 @@ export function useExternalTransactions(uid) {
     };
     // Optimistic local update
     setSessions((prev) => [session, ...prev]);
-    try {
-      await upsertExternalTransaction(uidRef.current, session);
-      return session.id;
-    } catch (err) {
-      console.error('[createSession] Firestore write failed:', err);
+    background(upsertExternalTransaction(uidRef.current, session), (err) => {
+      reportRef.current?.('create the billing session', err);
       setSessions((prev) => prev.filter((s) => s.id !== session.id));
-      return null;
-    }
+    });
+    return session.id;
   }, []);
 
   /* ── Write every pending patch (one merged patch per session) ── */
@@ -81,13 +82,9 @@ export function useExternalTransactions(uid) {
     const patches = Object.values(pendingPatches.current);
     pendingPatches.current = {};
     if (!uid || patches.length === 0) return;
-    try {
-      await Promise.all(patches.map((p) => upsertExternalTransaction(uid, p)));
-    } catch (err) {
-      console.error('[updateSession] Firestore write failed:', err);
-    } finally {
-      setSaving(false);
-    }
+    // Queued locally at once (offline too); `saving` only covers the debounce.
+    background(Promise.all(patches.map((p) => upsertExternalTransaction(uid, p))), (err) => reportRef.current?.('save the billing session', err));
+    setSaving(false);
   }, []);
 
   // Flush unsaved edits when the hook unmounts (e.g. switching tabs)
@@ -116,11 +113,7 @@ export function useExternalTransactions(uid) {
   const saveDraftSession = useCallback(async (id) => {
     if (!uidRef.current) return;
     setSessions((prev) => prev.map((s) => s.id === id ? { ...s, status: 'draft' } : s));
-    try {
-      await upsertExternalTransaction(uidRef.current, { id, status: 'draft' });
-    } catch (err) {
-      console.error('[saveDraftSession] Firestore write failed:', err);
-    }
+    background(upsertExternalTransaction(uidRef.current, { id, status: 'draft' }), (err) => reportRef.current?.('save the billing draft', err));
   }, []);
 
   /* ── Discard session ── */
@@ -138,14 +131,12 @@ export function useExternalTransactions(uid) {
       matchingTxns.forEach((t) => onDeleteTransaction && onDeleteTransaction(t.id));
 
       setSessions((prev) => prev.filter((s) => s.id !== id));
-      try {
-        if (session) {
-          await moveToRecentlyDeleted(uidRef.current, 'billing', session);
-        }
-        await deleteExternalTransaction(uidRef.current, id);
-      } catch (err) {
-        console.error('[discardSession] Firestore delete failed:', err);
-      }
+      // Both writes are queued immediately (in order), so an offline delete
+      // can't leave the session half-moved if the app closes before syncing.
+      background(Promise.all([
+        session ? moveToRecentlyDeleted(uidRef.current, 'billing', session) : null,
+        deleteExternalTransaction(uidRef.current, id),
+      ]), (err) => reportRef.current?.('discard the billing session', err));
     },
     [sessions]
   );
@@ -266,12 +257,7 @@ export function useExternalTransactions(uid) {
         closedAt: new Date().toISOString(),
       };
 
-      try {
-        await closeExternalTransaction(uidRef.current, sessionId, finalPatch);
-      } catch (err) {
-        console.error('[closeSession] Firestore close failed:', err);
-        throw err;
-      }
+      background(closeExternalTransaction(uidRef.current, sessionId, finalPatch), (err) => reportRef.current?.('close the billing session', err));
     },
     [sessions, flushPending]
   );
@@ -291,14 +277,12 @@ export function useExternalTransactions(uid) {
       matchingTxns.forEach((t) => onDeleteTransaction && onDeleteTransaction(t.id));
 
       setSessions((prev) => prev.filter((s) => s.id !== id));
-      try {
-        if (session) {
-          await moveToRecentlyDeleted(uidRef.current, 'billing', session);
-        }
-        await deleteExternalTransaction(uidRef.current, id);
-      } catch (err) {
-        console.error('[deleteSession] Firestore delete failed:', err);
-      }
+      // Both writes are queued immediately (in order), so an offline delete
+      // can't leave the session half-moved if the app closes before syncing.
+      background(Promise.all([
+        session ? moveToRecentlyDeleted(uidRef.current, 'billing', session) : null,
+        deleteExternalTransaction(uidRef.current, id),
+      ]), (err) => reportRef.current?.('delete the billing session', err));
     },
     [sessions]
   );
@@ -307,11 +291,7 @@ export function useExternalTransactions(uid) {
   const reopenSession = useCallback(async (id) => {
     if (!uidRef.current) return;
     setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, status: 'open' } : s)));
-    try {
-      await upsertExternalTransaction(uidRef.current, { id, status: 'open' });
-    } catch (err) {
-      console.error('[reopenSession] Firestore write failed:', err);
-    }
+    background(upsertExternalTransaction(uidRef.current, { id, status: 'open' }), (err) => reportRef.current?.('reopen the billing session', err));
   }, []);
 
   /* ── Archive session — hide but keep data intact ── */
@@ -320,11 +300,7 @@ export function useExternalTransactions(uid) {
     // Store the previous status so we can restore it on unarchive
     const prev_status = sessions.find((s) => s.id === id)?.status ?? 'closed';
     setSessions((prev) => prev.map((s) => s.id === id ? { ...s, status: 'archived', _prevStatus: prev_status } : s));
-    try {
-      await upsertExternalTransaction(uidRef.current, { id, status: 'archived', _prevStatus: prev_status });
-    } catch (err) {
-      console.error('[archiveSession] Firestore write failed:', err);
-    }
+    background(upsertExternalTransaction(uidRef.current, { id, status: 'archived', _prevStatus: prev_status }), (err) => reportRef.current?.('archive the billing session', err));
   }, [sessions]);
 
   /* ── Unarchive session — restore to previous status ── */
@@ -333,11 +309,7 @@ export function useExternalTransactions(uid) {
     const session = sessions.find((s) => s.id === id);
     const restoreStatus = session?._prevStatus ?? 'closed';
     setSessions((prev) => prev.map((s) => s.id === id ? { ...s, status: restoreStatus, _prevStatus: undefined } : s));
-    try {
-      await upsertExternalTransaction(uidRef.current, { id, status: restoreStatus, _prevStatus: null });
-    } catch (err) {
-      console.error('[unarchiveSession] Firestore write failed:', err);
-    }
+    background(upsertExternalTransaction(uidRef.current, { id, status: restoreStatus, _prevStatus: null }), (err) => reportRef.current?.('unarchive the billing session', err));
   }, [sessions]);
 
   return {

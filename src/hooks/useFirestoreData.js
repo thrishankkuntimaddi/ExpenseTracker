@@ -1,5 +1,6 @@
 // ─── useFirestoreData hook ───────────────────────────────────────
 import { useState, useEffect, useCallback, useRef } from "react";
+import { background, readableFirestoreError } from "../services/sync";
 import {
   subscribeToUserData,
   addTransaction as fsAddTxn,
@@ -80,7 +81,7 @@ export function useFirestoreData(uid, email) {
 
   const reportError = useCallback((action, err) => {
     console.error(`[${action}] Firestore write failed:`, err?.code, err?.message, err);
-    setWriteError(`Couldn't ${action}: ${err?.message || 'unknown error'}. Your change was not saved.`);
+    setWriteError(`${readableFirestoreError(err, action)} Your change was undone.`);
   }, []);
   const clearWriteError = useCallback(() => setWriteError(null), []);
 
@@ -89,28 +90,22 @@ export function useFirestoreData(uid, email) {
   const addTransaction = useCallback(async (txn) => {
     if (!uidRef.current) return false;
     setTransactions(prev => [...prev, txn]);
-    try {
-      await fsAddTxn(uidRef.current, txn);
-      return true;
-    } catch (err) {
+    background(fsAddTxn(uidRef.current, txn), (err) => {
       reportError('add the transaction', err);
       setTransactions(prev => prev.filter(t => t.id !== txn.id));
-      return false;
-    }
+    });
+    return true;
   }, [reportError]);
 
   const updateTransaction = useCallback(async (updated) => {
     if (!uidRef.current) return false;
     const previous = txnsRef.current.find(t => t.id === updated.id);
     setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t));
-    try {
-      await fsUpdateTxn(uidRef.current, updated);
-      return true;
-    } catch (err) {
+    background(fsUpdateTxn(uidRef.current, updated), (err) => {
       reportError('update the transaction', err);
       if (previous) setTransactions(prev => prev.map(t => t.id === updated.id ? previous : t));
-      return false;
-    }
+    });
+    return true;
   }, [reportError]);
 
   const deleteTransaction = useCallback(async (id) => {
@@ -118,15 +113,12 @@ export function useFirestoreData(uid, email) {
     const found = txnsRef.current.find(t => t.id === id);
     if (!found) return false;
     setTransactions(prev => prev.filter(t => t.id !== id));
-    try {
-      // Atomic: copy to Recently Deleted + delete original in one batch
-      await trashTransaction(uidRef.current, found);
-      return true;
-    } catch (err) {
+    // Atomic: copy to Recently Deleted + delete original in one batch
+    background(trashTransaction(uidRef.current, found), (err) => {
       reportError('delete the transaction', err);
       setTransactions(prev => prev.some(t => t.id === id) ? prev : [...prev, found]);
-      return false;
-    }
+    });
+    return true;
   }, [reportError]);
 
   /* ── Income ── */
@@ -134,28 +126,22 @@ export function useFirestoreData(uid, email) {
   const addIncome = useCallback(async (entry) => {
     if (!uidRef.current) return false;
     setIncome(prev => [...prev, entry]);
-    try {
-      await fsAddIncome(uidRef.current, entry);
-      return true;
-    } catch (err) {
+    background(fsAddIncome(uidRef.current, entry), (err) => {
       reportError('add the income entry', err);
       setIncome(prev => prev.filter(i => i.id !== entry.id));
-      return false;
-    }
+    });
+    return true;
   }, [reportError]);
 
   const updateIncome = useCallback(async (updated) => {
     if (!uidRef.current) return false;
     const previous = incomeRef.current.find(i => i.id === updated.id);
     setIncome(prev => prev.map(i => i.id === updated.id ? updated : i));
-    try {
-      await fsUpdateIncome(uidRef.current, updated);
-      return true;
-    } catch (err) {
+    background(fsUpdateIncome(uidRef.current, updated), (err) => {
       reportError('update the income entry', err);
       if (previous) setIncome(prev => prev.map(i => i.id === updated.id ? previous : i));
-      return false;
-    }
+    });
+    return true;
   }, [reportError]);
 
   const deleteIncome = useCallback(async (id) => {
@@ -163,15 +149,12 @@ export function useFirestoreData(uid, email) {
     const found = incomeRef.current.find(i => i.id === id);
     if (!found) return false;
     setIncome(prev => prev.filter(i => i.id !== id));
-    try {
-      // Atomic: copy to Recently Deleted + delete original in one batch
-      await trashIncome(uidRef.current, found);
-      return true;
-    } catch (err) {
+    // Atomic: copy to Recently Deleted + delete original in one batch
+    background(trashIncome(uidRef.current, found), (err) => {
       reportError('delete the income entry', err);
       setIncome(prev => prev.some(i => i.id === id) ? prev : [...prev, found]);
-      return false;
-    }
+    });
+    return true;
   }, [reportError]);
 
   /* ── Settings ── */
@@ -180,14 +163,11 @@ export function useFirestoreData(uid, email) {
     if (!uidRef.current) return false;
     const previous = settingsRef.current;
     setSettings(newSettings);
-    try {
-      await fsUpdateSettings(uidRef.current, newSettings);
-      return true;
-    } catch (err) {
+    background(fsUpdateSettings(uidRef.current, newSettings), (err) => {
       reportError('save settings', err);
       setSettings(previous);
-      return false;
-    }
+    });
+    return true;
   }, [reportError]);
 
   /** Merge a partial update into settings (budgets, categoryRules, goals …). */
@@ -195,50 +175,38 @@ export function useFirestoreData(uid, email) {
     const previous = settingsRef.current;
     const next = { ...previous, ...patch };
     setSettings(next);
-    try {
-      await fsUpdateSettings(uidRef.current, next);
-      return true;
-    } catch (err) {
+    background(fsUpdateSettings(uidRef.current, next), (err) => {
       reportError('save settings', err);
       setSettings(previous);
-      return false;
-    }
+    });
+    return true;
   }, [reportError]);
 
   /* ── Recently Deleted ── */
 
   const restoreDeletedItem = useCallback(async (item) => {
     if (!uidRef.current || !item) return false;
-    try {
-      // Atomic: re-create original + remove trash entry in one batch
-      await restoreFromRecentlyDeleted(uidRef.current, item);
-      return true;
-    } catch (err) {
+    // Atomic: re-create original + remove trash entry in one batch
+    background(restoreFromRecentlyDeleted(uidRef.current, item), (err) => {
       reportError('restore the item', err);
-      return false;
-    }
+    });
+    return true;
   }, [reportError]);
 
   const permanentlyDeleteRecentlyDeletedItem = useCallback(async (id) => {
     if (!uidRef.current || !id) return false;
-    try {
-      await permanentlyDeleteFromRecentlyDeleted(uidRef.current, id);
-      return true;
-    } catch (err) {
+    background(permanentlyDeleteFromRecentlyDeleted(uidRef.current, id), (err) => {
       reportError('permanently delete the item', err);
-      return false;
-    }
+    });
+    return true;
   }, [reportError]);
 
   const emptyTrash = useCallback(async () => {
     if (!uidRef.current) return false;
-    try {
-      await emptyRecentlyDeleted(uidRef.current);
-      return true;
-    } catch (err) {
+    background(emptyRecentlyDeleted(uidRef.current), (err) => {
       reportError('empty Recently Deleted', err);
-      return false;
-    }
+    });
+    return true;
   }, [reportError]);
 
   return {

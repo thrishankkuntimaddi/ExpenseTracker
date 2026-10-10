@@ -37,7 +37,7 @@ export default function DesktopDashboard({
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
   onAddIncome, onUpdateIncome, onDeleteIncome,
   themePref, onThemePrefChange,
-  onSignOut, onResetPassword, onResendVerification, theme, user,
+  onSignOut, onDeleteAccount, onResetPassword, onResendVerification, theme, user, devices,
   restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   isStandalone, canInstallNative, onTriggerInstall,
   recurring, onPatchSettings, onLearnCategory, reportError,
@@ -185,6 +185,8 @@ export default function DesktopDashboard({
             themePref={themePref}
             onThemePrefChange={onThemePrefChange}
             onSignOut={onSignOut}
+            onDeleteAccount={onDeleteAccount}
+            devices={devices}
             onResetPassword={onResetPassword}
             onResendVerification={onResendVerification}
             recentlyDeleted={recentlyDeleted}
