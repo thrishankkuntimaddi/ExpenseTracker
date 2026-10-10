@@ -53,5 +53,3 @@ export async function appVersion() {
   return import.meta.env.VITE_APP_VERSION ?? 'web';
 }
 
-/** Can this shell do Google sign-in with the browser popup? (Google blocks embedded web views.) */
-export const supportsGooglePopup = platform === 'web';

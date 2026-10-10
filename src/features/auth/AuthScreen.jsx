@@ -139,7 +139,7 @@ export default function AuthScreen({
                   ) : (
                     <div id="google-unavailable" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12, background: 'var(--surface2)', border: '1px solid var(--border)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
                       <GoogleMark />
-                      <span>Google sign-in isn’t available in this app version yet. Use your email and password here, or Continue with Google on the website.</span>
+                      <span>Google sign-in isn’t set up in this app yet. Use your email and password here, or Continue with Google on the website.</span>
                     </div>
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>

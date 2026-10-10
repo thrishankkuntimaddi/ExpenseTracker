@@ -8,6 +8,7 @@ import {
   signInWithRedirect,
   getRedirectResult,
   GoogleAuthProvider,
+  signInWithCredential,
   sendPasswordResetEmail,
   sendEmailVerification,
   deleteUser,
@@ -16,6 +17,8 @@ import {
 import { auth, clearLocalFirestoreCache } from "../services/firebase";
 import { ensureUserDoc, removeDevice } from "../services/firestore";
 import { getSyncState } from "../services/sync";
+import { platform } from "../native";
+import { nativeGoogleIdToken } from "../native/googleSignIn";
 import { getDeviceId, DEVICE_ID_KEY } from "./useDevices";
 import { clearLegacyDataCache } from "../utils/storage";
 
@@ -93,6 +96,18 @@ export function useAuth() {
      (some in-app browsers, installed PWAs on iOS) fall back to a redirect. */
   const signInWithGoogle = useCallback(async () => {
     setError(null);
+    // Apps: Google refuses embedded web views, so get the token natively
+    if (platform !== "web") {
+      try {
+        const idToken = await nativeGoogleIdToken();
+        if (!idToken) return;                       // cancelled
+        await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+      } catch (err) {
+        setError(friendlyError(err));
+        throw err;
+      }
+      return;
+    }
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
     try {

@@ -5,6 +5,10 @@
 //! of 100+. Adds what a browser tab can't: one instance only, and a menu bar
 //! / system tray icon so the app stays ready after its window is closed.
 
+mod oauth;
+
+use std::time::Duration;
+
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -14,6 +18,15 @@ use tauri::{
 #[tauri::command]
 fn app_version(app: AppHandle) -> String {
     app.package_info().version.to_string()
+}
+
+/// Desktop Google sign-in: open the browser, wait for the loopback redirect.
+/// Runs off the main thread (it waits up to 5 minutes for the user).
+#[tauri::command]
+async fn google_oauth_loopback(app: AppHandle, auth_url: String) -> Result<oauth::LoopbackResult, String> {
+    tauri::async_runtime::spawn_blocking(move || oauth::loopback(&app, &auth_url, Duration::from_secs(300)))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// Debug self-test: the page reports what every bridge call returned.
@@ -37,7 +50,8 @@ pub fn run() {
     let app = tauri::Builder::default()
         // A second launch focuses the running app instead of opening another copy
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app)))
-        .invoke_handler(tauri::generate_handler![app_version, selftest_report])
+        .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![app_version, google_oauth_loopback, selftest_report])
         .setup(|app| {
             // Menu bar / system tray: the app stays ready after the window closes
             let open = MenuItem::with_id(app, "open", "Open Expense Tracker", true, None::<&str>)?;
