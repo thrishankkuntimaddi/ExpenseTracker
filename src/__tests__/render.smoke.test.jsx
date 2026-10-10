@@ -121,7 +121,7 @@ describe('screens render with planning features', () => {
   });
 
   it('Settings tab offers CSV export and carry-forward controls', () => {
-    const html = render(<SettingsTab {...common} onThemeChange={noop} onSignOut={noop} isStandalone />);
+    const html = render(<SettingsTab {...common} onThemePrefChange={noop} onSignOut={noop} isStandalone />);
     expect(html).toContain('Export Spreadsheet (CSV)');
     expect(html).toContain('Month Carry Forward');
     expect(html).toContain('settings-carry-start');
@@ -148,7 +148,7 @@ describe('screens render with planning features', () => {
   it('Desktop dashboard renders the planning row and nav', () => {
     const html = render(
       <DesktopDashboard {...common} onAddTransaction={noop} onUpdateTransaction={noop} onDeleteTransaction={noop}
-        onAddIncome={noop} onUpdateIncome={noop} onDeleteIncome={noop} onThemeChange={noop} onSignOut={noop} />,
+        onAddIncome={noop} onUpdateIncome={noop} onDeleteIncome={noop} onThemePrefChange={noop} onSignOut={noop} />,
     );
     expect(html).toContain('Plan');
     expect(html).toContain('People');

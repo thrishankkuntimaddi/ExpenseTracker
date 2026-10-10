@@ -36,7 +36,7 @@ export default function DesktopDashboard({
   selectedPeriod, onPeriodChange,
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
   onAddIncome, onUpdateIncome, onDeleteIncome,
-  onThemeChange,
+  themePref, onThemePrefChange,
   onSignOut, onResetPassword, onResendVerification, theme, user,
   restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   isStandalone, canInstallNative, onTriggerInstall,
@@ -148,7 +148,7 @@ export default function DesktopDashboard({
         stats={stats}
         positive={positive}
         isMonoflow={isMonoflow}
-        onThemeChange={onThemeChange}
+        onThemePrefChange={onThemePrefChange}
         dueCount={recurring?.manualDue.length ?? 0}
       />
 
@@ -182,7 +182,8 @@ export default function DesktopDashboard({
             user={user}
             transactions={transactions}
             income={income}
-            onThemeChange={onThemeChange}
+            themePref={themePref}
+            onThemePrefChange={onThemePrefChange}
             onSignOut={onSignOut}
             onResetPassword={onResetPassword}
             onResendVerification={onResendVerification}

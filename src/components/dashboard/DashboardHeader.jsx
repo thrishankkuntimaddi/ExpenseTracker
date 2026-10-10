@@ -6,7 +6,7 @@ import PeriodSelector from '../PeriodSelector';
 export default function DashboardHeader({
   activeSection, setActiveSection,
   selectedPeriod, onPeriodChange, transactions, income,
-  stats, positive, isMonoflow, onThemeChange, dueCount = 0,
+  stats, positive, isMonoflow, onThemePrefChange, dueCount = 0,
 }) {
   return (
     <div style={{
@@ -91,8 +91,8 @@ export default function DashboardHeader({
         </div>
         {/* Theme toggle */}
         <button
-          onClick={() => onThemeChange(isMonoflow ? 'light' : 'monoflow')}
-          title={isMonoflow ? 'Switch to Light' : 'Switch to MonoFlow'}
+          onClick={() => onThemePrefChange?.(isMonoflow ? 'light' : 'dark')}
+          title={isMonoflow ? 'Switch to Light' : 'Switch to Dark'}
           style={{
             width: 34, height: 34, borderRadius: 9,
             background: 'var(--surface2)', border: '1px solid var(--border)',

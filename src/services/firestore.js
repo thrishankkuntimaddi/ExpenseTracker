@@ -99,7 +99,7 @@ export async function ensureUserDoc(uid, email, defaultSettings = {}) {
     await setDoc(ref, {
       email: email ?? null,
       createdAt: serverTimestamp(),
-      settings: { theme: "light", ...defaultSettings },
+      settings: { ...defaultSettings },
     }, { merge: true });
   }
 }

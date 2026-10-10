@@ -16,8 +16,8 @@
     <link rel="manifest" href="%BASE_URL%manifest.json?v=4" />
 
     <!-- ── Viewport & Theme ── -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#6366F1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#E4E5EA" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -163,7 +163,158 @@
       }
     </style>
   </head>
-  <body style="background:#F5F3FF;margin:0">
+  <body style="background:#E4E5EA;margin:0">
+    <!-- Theme applied before React boots — prevents FOUC. Mirrors
+         src/utils/theme.js: per-device Light / Dark / System. -->
+    <script>
+      (function() {
+        try {
+          var pref = localStorage.getItem('et_theme_pref');
+          if (pref !== 'light' && pref !== 'dark' && pref !== 'system') {
+            var legacy = localStorage.getItem('et_theme');
+            pref = legacy === 'monoflow' ? 'dark' : legacy === 'light' ? 'light' : 'system';
+          }
+          var dark = pref === 'dark' || (pref === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+          var t = dark ? 'monoflow' : 'light';
+          document.documentElement.setAttribute('data-theme', t);
+          document.body.style.backgroundColor = dark ? '#040405' : '#E4E5EA';
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', dark ? '#040405' : '#E4E5EA');
+        } catch(e) {}
+      })();
+    </script>
+
+    <!-- 3D splash: styles must be inline so it renders before any JS loads -->
+    <style>
+      #app-splash {
+        --sp-bg: radial-gradient(120vmax 90vmax at 50% 35%, #FFFFFF 0%, #E6E8EC 55%, #D5D8DE 100%);
+        --sp-glass: linear-gradient(135deg, rgba(255,255,255,.78), rgba(255,255,255,.38) 55%, rgba(255,255,255,.55));
+        --sp-edge: rgba(255,255,255,.9);
+        --sp-side: rgba(200,205,215,.85);
+        --sp-text: #0F172A;
+        --sp-sub: #64748B;
+        --sp-glow: rgba(99,102,241,.35);
+        --sp-shadow: rgba(15,23,42,.28);
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: var(--sp-bg);
+        perspective: 1100px; perspective-origin: 50% 40%;
+        overflow: hidden;
+        transition: opacity .55s ease .2s, visibility 0s linear .75s;
+      }
+      [data-theme="monoflow"] #app-splash {
+        --sp-bg: radial-gradient(120vmax 90vmax at 50% 35%, #12141B 0%, #050608 60%, #020203 100%);
+        --sp-glass: linear-gradient(135deg, rgba(40,44,56,.85), rgba(14,15,20,.7) 55%, rgba(30,33,42,.8));
+        --sp-edge: rgba(255,255,255,.28);
+        --sp-side: rgba(30,32,40,.95);
+        --sp-text: #F1F5F9;
+        --sp-sub: #8A93A6;
+        --sp-glow: rgba(99,102,241,.45);
+        --sp-shadow: rgba(0,0,0,.85);
+      }
+
+      /* Camera: flies in from deep space, then idles */
+      .sp-stage { position: relative; width: 320px; height: 202px; transform-style: preserve-3d;
+        animation: sp-camera 1.4s cubic-bezier(.16,1,.3,1) both; }
+      @keyframes sp-camera {
+        from { transform: translateZ(-1400px) rotateX(35deg); opacity: 0; }
+        30%  { opacity: 1; }
+        to   { transform: translateZ(0) rotateX(14deg); }
+      }
+
+      /* Glow + floor shadow */
+      .sp-glow { position: absolute; left: 50%; top: 50%; width: 640px; height: 640px; margin: -320px 0 0 -320px;
+        border-radius: 50%; background: radial-gradient(closest-side, var(--sp-glow), transparent);
+        filter: blur(20px); transform: translateZ(-120px); animation: sp-pulse 3s ease-in-out infinite; }
+      .sp-floor { position: absolute; left: 50%; top: 100%; width: 320px; height: 320px; margin-left: -160px;
+        border-radius: 50%; background: radial-gradient(closest-side, var(--sp-shadow), transparent);
+        transform: translateY(-40px) rotateX(90deg); filter: blur(8px); animation: sp-floor 3s ease-in-out infinite; }
+      @keyframes sp-pulse { 50% { transform: translateZ(-120px) scale(1.12); opacity: .8; } }
+      @keyframes sp-floor { 50% { transform: translateY(-40px) rotateX(90deg) scale(.82); opacity: .6; } }
+
+      /* The card: flips in, then floats */
+      .sp-card { position: absolute; inset: 0; transform-style: preserve-3d;
+        animation: sp-flip 1.9s cubic-bezier(.2,.9,.25,1) both, sp-float 3s ease-in-out 1.9s infinite; }
+      @keyframes sp-flip {
+        from { transform: rotateY(-540deg) rotateX(20deg) scale(.6); }
+        to   { transform: rotateY(-18deg) rotateX(0deg) scale(1); }
+      }
+      @keyframes sp-float {
+        0%, 100% { transform: rotateY(-18deg) translateY(0); }
+        50%      { transform: rotateY(14deg) translateY(-10px); }
+      }
+      /* Thickness: stacked slices between front and back */
+      .sp-slice { position: absolute; inset: 0; border-radius: 22px; background: var(--sp-side);
+        transform: translateZ(var(--z)); }
+      .sp-face { position: absolute; inset: 0; border-radius: 22px; overflow: hidden;
+        background: var(--sp-glass);
+        box-shadow: inset 0 1.5px 0 var(--sp-edge), inset 1px 0 0 var(--sp-edge), inset 0 0 30px rgba(255,255,255,.12);
+        border: 1px solid var(--sp-edge);
+        -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+      .sp-front { transform: translateZ(7px); padding: 20px 22px; display: flex; flex-direction: column; justify-content: space-between; }
+      .sp-back  { transform: rotateY(180deg) translateZ(1px); display: flex; align-items: center; justify-content: center; }
+      .sp-back::before { content: ''; position: absolute; left: 0; right: 0; top: 34px; height: 30px; background: rgba(0,0,0,.55); }
+      .sp-back span { font: 600 13px/1 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--sp-sub); letter-spacing: .3em; margin-top: 40px; }
+      /* Specular light sweeping across the glass */
+      .sp-front::after { content: ''; position: absolute; inset: -40%;
+        background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.75) 50%, transparent 60%);
+        transform: translateX(-60%); animation: sp-sweep 3s ease-in-out .9s infinite; mix-blend-mode: overlay; }
+      @keyframes sp-sweep { 0% { transform: translateX(-60%); } 55%, 100% { transform: translateX(60%); } }
+      .sp-row { display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 1; }
+      .sp-logo { width: 54px; height: 54px; border-radius: 12px; object-fit: cover; box-shadow: 0 6px 16px rgba(0,0,0,.25); }
+      .sp-chip { width: 38px; height: 28px; border-radius: 6px;
+        background: linear-gradient(135deg, #F5D27A, #C9952B 60%, #F1C75B); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.6); }
+      .sp-name { font: 700 20px/1.2 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--sp-text); letter-spacing: -.01em; }
+      .sp-num  { font: 500 12px/1 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--sp-sub); letter-spacing: .28em; }
+
+      /* Coins orbiting on a tilted ring */
+      .sp-orbit { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d;
+        transform: rotateX(74deg); animation: sp-orbit 5s linear infinite; }
+      @keyframes sp-orbit { from { transform: rotateX(74deg) rotateZ(0deg); } to { transform: rotateX(74deg) rotateZ(360deg); } }
+      .sp-coin-arm { position: absolute; transform-style: preserve-3d; transform: rotateZ(var(--a)) translateX(240px); }
+      .sp-coin { width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font: 800 22px/1 system-ui, sans-serif; color: #7A5410;
+        background: radial-gradient(circle at 32% 28%, #FFF6D5 0%, #F6CF5C 30%, #D49A1E 70%, #9C6A0E 100%);
+        box-shadow: inset 0 -3px 6px rgba(0,0,0,.25), inset 0 2px 3px rgba(255,255,255,.7), 0 0 0 3px rgba(212,154,30,.55);
+        transform: rotateZ(calc(var(--a) * -1)) rotateX(-74deg);
+        animation: sp-counter 5s linear infinite; }
+      @keyframes sp-counter {
+        from { transform: rotateZ(calc(var(--a) * -1)) rotateX(-74deg); }
+        to   { transform: rotateZ(calc(var(--a) * -1 - 360deg)) rotateX(-74deg); }
+      }
+
+      /* Title + progress */
+      .sp-title { margin-top: 104px; text-align: center; animation: sp-rise .9s cubic-bezier(.16,1,.3,1) .7s both; }
+      .sp-title strong { display: block; font: 700 22px/1.2 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--sp-text); letter-spacing: -.02em; }
+      .sp-title span   { display: block; margin-top: 4px; font: 500 13px/1.4 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--sp-sub); }
+      .sp-bar { width: 140px; height: 3px; margin: 18px auto 0; border-radius: 99px; overflow: hidden; background: rgba(127,127,140,.2); }
+      .sp-bar::after { content: ''; display: block; height: 100%; width: 40%; border-radius: inherit;
+        background: linear-gradient(90deg, #6366F1, #A855F7); animation: sp-load 1.2s ease-in-out infinite; }
+      @keyframes sp-rise { from { opacity: 0; transform: translateY(14px); } }
+      @keyframes sp-load { from { transform: translateX(-110%); } to { transform: translateX(280%); } }
+
+      /* Exit: camera dives through the card into the app */
+      #app-splash.sp-exit { opacity: 0; visibility: hidden; pointer-events: none; }
+      #app-splash.sp-exit .sp-stage { animation: sp-dive .75s cubic-bezier(.7,0,.84,0) both; }
+      #app-splash.sp-exit .sp-title { animation: sp-fade .3s ease both; }
+      @keyframes sp-dive { from { transform: translateZ(0) rotateX(14deg); } to { transform: translateZ(900px) rotateX(0deg); filter: blur(6px); } }
+      @keyframes sp-fade { to { opacity: 0; transform: translateY(-10px); } }
+
+      @media (max-width: 480px) {
+        .sp-stage { width: 250px; height: 158px; }
+        .sp-coin-arm { transform: rotateZ(var(--a)) translateX(175px); }
+        .sp-coin { width: 38px; height: 38px; margin: -19px 0 0 -19px; font-size: 18px; }
+        .sp-logo { width: 44px; height: 44px; }
+        .sp-name { font-size: 17px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #app-splash *, #app-splash *::before, #app-splash *::after { animation: none !important; }
+        .sp-orbit { display: none; }
+      }
+    </style>
+  </head>
+  <body style="background:#E4E5EA;margin:0">
     <!-- Theme applied before React boots — prevents FOUC -->
     <script>
       (function() {

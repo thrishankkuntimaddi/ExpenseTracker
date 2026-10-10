@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { Home, List, Wallet, BarChart2, Settings, ReceiptText, Target, LayoutGrid } from 'lucide-react';
 import { useFirestoreData } from '../hooks/useFirestoreData';
 import { useRecurring } from '../hooks/useRecurring';
@@ -7,6 +7,7 @@ import { usePWAInstall } from '../hooks/usePWAInstall';
 import { getDefaultPeriod } from '../utils/periodHelpers';
 import { clearLegacyDataCache } from '../utils/storage';
 import { learnCategoryRule } from '../utils/categories';
+import { useTheme, HAD_LOCAL_THEME_CHOICE } from '../utils/theme';
 import AuthGate from '../features/auth/AuthGate';
 import TodayTab         from '../features/transactions/TodayTab';
 // Everything past the first screen loads on demand — keeps the startup
@@ -57,22 +58,8 @@ function useIsDesktop() {
   return isDesktop;
 }
 
-const THEME_KEY = 'et_theme';
-
-function applyTheme(theme) {
-  const t = theme || 'light';
-  document.documentElement.setAttribute('data-theme', t);
-  try { localStorage.setItem(THEME_KEY, t); } catch { /* storage unavailable */ }
-}
-
 // Older versions kept a plaintext copy of all data in localStorage — remove it.
 clearLegacyDataCache();
-
-// Apply cached theme IMMEDIATELY on module load — before React even mounts.
-try {
-  const cached = localStorage.getItem(THEME_KEY);
-  if (cached) document.documentElement.setAttribute('data-theme', cached);
-} catch { /* storage unavailable — default theme */ }
 
 /* ── Inner app rendered when user is authenticated ── */
 function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) {
@@ -88,7 +75,7 @@ function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) 
     writeError, clearWriteError, reportError,
     addTransaction, updateTransaction, deleteTransaction,
     addIncome, updateIncome, deleteIncome,
-    saveSettings, patchSettings,
+    patchSettings,
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   } = useFirestoreData(user.uid, user.email);
 
@@ -115,14 +102,15 @@ function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) 
     </div>
   );
 
-  const theme = settings?.theme || 'light';
-
-  useEffect(() => { applyTheme(theme); }, [theme]);
-
-  const handleThemeChange = useCallback((newTheme) => {
-    saveSettings({ ...settings, theme: newTheme });
-    applyTheme(newTheme);
-  }, [settings, saveSettings]);
+  // Theme is per device. A device that never stored one adopts the theme
+  // this account used to sync (settings.theme, written by older versions).
+  const { pref: themePref, theme, setPref: setThemePref } = useTheme();
+  const adoptedTheme = useRef(HAD_LOCAL_THEME_CHOICE);
+  useEffect(() => {
+    if (adoptedTheme.current || !settings?.theme) return;
+    adoptedTheme.current = true;
+    setThemePref(settings.theme === 'monoflow' ? 'dark' : 'light');
+  }, [settings?.theme, setThemePref]);
 
   /**
    * smartAddEntry — routes entries to the right store.
@@ -159,7 +147,7 @@ function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) 
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
     isStandalone, canInstallNative, onTriggerInstall: triggerInstall,
     selectedPeriod, onPeriodChange: setSelectedPeriod,
-    theme, user,
+    theme, themePref, onThemePrefChange: setThemePref, user,
     recurring, onPatchSettings: patchSettings, onLearnCategory: learnCategory, reportError,
   };
 
@@ -176,7 +164,6 @@ function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) 
           onAddIncome={addIncome}
           onUpdateIncome={updateIncome}
           onDeleteIncome={deleteIncome}
-          onThemeChange={handleThemeChange}
           onSignOut={signOut}
           onResetPassword={resetPassword}
           onResendVerification={resendVerification}
@@ -260,8 +247,7 @@ function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) 
         {activeTab === 'settings' && (
           <SettingsTab
             {...commonProps}
-            onThemeChange={handleThemeChange}
-            onSignOut={signOut}
+              onSignOut={signOut}
             onResetPassword={resetPassword}
             onResendVerification={resendVerification}
           />

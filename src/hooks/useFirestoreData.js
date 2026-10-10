@@ -15,9 +15,9 @@ import {
   permanentlyDeleteFromRecentlyDeleted,
   emptyRecentlyDeleted,
 } from "../services/firestore";
-import { getSavedTheme, saveTheme } from "../utils/storage";
 
-const DEFAULT_SETTINGS = { theme: getSavedTheme() };
+// Theme is a per-device setting (utils/theme.js), not part of synced settings.
+const DEFAULT_SETTINGS = {};
 
 /**
  * Real-time Firestore data for the authenticated user.
@@ -47,10 +47,10 @@ export function useFirestoreData(uid, email) {
   useEffect(() => { incomeRef.current = income; }, [income]);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
 
-  // Repair accounts that never got a user doc (keep this device's theme)
+  // Repair accounts that never got a user doc
   useEffect(() => {
     if (!uid) return;
-    ensureUserDoc(uid, email, { theme: getSavedTheme() })
+    ensureUserDoc(uid, email)
       .catch((err) => console.warn('[ensureUserDoc] failed:', err?.message));
   }, [uid, email]);
 
@@ -66,7 +66,6 @@ export function useFirestoreData(uid, email) {
       if (gotTxns && gotIncome) setLoaded(true);
       if (s && Object.keys(s).length) {
         setSettings(prev => ({ ...prev, ...s }));
-        if (s.theme) saveTheme(s.theme);
       }
     });
 
@@ -181,7 +180,6 @@ export function useFirestoreData(uid, email) {
     if (!uidRef.current) return false;
     const previous = settingsRef.current;
     setSettings(newSettings);
-    if (newSettings?.theme) saveTheme(newSettings.theme);
     try {
       await fsUpdateSettings(uidRef.current, newSettings);
       return true;

@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import {
   Download, Upload, Trash2, Info,
-  ChevronRight, Moon, Sun, FileSpreadsheet,
+  ChevronRight, Moon, Sun, Monitor, FileSpreadsheet,
   Database, Palette, LogOut, RotateCcw, Smartphone, ArrowRightLeft, KeyRound, MailCheck,
 } from 'lucide-react';
 import { deleteAllUserData, bulkImport, exportAllUserData, restoreBackup } from '../../services/firestore';
@@ -15,7 +15,7 @@ import RecentlyDeletedModal from '../../components/RecentlyDeletedModal';
 import PWAInstallModal from '../../components/PWAInstallModal';
 
 export default function SettingsTab({
-  onThemeChange, onSignOut,
+  themePref = 'system', onThemePrefChange, onSignOut,
   settings, theme, user,
   transactions = [], income = [],
   recentlyDeleted = [],
@@ -145,9 +145,6 @@ export default function SettingsTab({
     });
   }
 
-  /* ── Theme ── */
-  function toggleTheme() { onThemeChange(isMonoflow ? 'light' : 'monoflow'); }
-
   async function handleInstallClick() {
     if (onTriggerInstall) {
       const res = await onTriggerInstall();
@@ -178,26 +175,24 @@ export default function SettingsTab({
               </div>
             )}
 
-            {/* ── Theme ── */}
+            {/* ── Theme (per device) ── */}
             <SectionLabel Icon={Palette}>Appearance</SectionLabel>
             <Card>
-              <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: isMonoflow ? 'var(--accent-bg)' : 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {isMonoflow ? <Moon size={16} style={{ color: 'var(--accent)' }} /> : <Sun size={16} style={{ color: 'var(--person)' }} />}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{isMonoflow ? 'MonoFlow (Dark)' : 'Light Theme'}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{isMonoflow ? 'Dark, gold-accented MonoFlow theme' : 'Clean white light theme'}</div>
+              <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: isMonoflow ? 'var(--accent-bg)' : 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {isMonoflow ? <Moon size={16} style={{ color: 'var(--accent)' }} /> : <Sun size={16} style={{ color: 'var(--person)' }} />}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Theme</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                    {themePref === 'system' ? `Following your device (${isMonoflow ? 'dark' : 'light'} now)` : isMonoflow ? 'Dark (MonoFlow)' : 'Light'} · this device only
                   </div>
                 </div>
-                <button className={`toggle-track ${isMonoflow ? 'on' : ''}`} onClick={toggleTheme} aria-label="Toggle theme">
-                  <span className="toggle-thumb" />
-                </button>
               </div>
-              <div style={{ padding: '8px 16px 14px', display: 'flex', gap: 6, flexWrap: 'wrap', borderTop: '1px solid var(--border)' }}>
-                <ThemeChip label="Light"    active={!isMonoflow}  onClick={() => onThemeChange('light')}    />
-                <ThemeChip label="MonoFlow" active={isMonoflow}   onClick={() => onThemeChange('monoflow')} />
+              <div role="radiogroup" aria-label="Theme" style={{ padding: '8px 16px 14px', display: 'flex', gap: 6, flexWrap: 'wrap', borderTop: '1px solid var(--border)' }}>
+                <ThemeChip id="theme-light"  Icon={Sun}     label="Light"  active={themePref === 'light'}  onClick={() => onThemePrefChange('light')} />
+                <ThemeChip id="theme-dark"   Icon={Moon}    label="Dark"   active={themePref === 'dark'}   onClick={() => onThemePrefChange('dark')} />
+                <ThemeChip id="theme-system" Icon={Monitor} label="System" active={themePref === 'system'} onClick={() => onThemePrefChange('system')} />
               </div>
             </Card>
 
@@ -393,11 +388,11 @@ function ActionRow({ id, Icon, label, sub, iconColor, onClick, danger, lastRow }
   );
 }
 
-function ThemeChip({ label, active, onClick }) {
+function ThemeChip({ id, Icon, label, active, onClick }) {
   return (
-    <button onClick={onClick}
-      style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, background: active ? 'var(--accent-bg)' : 'transparent', color: active ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-      {label}
+    <button id={id} role="radio" aria-checked={active} onClick={onClick}
+      style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, background: active ? 'var(--accent-bg)' : 'transparent', color: active ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+      <Icon size={12} />{label}
     </button>
   );
 }
