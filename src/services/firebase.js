@@ -4,6 +4,7 @@ import {
   getAuth,
   browserLocalPersistence,
   setPersistence,
+  useDeviceLanguage as useBrowserLanguageForAuthEmails,
 } from "firebase/auth";
 import {
   initializeFirestore,
@@ -33,7 +34,11 @@ if (app && appCheckKey) {
 
 // Auth with IndexedDB persistence (survives tab close + token refresh)
 export const auth = app ? getAuth(app) : null;
-if (auth) setPersistence(auth, browserLocalPersistence).catch(() => {});
+if (auth) {
+  setPersistence(auth, browserLocalPersistence).catch(() => {});
+  // Password-reset and verification emails in the browser's language
+  useBrowserLanguageForAuthEmails(auth); // eslint-disable-line react-hooks/rules-of-hooks -- Firebase API, not a React hook
+}
 
 // Firestore with IndexedDB offline cache: instant first paint from disk,
 // offline reads/writes, and only changed docs re-downloaded on reconnect.

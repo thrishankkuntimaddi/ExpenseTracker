@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Zap } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { firebaseConfigError } from '../../services/firebase';
-import LoginPage from './LoginPage';
-import SignUpPage from './SignUpPage';
+import AuthScreen from './AuthScreen';
 
 /* Shown when the bundle was built without VITE_FIREBASE_* — better than a stuck splash */
 function SetupRequired() {
@@ -72,45 +71,32 @@ function LoadingScreen() {
  * - user     → children
  */
 export default function AuthGate({ children }) {
-  const { user, loading, signIn, signUp, signOut, error, setError } = useAuth();
-  const [page, setPage] = useState('login'); // 'login' | 'signup'
+  const { user, loading, signIn, signUp, signInWithGoogle, resetPassword, resendVerification, signOut, error, setError } = useAuth();
   const [authLoading, setAuthLoading] = useState(false);
 
   if (firebaseConfigError) return <SetupRequired />;
   if (loading || user === undefined) return <LoadingScreen />;
 
   if (!user) {
-    async function handleSignIn(email, password) {
+    // Runs the action with the shared busy flag; errors are shown by useAuth.
+    const busy = (fn) => async (...args) => {
       setAuthLoading(true);
-      try { await signIn(email, password); }
+      try { await fn(...args); }
       finally { setAuthLoading(false); }
-    }
-    async function handleSignUp(email, password) {
-      setAuthLoading(true);
-      try { await signUp(email, password); }
-      finally { setAuthLoading(false); }
-    }
-
-    if (page === 'signup') {
-      return (
-        <SignUpPage
-          onSignUp={handleSignUp}
-          onGoLogin={() => { setError(null); setPage('login'); }}
-          error={error}
-          loading={authLoading}
-        />
-      );
-    }
+    };
     return (
-      <LoginPage
-        onSignIn={handleSignIn}
-        onGoSignUp={() => { setError(null); setPage('signup'); }}
+      <AuthScreen
+        onSignIn={busy(signIn)}
+        onSignUp={busy(signUp)}
+        onGoogle={() => signInWithGoogle().catch(() => {})}
+        onResetPassword={busy(resetPassword)}
         error={error}
+        setError={setError}
         loading={authLoading}
       />
     );
   }
 
   // Inject signOut into children via cloneElement
-  return children({ user, signOut });
+  return children({ user, signOut, resetPassword, resendVerification });
 }

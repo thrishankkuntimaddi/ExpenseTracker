@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import {
   Download, Upload, Trash2, Info,
   ChevronRight, Moon, Sun, FileSpreadsheet,
-  Database, Palette, LogOut, RotateCcw, Smartphone, ArrowRightLeft,
+  Database, Palette, LogOut, RotateCcw, Smartphone, ArrowRightLeft, KeyRound, MailCheck,
 } from 'lucide-react';
 import { deleteAllUserData, bulkImport, exportAllUserData, restoreBackup } from '../../services/firestore';
 import { parseBackup, describeBackup } from '../../utils/backup';
@@ -25,6 +25,7 @@ export default function SettingsTab({
   isStandalone,
   onTriggerInstall,
   onPatchSettings,
+  onResetPassword, onResendVerification,
 }) {
   const [feedback, setFeedback]       = useState(null);
   const carry = getCarrySettings(settings);
@@ -36,6 +37,7 @@ export default function SettingsTab({
   const fileInputRef = useRef(null);
   const csvInputRef  = useRef(null);
   const isMonoflow   = theme === 'monoflow';
+  const hasPassword  = user?.providerData?.some((p) => p.providerId === 'password') ?? false;
 
   function showFeedback(msg, isError = false) {
     setFeedback({ msg, isError });
@@ -288,8 +290,22 @@ export default function SettingsTab({
             <Card>
               <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{user?.email || 'Signed in'}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Firebase Auth · Data synced to cloud</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  {signInMethods(user)} · {hasPassword && !user?.emailVerified ? 'Email not verified yet' : 'Data synced to cloud'}
+                </div>
               </div>
+              {hasPassword && !user?.emailVerified && onResendVerification && (
+                <ActionRow id="btn-resend-verification" Icon={MailCheck} label="Verify your email" sub="Resend the verification link"
+                  iconColor="var(--savings)" onClick={() => onResendVerification()
+                    .then(() => showFeedback(`Verification link sent to ${user.email}.`))
+                    .catch((err) => showFeedback(`Couldn't send it: ${err.message}`, true))} />
+              )}
+              {hasPassword && onResetPassword && (
+                <ActionRow id="btn-change-password" Icon={KeyRound} label="Change password" sub="We'll email you a secure link"
+                  iconColor="var(--accent)" onClick={() => onResetPassword(user.email)
+                    .then(() => showFeedback(`Password link sent to ${user.email}. Check spam too.`))
+                    .catch(() => showFeedback("Couldn't send the link. Check your connection and try again.", true))} />
+              )}
               <ActionRow
                 id="btn-sign-out"
                 Icon={LogOut}
@@ -352,6 +368,13 @@ function SectionLabel({ children, Icon }) {
 
 function Card({ children }) {
   return <div className="card" style={{ marginBottom: 16 }}>{children}</div>;
+}
+
+/* "Google", "Email & password" or both, from the linked providers. */
+function signInMethods(user) {
+  const ids = user?.providerData?.map((p) => p.providerId) ?? [];
+  const names = [ids.includes('google.com') && 'Google', ids.includes('password') && 'Email & password'].filter(Boolean);
+  return names.length ? `Signed in with ${names.join(' + ')}` : 'Signed in';
 }
 
 function ActionRow({ id, Icon, label, sub, iconColor, onClick, danger, lastRow }) {

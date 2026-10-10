@@ -75,7 +75,7 @@ try {
 } catch { /* storage unavailable — default theme */ }
 
 /* ── Inner app rendered when user is authenticated ── */
-function AuthenticatedApp({ user, signOut }) {
+function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) {
   const [activeTab, setActiveTab]           = useState('today');
   const [slideDir, setSlideDir]             = useState(null);   // 'left' | 'right' | null — page transition
   const [moreOpen, setMoreOpen]             = useState(false);
@@ -178,6 +178,8 @@ function AuthenticatedApp({ user, signOut }) {
           onDeleteIncome={deleteIncome}
           onThemeChange={handleThemeChange}
           onSignOut={signOut}
+          onResetPassword={resetPassword}
+          onResendVerification={resendVerification}
           onSmartAdd={smartAddEntry}
         />
         </Suspense>
@@ -260,6 +262,8 @@ function AuthenticatedApp({ user, signOut }) {
             {...commonProps}
             onThemeChange={handleThemeChange}
             onSignOut={signOut}
+            onResetPassword={resetPassword}
+            onResendVerification={resendVerification}
           />
         )}
         </Suspense>
@@ -327,7 +331,7 @@ function AuthenticatedApp({ user, signOut }) {
 export default function App() {
   return (
     <AuthGate>
-      {({ user, signOut }) => <AuthenticatedApp user={user} signOut={signOut} />}
+      {(auth) => <AuthenticatedApp {...auth} />}
     </AuthGate>
   );
 }

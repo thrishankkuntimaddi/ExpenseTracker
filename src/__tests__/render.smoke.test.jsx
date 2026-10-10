@@ -208,3 +208,18 @@ describe('screens render with planning features', () => {
     expect(render(<GoalModal goal={settings.goals[0]} onSave={noop} onDelete={noop} onClose={noop} />)).toContain('Edit Goal');
   });
 });
+
+describe('auth screen', async () => {
+  const { default: AuthScreen } = await import('../features/auth/AuthScreen');
+  const props = { onSignIn: noop, onSignUp: noop, onGoogle: noop, onResetPassword: noop, setError: noop, loading: false };
+  it('offers Google, email login, forgot password and account creation', () => {
+    const html = render(<AuthScreen {...props} />);
+    expect(html).toContain('Continue with Google');
+    expect(html).toContain('Forgot password?');
+    expect(html).toContain('Create account');
+    expect(html).toContain('id="auth-email"');
+  });
+  it('shows an auth error', () => {
+    expect(render(<AuthScreen {...props} error="Wrong email or password." />)).toContain('Wrong email or password.');
+  });
+});
