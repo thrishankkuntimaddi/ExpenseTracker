@@ -7,8 +7,8 @@ import App from './app/App.jsx'
 function bootstrap() {
   const rootEl = document.getElementById('root');
   if (!rootEl) {
-    // Safety net: #root not in DOM yet — retry on next tick
-    requestAnimationFrame(bootstrap);
+    // Safety net: #root not in DOM yet — retry shortly
+    setTimeout(bootstrap, 16);
     return;
   }
   createRoot(rootEl).render(
@@ -17,19 +17,19 @@ function bootstrap() {
     </StrictMode>,
   );
 
-  // Hand off from the 3D splash once React has painted — but let the intro
-  // play for a minimum time so it doesn't flash. Skipped for reduced motion.
-  requestAnimationFrame(() => {
-    const splash = document.getElementById('app-splash');
-    if (!splash) return;
+  // Hand off from the 3D splash — but let the intro play for a minimum time
+  // so it doesn't flash. Skipped for reduced motion. Wall-clock based (not
+  // rAF), so a page opened in a background tab is ready when it's shown.
+  const splash = document.getElementById('app-splash');
+  if (splash) {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const MIN_MS = reduced ? 0 : 2600;
-    const wait = Math.max(0, MIN_MS - performance.now());
+    const elapsed = Date.now() - performance.timeOrigin;
     setTimeout(() => {
       splash.classList.add('sp-exit');
       setTimeout(() => splash.remove(), 800);
-    }, wait);
-  });
+    }, Math.max(0, MIN_MS - elapsed));
+  }
 }
 
 // type="module" is spec-deferred, but added guard for extra safety on

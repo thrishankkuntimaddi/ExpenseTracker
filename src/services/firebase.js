@@ -38,6 +38,7 @@ if (auth) setPersistence(auth, browserLocalPersistence).catch(() => {});
 // Firestore with IndexedDB offline cache: instant first paint from disk,
 // offline reads/writes, and only changed docs re-downloaded on reconnect.
 export const db = app ? initializeFirestore(app, {
+  ignoreUndefinedProperties: true,
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 }) : null;
 
