@@ -122,7 +122,11 @@ body::before {
   /* No backdrop blur on tiles: they sit on a soft static gradient, where a
      blur is nearly invisible but is the most expensive thing a phone can
      paint (each repaint re-blurs the area behind). Floating bars that
-     content scrolls behind keep their blur (see nav below). */
+     content scrolls behind keep their blur (see nav below).
+     Each tile still gets its own compositor layer — the blur used to do
+     that as a side effect, and without it Android WebView left stale
+     "ghost" copies of translucent tiles behind after content moved. */
+  transform: translateZ(0);
   /* fill inside, curved specular rim as a gradient border */
   background:
     linear-gradient(var(--glass-fill), var(--glass-fill)) padding-box,
