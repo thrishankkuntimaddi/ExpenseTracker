@@ -1,9 +1,11 @@
 import { CheckCircle2, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import { formatAmount } from '../../../utils/dateHelpers';
 import Portal from '../../../components/Portal';
+import { useEscape } from '../../../hooks/useEscape';
 
 /* ─── Confirmation Modal for Closing ─── */
 export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalance, sessionName, persons, onConfirm, onCancel, loading }) {
+  useEscape(onCancel);
   const isProfit = netBalance > 0;
   const isLoss   = netBalance < 0;
   const isEven   = netBalance === 0;

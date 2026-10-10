@@ -4,6 +4,8 @@ import { useFirestoreData } from '../hooks/useFirestoreData';
 import { useRecurring } from '../hooks/useRecurring';
 import { useDevices } from '../hooks/useDevices';
 import { useSyncStatus, clearSyncError } from '../services/sync';
+import { setStatusBarTheme, onBackButton } from '../native';
+import { overlayOpen } from '../hooks/useEscape';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { getDefaultPeriod } from '../utils/periodHelpers';
@@ -150,6 +152,16 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     setSlideDir(dir ?? (PAGE_ORDER.indexOf(key) > PAGE_ORDER.indexOf(activeTab) ? 'left' : 'right'));
     setActiveTab(key);
   }, [activeTab]);
+  // Android: status bar follows the theme; hardware back closes the top
+  // dialog, then returns to Expenses, then backgrounds the app.
+  useEffect(() => { setStatusBarTheme(theme); }, [theme]);
+  useEffect(() => onBackButton(() => {
+    if (overlayOpen()) { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); return true; }
+    if (moreOpen) { setMoreOpen(false); return true; }
+    if (activeTab !== 'today') { goTo('today', 'right'); return true; }
+    return false;
+  }), [activeTab, moreOpen, goTo]);
+
   const swipe = useSwipeNavigation({ order: PAGE_ORDER, active: activeTab, onChange: goTo, enabled: !isDesktop && !moreOpen });
 
   const commonProps = {

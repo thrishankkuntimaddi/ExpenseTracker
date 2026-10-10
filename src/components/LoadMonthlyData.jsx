@@ -1,5 +1,5 @@
 // ─── Load Monthly Data — Manual Historical Import ─────────────────
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { X, Upload, CheckCircle2, AlertCircle, Calendar, FileText, ChevronDown } from 'lucide-react';
 import { getCurrentMonthValue, formatMonthLabel } from '../utils/periodHelpers';
 import { dateInputToISO, localMonthKey } from '../utils/dateHelpers';
@@ -7,6 +7,7 @@ import { importId } from '../utils/importHelpers';
 import { bulkImport } from '../services/firestore';
 import { auth } from '../services/firebase';
 import Portal from './Portal';
+import { useEscape } from '../hooks/useEscape';
 
 /* ── Parse text block: "[Day/Date] Name Amount" per line ── */
 function parseEntries(text, selectedMonth) {
@@ -102,12 +103,8 @@ export default function LoadMonthlyData({
     };
   }, [incomeText, expenseText, selectedMonth]);
 
-  /* ── Escape key ── */
-  useEffect(() => {
-    const handler = e => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
+  /* ── Escape key / Android back ── */
+  useEscape(onClose);
 
   /* ── Already-imported check (read-only info) ── */
   const alreadyImported = useMemo(() => {

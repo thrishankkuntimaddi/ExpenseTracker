@@ -1,9 +1,9 @@
 // ─── ConfirmDeleteModal ──────────────────────────────────────────
 // Generic confirmation dialog for destructive actions.
 
-import { useEffect } from 'react';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 import Portal from './Portal';
+import { useEscape } from '../hooks/useEscape';
 
 export default function ConfirmDeleteModal({
   title = 'Delete this item?',
@@ -14,11 +14,7 @@ export default function ConfirmDeleteModal({
   onConfirm,
   onCancel,
 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onCancel?.(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel]);
+  useEscape(onCancel);
 
   return (
     <Portal>

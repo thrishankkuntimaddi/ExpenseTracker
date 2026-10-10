@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Plus, X, ReceiptText, Calendar, PenLine } from 'lucide-react';
 import { todayInputValue } from '../../../utils/dateHelpers';
 import Portal from '../../../components/Portal';
+import { useEscape } from '../../../hooks/useEscape';
 
 /* ─── New Billing Modal ─── */
 export default function NewBillingModal({ onCreate, onCancel }) {
+  useEscape(onCancel);
   const [name, setName]       = useState('');
   const [dateStr, setDateStr] = useState(todayInputValue());
 

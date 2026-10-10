@@ -1,0 +1,57 @@
+// ─── Native bridge ───────────────────────────────────────────────
+// One API over the three shells the same web app runs in:
+//   web      — browser / installed PWA (GitHub Pages)
+//   android  — Capacitor app
+//   desktop  — Tauri app (macOS, Windows, Linux)
+// Each call reports what it actually did, so the UI never claims more
+// than happened (e.g. a status-bar colour only exists on Android).
+import { Capacitor, registerPlugin } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
+import { invoke } from '@tauri-apps/api/core';
+
+const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
+/** 'web' | 'android' | 'ios' | 'desktop' */
+export const platform = isTauri ? 'desktop' : Capacitor.isNativePlatform() ? Capacitor.getPlatform() : 'web';
+export const isNative = platform !== 'web';
+
+/* Our own Android plugin (android/…/SystemThemePlugin.java) */
+const SystemTheme = registerPlugin('SystemTheme');
+
+/* Matches glass.css --backdrop-base, so the system bars blend with the app. */
+const BAR = { light: '#E4E5EA', monoflow: '#040405' };
+
+/** Android: colour behind the status/navigation bars + icon contrast for the theme. Returns true if applied. */
+export async function setStatusBarTheme(theme) {
+  if (platform !== 'android') return false;
+  try {
+    const { applied } = await SystemTheme.apply({ color: BAR[theme] ?? BAR.light, dark: theme === 'monoflow' });
+    return !!applied;
+  } catch { return false; }
+}
+
+/**
+ * Android hardware back. `handler()` returns true when it handled the press
+ * (closed a dialog, went to the home tab); otherwise the app is sent to the
+ * background — never quit, so it reopens instantly where it was.
+ * Returns an unsubscribe function.
+ */
+export function onBackButton(handler) {
+  if (platform !== 'android') return () => {};
+  const sub = CapApp.addListener('backButton', () => {
+    if (!handler()) CapApp.minimizeApp();
+  });
+  return () => { sub.then((s) => s.remove()); };
+}
+
+/** App version: the native app's own, or the web build's. */
+export async function appVersion() {
+  try {
+    if (platform === 'android') return (await CapApp.getInfo()).version;
+    if (platform === 'desktop') return await invoke('app_version');
+  } catch { /* fall through */ }
+  return import.meta.env.VITE_APP_VERSION ?? 'web';
+}
+
+/** Can this shell do Google sign-in with the browser popup? (Google blocks embedded web views.) */
+export const supportsGooglePopup = platform === 'web';

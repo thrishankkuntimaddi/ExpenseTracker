@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-native
 dist-ssr
 *.local
 
@@ -27,3 +28,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Desktop (Tauri) build output
+src-tauri/target
+src-tauri/gen/schemas

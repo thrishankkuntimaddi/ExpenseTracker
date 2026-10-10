@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { X, Smartphone, Share, PlusSquare, MoreVertical, Download, CheckCircle2 } from 'lucide-react';
 import Portal from './Portal';
+import { useEscape } from '../hooks/useEscape';
 
 export default function PWAInstallModal({ isOpen, onClose }) {
+  useEscape(onClose, isOpen);
   const [activeTab, setActiveTab] = useState('ios'); // 'ios' | 'android'
 
   if (!isOpen) return null;

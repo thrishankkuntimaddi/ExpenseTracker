@@ -1,0 +1,15 @@
+{
+  "appId": "com.thrishank.expensetracker",
+  "appName": "Expense Tracker",
+  "webDir": "dist-native",
+  "backgroundColor": "#E4E5EA",
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

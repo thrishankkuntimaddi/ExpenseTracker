@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { subscribeToDevices, touchDevice, removeDevice } from '../services/firestore';
 import { background } from '../services/sync';
 import { generateId } from '../utils/storage';
+import { platform } from '../native';
 
 export const DEVICE_ID_KEY = 'et_device_id';
 const HEARTBEAT_MS = 4 * 60 * 1000;
@@ -19,12 +20,17 @@ export function getDeviceId() {
   } catch { return 'unknown-device'; }
 }
 
-/** "Chrome on macOS", "Safari on iPhone", … from the user agent. */
-export function describeDevice(ua = typeof navigator !== 'undefined' ? navigator.userAgent : '') {
+/** "Chrome on macOS", "Pixel 8 (Android app)", "Desktop app on Windows", … */
+export function describeDevice(ua = typeof navigator !== 'undefined' ? navigator.userAgent : '', shell = platform) {
   const os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android'
     : /Mac OS X|Macintosh/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : /CrOS/.test(ua) ? 'ChromeOS' : /Linux/.test(ua) ? 'Linux' : 'Unknown OS';
   const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox'
     : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+  if (shell === 'android') {
+    const model = /Android [\d.]+; ([^;)]+?)(?: Build\/[^;)]*)?[;)]/.exec(ua)?.[1]?.trim();
+    return model && model !== 'K' ? `${model} (Android app)` : 'Android app';
+  }
+  if (shell === 'desktop') return `Desktop app on ${os}`;
   return `${browser} on ${os}`;
 }
 
@@ -39,7 +45,8 @@ export function useDevices(uid) {
     const standalone = typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches;
     const beat = () => {
       if (document.visibilityState !== 'visible') return;
-      background(touchDevice(uid, thisId, { name: describeDevice(), kind: standalone ? 'installed web app' : 'browser' }));
+      const kind = platform === 'web' ? (standalone ? 'installed web app' : 'browser') : 'app';
+      background(touchDevice(uid, thisId, { name: describeDevice(), kind }));
     };
     beat();
     const timer = setInterval(beat, HEARTBEAT_MS);

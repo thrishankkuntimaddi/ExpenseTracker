@@ -9,8 +9,10 @@ import { inferCategory } from '../utils/categories';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 import CategoryPicker from './CategoryPicker';
 import Portal from './Portal';
+import { useEscape } from '../hooks/useEscape';
 
 export default function EditTransactionModal({ txn, onSave, onDelete, onClose, categoryRules = {}, onLearnCategory }) {
+  useEscape(onClose);
   const [name, setName]           = useState(txn.name ?? '');
   const [category, setCategory]   = useState(txn.category ?? null);
   const [categoryTouched, setCategoryTouched] = useState(false);

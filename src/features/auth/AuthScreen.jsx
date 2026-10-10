@@ -18,6 +18,7 @@ const FEATURES = [
 export default function AuthScreen({
   onSignIn, onSignUp, onGoogle, onResetPassword,
   error, setError, loading,
+  googleAvailable = true,   // false inside the Android / desktop apps until native Google sign-in lands
 }) {
   const [mode, setMode]         = useState('login');
   const [email, setEmail]       = useState('');
@@ -129,11 +130,18 @@ export default function AuthScreen({
             <>
               {mode !== 'reset' && (
                 <>
+                  {googleAvailable ? (
                   <button type="button" id="btn-google" onClick={onGoogle} disabled={loading}
                     style={{ width: '100%', padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: loading ? 'not-allowed' : 'pointer',
                       background: 'var(--surface)', color: 'var(--text)', border: '1.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
                     <GoogleMark /> Continue with Google
                   </button>
+                  ) : (
+                    <div id="google-unavailable" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12, background: 'var(--surface2)', border: '1px solid var(--border)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                      <GoogleMark />
+                      <span>Google sign-in isn’t available in this app version yet. Use your email and password here, or Continue with Google on the website.</span>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
                     <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                     <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>or with email</span>

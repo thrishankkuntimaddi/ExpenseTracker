@@ -9,6 +9,9 @@ import { deleteAllUserData, bulkImport, exportAllUserData, restoreBackup } from 
 import { parseBackup, describeBackup } from '../../utils/backup';
 import { useSyncStatus, describeSync, timeAgo } from '../../services/sync';
 import { OPEN_NOW_MS } from '../../hooks/useDevices';
+import { platform, isNative } from '../../native';
+
+const SHELL_LABEL = { web: 'Web app', android: 'Android app', ios: 'iOS app', desktop: 'Desktop app' };
 import { csvToRecords } from '../../utils/importHelpers';
 import { recordsToCSV } from '../../utils/exportHelpers';
 import { getCarrySettings } from '../../utils/carryForward';
@@ -321,7 +324,7 @@ export default function SettingsTab({
           <div style={{ flex: 1, minWidth: 0 }}>
 
             {/* ── Install App (Visible only when visiting website via browser, hidden when running in standalone installed app) ── */}
-            {!isStandalone && (
+            {!isStandalone && !isNative && (
               <>
                 <SectionLabel Icon={Smartphone}>Mobile App</SectionLabel>
                 <Card>
@@ -391,8 +394,8 @@ export default function SettingsTab({
                 style={{ width: 38, height: 38, borderRadius: 10, objectFit: 'cover' }}
               />
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Expense Tracker v3.0</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Firebase · Real-time sync · PWA</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Expense Tracker v{import.meta.env.VITE_APP_VERSION}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{SHELL_LABEL[platform] ?? 'App'} · Real-time sync · Works offline</div>
               </div>
             </div>
           </div>

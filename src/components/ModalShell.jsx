@@ -1,16 +1,12 @@
 // ─── ModalShell ───────────────────────────────────────────────────
 // Shared overlay + panel used by the Plan modals (budget, recurring, goal).
 // Matches EditTransactionModal's look so dialogs feel like one family.
-import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import Portal from './Portal';
+import { useEscape } from '../hooks/useEscape';
 
 export default function ModalShell({ title, subtitle, onClose, children, footer, maxWidth = 460, zIndex = 1500 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  useEscape(onClose);
 
   return (
     <Portal>

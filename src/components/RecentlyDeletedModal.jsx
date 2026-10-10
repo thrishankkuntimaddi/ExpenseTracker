@@ -6,6 +6,7 @@ import {
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 import { formatAmount, formatDateShort } from '../utils/dateHelpers';
 import Portal from './Portal';
+import { useEscape } from '../hooks/useEscape';
 
 function formatDate(dateStr) {
   if (!dateStr) return 'N/A';
@@ -46,6 +47,7 @@ export default function RecentlyDeletedModal({
   onPermanentlyDeleteItem,
   onEmptyTrash,
 }) {
+  useEscape(onClose, isOpen);
   const [filter, setFilter] = useState('all'); // 'all' | 'expense' | 'income' | 'billing'
   const [permDeleteId, setPermDeleteId] = useState(null);
   const [showEmptyConfirm, setShowEmptyConfirm] = useState(false);

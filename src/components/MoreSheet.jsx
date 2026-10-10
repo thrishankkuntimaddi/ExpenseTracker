@@ -1,16 +1,12 @@
 // ─── MoreSheet ───────────────────────────────────────────────────
 // Bottom sheet behind the "More" tab on mobile: the pages that don't earn
 // a permanent slot in the five-icon bar.
-import { useEffect } from 'react';
 import { ChevronRight, MoveHorizontal, X } from 'lucide-react';
 import Portal from './Portal';
+import { useEscape } from '../hooks/useEscape';
 
 export default function MoreSheet({ pages, active, onSelect, onClose }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  useEscape(onClose);
 
   return (
     <Portal>

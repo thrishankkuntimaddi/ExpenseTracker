@@ -57,3 +57,13 @@ describe('recordsToCSV', () => {
     expect(back.income[0]).toMatchObject({ name: 'Salary', amount: 50000 });
   });
 });
+
+describe('describeDevice', async () => {
+  const { describeDevice } = await import('../../hooks/useDevices');
+  it('names browsers, the Android app and the desktop app', () => {
+    expect(describeDevice('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36', 'web')).toBe('Chrome on macOS');
+    expect(describeDevice('Mozilla/5.0 (Linux; Android 15; Pixel 8 Build/AP3A; wv) AppleWebKit/537.36 Chrome/140.0 Mobile Safari/537.36', 'android')).toBe('Pixel 8 (Android app)');
+    expect(describeDevice('Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 Chrome/140.0 Mobile Safari/537.36', 'android')).toBe('Android app');
+    expect(describeDevice('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36 Edg/140.0', 'desktop')).toBe('Desktop app on Windows');
+  });
+});

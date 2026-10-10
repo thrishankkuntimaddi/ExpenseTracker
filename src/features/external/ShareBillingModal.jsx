@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Share2, Copy, Download, Check, X, Image as ImageIcon, Loader2, Send } from 'lucide-react';
 import Portal from '../../components/Portal';
+import { useEscape } from '../../hooks/useEscape';
 import {
   formatSessionTextSummary,
   generateSessionReceiptBlob,
@@ -10,6 +11,7 @@ import {
 } from './shareHelpers';
 
 export default function ShareBillingModal({ session, onClose }) {
+  useEscape(onClose);
   const [loadingImage, setLoadingImage] = useState(true);
   const [imageBlob, setImageBlob]       = useState(null);
   const [imageUrl, setImageUrl]         = useState('');

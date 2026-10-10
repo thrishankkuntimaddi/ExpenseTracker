@@ -13,7 +13,7 @@
     <!-- ── Apple / PWA icons ── -->
     <link rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%apple-touch-icon.png?v=4" />
     <link rel="apple-touch-icon" sizes="512x512" href="%BASE_URL%icon-512.png?v=4" />
-    <link rel="manifest" href="%BASE_URL%manifest.json?v=4" />
+    <link rel="manifest" href="%BASE_URL%manifest.json?v=4" /><!-- web-only -->
 
     <!-- ── Viewport & Theme ── -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -398,6 +398,7 @@
       })();
     </script>
     <script type="module" src="/src/main.jsx"></script>
+    <!-- web-only:start (removed from the Android / desktop build) -->
     <script>
       if ('serviceWorker' in navigator) {
         // Use hostname-only check — port can be '' in installed PWA mode on production.
@@ -453,5 +454,6 @@
         }
       }
     </script>
+    <!-- web-only:end -->
   </body>
 </html>

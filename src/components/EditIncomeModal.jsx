@@ -6,8 +6,10 @@ import { X, PenLine, IndianRupee, Calendar, Check, Trash2 } from 'lucide-react';
 import { isoToDateInput, dateInputToISO, isoToMonth } from '../utils/dateHelpers';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 import Portal from './Portal';
+import { useEscape } from '../hooks/useEscape';
 
 export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
+  useEscape(onClose);
   const [name, setName]           = useState(entry.name ?? '');
   const [amount, setAmount]       = useState(String(entry.amount ?? ''));
   const [dateInput, setDateInput] = useState(isoToDateInput(entry.date));

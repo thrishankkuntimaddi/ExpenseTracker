@@ -3,6 +3,7 @@ import { Zap } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { firebaseConfigError } from '../../services/firebase';
 import AuthScreen from './AuthScreen';
+import { supportsGooglePopup } from '../../native';
 
 /* Shown when the bundle was built without VITE_FIREBASE_* — better than a stuck splash */
 function SetupRequired() {
@@ -93,6 +94,7 @@ export default function AuthGate({ children }) {
         error={error}
         setError={setError}
         loading={authLoading}
+        googleAvailable={supportsGooglePopup}
       />
     );
   }
