@@ -37,7 +37,7 @@ function LoadingScreen() {
       background: 'var(--bg)', gap: 16,
     }}>
       <img
-        src={import.meta.env.BASE_URL + 'Expense.png'}
+        src={import.meta.env.BASE_URL + 'icon-192.png'}
         alt="Expense Tracker Logo"
         style={{
           width: 52, height: 52, borderRadius: 14,

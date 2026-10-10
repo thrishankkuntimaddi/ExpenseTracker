@@ -1,0 +1,26 @@
+[package]
+name = "expensetracker"
+version = "3.1.0"
+description = "Expense Tracker — personal finance, synced across devices"
+authors = ["Thrishank Kuntimaddi"]
+edition = "2021"
+
+[lib]
+name = "expensetracker_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

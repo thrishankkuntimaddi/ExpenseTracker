@@ -18,7 +18,7 @@ function AppHeader() {
       marginBottom: 10,
     }}>
       <img
-        src={import.meta.env.BASE_URL + 'Expense.png'}
+        src={import.meta.env.BASE_URL + 'icon-192.png'}
         alt="Expense Tracker Logo"
         style={{
           width: 36, height: 36, borderRadius: 10,

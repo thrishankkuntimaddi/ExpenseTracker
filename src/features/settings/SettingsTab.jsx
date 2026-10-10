@@ -389,7 +389,7 @@ export default function SettingsTab({
             {/* About */}
             <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
               <img
-                src={import.meta.env.BASE_URL + 'Expense.png'}
+                src={import.meta.env.BASE_URL + 'icon-192.png'}
                 alt="Expense Tracker Logo"
                 style={{ width: 38, height: 38, borderRadius: 10, objectFit: 'cover' }}
               />

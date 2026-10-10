@@ -6,7 +6,6 @@
     <!-- ── Favicon — all browsers ── -->
     <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%favicon-32x32.png?v=4" />
     <link rel="icon" type="image/png" sizes="16x16" href="%BASE_URL%favicon-16x16.png?v=4" />
-    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg?v=4" sizes="any" />
     <!-- Shortcut icon for legacy -->
     <link rel="shortcut icon" href="%BASE_URL%favicon-32x32.png?v=4" />
 
@@ -364,7 +363,7 @@
       </div>
       <script>
         // Resolve relative to the page so it works under any base path (dev and prod)
-        document.querySelector('#app-splash .sp-logo').src = new URL('Expense.png', location.origin + location.pathname.replace(/[^/]*$/, '')).href;
+        document.querySelector('#app-splash .sp-logo').src = new URL('icon-192.png', location.origin + location.pathname.replace(/[^/]*$/, '')).href;
       </script>
       <div class="sp-title">
         <strong>Expense Tracker</strong>

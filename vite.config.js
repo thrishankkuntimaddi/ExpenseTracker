@@ -20,7 +20,9 @@ function nativeShell() {
         .replace(/[ \t]*<link rel="manifest"[^>]*><!-- web-only -->\n?/, '')
     },
     closeBundle() {
-      for (const f of ['sw.js', 'manifest.json']) fs.rmSync(path.resolve(outDir, f), { force: true })
+      // PWA-only files: the apps have their own launcher icons
+      for (const f of ['sw.js', 'manifest.json', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'])
+        fs.rmSync(path.resolve(outDir, f), { force: true })
     },
   }
 }

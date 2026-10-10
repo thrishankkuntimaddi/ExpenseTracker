@@ -216,7 +216,7 @@ export default function AuthScreen({
 function Brand({ size }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <img src={import.meta.env.BASE_URL + 'Expense.png'} alt="" width={size} height={size}
+      <img src={import.meta.env.BASE_URL + 'icon-192.png'} alt="" width={size} height={size}
         style={{ width: size, height: size, borderRadius: size * 0.28, objectFit: 'cover', boxShadow: '0 8px 24px rgba(99,102,241,0.3)' }} />
       <div>
         <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>Expense Tracker</div>
