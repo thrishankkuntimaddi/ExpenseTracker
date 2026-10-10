@@ -5,33 +5,37 @@
   "start_url": "/ExpenseTracker/",
   "scope": "/ExpenseTracker/",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#F8FAFC",
-  "theme_color": "#6366F1",
+  "background_color": "#E4E5EA",
+  "theme_color": "#E4E5EA",
   "icons": [
     {
       "src": "/ExpenseTracker/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/ExpenseTracker/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/ExpenseTracker/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/ExpenseTracker/apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png"
-    },
-    {
-      "src": "/ExpenseTracker/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
     }
   ],
-  "categories": ["finance", "productivity"],
-  "lang": "en-IN"
+  "categories": [
+    "finance",
+    "productivity"
+  ],
+  "lang": "en-IN",
+  "id": "/ExpenseTracker/"
 }

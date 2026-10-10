@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window colour while the web app loads; matches the backdrop colour in src/styles/glass.css -->
+    <color name="app_backdrop">#E4E5EA</color>
+</resources>
