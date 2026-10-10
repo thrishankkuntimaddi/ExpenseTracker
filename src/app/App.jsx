@@ -6,6 +6,7 @@ import { useDevices } from '../hooks/useDevices';
 import { useSyncStatus, clearSyncError } from '../services/sync';
 import { setStatusBarTheme, onBackButton } from '../native';
 import { overlayOpen } from '../hooks/useEscape';
+import { initReminders, onReminderTap, updateReminderInput } from '../native/reminders';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { getDefaultPeriod } from '../utils/periodHelpers';
@@ -161,6 +162,21 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     if (activeTab !== 'today') { goTo('today', 'right'); return true; }
     return false;
   }), [activeTab, moreOpen, goTo]);
+
+  // Reminders: re-plan whenever their settings or the data they read change
+  // (debounced — a burst of edits re-plans once).
+  useEffect(() => { initReminders(); }, []);
+  useEffect(() => {
+    onReminderTap((route) => { if (['today', 'plan', 'stats', 'history'].includes(route)) goTo(route); });
+  }, [goTo]);
+  useEffect(() => {
+    if (!loaded) return undefined;
+    const t = setTimeout(() => updateReminderInput({
+      cfg: settings?.reminders,
+      data: { transactions, income, recurring: recurring.rules, budgets: settings?.budgets, categoryRules: settings?.categoryRules },
+    }), 800);
+    return () => clearTimeout(t);
+  }, [loaded, settings?.reminders, settings?.budgets, settings?.categoryRules, transactions, income, recurring.rules]);
 
   const swipe = useSwipeNavigation({ order: PAGE_ORDER, active: activeTab, onChange: goTo, enabled: !isDesktop && !moreOpen });
 

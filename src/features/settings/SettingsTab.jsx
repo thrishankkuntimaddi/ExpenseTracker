@@ -3,7 +3,7 @@ import {
   Download, Upload, Trash2, Info,
   ChevronRight, Moon, Sun, Monitor, FileSpreadsheet,
   Database, Palette, LogOut, RotateCcw, Smartphone, ArrowRightLeft, KeyRound, MailCheck,
-  Cloud, CloudOff, RefreshCw, AlertTriangle, Laptop, X, UserX, Eraser,
+  Cloud, CloudOff, RefreshCw, AlertTriangle, Laptop, X, UserX, Eraser, Bell,
 } from 'lucide-react';
 import { deleteAllUserData, bulkImport, exportAllUserData, restoreBackup } from '../../services/firestore';
 import { parseBackup, describeBackup } from '../../utils/backup';
@@ -19,6 +19,7 @@ import { getCarrySettings } from '../../utils/carryForward';
 import { formatMonthLabel } from '../../utils/periodHelpers';
 import { todayInputValue } from '../../utils/dateHelpers';
 import RecentlyDeletedModal from '../../components/RecentlyDeletedModal';
+import RemindersCard from './RemindersCard';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import PWAInstallModal from '../../components/PWAInstallModal';
 
@@ -34,7 +35,7 @@ export default function SettingsTab({
   onTriggerInstall,
   onPatchSettings,
   onResetPassword, onResendVerification, onDeleteAccount,
-  devices,
+  devices, recurring,
 }) {
   const [feedback, setFeedback]       = useState(null);
   const carry = getCarrySettings(settings);
@@ -239,6 +240,13 @@ export default function SettingsTab({
               {!(devices?.devices ?? []).length && (
                 <div style={{ padding: '6px 16px 14px', fontSize: 11, color: 'var(--text-muted)' }}>This device appears here once it has synced.</div>
               )}
+            </Card>
+
+            {/* ── Reminders ── */}
+            <SectionLabel Icon={Bell}>Reminders</SectionLabel>
+            <Card>
+              <RemindersCard settings={settings} onPatchSettings={onPatchSettings}
+                transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} />
             </Card>
 
             {/* ── Theme (per device) ── */}

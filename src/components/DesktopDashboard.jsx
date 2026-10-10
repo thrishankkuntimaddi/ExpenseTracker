@@ -187,6 +187,7 @@ export default function DesktopDashboard({
             onSignOut={onSignOut}
             onDeleteAccount={onDeleteAccount}
             devices={devices}
+            recurring={recurring}
             onResetPassword={onResetPassword}
             onResendVerification={onResendVerification}
             recentlyDeleted={recentlyDeleted}

@@ -18,6 +18,17 @@
   await step('service_workers', async () => (await navigator.serviceWorker?.getRegistrations?.())?.length ?? 'n/a');
   await step('google_button', () => (document.querySelector('#btn-google') ? 'shown' : document.querySelector('#google-unavailable') ? 'hidden with note' : 'n/a'));
   await step('location', () => location.href);
+  // Reminders: hand over a plan, show one now
+  await step('set_reminders', () => invoke('set_reminders', { items: [{ id: 1, at: Date.now() + 3600e3, title: 'Self-test', body: 'scheduled' }] }).then(() => 'accepted'));
+  await step('show_notification', () => invoke('show_notification', { title: 'Expense Tracker self-test', body: 'Desktop notifications work.' }).then(() => 'shown'));
+  // Open at login: prove on/off both take effect, then restore what it was
+  await step('autostart', async () => {
+    const before = await invoke('get_autostart');
+    const on = await invoke('set_autostart', { on: true });
+    const off = await invoke('set_autostart', { on: false });
+    if (before) await invoke('set_autostart', { on: true });
+    return { before, on, off, restored: (await invoke('get_autostart')) === before };
+  });
 
   if (window.__ET_SELFTEST_SIGNUP) {
     await step('signup', async () => {

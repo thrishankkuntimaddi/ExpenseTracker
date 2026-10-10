@@ -6,14 +6,17 @@
 //! / system tray icon so the app stays ready after its window is closed.
 
 mod oauth;
+mod reminders;
 
 use std::time::Duration;
 
+use reminders::{Reminder, SharedReminders};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, RunEvent, WindowEvent,
+    AppHandle, Manager, RunEvent, State, WindowEvent,
 };
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
 #[tauri::command]
 fn app_version(app: AppHandle) -> String {
@@ -27,6 +30,30 @@ async fn google_oauth_loopback(app: AppHandle, auth_url: String) -> Result<oauth
     tauri::async_runtime::spawn_blocking(move || oauth::loopback(&app, &auth_url, Duration::from_secs(300)))
         .await
         .map_err(|e| e.to_string())?
+}
+
+/// The web app hands over the next 14 days of reminders (replaces the list).
+#[tauri::command]
+fn set_reminders(list: State<'_, SharedReminders>, items: Vec<Reminder>) {
+    *list.lock().unwrap() = items;
+}
+
+#[tauri::command]
+fn show_notification(app: AppHandle, title: String, body: String) {
+    reminders::notify(&app, &title, &body);
+}
+
+#[tauri::command]
+fn get_autostart(app: AppHandle) -> bool {
+    app.autolaunch().is_enabled().unwrap_or(false)
+}
+
+/// Returns the state actually in effect afterwards.
+#[tauri::command]
+fn set_autostart(app: AppHandle, on: bool) -> bool {
+    let manager = app.autolaunch();
+    let _ = if on { manager.enable() } else { manager.disable() };
+    manager.is_enabled().unwrap_or(false)
 }
 
 /// Debug self-test: the page reports what every bridge call returned.
@@ -47,12 +74,26 @@ fn show_main(app: &AppHandle) {
 }
 
 pub fn run() {
+    let reminders_list: SharedReminders = Default::default();
+
     let app = tauri::Builder::default()
         // A second launch focuses the running app instead of opening another copy
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app)))
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![app_version, google_oauth_loopback, selftest_report])
-        .setup(|app| {
+        .plugin(tauri_plugin_notification::init())
+        // Open at login starts quietly in the tray (--hidden)
+        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec!["--hidden"])))
+        .manage(reminders_list.clone())
+        .invoke_handler(tauri::generate_handler![
+            app_version,
+            google_oauth_loopback,
+            set_reminders,
+            show_notification,
+            get_autostart,
+            set_autostart,
+            selftest_report
+        ])
+        .setup(move |app| {
             // Menu bar / system tray: the app stays ready after the window closes
             let open = MenuItem::with_id(app, "open", "Open Expense Tracker", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
@@ -73,6 +114,15 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            // Launched at login → start quietly in the tray
+            if std::env::args().any(|a| a == "--hidden") {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.hide();
+                }
+            }
+
+            reminders::start(app.handle().clone(), reminders_list.clone());
 
             #[cfg(debug_assertions)]
             if std::env::var("EXPENSETRACKER_SELFTEST").is_ok() {

@@ -127,3 +127,19 @@ self.addEventListener('fetch', (e) => {
     );
   }
 });
+
+// ── Reminder taps: focus (or open) the app and tell it which screen to show ──
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const route = e.notification.data?.route;
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const client = list.find((c) => c.url.startsWith(self.registration.scope));
+      if (client) {
+        client.postMessage({ type: 'reminder-tap', route });
+        return client.focus();
+      }
+      return self.clients.openWindow(self.registration.scope);
+    })
+  );
+});

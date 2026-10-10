@@ -53,3 +53,10 @@ export async function appVersion() {
   return import.meta.env.VITE_APP_VERSION ?? 'web';
 }
 
+
+/** Desktop: start with the computer (quietly, in the tray). Returns the state in effect. */
+export const autostart = {
+  available: platform === 'desktop',
+  get: () => (platform === 'desktop' ? invoke('get_autostart').catch(() => false) : Promise.resolve(false)),
+  set: (on) => (platform === 'desktop' ? invoke('set_autostart', { on }).catch(() => false) : Promise.resolve(false)),
+};
