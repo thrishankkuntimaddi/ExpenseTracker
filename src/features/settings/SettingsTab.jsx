@@ -20,6 +20,7 @@ import { formatMonthLabel } from '../../utils/periodHelpers';
 import { todayInputValue } from '../../utils/dateHelpers';
 import RecentlyDeletedModal from '../../components/RecentlyDeletedModal';
 import RemindersCard from './RemindersCard';
+import { useUpdateState, checkForUpdates, restartToUpdate, THIS_BUILD, APK_URL } from '../../native/updates';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import PWAInstallModal from '../../components/PWAInstallModal';
 
@@ -47,6 +48,7 @@ export default function SettingsTab({
   const [busyReset, setBusyReset]     = useState(false);
   const [showAllDevices, setShowAllDevices] = useState(false);
   const sync = useSyncStatus();
+  const update = useUpdateState();
   const [arch, setArch] = useState(null);
   useEffect(() => { if (!isNative) detectArch().then(setArch); }, []);
   const download = isNative ? null : pickDownload(typeof navigator !== 'undefined' ? navigator.userAgent : '', arch);
@@ -435,7 +437,21 @@ export default function SettingsTab({
               />
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Expense Tracker v{import.meta.env.VITE_APP_VERSION}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{SHELL_LABEL[platform] ?? 'App'} · Real-time sync · Works offline</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{SHELL_LABEL[platform] ?? 'App'} · build {new Date(THIS_BUILD * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {import.meta.env.VITE_APP_COMMIT}</div>
+                <div id="update-status" style={{ fontSize: 11, color: update.kind === 'error' || update.kind === 'native-needed' ? 'var(--lent)' : 'var(--text-muted)', marginTop: 3 }}>
+                  {UPDATE_LABEL[update.kind]?.(update) ?? 'Updates install automatically.'}
+                </div>
+              </div>
+              <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+                {update.kind === 'ready' && platform === 'desktop' ? (
+                  <button id="btn-restart-update" onClick={restartToUpdate} style={smallAccentBtn}>Restart</button>
+                ) : update.kind === 'native-needed' ? (
+                  <button onClick={() => window.open(APK_URL, '_blank')} style={smallAccentBtn}>Install</button>
+                ) : (
+                  <button id="btn-check-updates" onClick={() => checkForUpdates()} disabled={update.kind === 'checking' || update.kind === 'downloading'} style={{ ...smallAccentBtn, background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }}>
+                    {update.kind === 'checking' ? 'Checking…' : 'Check'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -514,6 +530,18 @@ function signInMethods(user) {
   const names = [ids.includes('google.com') && 'Google', ids.includes('password') && 'Email & password'].filter(Boolean);
   return names.length ? `Signed in with ${names.join(' + ')}` : 'Signed in';
 }
+
+const smallAccentBtn = { padding: '7px 12px', borderRadius: 10, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
+const UPDATE_LABEL = {
+  idle: () => 'Updates install automatically.',
+  checking: () => 'Checking for updates…',
+  current: () => 'You’re on the latest version.',
+  downloading: (u) => `Downloading ${u.version ?? 'the update'}…`,
+  ready: (u) => (platform === 'desktop' ? `Version ${u.version} is ready — restart to finish.` : `Version ${u.version} downloaded — applies the next time you open the app.`),
+  'native-needed': (u) => `Version ${u.version} needs the new app installed once.`,
+  updated: (u) => `Updated to ${u.version}.`,
+  error: (u) => u.message,
+};
 
 const SYNC_TONE = { ok: 'income', busy: 'savings', offline: 'surface2', problem: 'expense' };
 

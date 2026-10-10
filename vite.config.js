@@ -2,8 +2,21 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import fs from 'node:fs'
 import path from 'node:path'
+import { execSync } from 'node:child_process'
 
 const pkg = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
+
+/* Build stamp for updates: the commit time orders builds (over-the-air
+   bundles ship on every push, not only on version bumps). */
+function gitInfo() {
+  try {
+    const run = (cmd) => execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+    return { build: Number(run('git log -1 --format=%ct')), commit: run('git rev-parse --short HEAD') }
+  } catch { return { build: Math.floor(Date.now() / 1000), commit: 'local' } }
+}
+const git = gitInfo()
+// Tests can pin the build stamp (over-the-air update tests)
+if (process.env.ET_BUILD_OVERRIDE) git.build = Number(process.env.ET_BUILD_OVERRIDE)
 
 /* Android / desktop builds load the app from local files: no service
    worker (it would only serve stale code after an app update) and no
@@ -73,7 +86,11 @@ export default defineConfig(({ mode }) => {
       },
     ],
     base: native ? './' : '/ExpenseTracker/',
-    define: { 'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version) },
+    define: {
+      'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
+      'import.meta.env.VITE_APP_BUILD': JSON.stringify(git.build),
+      'import.meta.env.VITE_APP_COMMIT': JSON.stringify(git.commit),
+    },
     build: {
       outDir: native ? 'dist-native' : 'dist',
       // The apps run in the phone's / computer's own web view, which can be

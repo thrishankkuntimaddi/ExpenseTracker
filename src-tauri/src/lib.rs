@@ -60,7 +60,7 @@ fn set_autostart(app: AppHandle, on: bool) -> bool {
 #[tauri::command]
 fn selftest_report(app: AppHandle, report: String) {
     println!("SELFTEST {report}");
-    if std::env::var("EXPENSETRACKER_SELFTEST").is_ok() {
+    if std::env::var("EXPENSETRACKER_SELFTEST").is_ok() && !report.contains("\"installing\":true") {
         app.exit(0);
     }
 }
@@ -81,6 +81,9 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app)))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
+        // Signed self-updates from the GitHub release (latest.json)
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         // Open at login starts quietly in the tray (--hidden)
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec!["--hidden"])))
         .manage(reminders_list.clone())
@@ -133,7 +136,8 @@ pub fn run() {
                         // EXPENSETRACKER_SELFTEST=signup also signs up a throwaway user
                         // (only meaningful against the local Firebase emulators)
                         let signup = std::env::var("EXPENSETRACKER_SELFTEST").as_deref() == Ok("signup");
-                        let _ = w.eval(&format!("window.__ET_SELFTEST_SIGNUP = {signup};"));
+                        let mode = std::env::var("EXPENSETRACKER_SELFTEST").unwrap_or_default();
+                        let _ = w.eval(&format!("window.__ET_SELFTEST_SIGNUP = {signup}; window.__ET_SELFTEST_MODE = {mode:?};"));
                         let _ = w.eval(include_str!("selftest.js"));
                     }
                 });

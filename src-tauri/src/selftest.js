@@ -30,6 +30,18 @@
     return { before, on, off, restored: (await invoke('get_autostart')) === before };
   });
 
+  if (window.__ET_SELFTEST_MODE === 'update') {
+    await step('update_check', async () => {
+      await window.__etUpdates.checkForUpdates();
+      // the app's own launch check may already be downloading — wait for it
+      return (await until(() => (['ready', 'current', 'error'].includes(window.__etUpdates.state().kind) ? window.__etUpdates.state() : null), 90000)) ?? window.__etUpdates.state();
+    });
+    if (r.update_check?.kind === 'ready') {
+      await invoke('selftest_report', { report: JSON.stringify({ ...r, installing: true }) }).catch(() => {});
+      await window.__etUpdates.restartToUpdate();   // installs, then relaunches the new version
+      return;
+    }
+  }
   if (window.__ET_SELFTEST_SIGNUP) {
     await step('signup', async () => {
       document.querySelector('#auth-tab-signup').click(); await wait(300);

@@ -23,14 +23,16 @@
         "backgroundColor": "#E4E5EA"
       }
     ],
-    "security": { "csp": null }
+    "security": {
+      "csp": null
+    }
   },
   "bundle": {
     "active": true,
     "targets": "all",
     "category": "Finance",
     "shortDescription": "Personal finance, synced across devices",
-    "copyright": "© Thrishank Kuntimaddi",
+    "copyright": "\u00a9 Thrishank Kuntimaddi",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -43,7 +45,21 @@
       "signingIdentity": "-"
     },
     "windows": {
-      "nsis": { "installMode": "currentUser" }
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE4QTA3QkEzMDBENDUwRkUKUldUK1VOUUFvM3VnR0JGNms5L1NrV2hDV3RZdDNnT3oweURCV1FBd0UyWURTOG1iTW9rZVQ1OVkK",
+      "endpoints": [
+        "https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

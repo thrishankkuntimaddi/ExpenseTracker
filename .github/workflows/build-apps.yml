@@ -88,23 +88,27 @@ jobs:
           - name: Mac Apple Silicon
             os: macos-latest
             target: aarch64-apple-darwin
-            bundles: dmg
+            bundles: app,dmg
             output: ExpenseTracker-Mac-AppleSilicon.dmg
+            update: ExpenseTracker-Mac-AppleSilicon.app.tar.gz
           - name: Mac Intel
             os: macos-latest
             target: x86_64-apple-darwin
-            bundles: dmg
+            bundles: app,dmg
             output: ExpenseTracker-Mac-Intel.dmg
+            update: ExpenseTracker-Mac-Intel.app.tar.gz
           - name: Windows
             os: windows-latest
             target: x86_64-pc-windows-msvc
             bundles: nsis
             output: ExpenseTracker-Windows-Setup.exe
+            update: ExpenseTracker-Windows-Setup.exe
           - name: Linux
             os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             bundles: appimage
             output: ExpenseTracker-Linux.AppImage
+            update: ExpenseTracker-Linux.AppImage
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -131,18 +135,29 @@ jobs:
           done
       - run: npm ci
       - run: node scripts/check-config.mjs
+      # Signed update packages for the desktop auto-updater (createUpdaterArtifacts)
       - run: npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
-      - name: Rename installer
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      - name: Rename installer + update package
         shell: bash
         run: |
-          dir="src-tauri/target/${{ matrix.target }}/release/bundle/${{ matrix.bundles }}"
-          file=$(ls "$dir" | grep -E '\.(dmg|exe|AppImage)$' | head -1)
-          mv "$dir/$file" "${{ matrix.output }}"
-          ls -la "${{ matrix.output }}"
+          root="src-tauri/target/${{ matrix.target }}/release/bundle"
+          inst=$(ls "$root"/{dmg,nsis,appimage}/* 2>/dev/null | grep -E '\.(dmg|exe|AppImage)$' | head -1)
+          cp "$inst" "${{ matrix.output }}"
+          # the signed update package: .app.tar.gz on Mac, the installer itself elsewhere
+          upd=$(ls "$root"/{macos,nsis,appimage}/* 2>/dev/null | grep -E '\.(app\.tar\.gz|exe|AppImage)$' | head -1)
+          if [ "${{ matrix.update }}" != "${{ matrix.output }}" ]; then cp "$upd" "${{ matrix.update }}"; fi
+          cp "$upd.sig" "${{ matrix.update }}.sig"
+          ls -la ExpenseTracker-*
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.output }}
-          path: ${{ matrix.output }}
+          path: |
+            ${{ matrix.output }}
+            ${{ matrix.update }}
+            ${{ matrix.update }}.sig
 
   release:
     name: Publish release
@@ -155,11 +170,19 @@ jobs:
         with:
           path: out
           merge-multiple: true
+      - name: Desktop update manifest (latest.json)
+        run: node scripts/make-latest-json.mjs out "$GITHUB_REF_NAME"
       - uses: softprops/action-gh-release@v2
         with:
           name: Expense Tracker ${{ github.ref_name }}
           body_path: .github/release-notes.md
-          files: out/*
+          files: |
+            out/*.apk
+            out/*.dmg
+            out/*.exe
+            out/*.AppImage
+            out/*.app.tar.gz
+            out/latest.json
       # Only the newest release is kept, so the download page never shows stale apps
       - name: Remove older releases
         env:

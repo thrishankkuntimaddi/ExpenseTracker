@@ -4,6 +4,11 @@ import './index.css'
 import './styles/glass.css'
 import App from './app/App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import { confirmBundleBoots, startAutoUpdates } from './native/updates.js'
+
+// Android: tell the over-the-air updater this bundle boots, before anything
+// else (a bundle that never gets here is rolled back automatically).
+confirmBundleBoots()
 
 function bootstrap() {
   const rootEl = document.getElementById('root');
@@ -12,6 +17,7 @@ function bootstrap() {
     setTimeout(bootstrap, 16);
     return;
   }
+  startAutoUpdates();
   createRoot(rootEl).render(
     <StrictMode>
       <ErrorBoundary>

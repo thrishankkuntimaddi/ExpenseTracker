@@ -11,7 +11,9 @@
 
 Not sure which Mac you have? → Apple menu → **About This Mac**. "Chip: Apple M…" means Apple chip; "Processor: Intel" means Intel.
 
-*"Source code (zip)" and "Source code (tar.gz)" are added by GitHub automatically — you don't need them.*
+*"Source code" zips, the `.app.tar.gz` files and `latest.json` are for GitHub and the apps' automatic updates — you don't need them.*
+
+**Updates are automatic.** Once installed, the apps keep themselves up to date: Android receives most updates over the air (no reinstall), the desktop apps download updates in the background and ask to restart, and the website updates on its own.
 
 All versions use the same account and stay in sync. Sign in with Google or with your email and password.
 

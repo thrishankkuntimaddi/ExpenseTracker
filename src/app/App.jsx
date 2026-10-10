@@ -37,6 +37,7 @@ const SettingsTab      = lazyPage(() => import('../features/settings/SettingsTab
 const ExternalTab      = lazyPage(() => import('../features/external/ExternalTab'));
 const DesktopDashboard = lazyPage(() => import('../components/DesktopDashboard'));
 import MoreSheet from '../components/MoreSheet';
+import UpdateBanner from '../components/UpdateBanner';
 
 /* Mobile: five slots in the bar; the rest live behind "More".
    Swiping moves through PAGE_ORDER, so every page is one gesture away. */
@@ -356,8 +357,11 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
 /* ── Root App — wraps everything in AuthGate ── */
 export default function App() {
   return (
+    <>
+    <UpdateBanner />
     <AuthGate>
       {(auth) => <AuthenticatedApp {...auth} />}
     </AuthGate>
+    </>
   );
 }
