@@ -20,6 +20,7 @@ import { formatMonthLabel } from '../../utils/periodHelpers';
 import { todayInputValue } from '../../utils/dateHelpers';
 import RecentlyDeletedModal from '../../components/RecentlyDeletedModal';
 import RemindersCard from './RemindersCard';
+import { normaliseReminders, anyReminderOn, REMINDER_TYPES } from '../../utils/reminders';
 import { useUpdateState, checkForUpdates, restartToUpdate, THIS_BUILD, APK_URL } from '../../native/updates';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import PWAInstallModal from '../../components/PWAInstallModal';
@@ -49,6 +50,9 @@ export default function SettingsTab({
   const [showAllDevices, setShowAllDevices] = useState(false);
   const sync = useSyncStatus();
   const update = useUpdateState();
+  const remCfg = normaliseReminders(settings?.reminders);
+  const remOn = REMINDER_TYPES.filter((t) => remCfg[t].enabled).length;
+  const remindersSummary = anyReminderOn(remCfg) ? `${remOn} on` : 'Off';
   const [arch, setArch] = useState(null);
   useEffect(() => { if (!isNative) detectArch().then(setArch); }, []);
   const download = isNative ? null : pickDownload(typeof navigator !== 'undefined' ? navigator.userAgent : '', arch);
@@ -204,8 +208,7 @@ export default function SettingsTab({
             )}
 
             {/* ── Sync & devices ── */}
-            <SectionLabel Icon={Cloud}>Sync</SectionLabel>
-            <Card>
+            <Group id="sync" title="Sync" Icon={Cloud} summary={`${syncLine.label} · ${devices?.devices?.length ?? 0} device${(devices?.devices?.length ?? 0) === 1 ? '' : 's'}`}>
               <div id="sync-status" data-tone={syncLine.tone} style={{ padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, borderBottom: '1px solid var(--border)' }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `var(--${SYNC_TONE[syncLine.tone]}-bg)` }}>
                   {syncLine.tone === 'offline' ? <CloudOff size={16} style={{ color: 'var(--text-muted)' }} />
@@ -248,18 +251,16 @@ export default function SettingsTab({
               {!(devices?.devices ?? []).length && (
                 <div style={{ padding: '6px 16px 14px', fontSize: 11, color: 'var(--text-muted)' }}>This device appears here once it has synced.</div>
               )}
-            </Card>
+            </Group>
 
             {/* ── Reminders ── */}
-            <SectionLabel Icon={Bell}>Reminders</SectionLabel>
-            <Card>
+            <Group id="reminders" title="Reminders" Icon={Bell} summary={remindersSummary}>
               <RemindersCard settings={settings} onPatchSettings={onPatchSettings}
                 transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} />
-            </Card>
+            </Group>
 
             {/* ── Theme (per device) ── */}
-            <SectionLabel Icon={Palette}>Appearance</SectionLabel>
-            <Card>
+            <Group id="appearance" title="Appearance" Icon={Palette} summary={themePref === 'system' ? `System (${isMonoflow ? 'dark' : 'light'} now)` : isMonoflow ? 'Dark' : 'Light'}>
               <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: isMonoflow ? 'var(--accent-bg)' : 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {isMonoflow ? <Moon size={16} style={{ color: 'var(--accent)' }} /> : <Sun size={16} style={{ color: 'var(--person)' }} />}
@@ -276,11 +277,10 @@ export default function SettingsTab({
                 <ThemeChip id="theme-dark"   Icon={Moon}    label="Dark"   active={themePref === 'dark'}   onClick={() => onThemePrefChange('dark')} />
                 <ThemeChip id="theme-system" Icon={Monitor} label="System" active={themePref === 'system'} onClick={() => onThemePrefChange('system')} />
               </div>
-            </Card>
+            </Group>
 
             {/* ── Carry forward ── */}
-            <SectionLabel Icon={ArrowRightLeft}>Month Carry Forward</SectionLabel>
-            <Card>
+            <Group id="month-carry-forward" title="Month Carry Forward" Icon={ArrowRightLeft} summary={carry.enabled ? 'On' : 'Off'}>
               <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -320,11 +320,10 @@ export default function SettingsTab({
                   </div>
                 </div>
               )}
-            </Card>
+            </Group>
 
             {/* ── Data Management ── */}
-            <SectionLabel Icon={Database}>Data Management</SectionLabel>
-            <Card>
+            <Group id="data-management" title="Data Management" Icon={Database} summary={'Backup, import, export, trash'}>
               <ActionRow id="btn-recently-deleted" Icon={RotateCcw} label="Recently Deleted" sub={`${recentlyDeleted.length} ${recentlyDeleted.length === 1 ? 'item' : 'items'} in trash — view or revert`} iconColor="var(--expense)" onClick={() => setShowTrashModal(true)} />
               <ActionRow id="btn-export" Icon={Download} label={exporting ? 'Preparing backup…' : 'Export Backup (JSON)'} sub="Everything: transactions, income, billings, trips, recurring, trash, settings" iconColor="var(--savings)" onClick={() => !exporting && handleExport()} />
               <ActionRow id="btn-export-csv" Icon={FileSpreadsheet} label="Export Spreadsheet (CSV)" sub="With categories — opens in Excel / Google Sheets; re-importable" iconColor="var(--income)" onClick={handleExportCSV} />
@@ -332,12 +331,12 @@ export default function SettingsTab({
               <ActionRow id="btn-csv"    Icon={FileSpreadsheet} label={importing ? 'Importing…' : 'Import CSV'}  sub="Import .csv file (date,name,amount,type) → cloud"    iconColor="var(--income)"  onClick={() => !importing && csvInputRef.current?.click()} lastRow />
               <input ref={fileInputRef} type="file" accept=".json"     style={{ display: 'none' }} onChange={handleImport}    />
               <input ref={csvInputRef}  type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={handleCSVImport} />
-            </Card>
-
-            <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', marginBottom: 20, fontSize: 11, color: 'var(--accent)', lineHeight: 1.6 }}>
+            <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', margin: '4px 16px 14px', fontSize: 11, color: 'var(--accent)', lineHeight: 1.6 }}>
               <strong>CSV format:</strong> date,name,amount,type<br />
               Types: <code>expense</code> / <code>income</code> / <code>savings</code> / <code>person</code>
             </div>
+            </Group>
+
           </div>
 
           {/* ── Column 2 ── */}
@@ -346,8 +345,7 @@ export default function SettingsTab({
             {/* ── Get the app (website only) ── */}
             {!isNative && (
               <>
-                <SectionLabel Icon={Smartphone}>Get the app</SectionLabel>
-                <Card>
+                <Group id="get-the-app" title="Get the app" Icon={Smartphone} summary={download ? `Download the ${download.label}` : 'Downloads and install'}>
                   {download && (
                     <a id="btn-download-app" href={downloadUrl(download.file)} className="settings-row"
                       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', borderBottom: '1px solid var(--border)', textDecoration: 'none' }}>
@@ -379,13 +377,12 @@ export default function SettingsTab({
                       sub={download ? 'Or install this website as a lightweight app' : 'On iPhone and iPad the website is the app — works offline'}
                       iconColor="var(--accent)" onClick={handleInstallClick} lastRow />
                   )}
-                </Card>
+                </Group>
               </>
             )}
 
             {/* ── Account ── */}
-            <SectionLabel Icon={LogOut}>Account</SectionLabel>
-            <Card>
+            <Group id="account" title="Account" Icon={LogOut} summary={user?.email ?? 'Signed in'}>
               <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{user?.email || 'Signed in'}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
@@ -413,11 +410,10 @@ export default function SettingsTab({
                 onClick={() => setConfirming('signout')}
                 danger lastRow
               />
-            </Card>
+            </Group>
 
             {/* ── Reset ── */}
-            <SectionLabel Icon={Trash2}>Reset</SectionLabel>
-            <Card>
+            <Group id="reset" title="Reset" Icon={Trash2} summary={'Clear this device · delete data · delete account'}>
               <ActionRow id="btn-clear-device" Icon={Eraser} label="Clear this device" sub="Sign out and remove all ExpenseTracker data and preferences from this device. Your account keeps everything."
                 iconColor="var(--lent)" onClick={() => setConfirming('clear')} />
               <ActionRow id="btn-delete-all" Icon={Trash2} label={busyReset ? 'Deleting…' : 'Delete all my data'} sub="Every transaction, income entry, billing, trip and setting — on all devices. Keeps your sign-in."
@@ -426,7 +422,7 @@ export default function SettingsTab({
                 <ActionRow id="btn-delete-account" Icon={UserX} label="Delete my account" sub="All your data, then the sign-in itself. You'd need to create a new account to come back."
                   iconColor="var(--expense)" onClick={() => !busyReset && setConfirming('account')} danger lastRow />
               )}
-            </Card>
+            </Group>
 
             {/* About */}
             <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
@@ -523,6 +519,30 @@ function SectionLabel({ children, Icon }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
       {Icon && <Icon size={12} style={{ color: 'var(--text-muted)' }} />}
       <p className="section-label" style={{ margin: 0 }}>{children}</p>
+    </div>
+  );
+}
+
+/* A settings group that collapses to one summary line; open/closed is
+   remembered on this device. */
+function Group({ id, title, Icon, summary, children }) {
+  const key = `et_settings_open_${id}`;
+  const [open, setOpen] = useState(() => { try { return localStorage.getItem(key) === '1'; } catch { return false; } });
+  const toggle = () => setOpen((o) => { try { localStorage.setItem(key, o ? '0' : '1'); } catch { /* storage unavailable */ } return !o; });
+  return (
+    <div className="card settings-group" id={`group-${id}`} style={{ marginBottom: 10 }}>
+      <button onClick={toggle} aria-expanded={open}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+        <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Icon size={15} style={{ color: 'var(--accent)' }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{title}</div>
+          {!open && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{summary}</div>}
+        </div>
+        <ChevronRight size={15} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
+      </button>
+      {open && <div style={{ borderTop: '1px solid var(--border)' }}>{children}</div>}
     </div>
   );
 }

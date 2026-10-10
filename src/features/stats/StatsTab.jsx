@@ -235,45 +235,6 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                 </p>
               </div>
 
-              {/* Waste block */}
-              <div style={{
-                borderRadius: 14, padding: 14,
-                background: 'var(--expense-bg)',
-                border: '1.5px solid var(--expense-border)',
-                boxShadow: 'var(--shadow-sm)',
-                marginBottom: 14,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-                      <Flame size={13} style={{ color: 'var(--expense)' }} />
-                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--expense)' }}>
-                        Total Wastage
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--expense)' }}>
-                      {formatAmount(stats.totalWaste)}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--expense)' }}>
-                      {stats.wastePercent}%
-                    </div>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>of expenses</div>
-                  </div>
-                </div>
-                {/* Waste progress bar */}
-                <div style={{ height: 6, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${Math.min(100, parseFloat(stats.wastePercent))}%`,
-                    background: 'linear-gradient(90deg, #F59E0B, var(--expense))',
-                    borderRadius: 99,
-                    transition: 'width 0.5s cubic-bezier(0.16,1,0.3,1)',
-                  }} />
-                </div>
-              </div>
-
               {/* Spending Averages */}
               <Section title="Spending Averages">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>

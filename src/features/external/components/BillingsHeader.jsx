@@ -4,7 +4,7 @@ export default function BillingsHeader({ currentSession, saving, onBack, onShare
   return (
     <div className="tab-header">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: extra ? 10 : 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
           {currentSession && (
             <button
               onClick={onBack}
@@ -21,13 +21,15 @@ export default function BillingsHeader({ currentSession, saving, onBack, onShare
             <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
               {currentSession ? currentSession.name : 'Billings'}
             </h1>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-              Proxy spending ledger · track group bills on behalf of others
-            </p>
+            {!currentSession && (
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                Money you spend for others
+              </p>
+            )}
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, whiteSpace: 'nowrap' }}>
           {saving && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
               <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
@@ -48,7 +50,7 @@ export default function BillingsHeader({ currentSession, saving, onBack, onShare
                 transition: 'all 0.15s',
               }}
             >
-              <Share2 size={13} /> Share Session
+              <Share2 size={13} /> Share
             </button>
           )}
           {!currentSession && (
@@ -65,7 +67,7 @@ export default function BillingsHeader({ currentSession, saving, onBack, onShare
                 transition: 'all 0.15s',
               }}
             >
-              <Plus size={13} /> New Billing
+              <Plus size={13} /> New
             </button>
           )}
         </div>

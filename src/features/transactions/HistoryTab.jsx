@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Upload, Pencil, Search, X } from 'lucide-react';
+import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Upload, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 import { formatAmount, formatDate, getWeekStart } from '../../utils/dateHelpers';
 import PeriodSelector from '../../components/PeriodSelector';
 import { useWastage } from '../../hooks/useWastage';
@@ -18,7 +18,7 @@ export default function HistoryTab({
   onAddTransaction, onAddIncome,
   settings, onLearnCategory,
 }) {
-  const [expandAll, setExpandAll]         = useState(false);
+  const [expandAll, setExpandAll]         = useState(null);   // null = default: open when grouped by day
   const [search, setSearch]               = useState('');
   const [catFilter, setCatFilter]         = useState(null);
   const [typeFilter, setTypeFilter]       = useState(null); // 'expense' | 'savings' | 'person' | null
@@ -111,7 +111,7 @@ export default function HistoryTab({
     : 'Grouped by day';
 
   // Expand everything while searching/filtering so matches are visible
-  const effectiveExpandAll = expandAll || hasFilter;
+  const effectiveExpandAll = (expandAll ?? grouping === 'day') || hasFilter;
 
   return (
     <div className="tab-root">
@@ -148,107 +148,50 @@ export default function HistoryTab({
 
       {/* Header */}
       <div className="tab-header">
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
-              History
-            </h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
-                {groupLabel} · {filtTxns.length}{hasFilter ? ` of ${periodTxns.length}` : ''} transactions
-              </p>
-              <label
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: '3px 8px',
-                  borderRadius: 8,
-                  background: expandAll ? 'var(--accent-bg)' : 'var(--surface2)',
-                  border: `1.5px solid ${expandAll ? 'var(--accent-border)' : 'var(--border)'}`,
-                  color: expandAll ? 'var(--accent)' : 'var(--text-secondary)',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={expandAll}
-                  onChange={e => handleToggleExpandAll(e.target.checked)}
-                  style={{
-                    accentColor: 'var(--accent)',
-                    cursor: 'pointer',
-                    width: 13,
-                    height: 13,
-                    margin: 0,
-                  }}
-                />
-                <span>Expand All</span>
-              </label>
-            </div>
+        {/* Title row: count + two compact actions */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>History</h1>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '2px 0 0' }}>
+              {filtTxns.length}{hasFilter ? ` of ${periodTxns.length}` : ''} transactions · {groupLabel.replace('Grouped by ', 'by ')}
+            </p>
           </div>
-          {/* Load Past Data button */}
-          {onAddTransaction && onAddIncome && (
-            <button
-              id="mobile-btn-load-past-data"
-              onClick={() => setShowImport(true)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                padding: '7px 12px', borderRadius: 10,
-                fontSize: 11, fontWeight: 700,
-                background: 'var(--accent-bg)',
-                color: 'var(--accent)',
-                border: '1.5px solid var(--accent-border)',
-                cursor: 'pointer', fontFamily: 'inherit',
-                flexShrink: 0,
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'var(--accent)';
-                e.currentTarget.style.color = '#fff';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'var(--accent-bg)';
-                e.currentTarget.style.color = 'var(--accent)';
-              }}
-            >
-              <Upload size={11} />
-              Load Past Data
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            <IconAction id="history-expand-all" label={effectiveExpandAll ? 'Collapse all' : 'Expand all'}
+              Icon={effectiveExpandAll ? ChevronsDownUp : ChevronsUpDown} onClick={() => handleToggleExpandAll(!effectiveExpandAll)} />
+            {onAddTransaction && onAddIncome && (
+              <IconAction id="mobile-btn-load-past-data" label="Load past data" Icon={Upload} onClick={() => setShowImport(true)} />
+            )}
+          </div>
         </div>
 
-        {/* Period selector */}
-        <PeriodSelector
-          period={selectedPeriod}
-          onChange={onPeriodChange}
-          transactions={transactions}
-          income={income}
-        />
-
-        {/* Search */}
-        <div style={{ position: 'relative', marginTop: 12 }}>
-          <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-          <input
-            id="history-search"
-            type="search"
-            placeholder="Search name, platform or amount…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{
-              width: '100%', paddingLeft: 32, paddingRight: 32, paddingTop: 9, paddingBottom: 9,
-              borderRadius: 10, fontSize: 13, border: '1.5px solid var(--input-border)',
-              background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit',
-              WebkitAppearance: 'none', appearance: 'none',
-            }}
-          />
-          {search && (
-            <button onClick={() => setSearch('')} aria-label="Clear search" style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', width: 24, height: 24, borderRadius: 7, border: 'none', background: 'var(--surface2)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <X size={12} />
-            </button>
-          )}
+        {/* Period + search on one row */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ flexShrink: 0 }}>
+            <PeriodSelector period={selectedPeriod} onChange={onPeriodChange} transactions={transactions} income={income} />
+          </div>
+          <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+            <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <input
+              id="history-search"
+              type="search"
+              placeholder="Search…"
+              aria-label="Search name, platform or amount"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{
+                width: '100%', paddingLeft: 30, paddingRight: 30, paddingTop: 9, paddingBottom: 9,
+                borderRadius: 10, fontSize: 13, border: '1.5px solid var(--input-border)',
+                background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit',
+                WebkitAppearance: 'none', appearance: 'none',
+              }}
+            />
+            {search && (
+              <button onClick={() => setSearch('')} aria-label="Clear search" style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', width: 24, height: 24, borderRadius: 7, border: 'none', background: 'var(--surface2)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={12} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Period Totals Summary — tap to filter by type */}
@@ -489,5 +432,14 @@ function StatPill({ label, value, color, bg, border, Icon, active, onClick }) {
       <span style={{ fontSize: 11, fontWeight: 600, color }}>{label}:</span>
       <span style={{ fontSize: 11, fontWeight: 800, color }}>{formatAmount(value)}</span>
     </Tag>
+  );
+}
+
+function IconAction({ id, label, Icon, onClick }) {
+  return (
+    <button id={id} onClick={onClick} aria-label={label} title={label}
+      style={{ width: 34, height: 34, borderRadius: 10, border: '1.5px solid var(--accent-border)', background: 'var(--accent-bg)', color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Icon size={15} />
+    </button>
   );
 }

@@ -120,11 +120,11 @@ describe('screens render with planning features', () => {
     expect(html).toContain('No savings goals yet');
   });
 
-  it('Settings tab offers CSV export and carry-forward controls', () => {
+  it('Settings tab groups everything into collapsible sections with summaries', () => {
     const html = render(<SettingsTab {...common} onThemePrefChange={noop} onSignOut={noop} isStandalone />);
-    expect(html).toContain('Export Spreadsheet (CSV)');
-    expect(html).toContain('Month Carry Forward');
-    expect(html).toContain('settings-carry-start');
+    for (const title of ['Sync', 'Reminders', 'Appearance', 'Month Carry Forward', 'Data Management', 'Account', 'Reset']) expect(html).toContain(title);
+    expect(html).toContain('Backup, import, export, trash');   // closed groups show a summary line
+    expect(html).toContain('aria-expanded="false"');
   });
 
 
