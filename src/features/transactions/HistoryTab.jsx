@@ -454,10 +454,10 @@ export default function HistoryTab({
                                 onClick={cancelWaste}
                                 style={{
                                   padding: '5px 10px', borderRadius: 8, fontSize: 12,
-                                  background: 'var(--surface2)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer',
+                                  background: 'var(--surface2)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                                 }}
                               >
-                                ✕
+                                <X size={14} />
                               </button>
                             </div>
                           )}

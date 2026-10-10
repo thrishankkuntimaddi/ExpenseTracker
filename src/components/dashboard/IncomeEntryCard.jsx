@@ -1,7 +1,7 @@
 // ─── Desktop dashboard: income / borrowed / repayment-received form + list ───
 // Form state lives in useIncomeEntryForm (owned by DesktopDashboard) so it
 // survives switching between dashboard sections, as before the split.
-import { PenLine, IndianRupee, Calendar, Pencil, Trash2 } from 'lucide-react';
+import { PenLine, IndianRupee, Calendar, Pencil, Trash2, Wallet, HandCoins, ClipboardList } from 'lucide-react';
 import { formatAmount, todayInputValue } from '../../utils/dateHelpers';
 import { DCard, CardHeader } from './ui';
 import { inputStyle, focusHandlers } from './formStyles';
@@ -41,7 +41,7 @@ export default function IncomeEntryCard({
               transition: 'all 0.15s', textAlign: 'center',
             }}
           >
-            💰 Income
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Wallet size={12} />Income</span>
           </button>
           <button
             type="button"
@@ -54,7 +54,7 @@ export default function IncomeEntryCard({
               transition: 'all 0.15s', textAlign: 'center',
             }}
           >
-            🤝 Borrowed
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><HandCoins size={12} />Borrowed</span>
           </button>
           <button
             type="button"
@@ -109,7 +109,7 @@ export default function IncomeEntryCard({
                   {p} (Owes You: {formatAmount(stats.personDebts[p].netLent)})
                 </option>
               ))}
-              <option value="__custom__">✏️ Type Custom Name…</option>
+              <option value="__custom__">Type a custom name…</option>
             </select>
 
             {iName && iName !== '__custom__' && (
@@ -165,7 +165,7 @@ export default function IncomeEntryCard({
                   color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
-                List 📋
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><ClipboardList size={12} />List</span>
               </button>
             )}
           </div>

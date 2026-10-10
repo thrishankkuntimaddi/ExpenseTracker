@@ -1,5 +1,5 @@
 // ─── Desktop dashboard: today's / period entries list with wastage editing ───
-import { ShoppingCart, Flame, Pencil, Trash2 } from 'lucide-react';
+import { ShoppingCart, Flame, Pencil, Trash2, X } from 'lucide-react';
 import { formatAmount } from '../../utils/dateHelpers';
 import { TYPE_META } from '../../utils/typeConfig';
 import { categoryOf } from '../../utils/categories';
@@ -133,7 +133,7 @@ export default function EntriesCard({
                     onKeyDown={e => { if (e.key === 'Enter') saveWaste(txn); if (e.key === 'Escape') cancelWaste(); }}
                   />
                   <button onClick={() => saveWaste(txn)} style={{ padding: '5px 10px', borderRadius: 7, fontSize: 11, fontWeight: 700, background: 'var(--expense)', color: '#fff', border: 'none', cursor: 'pointer' }}>Save</button>
-                  <button onClick={cancelWaste} style={{ padding: '5px 8px', borderRadius: 7, fontSize: 11, background: 'var(--surface2)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer' }}>✕</button>
+                  <button onClick={cancelWaste} style={{ padding: '5px 8px', borderRadius: 7, fontSize: 11, background: 'var(--surface2)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }} aria-label="Cancel"><X size={13} /></button>
                 </div>
               )}
             </div>

@@ -1,6 +1,6 @@
 // ─── GoalsCard ────────────────────────────────────────────────────
 // Savings goals with progress, pace and ETA. Reused on Plan and Stats.
-import { Flag, Plus, Pencil, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Flag, Plus, Pencil, CheckCircle2, AlertTriangle, Trophy } from 'lucide-react';
 import { formatAmount } from '../../../utils/dateHelpers';
 import { computeGoalProgress } from '../../../utils/goals';
 import { getSavingsType } from '../../../utils/typeConfig';
@@ -71,7 +71,7 @@ export default function GoalsCard({ goals = [], transactions = [], onAdd, onEdit
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 6, fontSize: 11, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
               <span><strong style={{ color: 'var(--text-secondary)' }}>{formatAmount(p.saved)}</strong> of {formatAmount(p.target)}</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                {p.done ? 'Goal reached 🎉'
+                {p.done ? <><Trophy size={11} style={{ color: 'var(--income)' }} /> Goal reached</>
                   : p.overdue ? <><AlertTriangle size={10} style={{ color: 'var(--expense)' }} /> Deadline passed · {formatAmount(p.remaining)} short</>
                   : p.neededPerMonth != null ? `${formatAmount(p.neededPerMonth)}/mo needed${p.onTrack === false ? ' · behind pace' : p.onTrack ? ' · on track' : ''}`
                   : p.eta ? `ETA ${p.eta.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })} at current pace`

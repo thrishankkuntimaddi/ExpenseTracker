@@ -1,7 +1,7 @@
 // ─── Desktop dashboard: quick-entry form (expense / person / savings) ───
 // Form state lives in useQuickEntryForm (owned by DesktopDashboard) so it
 // survives switching between dashboard sections, as before the split.
-import { PenLine, IndianRupee, Calendar } from 'lucide-react';
+import { PenLine, IndianRupee, Calendar, ClipboardList } from 'lucide-react';
 import { formatAmount, todayInputValue } from '../../utils/dateHelpers';
 import { TRANSACTION_TYPES, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType } from '../../utils/typeConfig';
 import { DCard, CardHeader } from './ui';
@@ -157,7 +157,7 @@ export default function QuickEntryCard({ form, stats, todayTotal, todayCount }) 
                   })
                 </option>
               ))}
-              <option value="__custom__">✏️ Type Custom Name…</option>
+              <option value="__custom__">Type a custom name…</option>
             </select>
 
             {name && name !== '__custom__' && (
@@ -215,7 +215,7 @@ export default function QuickEntryCard({ form, stats, todayTotal, todayCount }) 
                   color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
-                List 📋
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><ClipboardList size={12} />List</span>
               </button>
             )}
           </div>

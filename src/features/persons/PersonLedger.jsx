@@ -182,7 +182,7 @@ function EditTxnRow({ txn, onSave, onCancel }) {
         padding: '5px 10px', borderRadius: 8, fontSize: 11,
         background: 'var(--surface2)', color: 'var(--text-secondary)',
         border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-      }}>✕</button>
+      }} aria-label="Cancel"><X size={14} /></button>
     </div>
   );
 }

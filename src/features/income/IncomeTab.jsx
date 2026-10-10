@@ -1,5 +1,5 @@
 import { useRef, useState, useMemo } from 'react';
-import { PenLine, IndianRupee, Wallet, Trash2, TrendingUp, CalendarDays, Calendar, Pencil, ArrowRightLeft } from 'lucide-react';
+import { PenLine, IndianRupee, Wallet, Trash2, TrendingUp, CalendarDays, Calendar, Pencil, ArrowRightLeft, HandCoins, ClipboardList } from 'lucide-react';
 import { isCarryForward } from '../../utils/carryForward';
 import { generateId } from '../../utils/storage';
 import { formatAmount, groupByDay, todayInputValue, dateInputToISO, isoToMonth, localMonthKey } from '../../utils/dateHelpers';
@@ -210,7 +210,7 @@ export default function IncomeTab({
                     transition: 'all 0.15s', textAlign: 'center',
                   }}
                 >
-                  💰 Income
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Wallet size={12} />Income</span>
                 </button>
                 <button
                   type="button"
@@ -223,7 +223,7 @@ export default function IncomeTab({
                     transition: 'all 0.15s', textAlign: 'center',
                   }}
                 >
-                  🤝 Borrowed
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><HandCoins size={12} />Borrowed</span>
                 </button>
                 <button
                   type="button"
@@ -278,7 +278,7 @@ export default function IncomeTab({
                         {p} (Owes You: {formatAmount(stats.personDebts[p].netLent)})
                       </option>
                     ))}
-                    <option value="__custom__">✏️ Type Custom Name…</option>
+                    <option value="__custom__">Type a custom name…</option>
                   </select>
 
                   {name && name !== '__custom__' && (
@@ -332,7 +332,7 @@ export default function IncomeTab({
                         color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit',
                       }}
                     >
-                      List 📋
+                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><ClipboardList size={12} />List</span>
                     </button>
                   )}
                 </div>

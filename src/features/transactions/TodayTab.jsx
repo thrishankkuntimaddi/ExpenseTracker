@@ -1,5 +1,5 @@
 import { useRef, useState, useMemo } from 'react';
-import { PenLine, IndianRupee, Zap, TrendingDown, Coins, Briefcase, ShoppingCart, PiggyBank, Users, Calendar } from 'lucide-react';
+import { PenLine, IndianRupee, Zap, TrendingDown, Coins, Briefcase, ShoppingCart, PiggyBank, Users, Calendar, ClipboardList } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount, todayInputValue, dateInputToISO, isoToMonth } from '../../utils/dateHelpers';
 import { getCurrentMonthValue } from '../../utils/periodHelpers';
@@ -332,7 +332,7 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
                           {p} (Debt Left: {formatAmount(stats.personDebts[p].netOwed)})
                         </option>
                       ))}
-                      <option value="__custom__">✏️ Type Custom Name…</option>
+                      <option value="__custom__">Type a custom name…</option>
                     </select>
 
                     {name && name !== '__custom__' && (
@@ -448,7 +448,7 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
                   color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
-                List 📋
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><ClipboardList size={12} />List</span>
               </button>
             )}
           </div>
