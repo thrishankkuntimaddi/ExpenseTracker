@@ -11,6 +11,7 @@ import { platform } from '../native';
 export const DEVICE_ID_KEY = 'et_device_id';
 const HEARTBEAT_MS = 4 * 60 * 1000;
 export const OPEN_NOW_MS = 6 * 60 * 1000;   // a heartbeat plus slack
+export const FORGET_AFTER_MS = 30 * 24 * 3600 * 1000;  // reinstalls / cleared app data leave old ids behind
 
 export function getDeviceId() {
   try {
@@ -39,6 +40,14 @@ export function useDevices(uid) {
   const thisId = getDeviceId();
 
   useEffect(() => (uid ? subscribeToDevices(uid, setDevices) : undefined), [uid]);
+
+  // Tidy up: a device not seen for 30 days is gone (reinstall, cleared data, old phone)
+  useEffect(() => {
+    if (!uid) return;
+    const now = Date.now();
+    devices.filter((d) => d.id !== thisId && d.lastSeen && now - d.lastSeen > FORGET_AFTER_MS)
+      .forEach((d) => background(removeDevice(uid, d.id)));
+  }, [uid, devices, thisId]);
 
   useEffect(() => {
     if (!uid) return undefined;

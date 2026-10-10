@@ -45,6 +45,7 @@ export default function SettingsTab({
   const [showTrashModal, setShowTrashModal] = useState(false);
   const [confirming, setConfirming]   = useState(null); // 'clear' | 'delete' | 'account' | 'signout' | { kind: 'pending', … }
   const [busyReset, setBusyReset]     = useState(false);
+  const [showAllDevices, setShowAllDevices] = useState(false);
   const sync = useSyncStatus();
   const [arch, setArch] = useState(null);
   useEffect(() => { if (!isNative) detectArch().then(setArch); }, []);
@@ -216,7 +217,7 @@ export default function SettingsTab({
                 </div>
               </div>
               <div style={{ padding: '10px 16px 4px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your devices</div>
-              {(devices?.devices ?? []).slice().sort((a, b) => (b.id === devices.thisId) - (a.id === devices.thisId) || (b.lastSeen ?? 0) - (a.lastSeen ?? 0)).map((d, i, all) => {
+              {(devices?.devices ?? []).slice().sort((a, b) => (b.id === devices.thisId) - (a.id === devices.thisId) || (b.lastSeen ?? 0) - (a.lastSeen ?? 0)).slice(0, showAllDevices ? undefined : 5).map((d, i, all) => {
                 const isThis = d.id === devices.thisId;
                 const openNow = isThis || (d.lastSeen && Date.now() - d.lastSeen < OPEN_NOW_MS);
                 return (
@@ -237,6 +238,11 @@ export default function SettingsTab({
                   </div>
                 );
               })}
+              {!showAllDevices && (devices?.devices?.length ?? 0) > 5 && (
+                <button onClick={() => setShowAllDevices(true)} style={{ width: '100%', padding: '9px 16px', border: 'none', borderTop: '1px solid var(--border)', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
+                  +{devices.devices.length - 5} older device{devices.devices.length - 5 === 1 ? '' : 's'}
+                </button>
+              )}
               {!(devices?.devices ?? []).length && (
                 <div style={{ padding: '6px 16px 14px', fontSize: 11, color: 'var(--text-muted)' }}>This device appears here once it has synced.</div>
               )}
