@@ -46,11 +46,15 @@ export default defineConfig({
   ],
   base: '/ExpenseTracker/',
   build: {
+    // The Firestore SDK alone is ~545 kB minified (160 kB gzip) and can't be
+    // split further; 600 kB still flags any real growth of our own code.
+    chunkSizeWarningLimit: 600,
     rolldownOptions: {
       output: {
         // Vendor code changes rarely — separate chunks stay cached across deploys.
         codeSplitting: {
           groups: [
+            { name: 'firestore', test: /node_modules[\\/]@firebase[\\/](firestore|webchannel-wrapper)[\\/]/ },
             { name: 'firebase', test: /node_modules[\\/](@firebase|firebase)[\\/]/ },
             { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
           ],
