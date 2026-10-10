@@ -1,12 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import {
   Download, Upload, Trash2, Info,
   ChevronRight, Moon, Sun, FileSpreadsheet,
-  Database, Palette, LogOut, Link, RefreshCw, ArrowDownToLine, RotateCcw, Smartphone, ArrowRightLeft,
+  Database, Palette, LogOut, RotateCcw, Smartphone, ArrowRightLeft,
 } from 'lucide-react';
-import { updateSettings as fsUpdateSettings, deleteAllUserData, bulkImport } from '../../services/firestore';
-import { pushToSheet, pullFromSheet, validateSheet, checkServerHealth, SHEETS_SYNC_AVAILABLE } from '../../services/googleSheets';
-import { csvToRecords, prepareSheetRecords } from '../../utils/importHelpers';
+import { deleteAllUserData, bulkImport } from '../../services/firestore';
+import { csvToRecords } from '../../utils/importHelpers';
 import { recordsToCSV } from '../../utils/exportHelpers';
 import { getCarrySettings } from '../../utils/carryForward';
 import { formatMonthLabel } from '../../utils/periodHelpers';
@@ -29,21 +28,12 @@ export default function SettingsTab({
   const [feedback, setFeedback]       = useState(null);
   const carry = getCarrySettings(settings);
   const setCarry = (patch) => onPatchSettings?.({ carryForward: { ...carry, ...patch } });
-  const [sheetUrl, setSheetUrl]       = useState(settings?.googleSheetUrl || '');
   const [importing, setImporting]     = useState(false);
-  const [syncing, setSyncing]         = useState(false);
-  const [pulling, setPulling]         = useState(false);
-  const [serverOnline, setServerOnline] = useState(null); // null=unchecked, true, false
   const [showTrashModal, setShowTrashModal] = useState(false);
   const [showInstallGuideModal, setShowInstallGuideModal] = useState(false);
   const fileInputRef = useRef(null);
   const csvInputRef  = useRef(null);
   const isMonoflow   = theme === 'monoflow';
-
-  /* ── Check if the proxy server is reachable on mount ── */
-  useEffect(() => {
-    if (SHEETS_SYNC_AVAILABLE) checkServerHealth().then(setServerOnline);
-  }, []);
 
   function showFeedback(msg, isError = false) {
     setFeedback({ msg, isError });
@@ -143,52 +133,6 @@ export default function SettingsTab({
       }
       runImport(records, records.skipped ? ` (${records.skipped} invalid rows skipped)` : '');
     });
-  }
-
-  /* ── Google Sheets ── */
-  async function handleSaveSheetUrl() {
-    if (!sheetUrl.trim()) { showFeedback('Please enter a sheet URL.', true); return; }
-    try {
-      // Save URL to Firestore settings
-      await fsUpdateSettings(user.uid, { ...settings, googleSheetUrl: sheetUrl.trim() });
-      // Validate access (non-blocking)
-      const v = await validateSheet(sheetUrl.trim());
-      if (v.success) {
-        showFeedback(`✅ Linked to "${v.title}" — ${v.sheets.length} tab(s) found.`);
-      } else {
-        showFeedback('Sheet URL saved. Share the sheet with your service account email to enable sync.', false);
-      }
-    } catch { showFeedback('Failed to save sheet URL.', true); }
-  }
-
-  async function handleSyncSheet() {
-    if (!sheetUrl.trim()) { showFeedback('Enter your Google Sheet URL first.', true); return; }
-    setSyncing(true);
-    try {
-      const result = await pushToSheet(sheetUrl, { transactions, income });
-      showFeedback(result.message, !result.success);
-      if (result.success) setServerOnline(true);
-    } catch (err) {
-      showFeedback(`Push failed: ${err.message}`, true);
-    } finally { setSyncing(false); }
-  }
-
-  async function handlePullSheet() {
-    if (!sheetUrl.trim()) { showFeedback('Enter your Google Sheet URL first.', true); return; }
-    setPulling(true);
-    try {
-      const result = await pullFromSheet(sheetUrl);
-      if (!result.success) { showFeedback(result.message, true); return; }
-      // Stable ids from sheet position; rows pulled before are skipped
-      const existingIds = new Set([...transactions, ...income].map((r) => r.id));
-      const records = prepareSheetRecords(result, existingIds);
-      await bulkImport(user.uid, records);
-      showFeedback(`✅ Pulled ${records.transactions.length} transactions + ${records.income.length} income entries`
-        + (records.duplicates ? ` (${records.duplicates} already imported, skipped)` : ''));
-      setServerOnline(true);
-    } catch (err) {
-      showFeedback(`Pull failed: ${err.message}`, true);
-    } finally { setPulling(false); }
   }
 
   /* ── Theme ── */
@@ -312,88 +256,6 @@ export default function SettingsTab({
 
           {/* ── Column 2 ── */}
           <div style={{ flex: 1, minWidth: 0 }}>
-
-            {/* ── Google Sheets ── */}
-            <SectionLabel Icon={FileSpreadsheet}>Google Sheets</SectionLabel>
-            {!SHEETS_SYNC_AVAILABLE ? (
-              <Card>
-                <div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                  Google Sheets sync needs the companion sync server, which isn&apos;t configured for this deployment.
-                  Run the app locally with <code>npm run server</code>, or build with <code>VITE_SHEETS_PROXY_URL</code> set
-                  to a hosted proxy. CSV and JSON import/export above work everywhere.
-                </div>
-              </Card>
-            ) : (
-            <Card>
-              <div style={{ padding: 16 }}>
-
-                {/* Server status indicator */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14, padding: '7px 12px', borderRadius: 9, background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-                  <span style={{
-                    width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                    background: serverOnline === null ? '#94A3B8' : serverOnline ? '#22C55E' : '#EF4444',
-                    boxShadow:  serverOnline ? '0 0 6px #22C55E88' : 'none',
-                  }} />
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
-                    {serverOnline === null ? 'Checking proxy server…'
-                      : serverOnline ? 'Proxy server online'
-                      : 'Proxy server offline — run: cd server && npm start'}
-                  </span>
-                </div>
-
-                <p className="section-label" style={{ marginBottom: 10 }}>Your Google Sheet URL</p>
-                <div style={{ position: 'relative', marginBottom: 10 }}>
-                  <Link size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                  <input
-                    id="settings-sheet-url"
-                    type="url"
-                    placeholder="https://docs.google.com/spreadsheets/d/…"
-                    value={sheetUrl}
-                    onChange={e => setSheetUrl(e.target.value)}
-                    style={{ width: '100%', paddingLeft: 34, paddingRight: 14, paddingTop: 10, paddingBottom: 10, borderRadius: 10, fontSize: 12, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
-                    onFocus={e => (e.target.style.borderColor = 'var(--income)')}
-                    onBlur={e  => (e.target.style.borderColor = 'var(--input-border)')}
-                  />
-                </div>
-
-                {/* Link + Sync Now row */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  <button
-                    id="btn-save-sheet"
-                    onClick={handleSaveSheetUrl}
-                    style={{ flex: 1, padding: '9px', borderRadius: 9, fontSize: 12, fontWeight: 700, background: 'var(--income)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                    Save &amp; Validate
-                  </button>
-                  <button
-                    id="btn-sync-sheet"
-                    onClick={handleSyncSheet}
-                    disabled={syncing || !sheetUrl.trim()}
-                    style={{ flex: 1, padding: '9px', borderRadius: 9, fontSize: 12, fontWeight: 600, background: 'var(--surface2)', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                    <RefreshCw size={12} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
-                    {syncing ? 'Pushing…' : '↑ Push to Sheet'}
-                  </button>
-                </div>
-
-                {/* Pull row */}
-                <button
-                  id="btn-pull-sheet"
-                  onClick={handlePullSheet}
-                  disabled={pulling || !sheetUrl.trim()}
-                  style={{ width: '100%', padding: '9px', borderRadius: 9, fontSize: 12, fontWeight: 600, background: pulling ? 'var(--surface2)' : 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  <ArrowDownToLine size={12} />
-                  {pulling ? 'Pulling from sheet…' : '↓ Pull from Sheet → Firestore'}
-                </button>
-
-                {/* Info box */}
-                <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 9, background: 'var(--surface2)', border: '1px solid var(--border)', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.65 }}>
-                  <strong style={{ color: 'var(--text)', display: 'block', marginBottom: 4 }}>How it works</strong>
-                  <span>↑ <strong>Push</strong> writes all your Firebase data to an <em>ExpenseTracker</em> tab (safe — never touches your existing data).</span><br />
-                  <span>↓ <strong>Pull</strong> reads columns A/B (income) + paired expense columns D/E, F/G … dynamically, and saves to Firestore.</span><br />
-                  <span style={{ marginTop: 4, display: 'block' }}>Share your sheet with the <strong>service account email</strong> in <code style={{ background: 'var(--border)', padding: '1px 4px', borderRadius: 3 }}>server/.env</code>.</span>
-                </div>
-              </div>
-            </Card>
-            )}
 
             {/* ── Install App (Visible only when visiting website via browser, hidden when running in standalone installed app) ── */}
             {!isStandalone && (

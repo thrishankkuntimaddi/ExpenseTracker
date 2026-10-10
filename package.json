@@ -8,8 +8,6 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "node server/index.js",
-    "server:dev": "node --watch server/index.js",
     "test": "TZ=Asia/Kolkata vitest run"
   },
   "dependencies": {

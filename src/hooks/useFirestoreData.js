@@ -17,7 +17,7 @@ import {
 } from "../services/firestore";
 import { getSavedTheme, saveTheme } from "../utils/storage";
 
-const DEFAULT_SETTINGS = { theme: getSavedTheme(), googleSheetUrl: "" };
+const DEFAULT_SETTINGS = { theme: getSavedTheme() };
 
 /**
  * Real-time Firestore data for the authenticated user.

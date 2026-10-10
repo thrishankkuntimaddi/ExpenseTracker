@@ -13,10 +13,6 @@ vi.mock('../services/firestore', () => ({
   closeExternalTransaction: async () => {}, deleteExternalTransaction: async () => {},
   moveToRecentlyDeleted: async () => {}, roundMoney: (n) => n,
 }));
-vi.mock('../services/googleSheets', () => ({
-  pushToSheet: async () => ({}), pullFromSheet: async () => ({}), validateSheet: async () => ({}),
-  checkServerHealth: async () => false, SHEETS_SYNC_AVAILABLE: false,
-}));
 
 const { default: TodayTab } = await import('../features/transactions/TodayTab');
 const { default: HistoryTab } = await import('../features/transactions/HistoryTab');
@@ -54,7 +50,7 @@ const income = [
   { id: 'i2', name: 'Ravi', amount: 400, isRepaymentRec: true, date: iso(4), month: month(iso(4)) },
 ];
 const settings = {
-  theme: 'light', googleSheetUrl: '',
+  theme: 'light',
   carryForward: { enabled: true, startMonth: month(iso(0)), includeNegative: false },
   budgets: { total: 25000, categories: { food: 4000, fuel: 2000 } },
   categoryRules: { 'amazon': 'groceries' },

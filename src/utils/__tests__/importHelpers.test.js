@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseCSV, parseAmount, csvToRecords, prepareSheetRecords, normaliseDate } from '../importHelpers';
+import { parseCSV, parseAmount, csvToRecords, normaliseDate } from '../importHelpers';
 import { localDateKey } from '../dateHelpers';
 
 describe('parseCSV', () => {
@@ -55,29 +55,5 @@ describe('csvToRecords', () => {
 
   it('rejects CSVs without required columns', () => {
     expect(() => csvToRecords('foo,bar\n1,2\n')).toThrow(/amount/);
-  });
-});
-
-describe('prepareSheetRecords', () => {
-  const pulled = {
-    spreadsheetId: 'sheet1',
-    income: [{ name: 'Salary', amount: 1000, type: 'income', row: 2, col: 'A' }],
-    transactions: [{ name: 'Milk', amount: 30, type: 'expense', row: 2, col: 'D' }],
-  };
-
-  it('assigns stable ids and drops row/col', () => {
-    const r = prepareSheetRecords(pulled, new Set());
-    expect(r.transactions[0].id).toMatch(/^sheet_/);
-    expect(r.transactions[0]).not.toHaveProperty('row');
-    expect(r.duplicates).toBe(0);
-  });
-
-  it('skips rows already imported by an earlier pull', () => {
-    const first = prepareSheetRecords(pulled, new Set());
-    const existing = new Set([...first.transactions, ...first.income].map(x => x.id));
-    const second = prepareSheetRecords(pulled, existing);
-    expect(second.transactions).toEqual([]);
-    expect(second.income).toEqual([]);
-    expect(second.duplicates).toBe(2);
   });
 });

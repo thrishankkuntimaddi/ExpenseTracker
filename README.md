@@ -1,6 +1,6 @@
 # ⚡ Expense Tracker — Personal Finance, Reimagined
 
-> **Smart, cloud-synced personal finance tracking with auto-categorised spending, monthly budgets with a daily "safe to spend", recurring entries, savings goals, plain-language insights, person ledgers, wastage analytics, billing sessions, Google Sheets integration, and a fully responsive offline-capable PWA.**
+> **Smart, cloud-synced personal finance tracking with auto-categorised spending, monthly budgets with a daily "safe to spend", recurring entries, savings goals, plain-language insights, person ledgers, wastage analytics, billing sessions and a fully responsive offline-capable PWA.**
 
 ---
 
@@ -17,7 +17,6 @@ Unlike basic spreadsheet trackers, this app:
 - **Tracks money with people** — lent, borrowed, repaid and gifted amounts roll up into all-time per-person balances.
 - **Tracks wastage** at the transaction level — mark any expense as wasted (single-tap) or set a partial waste amount (double-tap), giving you an instant "wastage percentage" of your spending.
 - **Manages external/proxy transactions** — record money you spend on behalf of someone else, log the settlement, and track net profit/loss per session.
-- Supports **Google Sheets two-way sync** (push all data to a sheet, pull data back), bridged through an authenticated Express proxy so credentials never reach the browser.
 - Works as an installable **Progressive Web App (PWA)** that keeps working offline (Firestore IndexedDB cache) and auto-updates on deploy.
 
 ---
@@ -28,7 +27,6 @@ The app is deployed via **GitHub Pages**:
 
 **🔗 [https://thrishankkuntimaddi.github.io/ExpenseTracker/](https://thrishankkuntimaddi.github.io/ExpenseTracker/)**
 
-> Google Sheets sync needs the Express proxy (`server/`). The deployed build hides the Sheets controls unless it was built with `VITE_SHEETS_PROXY_URL`; every other feature works on the deployed version.
 
 ---
 
@@ -124,12 +122,6 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 - **Area chart**: 6-month Income vs. Expense trend
 - Key metrics: total income, total expense, total savings, total given, net balance, average daily/weekly/monthly spend, and wastage percentage
 
-### 📤 Google Sheets Two-Way Sync
-- **Push**: writes all Firestore transactions + income to an `ExpenseTracker` tab in your linked Google Sheet
-- **Pull**: reads from your sheet (income from columns A/B, expense pairs from D/E, F/G, etc.) and saves records to Firestore
-- All API calls are proxied through a local Express server — **your service account key never touches the browser**
-- Live server-health indicator in Settings (green dot = online, red = offline with run command shown)
-
 ### ⚙️ Settings & Data Management
 - **Export JSON**: download a full backup of all transactions, income, and settings (budgets, goals, category rules included)
 - **Export CSV**: a spreadsheet with categories that the app's own CSV importer accepts — round-trips cleanly
@@ -164,7 +156,6 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 | **Fonts** | Inter (Google Fonts) |
 | **CSS** | Vanilla CSS with CSS Custom Properties (design tokens) |
 | **PWA** | Web App Manifest + custom Service Worker |
-| **Google Sheets Proxy** | Node.js + Express + `googleapis` |
 | **Build Tool** | Vite (base path `/ExpenseTracker/`) |
 | **Deployment** | GitHub Pages |
 | **Linting** | ESLint 9 (flat config) |
@@ -197,7 +188,7 @@ ExpenseTracker/
 │   │   ├── persons/            # Person ledgers
 │   │   ├── plan/               # PlanTab: budget editor, recurring rules, savings goals (+ reusable cards)
 │   │   ├── stats/              # Charts, key metrics, InsightsCard, CategoryBreakdown, SpendingCalendar
-│   │   └── settings/           # Theme, import/export (JSON + CSV), Google Sheets, account
+│   │   └── settings/           # Theme, import/export (JSON + CSV), account
 │   │
 │   ├── components/             # DesktopDashboard, modals, CategoryPicker, ModalShell, PeriodSelector, LoadMonthlyData
 │   │
@@ -214,7 +205,6 @@ ExpenseTracker/
 │   │   ├── firebaseConfig.js   # Public Firebase web config (shared with scripts/)
 │   │   ├── firebase.js         # App, Auth, Firestore (persistent cache), optional App Check
 │   │   ├── firestore.js        # Firestore CRUD, batched import/reset, atomic trash/restore
-│   │   └── googleSheets.js     # Authenticated calls to the Sheets proxy
 │   │
 │   └── utils/
 │       ├── finance.js          # ALL money maths: balances, person debts, settlement matching
@@ -227,7 +217,7 @@ ExpenseTracker/
 │       ├── insights.js         # Rule-based insights engine (pure, offline)
 │       ├── smartInput.js       # "chai 20" quick-entry parsing
 │       ├── exportHelpers.js    # CSV export (round-trips through importHelpers)
-│       ├── importHelpers.js    # CSV parser, stable import ids, sheet-record prep
+│       ├── importHelpers.js    # CSV parser, stable import ids
 │       ├── dateHelpers.js      # Formatting + local-time date keys
 │       ├── periodHelpers.js    # Period filtering (local calendar)
 │       ├── typeConfig.js       # Transaction type metadata
@@ -237,12 +227,6 @@ ExpenseTracker/
 ├── public/
 │   ├── manifest.json           # PWA Web App Manifest
 │   └── sw.js                   # Service Worker (cache name stamped per build)
-│
-└── server/                     # Google Sheets Proxy (Node.js / Express)
-    ├── index.js                # Express entry (CORS, rate limit, auth, /api/sheets/*)
-    ├── middleware/auth.js      # Firebase ID-token verification (+ optional UID allow-list)
-    ├── api/sheets.js           # Route handlers (push, pull, validate)
-    └── services/               # Google Sheets API wrapper (googleapis)
 ```
 
 ---
@@ -253,7 +237,6 @@ ExpenseTracker/
 
 - **Node.js** ≥ 20.19 (required by Vite 8 / Vitest)
 - A **Firebase project** with Firestore and Authentication (Email/Password) enabled
-- *(Optional)* A Google Cloud service account with the Sheets API enabled, for the Sheets sync feature
 
 ### 1. Clone and install
 
@@ -294,17 +277,6 @@ npm run lint
 npm test         # runs in Asia/Kolkata timezone to exercise local-date edge cases
 ```
 
-### 5. *(Optional)* Google Sheets proxy
-
-```bash
-cd server
-cp .env.example .env   # fill in GOOGLE_SERVICE_ACCOUNT_KEY (see comments in the file)
-npm install
-npm run dev
-```
-
-The proxy listens on `127.0.0.1:3001`. Every `/api/sheets/*` call must carry the signed-in user's Firebase ID token (the app sends it automatically) and is rate-limited to 30 requests/minute. The service account needs **no** project IAM role — just share each sheet with its email.
-
 ---
 
 ## 🔑 Environment Variables
@@ -314,15 +286,11 @@ The proxy listens on `127.0.0.1:3001`. Every `/api/sheets/*` call must carry the
 | Variable | Description |
 |---|---|
 | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID` | **Required.** Firebase web config (see `.env.example`). In CI these are GitHub repository *variables*. |
-| `VITE_SHEETS_PROXY_URL` | URL of the Sheets proxy. In dev it defaults to `http://localhost:3001`; a production build only shows Sheets sync when this is set. |
 | `VITE_APPCHECK_SITE_KEY` | reCAPTCHA v3 site key. When set, Firebase **App Check** is enabled so only this app can call your backend. Register the key in Firebase Console → App Check, then turn on enforcement for Firestore. |
 
 In CI these come from GitHub repository **variables** of the same name.
 
-### Server (`server/.env`)
-
-| Variable | Description |
-|---|---|
+---|---|
 | `GOOGLE_SERVICE_ACCOUNT_KEY` | Full JSON of the service-account key, minified to one line |
 | `PORT` / `HOST` | Listen port (default `3001`) and interface (default `127.0.0.1`) |
 | `FRONTEND_URL` | CORS origin for the frontend (e.g. `http://localhost:5173`) |
@@ -360,7 +328,7 @@ Firestore listeners (subscribeToUserData) ─▶ React state
 
 ```
 users/{uid}                         ← { email, settings, createdAt }
-  │                                    settings = { theme, googleSheetUrl,
+  │                                    settings = { theme,
   │                                                 carryForward: { enabled, startMonth: 'YYYY-MM', includeNegative },
   │                                                 budgets: { total, categories: { food: 6000, … } },
   │                                                 categoryRules: { "swiggy": "food", … },
@@ -392,7 +360,6 @@ Posted recurring occurrences are ordinary transaction / income documents whose i
 | Lost edits in billing autosave | Pending edits are merged per session and flushed on unmount / before close |
 | Flash of wrong theme on load | Inline script applies the cached theme before React mounts |
 | Service Worker serving stale assets | Cache name stamped with the build ID; `SKIP_WAITING` + `controllerchange` reload |
-| Google Sheets credentials in the browser | Calls go through the Express proxy, which verifies Firebase ID tokens; credentials live only in `server/.env` |
 
 ---
 
@@ -409,7 +376,6 @@ Posted recurring occurrences are ordinary transaction / income documents whose i
 - [ ] **Shared Budgets**: collaborative mode where two users (e.g., partners) share a budget workspace
 - [ ] **Native Mobile App**: a store build (Capacitor / React Native) once there is a reason to go beyond the PWA
 - [ ] **LLM-powered insights**: a natural-language layer over the rule-based engine (e.g. ask "why was October expensive?")
-- [ ] **Backend Deployment for Sheets Sync**: host the (already authenticated) Express proxy on a cloud service and build with `VITE_SHEETS_PROXY_URL` so Sheets sync works on the deployed site
 
 ---
 
@@ -423,7 +389,7 @@ Posted recurring occurrences are ordinary transaction / income documents whose i
 | **Billings Tab** | Proxy session manager — open sessions with amount paid + settlement; closed session ledger |
 | **Plan Tab** | Monthly budget (total + per category), recurring rules with due / upcoming, savings goals |
 | **Stats Tab** | Insights, budget, category breakdown, spending calendar, pie, 14-day bar and 6-month area charts + KPI cards |
-| **Settings Tab** | Theme toggle, export (JSON + CSV) / import (JSON + CSV), Google Sheets link + push/pull, account sign-out |
+| **Settings Tab** | Theme toggle, export (JSON + CSV) / import (JSON + CSV), account sign-out |
 | **Desktop Dashboard** | Summary strip, quick entry, entries, income, analytics, plus a planning row (insights · budget · categories · calendar) |
 
 ---
@@ -444,7 +410,7 @@ Contributions are welcome! Here's how to get started:
 - Keep components focused and extract shared logic into hooks
 - Add new transaction types to `src/utils/typeConfig.js` — do not define them locally in components
 - All Firestore mutations should go through `useFirestoreData` to maintain optimistic UI consistency
-- Do not commit `.env` files or `server/.env`
+- Do not commit `.env` files
 
 ---
 

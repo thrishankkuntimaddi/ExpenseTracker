@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'server/node_modules']),
+  globalIgnores(['dist']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -30,7 +30,7 @@ export default defineConfig([
   },
   {
     // Node code: Express proxy, scripts, tests, tool configs
-    files: ['server/**/*.js', 'scripts/**/*.{js,mjs}', '**/*.test.{js,jsx}', '*.config.js'],
+    files: ['scripts/**/*.{js,mjs}', '**/*.test.{js,jsx}', '*.config.js'],
     languageOptions: { globals: { ...globals.node } },
   },
 ])

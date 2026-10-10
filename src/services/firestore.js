@@ -98,7 +98,7 @@ export async function ensureUserDoc(uid, email, defaultSettings = {}) {
     await setDoc(ref, {
       email: email ?? null,
       createdAt: serverTimestamp(),
-      settings: { theme: "light", googleSheetUrl: "", ...defaultSettings },
+      settings: { theme: "light", ...defaultSettings },
     }, { merge: true });
   }
 }

@@ -128,32 +128,3 @@ export function csvToRecords(text) {
 
   return { transactions, income, skipped };
 }
-
-/**
- * Give records pulled from Google Sheets stable ids + today's local date,
- * and drop any whose id already exists (so a re-pull never duplicates and
- * never re-dates entries pulled earlier).
- *
- * Each incoming record carries its sheet position: { name, amount, type, row, col }.
- */
-export function prepareSheetRecords({ spreadsheetId, transactions = [], income = [] }, existingIds) {
-  const date  = dateInputToISO(todayInputValue());
-  const month = isoToMonth(date);
-  const tag = (r) => {
-    const { row, col, ...rest } = r;
-    return {
-      ...rest,
-      id: importId('sheet', [spreadsheetId, row, col, r.name.toLowerCase(), r.amount]),
-      date,
-      month,
-    };
-  };
-  const fresh = (r) => !existingIds.has(r.id);
-  const txns = transactions.map(tag).filter(fresh);
-  const inc  = income.map(tag).filter(fresh);
-  return {
-    transactions: txns,
-    income: inc,
-    duplicates: transactions.length + income.length - txns.length - inc.length,
-  };
-}

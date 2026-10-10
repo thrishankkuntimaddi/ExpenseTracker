@@ -60,11 +60,9 @@ Deploy after changes: `firebase deploy --only firestore:rules --project <id>`.
 
 | File | Contains |
 |---|---|
-| `.env`, `.env.local` | Firebase web config, App Check key, proxy URL |
-| `server/.env` | Google service-account JSON for the Sheets proxy — a real secret |
+| `.env`, `.env.local` | Firebase web config, App Check key |
 
-Both are ignored by `.gitignore`. If `server/.env` is ever committed, revoke the
-service-account key in Google Cloud immediately and create a new one.
+These are ignored by `.gitignore`.
 
 ## 6. Reporting
 
