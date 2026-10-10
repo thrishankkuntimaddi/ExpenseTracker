@@ -144,11 +144,12 @@ jobs:
         shell: bash
         run: |
           root="src-tauri/target/${{ matrix.target }}/release/bundle"
-          inst=$(ls "$root"/{dmg,nsis,appimage}/* 2>/dev/null | grep -E '\.(dmg|exe|AppImage)$' | head -1)
+          # find (not ls): folders that don't exist on this platform are simply skipped
+          inst=$(find "$root" -maxdepth 2 -type f \( -name '*.dmg' -o -name '*-setup.exe' -o -name '*.AppImage' \) | head -1)
+          upd=$(find "$root" -maxdepth 2 -type f \( -name '*.app.tar.gz' -o -name '*-setup.exe' -o -name '*.AppImage' \) | head -1)
+          [ -n "$inst" ] && [ -n "$upd" ] && [ -f "$upd.sig" ] || { echo "::error::missing installer/update/signature in $root"; find "$root" -maxdepth 2; exit 1; }
           cp "$inst" "${{ matrix.output }}"
-          # the signed update package: .app.tar.gz on Mac, the installer itself elsewhere
-          upd=$(ls "$root"/{macos,nsis,appimage}/* 2>/dev/null | grep -E '\.(app\.tar\.gz|exe|AppImage)$' | head -1)
-          if [ "${{ matrix.update }}" != "${{ matrix.output }}" ]; then cp "$upd" "${{ matrix.update }}"; fi
+          [ "${{ matrix.update }}" = "${{ matrix.output }}" ] || cp "$upd" "${{ matrix.update }}"
           cp "$upd.sig" "${{ matrix.update }}.sig"
           ls -la ExpenseTracker-*
       - uses: actions/upload-artifact@v4
