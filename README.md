@@ -483,7 +483,7 @@ Posted recurring occurrences are ordinary transaction / income documents whose i
 
 | Screen | Description |
 |---|---|
-| **Expenses Tab** | Quick-add form with type selector, auto-suggested category chips, "chai 20" quick entry, safe-to-spend-today, due recurring card, today's entries |
+| **Expenses Tab** | Month at a glance (spent, today, budget left or balance), quick-add form with auto-suggested category chips and "chai 20" quick entry, due recurring card, recent entries from the last 7 days |
 | **History Tab** | Full transaction log with search, type and category filters, period selector, inline wastage marking, and edit modal |
 | **Income Tab** | Month-grouped income entries with lock badges for closed months; add income with category |
 | **Billings Tab** | Proxy session manager — open sessions with amount paid + settlement; closed session ledger |
