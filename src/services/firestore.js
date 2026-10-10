@@ -2,9 +2,10 @@
 import {
   doc, collection, updateDoc, deleteDoc,
   onSnapshot, query, orderBy, serverTimestamp, setDoc, getDoc,
-  deleteField, getDocs, writeBatch,
+  deleteField, getDocs, writeBatch, getDocsFromServer, getDocFromServer,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { BACKUP_COLLECTIONS, buildBackup } from "../utils/backup";
 
 /* ── Document refs ── */
 const userRef      = (uid)          => doc(db, "users", uid);
@@ -160,6 +161,48 @@ export async function bulkImport(uid, { transactions = [], income = [] }) {
     ...income.map(({ id, ...data }) => (b) =>
       b.set(incDocRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() })),
   ];
+  await commitInChunks(ops);
+}
+
+/* ── Full backup ──
+   Reads every ExpenseTracker collection straight from the server, so the
+   file is complete even if this device's offline cache isn't. Fails with
+   a readable error when offline rather than saving a partial backup.
+─────────────────────────────────────────────────────────────────── */
+export async function exportAllUserData(uid, email) {
+  try {
+    const [userSnap, ...snaps] = await Promise.all([
+      getDocFromServer(userRef(uid)),
+      ...BACKUP_COLLECTIONS.map((name) => getDocsFromServer(collection(db, "users", uid, name))),
+    ]);
+    const collections = Object.fromEntries(BACKUP_COLLECTIONS.map((name, i) =>
+      [name, snaps[i].docs.map((d) => ({ ...d.data(), id: d.id }))]));
+    return buildBackup({ email, settings: userSnap.data()?.settings ?? {}, collections });
+  } catch (err) {
+    if (err?.code === "unavailable") {
+      throw new Error("You're offline. A full backup needs a connection so nothing is left out.");
+    }
+    throw err;
+  }
+}
+
+/* ── Restore a parsed backup (utils/backup.parseBackup) ──
+   Same ids as the file, so a re-run overwrites instead of duplicating.
+   Settings are merged into the user doc; nothing is deleted.
+─────────────────────────────────────────────────────────────────── */
+// Trash items store their own `id` field (see buildTrashItem); other
+// collections only use it as the document id.
+const KEEPS_ID_FIELD = ["recently_deleted"];
+
+export async function restoreBackup(uid, backup) {
+  const ops = BACKUP_COLLECTIONS.flatMap((name) => (backup[name] ?? []).map(({ id, ...data }) => (b) =>
+    b.set(doc(db, "users", uid, name, id), {
+      ...clean(KEEPS_ID_FIELD.includes(name) ? { id, ...data } : data),
+      updatedAt: serverTimestamp(),
+    })));
+  if (backup.settings) {
+    ops.push((b) => b.set(userRef(uid), { settings: backup.settings, updatedAt: serverTimestamp() }, { merge: true }));
+  }
   await commitInChunks(ops);
 }
 

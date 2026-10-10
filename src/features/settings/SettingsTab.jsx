@@ -4,7 +4,8 @@ import {
   ChevronRight, Moon, Sun, FileSpreadsheet,
   Database, Palette, LogOut, RotateCcw, Smartphone, ArrowRightLeft,
 } from 'lucide-react';
-import { deleteAllUserData, bulkImport } from '../../services/firestore';
+import { deleteAllUserData, bulkImport, exportAllUserData, restoreBackup } from '../../services/firestore';
+import { parseBackup, describeBackup } from '../../utils/backup';
 import { csvToRecords } from '../../utils/importHelpers';
 import { recordsToCSV } from '../../utils/exportHelpers';
 import { getCarrySettings } from '../../utils/carryForward';
@@ -29,6 +30,7 @@ export default function SettingsTab({
   const carry = getCarrySettings(settings);
   const setCarry = (patch) => onPatchSettings?.({ carryForward: { ...carry, ...patch } });
   const [importing, setImporting]     = useState(false);
+  const [exporting, setExporting]     = useState(false);
   const [showTrashModal, setShowTrashModal] = useState(false);
   const [showInstallGuideModal, setShowInstallGuideModal] = useState(false);
   const fileInputRef = useRef(null);
@@ -55,17 +57,24 @@ export default function SettingsTab({
     }
   }
 
-  // FIX: reads from live React state (transactions / income props), NOT localStorage cache
-  function handleExport() {
-    const payload = { transactions, income, settings };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url;
-    a.download = `expense-tracker-${todayInputValue()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showFeedback(`Exported ${transactions.length} transactions & ${income.length} income entries.`);
+  /* Full backup: every collection, read from the server (see exportAllUserData) */
+  async function handleExport() {
+    if (!user?.uid) { showFeedback('You must be logged in to export.', true); return; }
+    setExporting(true);
+    try {
+      const backup = await exportAllUserData(user.uid, user.email);
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = `expense-tracker-backup-${todayInputValue()}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showFeedback(`Backup saved: ${describeBackup(backup)}.`);
+    } catch (err) {
+      showFeedback(`Backup failed: ${err.message}`, true);
+      console.error('[Export]', err);
+    } finally { setExporting(false); }
   }
 
   function handleExportCSV() {
@@ -106,21 +115,20 @@ export default function SettingsTab({
   }
 
   function handleImport(e) {
-    readFile(e, (text) => {
-      let p;
-      try { p = JSON.parse(text); } catch { showFeedback('Invalid JSON file.', true); return; }
-      if (!Array.isArray(p.transactions) || !Array.isArray(p.income)) {
-        showFeedback('Invalid JSON file.', true); return;
-      }
-      // Mirrors validEntry() in firestore.rules so one bad row can't fail a whole batch
-      const valid = (r) => r && typeof r.id === 'string' && r.id && !r.id.includes('/')
-        && Number.isFinite(Number(r.amount))
-        && typeof r.date === 'string' && r.date.length <= 40
-        && typeof r.name === 'string' && r.name.trim() && r.name.length <= 500;
-      const transactions = p.transactions.filter(valid).map((r) => ({ ...r, amount: Number(r.amount) }));
-      const income       = p.income.filter(valid).map((r) => ({ ...r, amount: Number(r.amount) }));
-      const skipped = p.transactions.length + p.income.length - transactions.length - income.length;
-      runImport({ transactions, income }, skipped ? ` (${skipped} invalid rows skipped)` : '');
+    readFile(e, async (text) => {
+      let backup;
+      try { backup = parseBackup(text); } catch (err) { showFeedback(err.message, true); return; }
+      if (!user?.uid) { showFeedback('You must be logged in to import.', true); return; }
+      const skipped = Object.values(backup.skipped).reduce((a, b) => a + b, 0);
+      setImporting(true);
+      try {
+        await restoreBackup(user.uid, backup);
+        showFeedback(`Restored ${describeBackup(backup)}${backup.settings ? ' and your settings' : ''}`
+          + (skipped ? ` (${skipped} invalid records skipped)` : '') + '.');
+      } catch (err) {
+        showFeedback(`Import failed: ${err.message}. Some records may not have been saved — re-run the import to finish (it won't duplicate).`, true);
+        console.error('[Import]', err);
+      } finally { setImporting(false); }
     });
   }
 
@@ -239,9 +247,9 @@ export default function SettingsTab({
             <SectionLabel Icon={Database}>Data Management</SectionLabel>
             <Card>
               <ActionRow id="btn-recently-deleted" Icon={RotateCcw} label="Recently Deleted" sub={`${recentlyDeleted.length} ${recentlyDeleted.length === 1 ? 'item' : 'items'} in trash — view or revert`} iconColor="var(--expense)" onClick={() => setShowTrashModal(true)} />
-              <ActionRow id="btn-export" Icon={Download} label="Export Backup (JSON)" sub={`Full backup — ${transactions.length} txns, ${income.length} income, settings`} iconColor="var(--savings)" onClick={handleExport} />
+              <ActionRow id="btn-export" Icon={Download} label={exporting ? 'Preparing backup…' : 'Export Backup (JSON)'} sub="Everything: transactions, income, billings, trips, recurring, trash, settings" iconColor="var(--savings)" onClick={() => !exporting && handleExport()} />
               <ActionRow id="btn-export-csv" Icon={FileSpreadsheet} label="Export Spreadsheet (CSV)" sub="With categories — opens in Excel / Google Sheets; re-importable" iconColor="var(--income)" onClick={handleExportCSV} />
-              <ActionRow id="btn-import" Icon={Upload}   label={importing ? 'Importing…' : 'Import Data'}   sub="Restore from JSON backup file (writes to cloud)"          iconColor="var(--accent)"  onClick={() => !importing && fileInputRef.current?.click()} />
+              <ActionRow id="btn-import" Icon={Upload}   label={importing ? 'Importing…' : 'Import Data'}   sub="Restore a JSON backup — safe to re-run, never duplicates"          iconColor="var(--accent)"  onClick={() => !importing && fileInputRef.current?.click()} />
               <ActionRow id="btn-csv"    Icon={FileSpreadsheet} label={importing ? 'Importing…' : 'Import CSV'}  sub="Import .csv file (date,name,amount,type) → cloud"    iconColor="var(--income)"  onClick={() => !importing && csvInputRef.current?.click()} />
               <ActionRow id="btn-reset"  Icon={Trash2}   label="Reset All Data" sub="Permanently deletes all transactions, income, billings and trash"      iconColor="var(--expense)" onClick={handleResetData} danger lastRow />
               <input ref={fileInputRef} type="file" accept=".json"     style={{ display: 'none' }} onChange={handleImport}    />
