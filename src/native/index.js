@@ -60,3 +60,14 @@ export const autostart = {
   get: () => (platform === 'desktop' ? invoke('get_autostart').catch(() => false) : Promise.resolve(false)),
   set: (on) => (platform === 'desktop' ? invoke('set_autostart', { on }).catch(() => false) : Promise.resolve(false)),
 };
+
+/** The web engine the app runs in (Android: Android System WebView). */
+export const engineVersion = (() => {
+  const m = typeof navigator !== 'undefined' && /Chrome\/(\d+)/.exec(navigator.userAgent);
+  return m ? Number(m[1]) : null;
+})();
+/* Android System WebView older than this paints glitches (stale "ghost"
+   copies after scrolling) and is slower; it updates through the Play Store. */
+export const OLD_WEBVIEW = 130;
+export const webviewOutdated = platform === 'android' && engineVersion != null && engineVersion < OLD_WEBVIEW;
+export const WEBVIEW_PLAY_URL = 'https://play.google.com/store/apps/details?id=com.google.android.webview';

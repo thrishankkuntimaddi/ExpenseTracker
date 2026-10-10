@@ -9,7 +9,7 @@ import { deleteAllUserData, bulkImport, exportAllUserData, restoreBackup } from 
 import { parseBackup, describeBackup } from '../../utils/backup';
 import { useSyncStatus, describeSync, timeAgo } from '../../services/sync';
 import { OPEN_NOW_MS } from '../../hooks/useDevices';
-import { platform, isNative } from '../../native';
+import { platform, isNative, engineVersion, webviewOutdated, WEBVIEW_PLAY_URL } from '../../native';
 import { pickDownload, downloadUrl, detectArch, RELEASES } from '../../utils/downloads';
 
 const SHELL_LABEL = { web: 'Web app', android: 'Android app', ios: 'iOS app', desktop: 'Desktop app' };
@@ -438,6 +438,13 @@ export default function SettingsTab({
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Expense Tracker v{import.meta.env.VITE_APP_VERSION}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{SHELL_LABEL[platform] ?? 'App'} · build {new Date(THIS_BUILD * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {import.meta.env.VITE_APP_COMMIT}</div>
+                {engineVersion && <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>Web engine: Chrome {engineVersion}</div>}
+                {webviewOutdated && (
+                  <a href={WEBVIEW_PLAY_URL} target="_blank" rel="noreferrer" id="webview-outdated"
+                    style={{ display: 'block', fontSize: 11, color: 'var(--lent)', marginTop: 3, lineHeight: 1.45 }}>
+                    Your phone’s web engine is out of date, which can make the app slow or leave drawing glitches. Update “Android System WebView” in the Play Store →
+                  </a>
+                )}
                 <div id="update-status" style={{ fontSize: 11, color: update.kind === 'error' || update.kind === 'native-needed' ? 'var(--lent)' : 'var(--text-muted)', marginTop: 3 }}>
                   {UPDATE_LABEL[update.kind]?.(update) ?? 'Updates install automatically.'}
                 </div>
