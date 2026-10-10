@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Download, Upload, Trash2, Info,
   ChevronRight, Moon, Sun, Monitor, FileSpreadsheet,
@@ -10,6 +10,7 @@ import { parseBackup, describeBackup } from '../../utils/backup';
 import { useSyncStatus, describeSync, timeAgo } from '../../services/sync';
 import { OPEN_NOW_MS } from '../../hooks/useDevices';
 import { platform, isNative } from '../../native';
+import { pickDownload, downloadUrl, detectArch, RELEASES } from '../../utils/downloads';
 
 const SHELL_LABEL = { web: 'Web app', android: 'Android app', ios: 'iOS app', desktop: 'Desktop app' };
 import { csvToRecords } from '../../utils/importHelpers';
@@ -44,6 +45,9 @@ export default function SettingsTab({
   const [confirming, setConfirming]   = useState(null); // 'clear' | 'delete' | 'account' | 'signout' | { kind: 'pending', … }
   const [busyReset, setBusyReset]     = useState(false);
   const sync = useSyncStatus();
+  const [arch, setArch] = useState(null);
+  useEffect(() => { if (!isNative) detectArch().then(setArch); }, []);
+  const download = isNative ? null : pickDownload(typeof navigator !== 'undefined' ? navigator.userAgent : '', arch);
   const syncLine = describeSync(sync);
   const [showInstallGuideModal, setShowInstallGuideModal] = useState(false);
   const fileInputRef = useRef(null);
@@ -323,20 +327,42 @@ export default function SettingsTab({
           {/* ── Column 2 ── */}
           <div style={{ flex: 1, minWidth: 0 }}>
 
-            {/* ── Install App (Visible only when visiting website via browser, hidden when running in standalone installed app) ── */}
-            {!isStandalone && !isNative && (
+            {/* ── Get the app (website only) ── */}
+            {!isNative && (
               <>
-                <SectionLabel Icon={Smartphone}>Mobile App</SectionLabel>
+                <SectionLabel Icon={Smartphone}>Get the app</SectionLabel>
                 <Card>
-                  <ActionRow
-                    id="btn-install-app"
-                    Icon={Smartphone}
-                    label="Install App"
-                    sub="Add to home screen — works offline, opens like an app"
-                    iconColor="var(--accent)"
-                    onClick={handleInstallClick}
-                    lastRow
-                  />
+                  {download && (
+                    <a id="btn-download-app" href={downloadUrl(download.file)} className="settings-row"
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', borderBottom: '1px solid var(--border)', textDecoration: 'none' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--income-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Download size={16} style={{ color: 'var(--income)' }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Download the {download.label}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                          {download.unsure ? 'For Macs with an Apple chip — Intel Macs: see all downloads below' : 'Same account, synced with this website'}
+                        </div>
+                      </div>
+                      <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    </a>
+                  )}
+                  <a href={`${RELEASES}/latest`} target="_blank" rel="noreferrer" className="settings-row"
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', borderBottom: isStandalone ? 'none' : '1px solid var(--border)', textDecoration: 'none' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Laptop size={16} style={{ color: 'var(--text-secondary)' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>All downloads</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Android · Mac · Windows · Linux, with install steps</div>
+                    </div>
+                    <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                  </a>
+                  {!isStandalone && (
+                    <ActionRow id="btn-install-app" Icon={Smartphone} label="Add to home screen"
+                      sub={download ? 'Or install this website as a lightweight app' : 'On iPhone and iPad the website is the app — works offline'}
+                      iconColor="var(--accent)" onClick={handleInstallClick} lastRow />
+                  )}
                 </Card>
               </>
             )}

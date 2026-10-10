@@ -1,0 +1,162 @@
+name: Build apps
+
+# Builds the Android app and the desktop apps, with clear file names.
+#  - Run manually from the Actions tab (files attached to the run), or
+#  - push a tag like v3.1.0 to publish them on a GitHub Release with an install guide.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+# Firebase web config + desktop Google client, from repository variables
+# (or secrets). Exported only when set, so a committed .env still wins.
+env:
+  CFG_VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY || secrets.VITE_FIREBASE_API_KEY }}
+  CFG_VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN || secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+  CFG_VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID || secrets.VITE_FIREBASE_PROJECT_ID }}
+  CFG_VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET || secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+  CFG_VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID || secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+  CFG_VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID || secrets.VITE_FIREBASE_APP_ID }}
+  CFG_VITE_FIREBASE_MEASUREMENT_ID: ${{ vars.VITE_FIREBASE_MEASUREMENT_ID || secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+  CFG_VITE_GOOGLE_DESKTOP_CLIENT_ID: ${{ vars.VITE_GOOGLE_DESKTOP_CLIENT_ID || secrets.VITE_GOOGLE_DESKTOP_CLIENT_ID }}
+  CFG_VITE_GOOGLE_DESKTOP_CLIENT_SECRET: ${{ secrets.VITE_GOOGLE_DESKTOP_CLIENT_SECRET || vars.VITE_GOOGLE_DESKTOP_CLIENT_SECRET }}
+
+jobs:
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Load app config
+        shell: bash
+        run: |
+          for v in $(env | grep -o '^CFG_VITE_[A-Z_]*'); do
+            [ -n "${!v}" ] && echo "${v#CFG_}=${!v}" >> "$GITHUB_ENV"
+          done
+      - run: npm ci
+      - run: node scripts/check-config.mjs
+      - run: npm run android:sync
+      # The same signing key on every release lets people update without reinstalling.
+      - name: Restore signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::ANDROID_KEYSTORE_BASE64 secret not set — building with a temporary debug key (phones can't update from it later)"
+          fi
+      - name: Build APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          if [ -n "$ANDROID_KEYSTORE_PATH" ]; then
+            ./gradlew assembleRelease --no-daemon
+            mv app/build/outputs/apk/release/app-release.apk ../ExpenseTracker-Android.apk
+          else
+            ./gradlew assembleDebug --no-daemon
+            mv app/build/outputs/apk/debug/app-debug.apk ../ExpenseTracker-Android.apk
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ExpenseTracker-Android
+          path: ExpenseTracker-Android.apk
+
+  desktop:
+    name: Desktop (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Mac Apple Silicon
+            os: macos-latest
+            target: aarch64-apple-darwin
+            bundles: dmg
+            output: ExpenseTracker-Mac-AppleSilicon.dmg
+          - name: Mac Intel
+            os: macos-latest
+            target: x86_64-apple-darwin
+            bundles: dmg
+            output: ExpenseTracker-Mac-Intel.dmg
+          - name: Windows
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: nsis
+            output: ExpenseTracker-Windows-Setup.exe
+          - name: Linux
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: appimage
+            output: ExpenseTracker-Linux.AppImage
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.target }}
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+      - name: Load app config
+        shell: bash
+        run: |
+          for v in $(env | grep -o '^CFG_VITE_[A-Z_]*'); do
+            [ -n "${!v}" ] && echo "${v#CFG_}=${!v}" >> "$GITHUB_ENV"
+          done
+      - run: npm ci
+      - run: node scripts/check-config.mjs
+      - run: npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+      - name: Rename installer
+        shell: bash
+        run: |
+          dir="src-tauri/target/${{ matrix.target }}/release/bundle/${{ matrix.bundles }}"
+          file=$(ls "$dir" | grep -E '\.(dmg|exe|AppImage)$' | head -1)
+          mv "$dir/$file" "${{ matrix.output }}"
+          ls -la "${{ matrix.output }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output }}
+          path: ${{ matrix.output }}
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [android, desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Expense Tracker ${{ github.ref_name }}
+          body_path: .github/release-notes.md
+          files: out/*

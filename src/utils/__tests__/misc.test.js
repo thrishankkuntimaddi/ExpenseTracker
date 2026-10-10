@@ -67,3 +67,22 @@ describe('describeDevice', async () => {
     expect(describeDevice('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36 Edg/140.0', 'desktop')).toBe('Desktop app on Windows');
   });
 });
+
+describe('pickDownload', async () => {
+  const { pickDownload } = await import('../downloads');
+  const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/140.0 Safari/537.36';
+  it('chooses the installer for the device', () => {
+    expect(pickDownload('Mozilla/5.0 (Linux; Android 15; Pixel 8) Chrome/140.0 Mobile', null).file).toBe('ExpenseTracker-Android.apk');
+    expect(pickDownload('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140.0', 'x86').file).toBe('ExpenseTracker-Windows-Setup.exe');
+    expect(pickDownload('Mozilla/5.0 (X11; Linux x86_64) Chrome/140.0', 'x86').file).toBe('ExpenseTracker-Linux.AppImage');
+  });
+  it('tells Apple-chip Macs from Intel ones (the UA always says "Intel Mac")', () => {
+    expect(pickDownload(MAC, 'arm').file).toBe('ExpenseTracker-Mac-AppleSilicon.dmg');
+    expect(pickDownload(MAC, 'x86').file).toBe('ExpenseTracker-Mac-Intel.dmg');
+    expect(pickDownload(MAC, null)).toMatchObject({ file: 'ExpenseTracker-Mac-AppleSilicon.dmg', unsure: true });
+  });
+  it('iPhone / iPad get no download (the web app is the app)', () => {
+    expect(pickDownload('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Safari/604.1')).toBeNull();
+    expect(pickDownload('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1')).toBeNull();
+  });
+});

@@ -4,6 +4,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { firebaseConfigError } from '../../services/firebase';
 import AuthScreen from './AuthScreen';
 import { googleSignInAvailable } from '../../native/googleSignIn';
+import { isNative } from '../../native';
+import { RELEASES } from '../../utils/downloads';
 
 /* Shown when the bundle was built without VITE_FIREBASE_* — better than a stuck splash */
 function SetupRequired() {
@@ -95,6 +97,7 @@ export default function AuthGate({ children }) {
         setError={setError}
         loading={authLoading}
         googleAvailable={googleSignInAvailable}
+        appsLink={isNative ? null : `${RELEASES}/latest`}
       />
     );
   }

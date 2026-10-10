@@ -18,7 +18,8 @@ const FEATURES = [
 export default function AuthScreen({
   onSignIn, onSignUp, onGoogle, onResetPassword,
   error, setError, loading,
-  googleAvailable = true,   // false inside the Android / desktop apps until native Google sign-in lands
+  googleAvailable = true,   // false in the desktop app until its Google client is configured
+  appsLink = null,          // website only: link to the app downloads
 }) {
   const [mode, setMode]         = useState('login');
   const [email, setEmail]       = useState('');
@@ -200,6 +201,12 @@ export default function AuthScreen({
             </p>
           )}
         </div>
+        {appsLink && (
+          <a href={appsLink} target="_blank" rel="noreferrer" id="link-get-apps"
+            style={{ marginTop: 16, fontSize: 12, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none' }}>
+            Get the Android, Mac, Windows & Linux apps →
+          </a>
+        )}
       </main>
 
       <style>{`
