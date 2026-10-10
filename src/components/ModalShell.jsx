@@ -3,6 +3,7 @@
 // Matches EditTransactionModal's look so dialogs feel like one family.
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
+import Portal from './Portal';
 
 export default function ModalShell({ title, subtitle, onClose, children, footer, maxWidth = 460, zIndex = 1500 }) {
   useEffect(() => {
@@ -12,44 +13,46 @@ export default function ModalShell({ title, subtitle, onClose, children, footer,
   }, [onClose]);
 
   return (
-    <div
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
-      style={{
-        position: 'fixed', inset: 0, zIndex,
-        background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 16, animation: 'fadeIn 0.15s ease',
-      }}
-    >
+    <Portal>
       <div
-        role="dialog" aria-modal="true" aria-label={title}
+        onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
         style={{
-          background: 'var(--surface)', border: '1.5px solid var(--border)',
-          borderRadius: 22, padding: '22px 22px 18px', maxWidth, width: '100%',
-          boxShadow: 'var(--shadow-md)', animation: 'modalPop 0.2s cubic-bezier(0.16,1,0.3,1)',
-          maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14,
+          position: 'fixed', inset: 0, zIndex,
+          background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 16, animation: 'fadeIn 0.15s ease',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{title}</div>
-            {subtitle && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{subtitle}</div>}
+        <div
+          role="dialog" aria-modal="true" aria-label={title}
+          style={{
+            background: 'var(--surface)', border: '1.5px solid var(--border)',
+            borderRadius: 22, padding: '22px 22px 18px', maxWidth, width: '100%',
+            boxShadow: 'var(--shadow-md)', animation: 'modalPop 0.2s cubic-bezier(0.16,1,0.3,1)',
+            maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{title}</div>
+              {subtitle && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{subtitle}</div>}
+            </div>
+            <button onClick={onClose} aria-label="Close" style={{
+              width: 30, height: 30, borderRadius: 9, border: 'none', background: 'var(--surface2)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)',
+            }}>
+              <X size={15} />
+            </button>
           </div>
-          <button onClick={onClose} aria-label="Close" style={{
-            width: 30, height: 30, borderRadius: 9, border: 'none', background: 'var(--surface2)',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)',
-          }}>
-            <X size={15} />
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{children}</div>
+          {footer && <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>{footer}</div>}
+          <style>{`
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes modalPop { from { opacity: 0; transform: scale(0.93) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+          `}</style>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{children}</div>
-        {footer && <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>{footer}</div>}
-        <style>{`
-          @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-          @keyframes modalPop { from { opacity: 0; transform: scale(0.93) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        `}</style>
       </div>
-    </div>
+    </Portal>
   );
 }
 

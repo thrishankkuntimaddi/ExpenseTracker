@@ -6,6 +6,7 @@ import { dateInputToISO, localMonthKey } from '../utils/dateHelpers';
 import { importId } from '../utils/importHelpers';
 import { bulkImport } from '../services/firestore';
 import { auth } from '../services/firebase';
+import Portal from './Portal';
 
 /* ── Parse text block: "[Day/Date] Name Amount" per line ── */
 function parseEntries(text, selectedMonth) {
@@ -178,269 +179,271 @@ export default function LoadMonthlyData({
   const canImport = status !== 'importing' && (preview?.total ?? 0) > 0;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        ref={overlayRef}
-        onClick={e => { if (e.target === overlayRef.current) onClose(); }}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 200,
-          background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '16px', animation: 'lmd-fade-in 0.18s ease',
-        }}
-      >
-        {/* Modal */}
-        <div style={{
-          background: 'var(--surface)', borderRadius: 20,
-          border: '1px solid var(--border)',
-          boxShadow: '0 24px 60px rgba(0,0,0,0.3)',
-          width: '100%', maxWidth: 500, maxHeight: '92vh',
-          display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          animation: 'lmd-slide-up 0.22s cubic-bezier(0.16,1,0.3,1)',
-        }}>
-
-          {/* Header */}
+    <Portal>
+      <>
+        {/* Backdrop */}
+        <div
+          ref={overlayRef}
+          onClick={e => { if (e.target === overlayRef.current) onClose(); }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '16px', animation: 'lmd-fade-in 0.18s ease',
+          }}
+        >
+          {/* Modal */}
           <div style={{
-            padding: '18px 20px 14px', borderBottom: '1px solid var(--border)',
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-            flexShrink: 0,
+            background: 'var(--surface)', borderRadius: 20,
+            border: '1px solid var(--border)',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.3)',
+            width: '100%', maxWidth: 500, maxHeight: '92vh',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            animation: 'lmd-slide-up 0.22s cubic-bezier(0.16,1,0.3,1)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Upload size={16} style={{ color: 'var(--accent)' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>
-                  Load Past Data
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                  Import historical income &amp; expenses
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              style={{
-                width: 30, height: 30, borderRadius: 8,
-                background: 'var(--surface2)', border: '1px solid var(--border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--expense-bg)'; e.currentTarget.style.color = 'var(--expense)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
-            >
-              <X size={14} />
-            </button>
-          </div>
 
-          {/* Body */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px' }}>
-
-            {status === 'success' ? (
-              /* ── Success ── */
-              <div style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', padding: '32px 16px', gap: 14, textAlign: 'center',
-              }}>
+            {/* Header */}
+            <div style={{
+              padding: '18px 20px 14px', borderBottom: '1px solid var(--border)',
+              display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+              flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{
-                  width: 64, height: 64, borderRadius: 20,
-                  background: 'var(--income-bg)', border: '2px solid var(--income-border)',
+                  width: 36, height: 36, borderRadius: 10,
+                  background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <CheckCircle2 size={32} style={{ color: 'var(--income)' }} />
+                  <Upload size={16} style={{ color: 'var(--accent)' }} />
                 </div>
                 <div>
-                  <p style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', margin: 0 }}>
-                    Data Imported Successfully!
-                  </p>
-                  <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6 }}>
-                  {formatMonthLabel(selectedMonth)} data has been saved.
-                  </p>
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-                  {preview?.income > 0 && (
-                    <span style={{ padding: '5px 12px', borderRadius: 20, background: 'var(--income-bg)', color: 'var(--income)', fontSize: 12, fontWeight: 700, border: '1px solid var(--income-border)' }}>
-                      {preview.income} income entries
-                    </span>
-                  )}
-                  {preview?.expense > 0 && (
-                    <span style={{ padding: '5px 12px', borderRadius: 20, background: 'var(--expense-bg)', color: 'var(--expense)', fontSize: 12, fontWeight: 700, border: '1px solid var(--expense-border)' }}>
-                      {preview.expense} expense entries
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                  <button
-                    onClick={() => { setStatus('idle'); setIncomeText(''); setExpenseText(''); setSelectedMonth(currentMonth); }}
-                    style={{ padding: '10px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700, background: 'var(--surface2)', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit' }}
-                  >
-                    Import Another
-                  </button>
-                  <button
-                    onClick={onClose}
-                    style={{ padding: '10px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700, background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-                  >
-                    Done
-                  </button>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>
+                    Load Past Data
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                    Import historical income &amp; expenses
+                  </div>
                 </div>
               </div>
-            ) : (
-              <>
-                {/* Month/Year Selector */}
-                <div style={{ marginBottom: 14 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
-                    <Calendar size={11} />
-                    Target Month &amp; Year
-                  </label>
-                  <input
-                    type="month"
-                    value={selectedMonth}
-                    onChange={e => setSelectedMonth(e.target.value)}
-                    style={{
-                      width: '100%', padding: '10px 14px',
-                      borderRadius: 10, fontSize: 14, fontWeight: 700,
-                      border: '1.5px solid var(--accent-border)',
-                      background: 'var(--accent-bg)', color: 'var(--accent)',
-                      outline: 'none', fontFamily: 'inherit',
-                      cursor: 'pointer',
-                    }}
-                  />
-                </div>
-
-                {/* Already-imported info banner */}
-                {alreadyImported && (
-                  <div style={{
-                    padding: '8px 14px', borderRadius: 10, marginBottom: 14,
-                    background: 'var(--income-bg)', border: '1px solid var(--income-border)',
-                    fontSize: 11, color: 'var(--income)', fontWeight: 600,
-                  }}>
-                    ℹ️ Data already exists for {formatMonthLabel(selectedMonth)}. You can still add more entries.
-                  </div>
-                )}
-
-                {/* Format hint */}
-                <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--surface2)', border: '1px solid var(--border)', marginBottom: 14 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', margin: '0 0 4px' }}>
-                    <FileText size={10} style={{ display: 'inline', marginRight: 4 }} />
-                    Format: <code style={{ background: 'var(--surface3)', padding: '1px 5px', borderRadius: 4 }}>[Day] Name Amount</code> (one per line)
-                  </p>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                    • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>01 Salary 25000</span> (Day 1 of selected month)<br/>
-                    • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>15 Rent 8000</span> (Day 15 of selected month)<br/>
-                    • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>Tea 15</span> (Defaults to Day 1)
-                  </div>
-                </div>
-
-                {/* Income */}
-                <div style={{ marginBottom: 14 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--income)', display: 'inline-block' }} />
-                      Income
-                    </span>
-                    {preview?.income > 0 && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--income)', background: 'var(--income-bg)', padding: '2px 8px', borderRadius: 20, border: '1px solid var(--income-border)', textTransform: 'none' }}>
-                        {preview.income} entries · {f(preview.incTotal)}
-                      </span>
-                    )}
-                  </label>
-                  <textarea
-                    placeholder={"01 Salary 25000\n15 Freelance 5000\n25 Bonus 2000"}
-                    value={incomeText}
-                    onChange={e => setIncomeText(e.target.value)}
-                    style={textAreaStyle}
-                    onFocus={e => (e.target.style.borderColor = 'var(--income)')}
-                    onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
-                  />
-                </div>
-
-                {/* Expenses */}
-                <div style={{ marginBottom: errorMsg ? 12 : 0 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--expense)', display: 'inline-block' }} />
-                      Expenses
-                    </span>
-                    {preview?.expense > 0 && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--expense)', background: 'var(--expense-bg)', padding: '2px 8px', borderRadius: 20, border: '1px solid var(--expense-border)', textTransform: 'none' }}>
-                        {preview.expense} entries · {f(preview.expTotal)}
-                      </span>
-                    )}
-                  </label>
-                  <textarea
-                    placeholder={"01 Rent 8000\n05 Electricity 1200\n12 Grocery 1500\n20 Tea 15"}
-                    value={expenseText}
-                    onChange={e => setExpenseText(e.target.value)}
-                    style={textAreaStyle}
-                    onFocus={e => (e.target.style.borderColor = 'var(--expense)')}
-                    onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
-                  />
-                </div>
-
-                {/* Error */}
-                {errorMsg && (
-                  <div style={{ padding: '10px 14px', borderRadius: 10, marginTop: 12, background: 'var(--expense-bg)', border: '1.5px solid var(--expense-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <AlertCircle size={14} style={{ color: 'var(--expense)', flexShrink: 0 }} />
-                    <p style={{ fontSize: 12, color: 'var(--expense)', fontWeight: 600, margin: 0 }}>{errorMsg}</p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Footer */}
-          {status !== 'success' && (
-            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, flexShrink: 0, background: 'var(--surface)' }}>
               <button
                 onClick={onClose}
-                style={{ flex: 1, padding: '11px', borderRadius: 10, fontSize: 13, fontWeight: 700, background: 'var(--surface2)', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleImport}
-                disabled={!canImport}
                 style={{
-                  flex: 2, padding: '11px', borderRadius: 10, fontSize: 13, fontWeight: 800,
-                  background: canImport ? 'var(--accent)' : 'var(--surface2)',
-                  color: canImport ? '#fff' : 'var(--text-muted)',
-                  border: 'none', cursor: canImport ? 'pointer' : 'not-allowed',
-                  fontFamily: 'inherit',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  transition: 'all 0.15s',
+                  width: 30, height: 30, borderRadius: 8,
+                  background: 'var(--surface2)', border: '1px solid var(--border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0,
                 }}
-                onMouseEnter={e => { if (canImport) e.currentTarget.style.background = 'var(--accent-hover)'; }}
-                onMouseLeave={e => { if (canImport) e.currentTarget.style.background = 'var(--accent)'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--expense-bg)'; e.currentTarget.style.color = 'var(--expense)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
               >
-                {status === 'importing' ? (
-                  <>
-                    <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
-                    Importing…
-                  </>
-                ) : (
-                  <>
-                    <Upload size={14} />
-                    {(preview?.total ?? 0) > 0 ? `Import ${preview.total} Entries` : 'Import Data'}
-                  </>
-                )}
+                <X size={14} />
               </button>
             </div>
-          )}
-        </div>
-      </div>
 
-      <style>{`
-        @keyframes lmd-fade-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes lmd-slide-up {
-          from { opacity: 0; transform: translateY(20px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0)    scale(1);    }
-        }
-      `}</style>
-    </>
+            {/* Body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px' }}>
+
+              {status === 'success' ? (
+                /* ── Success ── */
+                <div style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  justifyContent: 'center', padding: '32px 16px', gap: 14, textAlign: 'center',
+                }}>
+                  <div style={{
+                    width: 64, height: 64, borderRadius: 20,
+                    background: 'var(--income-bg)', border: '2px solid var(--income-border)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <CheckCircle2 size={32} style={{ color: 'var(--income)' }} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', margin: 0 }}>
+                      Data Imported Successfully!
+                    </p>
+                    <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6 }}>
+                    {formatMonthLabel(selectedMonth)} data has been saved.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {preview?.income > 0 && (
+                      <span style={{ padding: '5px 12px', borderRadius: 20, background: 'var(--income-bg)', color: 'var(--income)', fontSize: 12, fontWeight: 700, border: '1px solid var(--income-border)' }}>
+                        {preview.income} income entries
+                      </span>
+                    )}
+                    {preview?.expense > 0 && (
+                      <span style={{ padding: '5px 12px', borderRadius: 20, background: 'var(--expense-bg)', color: 'var(--expense)', fontSize: 12, fontWeight: 700, border: '1px solid var(--expense-border)' }}>
+                        {preview.expense} expense entries
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                    <button
+                      onClick={() => { setStatus('idle'); setIncomeText(''); setExpenseText(''); setSelectedMonth(currentMonth); }}
+                      style={{ padding: '10px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700, background: 'var(--surface2)', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      Import Another
+                    </button>
+                    <button
+                      onClick={onClose}
+                      style={{ padding: '10px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700, background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Month/Year Selector */}
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
+                      <Calendar size={11} />
+                      Target Month &amp; Year
+                    </label>
+                    <input
+                      type="month"
+                      value={selectedMonth}
+                      onChange={e => setSelectedMonth(e.target.value)}
+                      style={{
+                        width: '100%', padding: '10px 14px',
+                        borderRadius: 10, fontSize: 14, fontWeight: 700,
+                        border: '1.5px solid var(--accent-border)',
+                        background: 'var(--accent-bg)', color: 'var(--accent)',
+                        outline: 'none', fontFamily: 'inherit',
+                        cursor: 'pointer',
+                      }}
+                    />
+                  </div>
+
+                  {/* Already-imported info banner */}
+                  {alreadyImported && (
+                    <div style={{
+                      padding: '8px 14px', borderRadius: 10, marginBottom: 14,
+                      background: 'var(--income-bg)', border: '1px solid var(--income-border)',
+                      fontSize: 11, color: 'var(--income)', fontWeight: 600,
+                    }}>
+                      ℹ️ Data already exists for {formatMonthLabel(selectedMonth)}. You can still add more entries.
+                    </div>
+                  )}
+
+                  {/* Format hint */}
+                  <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--surface2)', border: '1px solid var(--border)', marginBottom: 14 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', margin: '0 0 4px' }}>
+                      <FileText size={10} style={{ display: 'inline', marginRight: 4 }} />
+                      Format: <code style={{ background: 'var(--surface3)', padding: '1px 5px', borderRadius: 4 }}>[Day] Name Amount</code> (one per line)
+                    </p>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                      • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>01 Salary 25000</span> (Day 1 of selected month)<br/>
+                      • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>15 Rent 8000</span> (Day 15 of selected month)<br/>
+                      • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>Tea 15</span> (Defaults to Day 1)
+                    </div>
+                  </div>
+
+                  {/* Income */}
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--income)', display: 'inline-block' }} />
+                        Income
+                      </span>
+                      {preview?.income > 0 && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--income)', background: 'var(--income-bg)', padding: '2px 8px', borderRadius: 20, border: '1px solid var(--income-border)', textTransform: 'none' }}>
+                          {preview.income} entries · {f(preview.incTotal)}
+                        </span>
+                      )}
+                    </label>
+                    <textarea
+                      placeholder={"01 Salary 25000\n15 Freelance 5000\n25 Bonus 2000"}
+                      value={incomeText}
+                      onChange={e => setIncomeText(e.target.value)}
+                      style={textAreaStyle}
+                      onFocus={e => (e.target.style.borderColor = 'var(--income)')}
+                      onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
+                    />
+                  </div>
+
+                  {/* Expenses */}
+                  <div style={{ marginBottom: errorMsg ? 12 : 0 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--expense)', display: 'inline-block' }} />
+                        Expenses
+                      </span>
+                      {preview?.expense > 0 && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--expense)', background: 'var(--expense-bg)', padding: '2px 8px', borderRadius: 20, border: '1px solid var(--expense-border)', textTransform: 'none' }}>
+                          {preview.expense} entries · {f(preview.expTotal)}
+                        </span>
+                      )}
+                    </label>
+                    <textarea
+                      placeholder={"01 Rent 8000\n05 Electricity 1200\n12 Grocery 1500\n20 Tea 15"}
+                      value={expenseText}
+                      onChange={e => setExpenseText(e.target.value)}
+                      style={textAreaStyle}
+                      onFocus={e => (e.target.style.borderColor = 'var(--expense)')}
+                      onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
+                    />
+                  </div>
+
+                  {/* Error */}
+                  {errorMsg && (
+                    <div style={{ padding: '10px 14px', borderRadius: 10, marginTop: 12, background: 'var(--expense-bg)', border: '1.5px solid var(--expense-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <AlertCircle size={14} style={{ color: 'var(--expense)', flexShrink: 0 }} />
+                      <p style={{ fontSize: 12, color: 'var(--expense)', fontWeight: 600, margin: 0 }}>{errorMsg}</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            {status !== 'success' && (
+              <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, flexShrink: 0, background: 'var(--surface)' }}>
+                <button
+                  onClick={onClose}
+                  style={{ flex: 1, padding: '11px', borderRadius: 10, fontSize: 13, fontWeight: 700, background: 'var(--surface2)', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleImport}
+                  disabled={!canImport}
+                  style={{
+                    flex: 2, padding: '11px', borderRadius: 10, fontSize: 13, fontWeight: 800,
+                    background: canImport ? 'var(--accent)' : 'var(--surface2)',
+                    color: canImport ? '#fff' : 'var(--text-muted)',
+                    border: 'none', cursor: canImport ? 'pointer' : 'not-allowed',
+                    fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { if (canImport) e.currentTarget.style.background = 'var(--accent-hover)'; }}
+                  onMouseLeave={e => { if (canImport) e.currentTarget.style.background = 'var(--accent)'; }}
+                >
+                  {status === 'importing' ? (
+                    <>
+                      <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+                      Importing…
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={14} />
+                      {(preview?.total ?? 0) > 0 ? `Import ${preview.total} Entries` : 'Import Data'}
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes lmd-fade-in { from { opacity: 0; } to { opacity: 1; } }
+          @keyframes lmd-slide-up {
+            from { opacity: 0; transform: translateY(20px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0)    scale(1);    }
+          }
+        `}</style>
+      </>
+    </Portal>
   );
 }

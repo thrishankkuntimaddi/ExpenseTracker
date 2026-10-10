@@ -14,6 +14,9 @@ const MIN_DX  = 56;
 const MAX_MS  = 700;
 
 function shouldIgnore(target, root) {
+  // Dialogs render into <body> via a portal; React still bubbles their
+  // touches here, but they are not part of the page.
+  if (!root.contains(target)) return true;
   if (target?.closest?.('[data-no-swipe]')) return true;
   for (let n = target; n && n !== root; n = n.parentElement) {
     if (n.tagName === 'INPUT' && n.type === 'range') return true;
