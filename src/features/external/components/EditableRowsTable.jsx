@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Plus, ChevronDown, ChevronUp, X, GripVertical } from 'lucide-react';
 import { formatAmount } from '../../../utils/dateHelpers';
+import ConfirmDeleteModal from '../../../components/ConfirmDeleteModal';
 
 const tableStyle = {
   border: '1px solid var(--border)', borderRadius: 14,
@@ -31,9 +32,18 @@ export default function EditableRowsTable({
 }) {
   const [draggedIdx, setDraggedIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
+  const [removing, setRemoving] = useState(null);   // filled-in row awaiting confirmation
+  // Empty rows go at once; a row with content asks first.
+  const requestRemove = (row) => ((row[field] ?? '').trim() || parseFloat(row.amount) ? setRemoving(row) : onRemove(row.id));
 
   return (
     <div>
+      {removing && (
+        <ConfirmDeleteModal title={`Remove “${(removing[field] ?? '').trim() || 'this row'}”?`}
+          message={parseFloat(removing.amount) ? `${formatAmount(parseFloat(removing.amount))} comes off this session's total.` : 'The row is removed from this session.'}
+          confirmLabel="Remove"
+          onConfirm={() => { onRemove(removing.id); setRemoving(null); }} onCancel={() => setRemoving(null)} />
+      )}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <Icon size={15} style={{ color: `var(--${tone})` }} />
@@ -134,7 +144,7 @@ export default function EditableRowsTable({
                 style={{ ...inputStyle, fontWeight: 700, color: parseFloat(row.amount) > 0 ? `var(--${tone})` : 'var(--text-muted)' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <button onClick={() => onRemove(row.id)} disabled={rows.length === 1} style={{
+              <button onClick={() => requestRemove(row)} disabled={rows.length === 1} aria-label="Remove row" style={{
                 width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer',
               }}>

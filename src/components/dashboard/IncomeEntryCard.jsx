@@ -9,7 +9,7 @@ import { inputStyle, focusHandlers } from './formStyles';
 export default function IncomeEntryCard({
   form, stats, filtInc, filtTxns, income, transactions,
   onUpdateIncome, onDeleteIncome, onDeleteTransaction,
-  setEditingInc, setDeletingIncId,
+  setEditingInc, setDeletingIncId, setDeletingTxnId,
 }) {
   const {
     incMode, setIncMode, iName, setIName, iAmount, setIAmount, iDateInput, setIDateInput,
@@ -266,7 +266,8 @@ export default function IncomeEntryCard({
                         if (income.some(i => i.id === entry.id)) {
                           setDeletingIncId(entry.id);
                         } else if (transactions.some(t => t.id === entry.id)) {
-                          if (onDeleteTransaction) onDeleteTransaction(entry.id);
+                          if (setDeletingTxnId) setDeletingTxnId(entry.id);
+                          else if (onDeleteTransaction) onDeleteTransaction(entry.id);
                         } else {
                           setDeletingIncId(entry.id);
                         }

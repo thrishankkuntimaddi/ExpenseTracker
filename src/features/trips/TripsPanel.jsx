@@ -3,7 +3,7 @@
 // the billing sessions: active list → history → archived, each with
 // share / edit / archive / delete, and a detail workspace.
 import { useMemo, useState } from 'react';
-import { Plus, ArrowLeft } from 'lucide-react';
+import { Plus, ArrowLeft, Unlock } from 'lucide-react';
 import { useTrips } from '../../hooks/useTrips';
 import { computeTripSummary } from '../../utils/split';
 import { dateInputToISO, isoToMonth, todayInputValue } from '../../utils/dateHelpers';
@@ -23,6 +23,7 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
   const [sharingTrip, setSharingTrip] = useState(null);
   const [closingTrip, setClosingTrip] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [reopening, setReopening] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -65,6 +66,14 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
       {editingTrip && <TripModal trip={editingTrip} onSave={saveTrip} onDelete={deleteTripById} onClose={() => setEditingTrip(null)} />}
       {closingTrip && <TripCloseModal trip={closingTrip} summary={computeTripSummary(closingTrip)} onConfirm={(opts) => closeTrip(closingTrip, opts)} onClose={() => setClosingTrip(null)} />}
       {sharingTrip && <TripShareModal trip={sharingTrip} onClose={() => setSharingTrip(null)} />}
+      {reopening && (
+        <ConfirmDeleteModal title={`Reopen “${reopening.name}”?`}
+          message={(reopening.postedEntryIds?.length ?? 0) > 0
+            ? `The ${reopening.postedEntryIds.length} ${reopening.postedEntryIds.length === 1 ? 'entry' : 'entries'} it logged to your ledger move to Recently Deleted. Closing it again logs fresh ones.`
+            : 'You can edit its rows again and close it later.'}
+          confirmLabel="Reopen" ConfirmIcon={Unlock}
+          onConfirm={() => { const t = reopening; setReopening(null); reopenTrip(t); }} onCancel={() => setReopening(null)} />
+      )}
       {deletingId && (
         <ConfirmDeleteModal title="Delete this trip?" message="All its rows and settlements are removed. Entries already posted to your ledger stay."
           onConfirm={() => { const id = deletingId; setDeletingId(null); deleteTripById(id); }} onCancel={() => setDeletingId(null)} />
@@ -98,7 +107,7 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
           <TripDetail
             trip={active} onChange={saveTrip}
             onEdit={() => setEditingTrip(active)} onShare={() => setSharingTrip(active)}
-            onClose={() => setClosingTrip(active)} onReopen={() => reopenTrip(active)} onDelete={deleteTripById}
+            onClose={() => setClosingTrip(active)} onReopen={() => setReopening(active)} onDelete={deleteTripById}
           />
         ) : (
           <TripsList

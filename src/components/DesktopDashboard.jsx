@@ -112,7 +112,7 @@ export default function DesktopDashboard({
       {deletingTxnId && (
         <ConfirmDeleteModal
           title="Delete transaction?"
-          message="This action cannot be undone."
+          message="It moves to Recently Deleted (Settings), where you can restore it."
           onConfirm={() => { onDeleteTransaction(deletingTxnId); setDeletingTxnId(null); }}
           onCancel={() => setDeletingTxnId(null)}
         />
@@ -122,7 +122,7 @@ export default function DesktopDashboard({
       {deletingIncId && (
         <ConfirmDeleteModal
           title="Delete income entry?"
-          message="This action cannot be undone."
+          message="It moves to Recently Deleted (Settings), where you can restore it."
           onConfirm={() => { onDeleteIncome(deletingIncId); setDeletingIncId(null); }}
           onCancel={() => setDeletingIncId(null)}
         />
@@ -297,6 +297,7 @@ export default function DesktopDashboard({
               onDeleteTransaction={onDeleteTransaction}
               setEditingInc={setEditingInc}
               setDeletingIncId={setDeletingIncId}
+              setDeletingTxnId={setDeletingTxnId}
             />
             <AnalyticsCard
               stats={stats}

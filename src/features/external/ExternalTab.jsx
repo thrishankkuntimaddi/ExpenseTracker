@@ -239,8 +239,8 @@ export default function ExternalTab({
       );
       setActiveSessionId(null);
       setShowCloseModal(false);
-    } catch {
-      alert('Failed to close session.');
+    } catch (err) {
+      reportError?.('close the billing session', err);
     } finally {
       setClosing(false);
     }
@@ -320,7 +320,7 @@ export default function ExternalTab({
       {deletingId && (
         <ConfirmDeleteModal
           title="Delete billing session?"
-          message="This will permanently remove all items, received entries, and totals."
+          message="The session, its items and received entries move to Recently Deleted (Settings), where you can restore them."
           onConfirm={() => { deleteSession(deletingId, { onDeleteIncome, onDeleteTransaction, transactions, income }); setDeletingId(null); }}
           onCancel={() => setDeletingId(null)}
         />

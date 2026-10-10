@@ -29,7 +29,7 @@ export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
         {showDeleteConfirm && (
           <ConfirmDeleteModal
             title="Delete income entry?"
-            message="This action cannot be undone."
+            message="It moves to Recently Deleted (Settings), where you can restore it."
             onConfirm={() => { onDelete(entry.id); onClose(); }}
             onCancel={() => setShowDeleteConfirm(false)}
           />

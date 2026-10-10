@@ -12,6 +12,7 @@ import { getCarrySettings } from '../../utils/carryForward';
 import { formatMonthLabel } from '../../utils/periodHelpers';
 import { todayInputValue } from '../../utils/dateHelpers';
 import RecentlyDeletedModal from '../../components/RecentlyDeletedModal';
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import PWAInstallModal from '../../components/PWAInstallModal';
 
 export default function SettingsTab({
@@ -33,6 +34,7 @@ export default function SettingsTab({
   const [importing, setImporting]     = useState(false);
   const [exporting, setExporting]     = useState(false);
   const [showTrashModal, setShowTrashModal] = useState(false);
+  const [confirming, setConfirming]   = useState(null); // 'reset' | 'signout'
   const [showInstallGuideModal, setShowInstallGuideModal] = useState(false);
   const fileInputRef = useRef(null);
   const csvInputRef  = useRef(null);
@@ -46,7 +48,6 @@ export default function SettingsTab({
 
   /* ── Data ── */
   async function handleResetData() {
-    if (!window.confirm('Reset ALL data? This cannot be undone.')) return;
     if (!user?.uid) { showFeedback('You must be logged in to reset.', true); return; }
     try {
       // Deletes transactions, income, billings and trash (batched).
@@ -248,7 +249,7 @@ export default function SettingsTab({
               <ActionRow id="btn-export-csv" Icon={FileSpreadsheet} label="Export Spreadsheet (CSV)" sub="With categories — opens in Excel / Google Sheets; re-importable" iconColor="var(--income)" onClick={handleExportCSV} />
               <ActionRow id="btn-import" Icon={Upload}   label={importing ? 'Importing…' : 'Import Data'}   sub="Restore a JSON backup — safe to re-run, never duplicates"          iconColor="var(--accent)"  onClick={() => !importing && fileInputRef.current?.click()} />
               <ActionRow id="btn-csv"    Icon={FileSpreadsheet} label={importing ? 'Importing…' : 'Import CSV'}  sub="Import .csv file (date,name,amount,type) → cloud"    iconColor="var(--income)"  onClick={() => !importing && csvInputRef.current?.click()} />
-              <ActionRow id="btn-reset"  Icon={Trash2}   label="Reset All Data" sub="Permanently deletes all transactions, income, billings and trash"      iconColor="var(--expense)" onClick={handleResetData} danger lastRow />
+              <ActionRow id="btn-reset"  Icon={Trash2}   label="Reset All Data" sub="Deletes everything on all devices: transactions, income, billings, trips, recurring, trash"      iconColor="var(--expense)" onClick={() => setConfirming('reset')} danger lastRow />
               <input ref={fileInputRef} type="file" accept=".json"     style={{ display: 'none' }} onChange={handleImport}    />
               <input ref={csvInputRef}  type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={handleCSVImport} />
             </Card>
@@ -307,7 +308,7 @@ export default function SettingsTab({
                 label="Sign Out"
                 sub="You will need to sign in again"
                 iconColor="var(--expense)"
-                onClick={() => { if (window.confirm('Sign out?')) onSignOut(); }}
+                onClick={() => setConfirming('signout')}
                 danger lastRow
               />
             </Card>
@@ -329,6 +330,17 @@ export default function SettingsTab({
         </div>
       </div>
 
+      {confirming === 'reset' && (
+        <ConfirmDeleteModal title="Delete all your data?"
+          message="Every transaction, income entry, billing, trip, recurring rule and the trash are deleted from all your devices. This can't be undone — export a backup first if you might need it."
+          confirmLabel="Delete everything"
+          onConfirm={() => { setConfirming(null); handleResetData(); }} onCancel={() => setConfirming(null)} />
+      )}
+      {confirming === 'signout' && (
+        <ConfirmDeleteModal title="Sign out?" message="Your data stays safe in your account. This device's offline copy is cleared."
+          confirmLabel="Sign out" ConfirmIcon={LogOut}
+          onConfirm={() => { setConfirming(null); onSignOut(); }} onCancel={() => setConfirming(null)} />
+      )}
       <RecentlyDeletedModal
         isOpen={showTrashModal}
         onClose={() => setShowTrashModal(false)}

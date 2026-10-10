@@ -26,6 +26,7 @@ export default function TripDetail({ trip, onChange, onEdit, onShare, onClose, o
   const closed = trip.status === 'closed' || trip.status === 'archived';
   const members = trip.members ?? [];
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [removingRow, setRemovingRow] = useState(null);       // filled-in row awaiting confirmation
   const [editingMember, setEditingMember] = useState(null);   // member id whose inline editor is open
   const [stepState, setStep] = useState(1);
   const step = closed ? 2 : stepState;   // a closed trip always shows the settlement
@@ -251,7 +252,7 @@ export default function TripDetail({ trip, onChange, onEdit, onShare, onClose, o
               <input type="text" inputMode="decimal" value={r.amount} placeholder="0" onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) updateRow(r.id, { amount: v }); }}
                 onKeyDown={(e) => { if (e.key === 'Enter' && isValidRow(r)) { if (i === rows.length - 1) addRow(); } }}
                 style={{ ...cellInput, borderLeft: '1px solid var(--border)', fontWeight: 700, textAlign: 'right' }} />
-              <button onClick={() => removeRow(r.id)} aria-label="Remove row" style={{ width: 32, height: 36, border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={12} /></button>
+              <button onClick={() => ((r.title ?? '').trim() || parseFloat(r.amount) ? setRemovingRow(r) : removeRow(r.id))} aria-label="Remove row" style={{ width: 32, height: 36, border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={12} /></button>
             </div>
           ))}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderTop: '1px solid var(--border)', background: 'var(--surface2)' }}>
@@ -293,6 +294,12 @@ export default function TripDetail({ trip, onChange, onEdit, onShare, onClose, o
   /* ═══ STEP 2 — settle up ═══ */
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {removingRow && (
+        <ConfirmDeleteModal title={`Remove “${(removingRow.title ?? '').trim() || 'this row'}”?`}
+          message={parseFloat(removingRow.amount) ? `${formatAmount(parseFloat(removingRow.amount))} comes off the trip and everyone's shares update.` : 'The row is removed from the trip.'}
+          confirmLabel="Remove"
+          onConfirm={() => { removeRow(removingRow.id); setRemovingRow(null); }} onCancel={() => setRemovingRow(null)} />
+      )}
       {stepper}
 
       {/* Summary */}

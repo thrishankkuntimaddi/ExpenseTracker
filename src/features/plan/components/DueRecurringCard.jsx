@@ -7,12 +7,14 @@ import { CalendarClock, Check, SkipForward, ChevronDown, ChevronUp } from 'lucid
 import { formatAmount } from '../../../utils/dateHelpers';
 import { fromKey } from '../../../utils/recurring';
 import { CategoryBadge } from '../../../components/CategoryPicker';
+import ConfirmDeleteModal from '../../../components/ConfirmDeleteModal';
 
 const KIND_COLOR = { expense: 'var(--expense)', savings: 'var(--savings)', income: 'var(--income)' };
 
 export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, compact = false }) {
   const [busy, setBusy] = useState({});
   const [showAll, setShowAll] = useState(false);
+  const [confirmSkipAll, setConfirmSkipAll] = useState(false);
   if (!due.length) return null;
 
   const visible = showAll || due.length <= 4 ? due : due.slice(-3);
@@ -24,8 +26,16 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
     try { await fn(); } finally { setBusy((b) => { const n = { ...b }; delete n[key]; return n; }); }
   }
 
+  const dueRules = [...new Set(due.map((d) => d.rule))];
   return (
     <div className="card" style={{ marginBottom: 14, borderColor: 'var(--accent-border)' }}>
+      {confirmSkipAll && (
+        <ConfirmDeleteModal title={`Skip all ${due.length} due entries?`}
+          message="Nothing is logged for them; each rule moves on to its next date. Skipped entries can't be logged later from here."
+          confirmLabel="Skip all" ConfirmIcon={SkipForward}
+          onConfirm={() => { setConfirmSkipAll(false); run('skipall', () => Promise.all(dueRules.map((r) => onSkipAll(r)))); }}
+          onCancel={() => setConfirmSkipAll(false)} />
+      )}
       <div style={{ padding: compact ? '11px 14px 8px' : '13px 16px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -106,7 +116,7 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
       {onSkipAll && due.length > 1 && (
         <div style={{ padding: '6px 16px 10px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
           <button
-            onClick={() => run('skipall', () => Promise.all([...new Set(due.map((d) => d.rule))].map((r) => onSkipAll(r))))}
+            onClick={() => setConfirmSkipAll(true)}
             style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
           >
             Skip everything that is due

@@ -25,6 +25,7 @@ export default function IncomeTab({
   const [isFullPayment, setIsFullPayment] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [deletingId, setDeletingId]     = useState(null);
+  const [deletingTxnId, setDeletingTxnId] = useState(null);
 
   const nameRef   = useRef(null);
   const amountRef = useRef(null);
@@ -107,9 +108,17 @@ export default function IncomeTab({
       {deletingId && (
         <ConfirmDeleteModal
           title="Delete income entry?"
-          message="This action cannot be undone."
+          message="It moves to Recently Deleted (Settings), where you can restore it."
           onConfirm={() => { onDeleteIncome(deletingId); setDeletingId(null); }}
           onCancel={() => setDeletingId(null)}
+        />
+      )}
+      {deletingTxnId && (
+        <ConfirmDeleteModal
+          title="Delete this entry?"
+          message="It moves to Recently Deleted (Settings), where you can restore it."
+          onConfirm={() => { onDeleteTransaction?.(deletingTxnId); setDeletingTxnId(null); }}
+          onCancel={() => setDeletingTxnId(null)}
         />
       )}
 
@@ -454,7 +463,7 @@ export default function IncomeTab({
                                 if (income.some(i => i.id === entry.id)) {
                                   setDeletingId(entry.id);
                                 } else if (transactions.some(t => t.id === entry.id)) {
-                                  if (onDeleteTransaction) onDeleteTransaction(entry.id);
+                                  setDeletingTxnId(entry.id);
                                 } else {
                                   setDeletingId(entry.id);
                                 }

@@ -61,7 +61,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
         {showDeleteConfirm && (
           <ConfirmDeleteModal
             title="Delete transaction?"
-            message="This action cannot be undone."
+            message="It moves to Recently Deleted (Settings), where you can restore it."
             onConfirm={() => { onDelete(txn.id); onClose(); }}
             onCancel={() => setShowDeleteConfirm(false)}
           />

@@ -1,20 +1,28 @@
 // ─── ConfirmDeleteModal ──────────────────────────────────────────
 // Generic confirmation dialog for destructive actions.
 
+import { useEffect } from 'react';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 import Portal from './Portal';
 
 export default function ConfirmDeleteModal({
   title = 'Delete this item?',
-  message = 'This action cannot be undone.',
+  message = 'Are you sure?',
   details = null,          // optional extra detail lines (array of strings or JSX)
   confirmLabel = 'Delete',
+  ConfirmIcon = Trash2,    // e.g. LogOut / Unlock for non-delete confirmations
   onConfirm,
   onCancel,
 }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onCancel?.(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onCancel]);
+
   return (
     <Portal>
-      <div style={{
+      <div role="alertdialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined} style={{
         position: 'fixed', inset: 0, zIndex: 2000,
         background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -99,7 +107,7 @@ export default function ConfirmDeleteModal({
               onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
               onMouseLeave={e => e.currentTarget.style.opacity = '1'}
             >
-              <Trash2 size={14} />
+              <ConfirmIcon size={14} />
               {confirmLabel}
             </button>
           </div>

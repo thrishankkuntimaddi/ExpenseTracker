@@ -25,7 +25,7 @@ const DEBOUNCE_MS = 600;
  *   saveDraftSession(id)           — sets status to 'draft'
  *   closeSession(id, finalData, onAddIncome, onAddTransaction) — closes session
  *   discardSession(id)             — sets status to 'discarded'
- *   deleteSession(id)              — permanently deletes
+ *   deleteSession(id)              — moves to Recently Deleted
  */
 export function useExternalTransactions(uid) {
   const [sessions, setSessions] = useState([]);

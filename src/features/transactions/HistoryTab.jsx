@@ -131,7 +131,7 @@ export default function HistoryTab({
       {deletingId && (
         <ConfirmDeleteModal
           title="Delete transaction?"
-          message="This action cannot be undone."
+          message="It moves to Recently Deleted (Settings), where you can restore it."
           onConfirm={() => { onDeleteTransaction(deletingId); setDeletingId(null); }}
           onCancel={() => setDeletingId(null)}
         />

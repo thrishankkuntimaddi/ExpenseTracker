@@ -221,7 +221,7 @@ export default function PersonLedger({ personName, transactions, onAddTransactio
       {deleteTarget && (
         <ConfirmDeleteModal
           title="Delete transaction?"
-          message="This action cannot be undone."
+          message="It moves to Recently Deleted (Settings), where you can restore it."
           onConfirm={() => handleDelete(deleteTarget)}
           onCancel={() => setDeleteTarget(null)}
         />
