@@ -1,12 +1,12 @@
 # ⚡ Expense Tracker — Personal Finance, Reimagined
 
-> **Smart, cloud-synced personal finance tracking with auto-categorised spending, monthly budgets with a daily "safe to spend", recurring entries, savings goals, plain-language insights, person ledgers, wastage analytics, billing sessions and a fully responsive offline-capable PWA.**
+> **Smart, cloud-synced personal finance tracking with auto-categorised spending, monthly budgets with a daily "safe to spend", recurring entries, savings goals, plain-language insights, person ledgers, wastage analytics and billing sessions — on the web, Android, Mac, Windows and Linux, all on one account, with reminders and automatic updates.**
 
 ---
 
 ## 📌 Description
 
-**Expense Tracker** is a production-grade personal finance web application built with React + Firebase. It solves the frustrating problem of losing track of where your money goes each month — including money lent to, borrowed from, or spent on behalf of other people.
+**Expense Tracker** is a production-grade personal finance app built with React + Firebase, shipped as a website, an Android app (Capacitor) and a desktop app for Mac, Windows and Linux (Tauri). It solves the frustrating problem of losing track of where your money goes each month — including money lent to, borrowed from, or spent on behalf of other people.
 
 Unlike basic spreadsheet trackers, this app:
 
@@ -17,26 +17,48 @@ Unlike basic spreadsheet trackers, this app:
 - **Tracks money with people** — lent, borrowed, repaid and gifted amounts roll up into all-time per-person balances.
 - **Tracks wastage** at the transaction level — mark any expense as wasted (single-tap) or set a partial waste amount (double-tap), giving you an instant "wastage percentage" of your spending.
 - **Manages external/proxy transactions** — record money you spend on behalf of someone else, log the settlement, and track net profit/loss per session.
-- Works as an installable **Progressive Web App (PWA)** that keeps working offline (Firestore IndexedDB cache) and auto-updates on deploy.
+- **Syncs across every device** on one account and keeps working offline (Firestore's on-device cache); changes made offline upload when the connection is back.
+- **Updates itself everywhere** — no reinstalling (see [Automatic updates](#-automatic-updates)).
 
 ---
 
-## 🚀 Live Demo
+## 🚀 Get the app
 
-The app is deployed via **GitHub Pages**:
+| Platform | How | Updates |
+|---|---|---|
+| **Web** (any browser, iPhone/iPad too) | **[thrishankkuntimaddi.github.io/ExpenseTracker](https://thrishankkuntimaddi.github.io/ExpenseTracker/)** — on iPhone: Share → *Add to Home Screen* | Each deploy, on the next open |
+| **Android** 7+ | [ExpenseTracker-Android.apk](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Android.apk) — allow "install unknown apps" for your browser once | Over the air, in the background — applies on the next open |
+| **Mac** (Apple Silicon) | [ExpenseTracker-Mac-AppleSilicon.dmg](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Mac-AppleSilicon.dmg) | Downloads in the background → *Restart to update* |
+| **Mac** (Intel) | [ExpenseTracker-Mac-Intel.dmg](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Mac-Intel.dmg) | same |
+| **Windows** 10/11 | [ExpenseTracker-Windows-Setup.exe](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Windows-Setup.exe) | same |
+| **Linux** | [ExpenseTracker-Linux.AppImage](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Linux.AppImage) — `chmod +x`, then run | same |
 
-**🔗 [https://thrishankkuntimaddi.github.io/ExpenseTracker/](https://thrishankkuntimaddi.github.io/ExpenseTracker/)**
+All links always point at the newest [release](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest). You only download once — after that every platform updates itself.
 
+**First launch on a Mac:** the app isn't notarised by Apple (that needs a paid developer account), so macOS says it "could not verify" it. Right-click the app → **Open** → **Open**, once. Or run `xattr -dr com.apple.quarantine /Applications/ExpenseTracker.app`.
+**Windows:** SmartScreen may say "Windows protected your PC" → *More info* → *Run anyway*, once.
+
+### What each platform can do
+
+| | Web | Android | Desktop |
+|---|---|---|---|
+| Same data, live sync | ✅ | ✅ | ✅ |
+| Works offline | ✅ (after first load) | ✅ | ✅ |
+| Google sign-in | ✅ | ✅ (native account picker) | ✅ (opens your browser) |
+| Reminders when the app is closed | ❌ only while the page is open | ✅ quiet notifications | ✅ while it runs in the menu bar / tray |
+| Open at login, menu bar / tray | — | — | ✅ |
+| Updates without reinstalling | ✅ | ✅ | ✅ |
+| System back button, status bar follows theme | — | ✅ | — |
+
+These limits are the operating systems', not choices: a browser can't wake a closed tab, and a desktop app can only notify while it's running (closing the window keeps it in the menu bar / tray; *Quit* stops reminders).
 
 ---
 
 ## 🔐 Login / Demo Credentials
 
-The app uses **Firebase Email/Password Authentication**. To explore it:
+Sign in with **Google** or with **email + password** (create an account, verify the email, *Forgot password?* sends a reset link). The same account works on every platform.
 
-1. Click **"Create account"** on the login screen.
-2. Register with any valid email + a password of 6+ characters.
-3. All data is private and scoped strictly to your account — `firestore.rules` only lets a signed-in user read/write `users/{their uid}/**`, and validates transaction/income shapes.
+All data is private and scoped strictly to your account — `firestore.rules` only lets a signed-in user read/write `users/{their uid}/**`, and validates transaction/income shapes.
 
 > There are no shared demo credentials — every user gets their own isolated data space.
 
@@ -129,18 +151,42 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 - **Import CSV**: RFC-4180 CSV importer (`date, name, amount, type`; quoted fields, `1,200`-style amounts, `DD/MM/YYYY` dates) with stable ids — importing the same file twice is safe
 - **Recently Deleted**: deletes move items to a trash (atomically) from which they can be restored
 - **Reset All Data**: permanently deletes all transactions, income, billings and trash
-- **Theme toggle**: Light and MonoFlow (dark, gold-accented) themes, persisted to Firestore
+- **Sync status** ("Synced", "Saving…", "Offline — changes are saved on this device") and the list of your **signed-in devices** (Android app, Mac app, Chrome on Windows …); devices unused for 30 days drop off
+- **Updates**: current version and build, *Check for updates*, and *Restart to update* / *Install* when one is waiting
+
+### 🔔 Reminders
+Four optional reminders, all off until you switch them on (Settings → Reminders), each with its own time:
+- **Daily nudge** — on the days you choose; skipped if you already logged something that day
+- **Recurring due** — the evening before rent, an EMI or a subscription is due (one combined line)
+- **Budget** — once when the month passes 80 %, once at 100 %; never repeated
+- **Weekly summary** — your week in one line on the evening you pick
+
+At most one per type per day, quiet (no sound), and never while you're using the app. Tapping one opens the right screen (Expenses, Plan or Stats). The settings sync across devices, but *"Deliver reminders on this device"* is per device, so you don't get the same reminder on your phone and your laptop. *Send a test* shows one right away. See [What each platform can do](#what-each-platform-can-do) for when they can arrive.
 
 ### 🌙 Theming
-- **Light**: clean white UI with indigo/violet accent
-- **MonoFlow**: dark background (`#0c0c0c`) with gold accents — FOUC-free via a pre-React inline script
+- **Light**, **dark** or **follow the device** — chosen per device, applied before the first paint (no flash)
+- Liquid-glass surfaces; deep, smoked dark mode
+- In the Android app the status and navigation bars follow the theme
 
-### 📱 Responsive PWA
+### 📱 Responsive layout
 - **Mobile**: a five-slot bottom bar (Expenses, History, Income, Stats, More). Plan, Billings and Settings live behind **More**, which shows a badge when recurring entries are waiting. **Swipe left or right** anywhere to move between all seven pages; the bar's last slot takes the name and icon of whichever More page you are on. Swipes are ignored inside chip rows, wide charts and dialogs, and near the screen edges so the OS back gesture keeps working
 - **Desktop** (≥1024px): a unified `DesktopDashboard` with Dashboard / History / Billings / People / Plan / Settings sections and a planning row (insights · budget · categories · calendar)
-- Installable as a PWA on iOS and Android (Web App Manifest + Service Worker)
-- Service Worker auto-updates on new deploys (`SKIP_WAITING` + `controllerchange` reload)
-- Offline-capable: Firestore's persistent IndexedDB cache paints the UI instantly and queues writes while offline (cleared on sign-out)
+- The website is installable (Add to Home Screen) and works offline; the Android and desktop apps carry the whole app inside, so they open instantly with no connection
+- Firestore's persistent on-device cache paints the UI instantly and queues writes while offline. Sign-out waits until unsent changes are uploaded (or asks before discarding them)
+
+---
+
+## 🔄 Automatic updates
+
+You install once; after that every platform updates itself.
+
+| Platform | How it works |
+|---|---|
+| **Web** | Every push to `main` deploys the site. The service worker checks on open, when the tab comes back and every 30 minutes, then reloads once onto the new version. |
+| **Android** | Over-the-air: each deploy also publishes the app's web bundle (`/app/update.json` + a zip with a SHA-256 checksum) next to the website. The app checks on launch, on return and every 30 minutes, downloads in the background and switches on the next open. If the new bundle doesn't start, the app rolls back by itself. Only when a version needs new *native* code (`expensetracker.minNativeVersion` in `package.json`) does it say *"install the new app"* — once — with a link to the APK. |
+| **Desktop** | Tauri's signed updater reads `latest.json` from the newest GitHub release, downloads in the background and offers **Restart to update**. Updates are signed with a minisign key; an update without a valid signature is refused. |
+
+After any update the app says *"Updated to vX"* once. Settings shows the version, build date and commit.
 
 ---
 
@@ -150,14 +196,16 @@ The app uses **Firebase Email/Password Authentication**. To explore it:
 |---|---|
 | **Frontend Framework** | React 19 + Vite 8 |
 | **Backend / Database** | Firebase Firestore (NoSQL, real-time) |
-| **Authentication** | Firebase Auth (Email/Password) |
+| **Authentication** | Firebase Auth — Google + email/password (native Google picker on Android, browser sign-in with PKCE on desktop) |
+| **Android app** | Capacitor 8 (local notifications, OTA updates via `@capgo/capacitor-updater`, a small native plugin for the system bars) |
+| **Desktop app** | Tauri 2 (Rust): menu bar / tray, single instance, open at login, notifications, signed updater |
 | **Charts** | Recharts 3 |
 | **Icons** | Lucide React |
 | **Fonts** | Inter (Google Fonts) |
 | **CSS** | Vanilla CSS with CSS Custom Properties (design tokens) |
-| **PWA** | Web App Manifest + custom Service Worker |
-| **Build Tool** | Vite (base path `/ExpenseTracker/`) |
-| **Deployment** | GitHub Pages |
+| **PWA** | Web App Manifest + custom Service Worker (website only) |
+| **Build Tool** | Vite — `vite build` for the website (base `/ExpenseTracker/`), `vite build --mode native` for the apps (`dist-native/`, no service worker) |
+| **Deployment** | GitHub Actions → GitHub Pages (website + Android OTA bundle) and GitHub Releases (APK, DMG, EXE, AppImage, `latest.json`) |
 | **Linting** | ESLint 9 (flat config) |
 | **Testing** | Vitest (unit tests for finance, categories, budget, recurring, insights, goals, dates and import/export; server-render smoke tests for every screen) |
 
@@ -172,7 +220,16 @@ ExpenseTracker/
 ├── firebase.json               # Firebase Firestore rules + indexes config
 ├── firestore.rules             # Security rules for the WHOLE shared project (see below)
 ├── firestore.indexes.json      # Composite index definitions
-├── scripts/clear-db.mjs        # Maintenance: wipe one user's data (prompts for password)
+├── capacitor.config.json       # Android app config (app id, OTA updater, Google sign-in)
+├── android/                    # Android project (Gradle); SystemThemePlugin.java, notification icon
+├── src-tauri/                  # Desktop app (Rust): lib.rs (tray, commands), oauth.rs, reminders.rs
+├── scripts/
+│   ├── check-config.mjs        # Refuses to build without a Firebase config
+│   ├── make-ota.mjs            # Android OTA bundle + update.json
+│   ├── make-latest-json.mjs    # Desktop updater manifest
+│   ├── render-icons.mjs        # App icons for every platform
+│   └── clear-db.mjs            # Maintenance: wipe one user's data (prompts for password)
+├── .github/workflows/          # deploy-web.yml (site + OTA), build-apps.yml (all apps → release)
 │
 ├── src/
 │   ├── main.jsx                # React 19 createRoot entry
@@ -190,7 +247,9 @@ ExpenseTracker/
 │   │   ├── stats/              # Charts, key metrics, InsightsCard, CategoryBreakdown, SpendingCalendar
 │   │   └── settings/           # Theme, import/export (JSON + CSV), account
 │   │
-│   ├── components/             # DesktopDashboard, modals, CategoryPicker, ModalShell, PeriodSelector, LoadMonthlyData
+│   ├── components/             # DesktopDashboard, modals, UpdateBanner, ErrorBoundary, PeriodSelector, …
+│   ├── native/                 # Platform layer: index.js (detection, back button, status bar), updates.js,
+│   │                           #   reminders.js (delivery), googleSignIn.js (Android + desktop)
 │   │
 │   ├── hooks/
 │   │   ├── useAuth.js               # Auth state (grace period) + sign-out cache wipe
@@ -204,7 +263,8 @@ ExpenseTracker/
 │   ├── services/
 │   │   ├── firebaseConfig.js   # Public Firebase web config (shared with scripts/)
 │   │   ├── firebase.js         # App, Auth, Firestore (persistent cache), optional App Check
-│   │   ├── firestore.js        # Firestore CRUD, batched import/reset, atomic trash/restore
+│   │   ├── firestore.js        # Firestore CRUD, batched import/reset, atomic trash/restore, devices
+│   │   ├── sync.js             # Sync status store, background writes, readable errors
 │   │
 │   └── utils/
 │       ├── finance.js          # ALL money maths: balances, person debts, settlement matching
@@ -221,7 +281,10 @@ ExpenseTracker/
 │       ├── dateHelpers.js      # Formatting + local-time date keys
 │       ├── periodHelpers.js    # Period filtering (local calendar)
 │       ├── typeConfig.js       # Transaction type metadata
-│       ├── storage.js          # Theme preference + id generation
+│       ├── storage.js          # Id generation
+│       ├── theme.js            # Light / dark / follow device
+│       ├── reminders.js        # Reminder plan (pure): what fires when, and the wording
+│       ├── backup.js           # Backup format v2: parse + validate before restoring
 │       └── __tests__/          # Vitest unit tests
 │
 ├── public/
@@ -236,7 +299,9 @@ ExpenseTracker/
 ### Prerequisites
 
 - **Node.js** ≥ 20.19 (required by Vite 8 / Vitest)
-- A **Firebase project** with Firestore and Authentication (Email/Password) enabled
+- A **Firebase project** with Firestore and Authentication (Email/Password + Google) enabled — this app uses `expensetracker-385b0`
+- For the Android app: JDK 21 and the Android SDK (Android Studio installs both)
+- For the desktop app: Rust (`rustup`) and, on Linux, the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)
 
 ### 1. Clone and install
 
@@ -267,7 +332,7 @@ firebase login
 firebase deploy --only firestore:rules --project <your-project-id>
 ```
 
-> ⚠️ **Shared project:** `nistha-passi-core` also hosts other apps. `firestore.rules` is the single source of truth for the *entire* project — add other apps' rules to this file rather than deploying a different rules file from another repo, or you will overwrite them.
+> The app has its own Firebase project (`expensetracker-385b0`, set in `.firebaserc`), so these rules cover only Expense Tracker. It used to live in the shared `nistha-passi-core` project — never deploy this file there: that would replace the rules of every other app in it (`scripts/check-config.mjs` refuses builds pointed at it).
 
 ### 4. Run locally
 
@@ -276,6 +341,43 @@ npm run dev      # http://localhost:5173/ExpenseTracker/
 npm run lint
 npm test         # runs in Asia/Kolkata timezone to exercise local-date edge cases
 ```
+
+### 5. Apps on your machine
+
+```bash
+# Android — debug APK (or open in Android Studio)
+npm run android:apk            # → android/app/build/outputs/apk/debug/app-debug.apk
+npm run android:open
+
+# Desktop
+npm run desktop:dev            # live-reloading desktop window
+npm run desktop:build          # installers for this OS in src-tauri/target/release/bundle/
+```
+
+A local `desktop:build` also builds signed update files, so it needs the updater key in the environment (or turn them off with `--config '{"bundle":{"createUpdaterArtifacts":false}}'`):
+
+```bash
+export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.local/expensetracker-signing/tauri-updater.key)"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="…"   # in ~/.local/expensetracker-signing/secrets.txt on the release machine
+```
+
+---
+
+## 🚢 Releasing
+
+| What | How |
+|---|---|
+| **Website + Android OTA** | Push to `main`. `deploy-web.yml` lints, tests, builds the site and the app bundle, and publishes both to GitHub Pages. Phones pick up the bundle on their own. |
+| **New app version** (all platforms) | Bump `version` in `package.json` and `src-tauri/Cargo.toml` (the desktop app reads the rest from `package.json`), commit, then `git tag vX.Y.Z && git push origin vX.Y.Z`. `build-apps.yml` builds the signed APK, the Mac (Apple Silicon + Intel), Windows and Linux installers, writes `latest.json`, publishes the release and removes older releases. |
+| **Needs a new APK?** | Only when native code or Capacitor plugins change. Then raise `expensetracker.minNativeVersion` in `package.json` to the new version, so older APKs are told to install it instead of receiving a bundle they can't run. |
+
+**Repository secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Used for |
+|---|---|
+| `VITE_FIREBASE_*` (7), `VITE_GOOGLE_DESKTOP_CLIENT_ID`, `VITE_GOOGLE_DESKTOP_CLIENT_SECRET` | App config (variables work too) |
+| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | Signing the APK. **Keep the keystore safe** (the release machine has a copy in `~/.local/expensetracker-signing/` — back it up somewhere else too); phones only accept updates signed with the same key. |
+| `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Signing desktop updates (the public key is in `tauri.conf.json`) |
 
 ---
 
@@ -288,14 +390,9 @@ npm test         # runs in Asia/Kolkata timezone to exercise local-date edge cas
 | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID` | **Required.** Firebase web config (see `.env.example`). In CI these are GitHub repository *variables*. |
 | `VITE_APPCHECK_SITE_KEY` | reCAPTCHA v3 site key. When set, Firebase **App Check** is enabled so only this app can call your backend. Register the key in Firebase Console → App Check, then turn on enforcement for Firestore. |
 
-In CI these come from GitHub repository **variables** of the same name.
+| `VITE_GOOGLE_DESKTOP_CLIENT_ID`, `VITE_GOOGLE_DESKTOP_CLIENT_SECRET` | Google sign-in in the desktop app (a "Desktop app" OAuth client). Empty = Google sign-in hidden on desktop. |
 
----|---|
-| `GOOGLE_SERVICE_ACCOUNT_KEY` | Full JSON of the service-account key, minified to one line |
-| `PORT` / `HOST` | Listen port (default `3001`) and interface (default `127.0.0.1`) |
-| `FRONTEND_URL` | CORS origin for the frontend (e.g. `http://localhost:5173`) |
-| `FIREBASE_PROJECT_ID` | Project whose ID tokens are accepted (default `nistha-passi-core`) |
-| `ALLOWED_UIDS` | Optional comma-separated UIDs allowed to use the proxy — recommended if it is reachable by anyone else |
+In CI these come from GitHub repository **variables** (or secrets) of the same name.
 
 ---
 
@@ -354,7 +451,9 @@ Posted recurring occurrences are ordinary transaction / income documents whose i
 
 | Challenge | Solution |
 |---|---|
-| Shared Firebase project with other apps | One rules file for the whole project; the catch-all for other apps explicitly excludes `users/**` |
+| Shared Firebase project with other apps | Moved to its own project (`expensetracker-385b0`); data migrated from a full backup |
+| Reinstalling for every fix | OTA bundles on Android, signed updater on desktop, service worker on the web |
+| Old Android WebViews drawing ghost copies of cards | Settings shows the web engine version and links to the WebView update in the Play Store when it's older than Chrome 130 |
 | Duplicate records from repeated imports | Deterministic import ids + batched `set()` writes |
 | Dates landing on the wrong day near midnight | Local-calendar date keys instead of slicing UTC ISO strings |
 | Lost edits in billing autosave | Pending edits are merged per session and flushed on unmount / before close |
@@ -374,7 +473,8 @@ Posted recurring occurrences are ordinary transaction / income documents whose i
 - [ ] **Multi-currency Support**: record transactions in foreign currencies with exchange rate conversion
 - [ ] **Receipt OCR**: upload a photo of a receipt and auto-extract the amount and merchant name
 - [ ] **Shared Budgets**: collaborative mode where two users (e.g., partners) share a budget workspace
-- [ ] **Native Mobile App**: a store build (Capacitor / React Native) once there is a reason to go beyond the PWA
+- [x] **Native apps**: Android (Capacitor) and Mac / Windows / Linux (Tauri) with reminders and automatic updates
+- [ ] **Play Store / signed Mac build**: removes the "unknown apps" and "could not verify" steps (needs paid developer accounts)
 - [ ] **LLM-powered insights**: a natural-language layer over the rule-based engine (e.g. ask "why was October expensive?")
 
 ---
@@ -389,7 +489,7 @@ Posted recurring occurrences are ordinary transaction / income documents whose i
 | **Billings Tab** | Proxy session manager — open sessions with amount paid + settlement; closed session ledger |
 | **Plan Tab** | Monthly budget (total + per category), recurring rules with due / upcoming, savings goals |
 | **Stats Tab** | Insights, budget, category breakdown, spending calendar, pie, 14-day bar and 6-month area charts + KPI cards |
-| **Settings Tab** | Theme toggle, export (JSON + CSV) / import (JSON + CSV), account sign-out |
+| **Settings Tab** | Sync status and devices, reminders, theme, carry forward, export / import (JSON + CSV), get the apps, updates, account, reset |
 | **Desktop Dashboard** | Summary strip, quick entry, entries, income, analytics, plus a planning row (insights · budget · categories · calendar) |
 
 ---
