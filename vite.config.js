@@ -76,6 +76,9 @@ export default defineConfig(({ mode }) => {
     define: { 'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version) },
     build: {
       outDir: native ? 'dist-native' : 'dist',
+      // The apps run in the phone's / computer's own web view, which can be
+      // years older than a current browser: compile down to ~2021 engines.
+      target: native ? ['chrome89', 'edge89', 'safari15', 'firefox90'] : 'baseline-widely-available',
       // The Firestore SDK alone is ~545 kB minified (160 kB gzip) and can't be
       // split further; 600 kB still flags any real growth of our own code.
       chunkSizeWarningLimit: 600,
