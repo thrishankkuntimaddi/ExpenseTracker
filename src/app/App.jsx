@@ -185,11 +185,11 @@ function AuthenticatedApp({ user, signOut, resetPassword, resendVerification }) 
   const morePage = MORE_PAGES.find((p) => p.key === activeTab);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
+    <div className="mobile-shell" style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
       <div
         {...swipe}
         key={activeTab}
-        className={slideDir === 'left' ? 'page-slide-left' : slideDir === 'right' ? 'page-slide-right' : undefined}
+        className={`mobile-page${slideDir === 'left' ? ' page-slide-left' : slideDir === 'right' ? ' page-slide-right' : ''}`}
         style={{ flex: 1, overflow: 'auto' }}
       >
         <Suspense fallback={null}>

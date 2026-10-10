@@ -289,6 +289,15 @@ button:disabled { cursor: not-allowed; }
   padding: 16px 20px 24px;
 }
 
+/* ══ MOBILE SHELL (phones and tablets below the desktop breakpoint) ══
+   Clears the notch / status bar when installed full-screen, and keeps
+   pages phone-width on tablets instead of stretching edge to edge. */
+.mobile-shell { padding-top: env(safe-area-inset-top, 0px); }
+@media (min-width: 600px) {
+  .mobile-page { width: 100%; max-width: 560px; margin: 0 auto; }
+  .mobile-shell nav[style*="flex-shrink: 0"] { max-width: 532px; margin-left: auto !important; margin-right: auto !important; }
+}
+
 /* ══ CARD ═══════════════════════════════════════════════════ */
 .card {
   background: var(--surface);
