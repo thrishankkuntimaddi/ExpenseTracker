@@ -119,8 +119,10 @@ body::before {
     [style*="background: var(--surface)"],
     [style*="background: var(--glass-bg)"],
     [style*="background: var(--tooltip-bg)"]):not(.card *):not([style*="background: var(--surface)"] *) {
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
+  /* No backdrop blur on tiles: they sit on a soft static gradient, where a
+     blur is nearly invisible but is the most expensive thing a phone can
+     paint (each repaint re-blurs the area behind). Floating bars that
+     content scrolls behind keep their blur (see nav below). */
   /* fill inside, curved specular rim as a gradient border */
   background:
     linear-gradient(var(--glass-fill), var(--glass-fill)) padding-box,

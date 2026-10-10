@@ -47,9 +47,17 @@ export const HAD_LOCAL_THEME_CHOICE = (() => {
   catch { return true; }
 })();
 
+let switchTimer = null;
 export function applyTheme(theme) {
   if (typeof document === 'undefined') return;
-  document.documentElement.setAttribute('data-theme', theme);
+  const html = document.documentElement;
+  // Fade colours only when the theme really changes (not on first paint)
+  if (html.getAttribute('data-theme') && html.getAttribute('data-theme') !== theme) {
+    html.classList.add('theme-switching');
+    clearTimeout(switchTimer);
+    switchTimer = setTimeout(() => html.classList.remove('theme-switching'), 320);
+  }
+  html.setAttribute('data-theme', theme);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', BAR_COLOR[theme] ?? BAR_COLOR.light);
   try { localStorage.setItem(RESOLVED_KEY, theme); } catch { /* storage unavailable */ }
 }

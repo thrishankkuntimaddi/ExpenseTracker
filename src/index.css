@@ -201,15 +201,14 @@ html, body, #root {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Theme transition — smooth switch */
-*, *::before, *::after {
-  transition-property: background-color, border-color, color;
-  transition-duration: 220ms;
-  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-}
-/* But NOT layout transitions */
-button, input, select, textarea {
-  transition-property: background-color, border-color, color, opacity, transform;
+/* Theme transition — only while the theme is actually switching
+   (utils/theme.js adds .theme-switching for ~300 ms). A permanent
+   transition on every element made each re-render — every keystroke —
+   track and animate thousands of nodes: the main source of lag on phones. */
+html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after {
+  transition-property: background-color, border-color, color !important;
+  transition-duration: 220ms !important;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 body { overflow: hidden; }

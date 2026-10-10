@@ -26,7 +26,9 @@ function bootstrap() {
   const splash = document.getElementById('app-splash');
   if (splash) {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const MIN_MS = reduced ? 0 : 2600;
+    // The apps open many times a day: a short intro. The website keeps the full one.
+    const isApp = '__TAURI_INTERNALS__' in window || !!window.Capacitor?.isNativePlatform?.();
+    const MIN_MS = reduced ? 0 : isApp ? 900 : 2600;
     const elapsed = Date.now() - performance.timeOrigin;
     setTimeout(() => {
       splash.classList.add('sp-exit');

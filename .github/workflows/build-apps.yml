@@ -160,3 +160,11 @@ jobs:
           name: Expense Tracker ${{ github.ref_name }}
           body_path: .github/release-notes.md
           files: out/*
+      # Only the newest release is kept, so the download page never shows stale apps
+      - name: Remove older releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName --jq '.[].tagName' \
+            | grep -vx "$GITHUB_REF_NAME" \
+            | while read -r tag; do gh release delete "$tag" --yes --cleanup-tag --repo "$GITHUB_REPOSITORY"; done
