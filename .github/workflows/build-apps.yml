@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           for v in $(env | grep -o '^CFG_VITE_[A-Z_]*'); do
-            [ -n "${!v}" ] && echo "${v#CFG_}=${!v}" >> "$GITHUB_ENV"
+            if [ -n "${!v}" ]; then echo "${v#CFG_}=${!v}" >> "$GITHUB_ENV"; fi
           done
       - run: npm ci
       - run: node scripts/check-config.mjs
@@ -127,7 +127,7 @@ jobs:
         shell: bash
         run: |
           for v in $(env | grep -o '^CFG_VITE_[A-Z_]*'); do
-            [ -n "${!v}" ] && echo "${v#CFG_}=${!v}" >> "$GITHUB_ENV"
+            if [ -n "${!v}" ]; then echo "${v#CFG_}=${!v}" >> "$GITHUB_ENV"; fi
           done
       - run: npm ci
       - run: node scripts/check-config.mjs
