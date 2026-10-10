@@ -3,15 +3,18 @@
 // deploy gets a fresh cache name automatically (no manual bumping).
 const CACHE_NAME = 'et-__BUILD_ID__';
 const BASE = '/ExpenseTracker/';
+// Every hashed JS/CSS file of this build, stamped in at build time. Screens
+// load on demand, so pre-caching them all is what makes a screen you never
+// opened online still work offline.
+const ASSETS = __ASSETS__; /* global __ASSETS__ */
 
 // ── Install: skip waiting immediately so new SW takes over right away ──
 self.addEventListener('install', (e) => {
-  // Pre-cache only the HTML shell. JS/CSS have content hashes and get
-  // cached on first fetch. Skipping large asset pre-cache avoids install
-  // failures on slow mobile connections.
+  // Pre-cache the HTML shell plus this build's assets. A failure is
+  // non-fatal: anything missed is cached on first fetch instead.
   e.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.add(BASE + 'index.html'))
+      .then((cache) => cache.addAll([BASE + 'index.html', ...ASSETS.map((a) => BASE + a)]))
       .then(() => self.skipWaiting())   // activate ASAP, don't wait for old tabs
       .catch((err) => {
         // Don't let a cache-add failure block SW install
@@ -54,29 +57,23 @@ self.addEventListener('message', (e) => {
 //  HTML navigation  →  NETWORK-FIRST (always get latest deploy)
 //                      fallback to cache only when fully offline
 //  JS / CSS assets  →  CACHE-FIRST  (content-hashed; safe)
-//  Firebase / CDN   →  PASSTHROUGH  (never intercepted)
+//  Cross-origin     →  PASSTHROUGH  (Firebase, Google APIs, fonts)
 // ────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', (e) => {
   const url = e.request.url;
 
-  // ── Never intercept Firebase / Google API / external requests ──
-  const isExternal = (
-    url.includes('firestore.googleapis.com') ||
-    url.includes('identitytoolkit.googleapis.com') ||
-    url.includes('securetoken.googleapis.com') ||
-    url.includes('firebase') ||
-    url.includes('gstatic.com') ||
-    url.includes('googleapis.com') ||
-    url.includes('fonts.googleapis.com') ||
-    url.includes('fonts.gstatic.com')
-  );
-  if (isExternal) return; // let browser handle natively
+  // ── Only handle this site's own GET requests. Firebase, Google APIs and
+  //    fonts are cross-origin and go straight to the network. (Matching on
+  //    the URL text instead would also catch our own firebase-*.js chunk.)
+  if (e.request.method !== 'GET' || new URL(url).origin !== self.location.origin) return;
 
   // ── HTML navigation: NETWORK-FIRST ──
-  // Always try to pull the freshest index.html; only fallback to cache when offline.
+  // Always try to pull the freshest index.html; fall back to the cache when
+  // offline or when the network hangs (weak signal) for more than 4 s.
   if (e.request.mode === 'navigate') {
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
     e.respondWith(
-      fetch(e.request, { cache: 'no-store' })
+      Promise.race([fetch(e.request, { cache: 'no-store' }), timeout])
         .then((response) => {
           if (response.ok) {
             const clone = response.clone();
@@ -96,7 +93,7 @@ self.addEventListener('fetch', (e) => {
   // ── Static assets (JS/CSS/images): CACHE-FIRST ──
   // Content-hashed files (e.g. index-AbCd1234.js) are immutable — safe to cache forever.
   // Non-hashed files (manifest.json, sw.js, icons) use network-first to stay fresh.
-  const isHashedAsset = /\/assets\/[^/]+-[A-Za-z0-9]{8}\.(js|css)/.test(url);
+  const isHashedAsset = /\/assets\/[^/]+-[\w-]{8}\.(js|css)$/.test(new URL(url).pathname);
 
   if (isHashedAsset) {
     // Cache-first: hashed file → cache hit = instant; miss = fetch + cache

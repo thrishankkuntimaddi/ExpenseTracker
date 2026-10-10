@@ -3,8 +3,9 @@ import react from '@vitejs/plugin-react'
 import fs from 'node:fs'
 import path from 'node:path'
 
-/* Stamp a unique build ID into dist/sw.js so each deploy busts the
-   service-worker cache without anyone having to bump a version by hand. */
+/* Stamp a unique build ID and the list of built assets into dist/sw.js, so
+   each deploy busts the service-worker cache without a manual version bump
+   and every lazily loaded screen is pre-cached for offline use. */
 function swBuildId() {
   let outDir = 'dist'
   return {
@@ -15,7 +16,11 @@ function swBuildId() {
       const file = path.resolve(outDir, 'sw.js')
       if (!fs.existsSync(file)) return
       const buildId = process.env.GITHUB_SHA?.slice(0, 8) || Date.now().toString(36)
-      fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replaceAll('__BUILD_ID__', buildId))
+      const assets = fs.readdirSync(path.resolve(outDir, 'assets'))
+        .filter((f) => /\.(js|css)$/.test(f)).map((f) => `assets/${f}`)
+      fs.writeFileSync(file, fs.readFileSync(file, 'utf8')
+        .replaceAll('__BUILD_ID__', buildId)
+        .replace('__ASSETS__', JSON.stringify(assets)))
     },
   }
 }
@@ -40,5 +45,18 @@ export default defineConfig({
     },
   ],
   base: '/ExpenseTracker/',
+  build: {
+    rolldownOptions: {
+      output: {
+        // Vendor code changes rarely — separate chunks stay cached across deploys.
+        codeSplitting: {
+          groups: [
+            { name: 'firebase', test: /node_modules[\\/](@firebase|firebase)[\\/]/ },
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+          ],
+        },
+      },
+    },
+  },
 })
 

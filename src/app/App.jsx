@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Home, List, Wallet, BarChart2, Settings, ReceiptText, Target, LayoutGrid } from 'lucide-react';
 import { useFirestoreData } from '../hooks/useFirestoreData';
 import { useRecurring } from '../hooks/useRecurring';
@@ -9,13 +9,27 @@ import { clearLegacyDataCache } from '../utils/storage';
 import { learnCategoryRule } from '../utils/categories';
 import AuthGate from '../features/auth/AuthGate';
 import TodayTab         from '../features/transactions/TodayTab';
-import HistoryTab       from '../features/transactions/HistoryTab';
-import IncomeTab        from '../features/income/IncomeTab';
-import StatsTab         from '../features/stats/StatsTab';
-import PlanTab          from '../features/plan/PlanTab';
-import SettingsTab      from '../features/settings/SettingsTab';
-import ExternalTab      from '../features/external/ExternalTab';
-import DesktopDashboard from '../components/DesktopDashboard';
+// Everything past the first screen loads on demand — keeps the startup
+// bundle small (charts and the desktop dashboard are the heavy parts).
+// If a chunk can't load (a tab left open across a deploy), reload once to
+// pick up the current build instead of rendering a blank page.
+const RELOAD_KEY = 'et_chunk_reload';
+const lazyPage = (load) => lazy(() => load().then((m) => {
+  try { sessionStorage.removeItem(RELOAD_KEY); } catch { /* storage unavailable */ }
+  return m;
+}, (err) => {
+  let reloaded = true;
+  try { reloaded = sessionStorage.getItem(RELOAD_KEY) === '1'; sessionStorage.setItem(RELOAD_KEY, '1'); } catch { /* storage unavailable */ }
+  if (!reloaded) { window.location.reload(); return new Promise(() => {}); }
+  throw err;
+}));
+const HistoryTab       = lazyPage(() => import('../features/transactions/HistoryTab'));
+const IncomeTab        = lazyPage(() => import('../features/income/IncomeTab'));
+const StatsTab         = lazyPage(() => import('../features/stats/StatsTab'));
+const PlanTab          = lazyPage(() => import('../features/plan/PlanTab'));
+const SettingsTab      = lazyPage(() => import('../features/settings/SettingsTab'));
+const ExternalTab      = lazyPage(() => import('../features/external/ExternalTab'));
+const DesktopDashboard = lazyPage(() => import('../components/DesktopDashboard'));
 import MoreSheet from '../components/MoreSheet';
 
 /* Mobile: five slots in the bar; the rest live behind "More".
@@ -153,6 +167,7 @@ function AuthenticatedApp({ user, signOut }) {
   if (isDesktop) {
     return (
       <div style={{ width: '100%', minHeight: '100%', overflow: 'auto', background: 'var(--bg)' }}>
+        <Suspense fallback={null}>
         <DesktopDashboard
           {...commonProps}
           onAddTransaction={addTransaction}
@@ -165,6 +180,7 @@ function AuthenticatedApp({ user, signOut }) {
           onSignOut={signOut}
           onSmartAdd={smartAddEntry}
         />
+        </Suspense>
         {errorBanner}
       </div>
     );
@@ -187,6 +203,7 @@ function AuthenticatedApp({ user, signOut }) {
         className={slideDir === 'left' ? 'page-slide-left' : slideDir === 'right' ? 'page-slide-right' : undefined}
         style={{ flex: 1, overflow: 'auto' }}
       >
+        <Suspense fallback={null}>
         {activeTab === 'today' && (
           <TodayTab
             {...commonProps}
@@ -245,6 +262,7 @@ function AuthenticatedApp({ user, signOut }) {
             onSignOut={signOut}
           />
         )}
+        </Suspense>
       </div>
 
       {errorBanner}
