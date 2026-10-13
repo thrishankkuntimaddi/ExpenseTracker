@@ -1,43 +1,28 @@
-import { useRef, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { PenLine, IndianRupee, Wallet, Trash2, TrendingUp, CalendarDays, Calendar, Pencil, ArrowRightLeft, HandCoins, ClipboardList } from 'lucide-react';
 import { isCarryForward } from '../../utils/carryForward';
-import { generateId } from '../../utils/storage';
-import { formatAmount, groupByDay, todayInputValue, dateInputToISO, isoToMonth, localMonthKey } from '../../utils/dateHelpers';
-import { incomeKindFlags, sumAmounts } from '../../utils/finance';
-import { filterItemsByPeriod, getCurrentMonthValue } from '../../utils/periodHelpers';
+import { formatAmount, groupByDay } from '../../utils/dateHelpers';
+import { sumAmounts } from '../../utils/finance';
+import { filterItemsByPeriod } from '../../utils/periodHelpers';
 import PeriodSelector from '../../components/PeriodSelector';
 import EditIncomeModal from '../../components/EditIncomeModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { useStats } from '../../hooks/useStats';
-import ProfileButton from '../../components/ProfileButton';
-import BackButton from '../../components/BackButton';
+import { PageHeader, HeaderAction } from '../../components/Page';
+import { Plus } from 'lucide-react';
+import { useShell } from '../../app/shellContext';
 
 export default function IncomeTab({
-  income: rawIncome = [], onAddIncome, onUpdateIncome, onDeleteIncome,
+  income: rawIncome = [], onUpdateIncome, onDeleteIncome,
   selectedPeriod, onPeriodChange,
   transactions = [], onDeleteTransaction, theme, settings,
 }) {
   // `income` here includes the synthetic carry-forward lines; rawIncome is what is stored
-  const { stats, income } = useStats(transactions, rawIncome, selectedPeriod, theme, settings);
-  const [incMode, setIncMode]         = useState('income'); // 'income' | 'borrowed' | 'repaymentRec'
-  const [name, setName]               = useState('');
-  const [amount, setAmount]           = useState('');
-  const [dateInput, setDateInput]     = useState(todayInputValue());
-  const [isCustomName, setIsCustomName] = useState(false);
-  const [isFullPayment, setIsFullPayment] = useState(false);
+  const { income } = useStats(transactions, rawIncome, selectedPeriod, theme, settings);
   const [editingEntry, setEditingEntry] = useState(null);
   const [deletingId, setDeletingId]     = useState(null);
   const [deletingTxnId, setDeletingTxnId] = useState(null);
 
-  const nameRef   = useRef(null);
-  const amountRef = useRef(null);
-
-  const lentPersons = useMemo(() => {
-    const all = Object.keys(stats?.personDebts || {});
-    return all.filter(p => (stats.personDebts[p]?.netLent ?? 0) > 0);
-  }, [stats?.personDebts]);
-
-  const hasLentPersons = lentPersons.length > 0;
 
   // Filter income by selected period
   const filtInc = useMemo(
@@ -49,7 +34,6 @@ export default function IncomeTab({
     [transactions, selectedPeriod]
   );
 
-  const currentMonth = getCurrentMonthValue();
 
   const totalIncome = sumAmounts(filtInc);
 
@@ -66,33 +50,20 @@ export default function IncomeTab({
 
   const grouped = useMemo(() => groupByDay(combinedItems), [combinedItems]);
 
-  const thisMonthIncome = sumAmounts(income.filter(i => localMonthKey(i.date) === currentMonth));
+  // Totals by kind, and where income comes from (by name), for the period
+  const kindTotals = useMemo(() => {
+    const t = { income: 0, borrowed: 0, repayment: 0 };
+    combinedItems.forEach((i) => { t[i.isRepaymentRec ? 'repayment' : i.isBorrowed ? 'borrowed' : 'income'] += Number(i.amount) || 0; });
+    return t;
+  }, [combinedItems]);
+  const bySource = useMemo(() => {
+    const m = {};
+    filtInc.forEach((i) => { const k = (i.name || 'Other').trim(); m[k] = m[k] ?? { name: k, amount: 0, count: 0 }; m[k].amount += Number(i.amount) || 0; m[k].count += 1; });
+    return Object.values(m).sort((a, b) => b.amount - a.amount);
+  }, [filtInc]);
+  const periodLabel = selectedPeriod?.type === 'current_month' ? 'this month' : 'this period';
+  const shell = useShell();
 
-  function handleNameKey(e)   { if (e.key === 'Enter') { e.preventDefault(); amountRef.current?.focus(); } }
-  function handleAmountKey(e) { if (e.key === 'Enter') { e.preventDefault(); save(); } }
-  function handleAmountInput(e) {
-    const v = e.target.value;
-    if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v);
-  }
-
-  function save() {
-    const n = name.trim(), a = parseFloat(amount);
-    if (!n || !amount || isNaN(a) || a <= 0) return;
-    const isoDate = dateInputToISO(dateInput);
-    onAddIncome({
-      id: generateId(),
-      name: n,
-      amount: a,
-      type: 'income',
-      ...incomeKindFlags(incMode === 'repaymentRec' ? 'repayment' : incMode),
-      date: isoDate,
-      month: isoToMonth(isoDate),
-    });
-    setName(''); setAmount(''); setDateInput(todayInputValue()); setIsCustomName(false); setIsFullPayment(false);
-    nameRef.current?.focus();
-  }
-
-  const canSave = !!name.trim() && !!amount && parseFloat(amount) > 0;
 
   return (
     <div className="tab-root">
@@ -125,270 +96,47 @@ export default function IncomeTab({
       )}
 
       {/* Header */}
-      <div className="tab-header">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <BackButton />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
-              Income
-            </h1>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-              Track all your income sources
-            </p>
-          </div>
-          <ProfileButton />
-        </div>
-        <div style={{ marginTop: 10 }}>
-          <PeriodSelector
-            period={selectedPeriod}
-            onChange={onPeriodChange}
-            transactions={transactions || []}
-            income={income}
-          />
-        </div>
-      </div>
+      <PageHeader title="Income" subtitle="Salary, borrowed money, repayments"
+        actions={shell && <HeaderAction id="income-add" Icon={Plus} label="Add" onClick={() => shell.openAdd('income')} />}>
+        <PeriodSelector period={selectedPeriod} onChange={onPeriodChange} transactions={transactions || []} income={income} />
+      </PageHeader>
 
       {/* Body */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         <div className="income-layout">
 
-          {/* LEFT: Hero + Form */}
-          <div className="income-left" style={{ padding: '16px 20px' }}>
-
-            {/* Hero cards row */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-              {/* Period Income */}
-              <div className="hero-card hero-income" style={{
-                flex: 1, borderRadius: 16, padding: '16px 18px',
-                background: 'var(--income)', boxShadow: 'var(--shadow-md)',
-                display: 'flex', flexDirection: 'column', gap: 4,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.7)' }}>
-                    Period Total
-                  </span>
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Wallet size={14} color="#fff" />
-                  </div>
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', lineHeight: 1.1 }}>
-                  {formatAmount(totalIncome)}
-                </div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>
-                  {filtInc.length} income {filtInc.length === 1 ? 'entry' : 'entries'}
-                </div>
-              </div>
-
-              {/* This Month */}
-              <div style={{
-                flex: 1, borderRadius: 16, padding: '16px 18px',
-                background: 'var(--income-bg)', border: '1.5px solid var(--income-border)',
-                display: 'flex', flexDirection: 'column', gap: 4,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--income)' }}>
-                    This Month
-                  </span>
-                  <TrendingUp size={14} style={{ color: 'var(--income)' }} />
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--income)', lineHeight: 1.1 }}>
-                  {formatAmount(thisMonthIncome)}
-                </div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>
-                  {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-                </div>
+          {/* Summary: period total, this month, where it comes from */}
+          <div className="income-left" style={{ padding: '16px 16px 4px' }}>
+            <div className="hero-card hero-income" style={{ borderRadius: 22, padding: '16px 18px', color: '#fff' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.8 }}>Received · {periodLabel}</div>
+              <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 2 }}>{formatAmount(totalIncome)}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                <HeroFigure label="Income" value={formatAmount(kindTotals.income)} />
+                <HeroFigure label="Borrowed" value={formatAmount(kindTotals.borrowed)} />
+                <HeroFigure label="Repaid to you" value={formatAmount(kindTotals.repayment)} />
               </div>
             </div>
 
-            {/* Form */}
-            <div style={{
-              background: 'var(--surface)', borderRadius: 16,
-              border: '1.5px solid var(--income-border)', boxShadow: 'var(--shadow)', padding: 16,
-            }}>
-              {/* 3-way mode toggle */}
-              <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 10, padding: 3, marginBottom: 14, border: '1px solid var(--border)', gap: 3 }}>
-                <button
-                  type="button"
-                  onClick={() => { setIncMode('income'); setName(''); setAmount(''); setIsCustomName(false); }}
-                  style={{
-                    flex: 1, padding: '7px 2px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                    background: incMode === 'income' ? 'var(--income)' : 'transparent',
-                    color: incMode === 'income' ? '#fff' : 'var(--text-muted)',
-                    transition: 'all 0.15s', textAlign: 'center',
-                  }}
-                >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Wallet size={12} />Income</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIncMode('borrowed'); setName(''); setAmount(''); setIsCustomName(false); }}
-                  style={{
-                    flex: 1, padding: '7px 2px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                    background: incMode === 'borrowed' ? 'var(--person)' : 'transparent',
-                    color: incMode === 'borrowed' ? '#fff' : 'var(--text-muted)',
-                    transition: 'all 0.15s', textAlign: 'center',
-                  }}
-                >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><HandCoins size={12} />Borrowed</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIncMode('repaymentRec'); setName(''); setAmount(''); setIsCustomName(false); }}
-                  style={{
-                    flex: 1, padding: '7px 2px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                    background: incMode === 'repaymentRec' ? '#0891B2' : 'transparent',
-                    color: incMode === 'repaymentRec' ? '#fff' : 'var(--text-muted)',
-                    transition: 'all 0.15s', textAlign: 'center',
-                  }}
-                >
-                  ⮐ Repayment Rec.
-                </button>
-              </div>
-
-              {/* Person Dropdown for Repayment Rec. */}
-              {incMode === 'repaymentRec' && !isCustomName ? (
-                <div style={{ marginBottom: 10 }}>
-                  <select
-                    value={name}
-                    onChange={e => {
-                      const val = e.target.value;
-                      if (val === '__custom__') {
-                        setIsCustomName(true);
-                        setName('');
-                        setAmount('');
-                        setIsFullPayment(false);
-                        return;
-                      }
-                      setName(val);
-                      setIsFullPayment(false);
-                      const debt = stats.personDebts?.[val]?.netLent ?? 0;
-                      if (debt > 0) {
-                        setAmount(debt.toString());
-                        setIsFullPayment(true);
-                      } else {
-                        setAmount('');
-                      }
-                    }}
-                    style={{
-                      width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 13,
-                      border: '1.5px solid #0891B2', background: 'var(--input-bg)', color: 'var(--text)',
-                      outline: 'none', fontFamily: 'inherit', fontWeight: 600,
-                    }}
-                  >
-                    <option value="">
-                      {hasLentPersons ? '-- Select Person Who Repaid You --' : '-- No Active Debtors (Type Custom Name) --'}
-                    </option>
-                    {lentPersons.map(p => (
-                      <option key={p} value={p}>
-                        {p} (Owes You: {formatAmount(stats.personDebts[p].netLent)})
-                      </option>
-                    ))}
-                    <option value="__custom__">Type a custom name…</option>
-                  </select>
-
-                  {name && name !== '__custom__' && (
-                    <div style={{
-                      fontSize: 12, color: '#0891B2', fontWeight: 700, marginTop: 6,
-                      padding: '8px 10px', borderRadius: 8, background: '#ECFEFF',
-                      border: '1px solid #A5F3FC', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    }}>
-                      <span>Owes You: {formatAmount(stats.personDebts?.[name]?.netLent ?? 0)}</span>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={isFullPayment}
-                          onChange={e => {
-                            const checked = e.target.checked;
-                            setIsFullPayment(checked);
-                            if (checked) {
-                              const fullAmt = stats.personDebts?.[name]?.netLent ?? 0;
-                              setAmount(fullAmt.toString());
-                            }
-                          }}
-                        />
-                        Full Repayment
-                      </label>
+            {bySource.length > 0 && (
+              <>
+                <p className="section-label" style={{ margin: '18px 4px 8px' }}>By source</p>
+                <div className="card" style={{ padding: '4px 14px' }}>
+                  {bySource.slice(0, 5).map((src, i) => (
+                    <div key={src.name} style={{ padding: '10px 0', borderTop: i ? '1px solid var(--border)' : 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 650, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{src.name}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{src.count}×</span>
+                        <span style={{ fontSize: 13, fontWeight: 750, color: 'var(--income)', fontVariantNumeric: 'tabular-nums' }}>{formatAmount(src.amount)}</span>
+                      </div>
+                      <div style={{ height: 5, borderRadius: 99, background: 'var(--surface2)', marginTop: 7, overflow: 'hidden' }}>
+                        <div style={{ width: `${totalIncome > 0 ? (src.amount / totalIncome) * 100 : 0}%`, height: '100%', borderRadius: 99, background: 'var(--income)' }} />
+                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
-              ) : null}
-
-              {/* Name (for Income, Borrowed, or Custom Name mode) */}
-              {(incMode !== 'repaymentRec' || isCustomName) && (
-                <div style={{ position: 'relative', marginBottom: 10 }}>
-                  <PenLine size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                  <input
-                    id="income-input-name" ref={nameRef} type="text"
-                    placeholder={incMode === 'income' ? 'Source (Salary, Freelance…)' : 'Person Name'}
-                    value={name}
-                    onChange={e => setName(e.target.value)} onKeyDown={handleNameKey} autoComplete="off"
-                    style={{ width: '100%', paddingLeft: 38, paddingRight: incMode === 'repaymentRec' ? 80 : 14, paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 14, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
-                    onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2')}
-                    onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
-                  />
-                  {incMode === 'repaymentRec' && (
-                    <button
-                      type="button"
-                      onClick={() => { setIsCustomName(false); setName(''); setAmount(''); }}
-                      style={{
-                        position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                        background: 'var(--surface2)', border: '1px solid var(--border)',
-                        borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 600,
-                        color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit',
-                      }}
-                    >
-                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><ClipboardList size={12} />List</span>
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Amount */}
-              <div style={{ position: 'relative', marginBottom: 10 }}>
-                <IndianRupee size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                <input
-                  id="income-input-amount" ref={amountRef} type="text"
-                  placeholder="0.00" value={amount}
-                  onChange={handleAmountInput} onKeyDown={handleAmountKey} inputMode="decimal"
-                  style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 20, fontWeight: 700, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
-                  onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2')}
-                  onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
-                />
-              </div>
-
-              {/* Date */}
-              <div style={{ position: 'relative', marginBottom: 14 }}>
-                <Calendar size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                <input
-                  type="date"
-                  value={dateInput}
-                  max={todayInputValue()}
-                  onChange={e => setDateInput(e.target.value)}
-                  style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 10, paddingBottom: 10, borderRadius: 10, fontSize: 13, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
-                  onFocus={e => (e.target.style.borderColor = incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2')}
-                  onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
-                />
-              </div>
-
-              <button id="btn-save-income" onClick={save} disabled={!canSave}
-                style={{
-                  width: '100%', padding: 13, borderRadius: 12, fontSize: 14, fontWeight: 700,
-                  background: canSave ? (incMode === 'income' ? 'var(--income)' : incMode === 'borrowed' ? 'var(--person)' : '#0891B2') : 'var(--surface2)',
-                  color: canSave ? '#fff' : 'var(--text-muted)', border: 'none', cursor: canSave ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'all 0.15s',
-                }}>
-                {incMode === 'income' ? 'Add Income ↵' : incMode === 'borrowed' ? 'Add Borrowed Money ↵' : 'Add Repayment Rec. ↵'}
-              </button>
-
-              <div style={{
-                marginTop: 14, padding: '10px 12px', borderRadius: 10,
-                background: 'var(--surface2)', border: '1px solid var(--border)',
-                fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5,
-              }}>
-              </div>
-            </div>
+              </>
+            )}
+            <div style={{ height: 14 }} />
           </div>
 
           {/* RIGHT: Income & Borrowed list */}
@@ -501,9 +249,18 @@ export default function IncomeTab({
         }
         @media (max-width: 1023px) {
           .income-layout { display: block; }
-          .income-right  { padding: 0 20px 24px !important; }
+          .income-right  { padding: 0 16px 24px !important; }
         }
       `}</style>
+    </div>
+  );
+}
+
+function HeroFigure({ label, value }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: 10, fontWeight: 600, opacity: 0.75 }}>{label}</div>
+      <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
     </div>
   );
 }

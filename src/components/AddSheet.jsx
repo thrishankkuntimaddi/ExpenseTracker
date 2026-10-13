@@ -49,7 +49,7 @@ export default function AddSheet({ initialKind = 'expense', onClose, onSaved, on
           </div>
 
           {kind === 'income'
-            ? <IncomeForm onAddIncome={onAddIncome} onSaved={saved} />
+            ? <IncomeForm onAddIncome={onAddIncome} onSaved={saved} transactions={data.transactions} />
             : <QuickAddForm key={kind} {...data} type={kind} onAdd={onAdd} onSaved={saved} />}
         </div>
       </div>
@@ -67,7 +67,9 @@ const INCOME_KINDS = [
   { key: 'repayment', label: 'Repaid to me', action: 'Add repayment' },
 ];
 
-function IncomeForm({ onAddIncome, onSaved }) {
+function IncomeForm({ onAddIncome, onSaved, transactions = [] }) {
+  // People you lent to — suggested when recording money paid back
+  const lentTo = [...new Set(transactions.filter((t) => t.type === 'person' && t.direction === 'lent').map((t) => t.name))];
   const [mode, setMode] = useState('income');
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
@@ -97,8 +99,9 @@ function IncomeForm({ onAddIncome, onSaved }) {
       </div>
       <div style={{ position: 'relative', marginBottom: 10 }}>
         <PenLine size={14} style={icon} />
-        <input id="income-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus autoComplete="off"
+        <input id="income-name" list={mode === 'repayment' ? 'income-lent-to' : undefined} value={name} onChange={(e) => setName(e.target.value)} autoFocus autoComplete="off"
           placeholder={mode === 'income' ? 'Source (Salary, Freelance…)' : mode === 'borrowed' ? 'Borrowed from…' : 'Who paid you back?'} style={field} />
+        <datalist id="income-lent-to">{lentTo.map((n) => <option key={n} value={n} />)}</datalist>
       </div>
       <div style={{ position: 'relative', marginBottom: 10 }}>
         <IndianRupee size={14} style={icon} />

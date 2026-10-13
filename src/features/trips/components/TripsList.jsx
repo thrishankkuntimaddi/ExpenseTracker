@@ -35,28 +35,39 @@ export default function TripsList({
       {activeTrips.length > 0 && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--external)' }} />
-            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--external)' }}>Active Trips ({activeTrips.length})</span>
+            <span className="section-label" style={{ margin: 0 }}>Active trips · {activeTrips.length}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {activeTrips.map((t) => {
               const s = computeTripSummary(t);
               return (
-                <div key={t.id} onClick={() => onOpen(t.id)} style={{ padding: '14px 16px', borderRadius: 16, background: 'var(--surface)', border: '1.5px solid var(--external-border)', boxShadow: 'var(--shadow-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, transition: 'all 0.15s' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--external)')} onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--external-border)')}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                      {t.startDate ? `${formatDateShort(t.startDate)} · ` : ''}{(t.members ?? []).length} people · Spend: {formatAmount(s.total)}
-                      {s.count > 0 && <> · <span style={{ color: s.isSettled ? 'var(--income)' : 'var(--expense)', fontWeight: 600 }}>{s.isSettled ? 'settled' : `${formatAmount(s.outstanding)} to settle`}</span></>}
+                <div key={t.id} className="trip-card" onClick={() => onOpen(t.id)} style={{ padding: '14px 16px 10px', borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 750, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                        {t.startDate ? `${formatDateShort(t.startDate)} · ` : ''}{(t.members ?? []).length} people
+                      </div>
                     </div>
+                    <ChevronRight size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    <button onClick={(e) => { e.stopPropagation(); onShare(t); }} title="Share summary" style={smallBtn('var(--accent-bg)', 'var(--accent-border)', 'var(--accent)')}><Share2 size={13} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); onEdit(t); }} title="Edit trip" style={smallBtn('var(--surface2)', 'var(--border)', 'var(--text-secondary)')}><Pencil size={13} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); onArchive(t); }} title="Archive" style={smallBtn('transparent', null, 'var(--text-muted)')}><Archive size={13} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); onDelete(t.id); }} title="Delete" style={smallBtn('transparent', null, 'var(--text-muted)')}><Trash2 size={13} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); onOpen(t.id); }} style={{ padding: '8px 12px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: 'var(--external-bg)', color: 'var(--external)', border: '1px solid var(--external-border)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>Open →</button>
+                  <div style={{ display: 'flex', gap: 18, marginTop: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>Spent</div>
+                      <div style={{ fontSize: 14, fontWeight: 750, color: 'var(--text)' }}>{formatAmount(s.total)}</div>
+                    </div>
+                    {s.count > 0 && (
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>{s.isSettled ? 'Status' : 'To settle'}</div>
+                        <div style={{ fontSize: 14, fontWeight: 750, color: s.isSettled ? 'var(--income)' : 'var(--expense)' }}>{s.isSettled ? 'Settled' : formatAmount(s.outstanding)}</div>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                    <button onClick={(e) => { e.stopPropagation(); onShare(t); }} aria-label="Share summary" title="Share summary" style={smallBtn('var(--accent-bg)', null, 'var(--accent)')}><Share2 size={13} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); onEdit(t); }} aria-label="Edit trip" title="Edit trip" style={smallBtn('var(--surface2)', null, 'var(--text-secondary)')}><Pencil size={13} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); onArchive(t); }} aria-label="Archive" title="Archive" style={smallBtn('var(--surface2)', null, 'var(--text-secondary)')}><Archive size={13} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(t.id); }} aria-label="Delete" title="Delete" style={smallBtn('var(--surface2)', null, 'var(--expense)')}><Trash2 size={13} /></button>
                   </div>
                 </div>
               );

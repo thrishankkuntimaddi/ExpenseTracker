@@ -3,7 +3,7 @@ import {
   TrendingUp, TrendingDown, PiggyBank, Users,
   Scale, Flame, CalendarDays,
   ChevronDown, ChevronUp,
-  Wallet, ArrowDownLeft, ArrowUpRight,
+  ArrowDownLeft, ArrowUpRight,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -19,11 +19,7 @@ import { useStats } from '../../hooks/useStats';
 import InsightsCard from './components/InsightsCard';
 import CategoryBreakdown from './components/CategoryBreakdown';
 import SpendingCalendar from './components/SpendingCalendar';
-import BudgetStatusCard from '../plan/components/BudgetStatusCard';
-import GoalsCard from '../plan/components/GoalsCard';
-import BudgetEditorModal from '../plan/BudgetEditorModal';
-import ProfileButton from '../../components/ProfileButton';
-import BackButton from '../../components/BackButton';
+import { PageHeader } from '../../components/Page';
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
@@ -128,10 +124,9 @@ function AvgCard({ label, value, Icon }) {
   );
 }
 
-export default function StatsTab({ transactions, income, selectedPeriod, onPeriodChange, theme, settings, recurring, onPatchSettings }) {
+export default function StatsTab({ transactions, income, selectedPeriod, onPeriodChange, theme, settings, recurring }) {
   const { stats, filtTxns, filtInc, pieData, barData, areaData, areaData4, C } = useStats(transactions, income, selectedPeriod, theme, settings);
   const isMobile = useIsMobile();
-  const [budgetOpen, setBudgetOpen] = useState(false);
 
   const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
   const isMonthPeriod = selectedPeriod.type === 'current_month' || selectedPeriod.type === 'select_month';
@@ -150,7 +145,6 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
     [transactions, income, categoryRules, currentBudgetStatus, recurring?.rules],
   );
   const catTotals = useMemo(() => categoryTotals(filtTxns, categoryRules), [filtTxns, categoryRules]);
-  const goals = settings?.goals ?? [];
 
   const trendData = isMobile ? (areaData4 || areaData.slice(-4)) : areaData;
   const trendTitle = isMobile ? "4-Month Trend — All Financials" : "6-Month Trend — All Financials";
@@ -180,26 +174,9 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
     <div className="tab-root">
 
       {/* Header */}
-      <div className="tab-header">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
-          <BackButton />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
-              Stats
-            </h1>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-              Financial overview
-            </p>
-          </div>
-          <ProfileButton />
-        </div>
-        <PeriodSelector
-          period={selectedPeriod}
-          onChange={onPeriodChange}
-          transactions={transactions}
-          income={income}
-        />
-      </div>
+      <PageHeader title="Stats" subtitle="Insights, categories, trends">
+        <PeriodSelector period={selectedPeriod} onChange={onPeriodChange} transactions={transactions} income={income} />
+      </PageHeader>
 
       {/* Content */}
       <div className="tab-body">
@@ -239,6 +216,11 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                 </p>
               </div>
 
+              {/* Insights — always about the current month: the most useful thing here, so first */}
+              <div style={{ marginBottom: 14 }}>
+                <InsightsCard insights={insights} />
+              </div>
+
               {/* Spending Averages */}
               <Section title="Spending Averages">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
@@ -255,22 +237,6 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                 </div>
               </Section>
 
-              {/* Budget for the viewed month */}
-              <div style={{ marginBottom: 14 }}>
-                <BudgetStatusCard
-                  status={budgetStatus}
-                  onEdit={onPatchSettings ? () => setBudgetOpen(true) : undefined}
-                  title={isMonthPeriod ? 'Budget · this month' : 'Budget · current month'}
-                />
-              </div>
-
-              {goals.length > 0 && (
-                <Section title="Savings Goals">
-                  <div style={{ marginTop: 8 }}>
-                    <GoalsCard goals={goals} transactions={transactions} compact emptyHint={false} />
-                  </div>
-                </Section>
-              )}
             </div>
 
             {/* ── RIGHT COLUMN ── */}
@@ -280,33 +246,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
               <Section title="Breakdown">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginTop: 8 }}>
 
-                  {/* 1. Remaining Balance — full width */}
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <div style={{
-                      background: stats.balance >= 0 ? 'var(--income-bg)' : 'var(--expense-bg)',
-                      border: `1.5px solid ${stats.balance >= 0 ? 'var(--income-border)' : 'var(--expense-border)'}`,
-                      borderRadius: 14, padding: '14px 16px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      boxShadow: 'var(--shadow-sm)',
-                    }}>
-                      <div>
-                        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: stats.balance >= 0 ? 'var(--income)' : 'var(--expense)', marginBottom: 6 }}>
-                          Remaining Balance
-                        </div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: stats.balance >= 0 ? 'var(--income)' : 'var(--expense)' }}>
-                          {formatAmount(Math.abs(stats.balance))}
-                        </div>
-                        <div style={{ fontSize: 10, color: stats.balance >= 0 ? 'var(--income)' : 'var(--expense)', opacity: 0.75, marginTop: 3 }}>
-                          {stats.balance >= 0 ? 'You are in the green ✓' : 'Overspent this period'}
-                        </div>
-                      </div>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: (stats.balance >= 0 ? 'var(--income)' : 'var(--expense)') + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Wallet size={18} color={stats.balance >= 0 ? 'var(--income)' : 'var(--expense)'} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 2. Total Income */}
+                  {/* Income */}
                   <MetricCard
                     label="Total Income"
                     value={stats.totalIncome}
@@ -498,20 +438,12 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
                 </div>
               </Section>
 
-              {/* Insights — always about the current month (kept last on purpose) */}
-              <div style={{ marginBottom: 14 }}>
-                <InsightsCard insights={insights} />
-              </div>
 
             </div>
           </div>
         )}
       </div>
 
-      {budgetOpen && (
-        <BudgetEditorModal budgets={settings?.budgets} transactions={transactions} rules={categoryRules}
-          onSave={(b) => onPatchSettings({ budgets: b })} onClose={() => setBudgetOpen(false)} />
-      )}
 
       <style>{`
         @media (min-width: 1024px) {

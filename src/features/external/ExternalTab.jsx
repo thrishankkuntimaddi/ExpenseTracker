@@ -25,6 +25,7 @@ export default function ExternalTab({
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
   selectedPeriod, reportError,
   initialMode = 'billings',   // a Home tile can open Trips directly
+  showModeToggle = true,      // phones show Trips and Billings as separate pages
 }) {
   const [mode, setMode] = useState(initialMode === 'trips' ? 'trips' : 'billings');   // 'billings' | 'trips'
   const {
@@ -288,7 +289,7 @@ export default function ExternalTab({
         onAddTransaction={onAddTransaction}
         onDeleteTransaction={onDeleteTransaction}
         reportError={reportError}
-        headerExtra={<ModeToggle mode={mode} onChange={setMode} />}
+        headerExtra={showModeToggle ? <ModeToggle mode={mode} onChange={setMode} /> : null}
       />
     );
   }
@@ -342,7 +343,7 @@ export default function ExternalTab({
         onBack={() => setActiveSessionId(null)}
         onShare={handleShareCurrentSession}
         onNew={() => setShowNewModal(true)}
-        extra={!currentSession ? <ModeToggle mode={mode} onChange={setMode} /> : null}
+        extra={!currentSession && showModeToggle ? <ModeToggle mode={mode} onChange={setMode} /> : null}
       />
 
       {/* Body */}

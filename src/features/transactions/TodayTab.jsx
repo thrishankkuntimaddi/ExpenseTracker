@@ -1,87 +1,103 @@
 import { useMemo, useState, Fragment } from 'react';
-import {
-  Coins, Users, Search, Zap, ArrowUpRight, List, Wallet, Sparkles, CalendarDays, Target, Repeat, Flag,
-  ReceiptText, Plane, Bell, Database,
-} from 'lucide-react';
+import { Coins, Users, Search, Zap, ArrowUpRight, ChevronRight, CalendarClock, Check } from 'lucide-react';
 import { generateId } from '../../utils/storage';
-import { formatAmount, todayInputValue, dateInputToISO, isoToMonth } from '../../utils/dateHelpers';
+import { formatAmount, todayInputValue, dateInputToISO, isoToMonth, localMonthKey } from '../../utils/dateHelpers';
 import { getCurrentMonthValue } from '../../utils/periodHelpers';
 import { TRANSACTION_TYPES as TYPES, getDirectionMeta } from '../../utils/typeConfig';
 import { useStats } from '../../hooks/useStats';
 import { inferCategory, categoryOf, categoryMeta, EMPTY_RULES } from '../../utils/categories';
 import { parseQuickEntry } from '../../utils/smartInput';
 import { computeBudgetStatus } from '../../utils/budget';
+import { upcomingBills, dueLabel } from '../../utils/bills';
+import { toKey, fromKey } from '../../utils/recurring';
 import { CategoryBadge } from '../../components/CategoryPicker';
-import DueRecurringCard from '../plan/components/DueRecurringCard';
 import ProfileButton from '../../components/ProfileButton';
 import { useShell } from '../../app/shellContext';
-import { ADD_KINDS } from '../../app/pages';
-import { normaliseUi } from '../../utils/uiPrefs';
-
-/* Home tiles: every feature one tap away (PhonePe-style service grid). */
-const SHORTCUTS = [
-  { key: 'history',   label: 'History',   Icon: List,         color: '#D97706', go: ['history'] },
-  { key: 'income',    label: 'Income',    Icon: Wallet,       color: '#059669', go: ['income'] },
-  { key: 'insights',  label: 'Insights',  Icon: Sparkles,     color: '#2563EB', go: ['stats'] },
-  { key: 'calendar',  label: 'Calendar',  Icon: CalendarDays, color: '#E11D48', go: ['stats', { anchor: 'stats-calendar' }] },
-  { key: 'budget',    label: 'Budget',    Icon: Target,       color: '#0891B2', go: ['plan', { anchor: 'plan-budget' }] },
-  { key: 'recurring', label: 'Recurring', Icon: Repeat,       color: '#7C3AED', go: ['plan', { anchor: 'plan-recurring' }] },
-  { key: 'goals',     label: 'Goals',     Icon: Flag,         color: '#16A34A', go: ['plan', { anchor: 'plan-goals' }] },
-  { key: 'people',    label: 'People',    Icon: Users,        color: '#C2410C', go: ['people'] },
-  { key: 'billings',  label: 'Billings',  Icon: ReceiptText,  color: '#4F46E5', go: ['external', { mode: 'billings' }] },
-  { key: 'trips',     label: 'Trips',     Icon: Plane,        color: '#0EA5E9', go: ['external', { mode: 'trips' }] },
-  { key: 'reminders', label: 'Reminders', Icon: Bell,         color: '#DB2777', go: ['profile', { openGroup: 'reminders' }] },
-  { key: 'backup',    label: 'Backup',    Icon: Database,     color: '#475569', go: ['profile', { openGroup: 'data-management' }] },
-];
+import { PAGE_META } from '../../app/pages';
+import { normaliseUi, SLOT_KEYS } from '../../utils/uiPrefs';
 
 const linkBtn = { padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
+const rupees = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;   // compact: no paise
+const capitalise = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 export default function TodayTab({ transactions = [], income = [], onAdd, theme, settings, recurring }) {
   const shell = useShell();
-  const homeSections = useMemo(() => normaliseUi(settings?.ui).home, [settings?.ui]);
+  const ui = useMemo(() => normaliseUi(settings?.ui), [settings?.ui]);
+  const homeSections = ui.home;
   const { stats } = useStats(transactions, income, { type: 'current_month', value: getCurrentMonthValue() }, theme, settings);
   const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
   const [quick, setQuick] = useState('');
+  const monthKey = getCurrentMonthValue();
 
   const budgetStatus = useMemo(
-    () => computeBudgetStatus({ budgets: settings?.budgets, transactions, monthKey: getCurrentMonthValue(), rules: categoryRules }),
-    [settings?.budgets, transactions, categoryRules],
+    () => computeBudgetStatus({ budgets: settings?.budgets, transactions, monthKey, rules: categoryRules }),
+    [settings?.budgets, transactions, monthKey, categoryRules],
   );
   const safeToday = budgetStatus.hasBudget && budgetStatus.total.limit ? budgetStatus.total : null;
 
   const now = new Date();
+  const todayKey = toKey(now);
   const todayExpense = transactions
     .filter((t) => t.type === 'expense' && new Date(t.date).toDateString() === now.toDateString())
     .reduce((s, t) => s + t.amount, 0);
   const monthShort = now.toLocaleDateString('en-IN', { month: 'long' });
+  const monthAbbr = now.toLocaleDateString('en-IN', { month: 'short' });
   const hour = now.getHours();
   const greeting = hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const dueCount = recurring?.manualDue?.length ?? 0;
+
+  // Bills: late + the next seven days
+  const existingIds = useMemo(() => {
+    const s = new Set();
+    transactions.forEach((t) => s.add(t.id));
+    income.forEach((i) => s.add(i.id));
+    return s;
+  }, [transactions, income]);
+  const rules = useMemo(() => recurring?.rules ?? [], [recurring?.rules]);
+  const soon = upcomingBills(rules, existingIds, todayKey, 7);
+  const lateCount = soon.filter((b) => b.status === 'overdue').length;
 
   // Recent entries: the last 7 days, newest first
   const recent = useMemo(() => {
     const since = new Date(); since.setHours(0, 0, 0, 0); since.setDate(since.getDate() - 6);
     return transactions.filter(t => new Date(t.date) >= since)
       .sort((a, b) => new Date(b.date) - new Date(a.date) || String(b.id).localeCompare(String(a.id)))
-      .slice(0, 8);
+      .slice(0, 6);
   }, [transactions]);
   const dayLabel = (iso) => {
     const d = new Date(iso); const today = new Date(); const y = new Date(); y.setDate(today.getDate() - 1);
     return d.toDateString() === today.toDateString() ? 'Today' : d.toDateString() === y.toDateString() ? 'Yesterday' : d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
   };
 
-  /* "chai 20" ⏎ → an expense, categorised, dated now. Anything that doesn't
-     parse opens the full form instead. */
+  /* Quick entry: "chai 20" ⏎ → a categorised expense, dated now. A live
+     preview shows exactly what will be saved before you press Add. */
+  const parsed = parseQuickEntry(quick);
+  const preview = parsed && { name: capitalise(parsed.name), amount: parsed.amount, category: inferCategory(parsed.name, categoryRules) };
   function submitQuick(e) {
     e.preventDefault();
-    const parsed = parseQuickEntry(quick);
-    if (!parsed) { shell?.openAdd('expense'); return; }
+    if (!preview) return;
     const isoDate = dateInputToISO(todayInputValue());
-    const category = inferCategory(parsed.name, categoryRules);
-    onAdd({ id: generateId(), type: 'expense', name: parsed.name, amount: parsed.amount, category, date: isoDate, month: isoToMonth(isoDate) });
-    shell?.toast(`Added ${parsed.name} · ${formatAmount(parsed.amount)} · ${categoryMeta(category).label}`);
+    onAdd({ id: generateId(), type: 'expense', name: preview.name, amount: preview.amount, category: preview.category, date: isoDate, month: isoToMonth(isoDate) });
+    shell?.toast(`Added ${preview.name} · ${formatAmount(preview.amount)}`);
     setQuick('');
   }
+
+  // Explore: one live line per page that isn't already in the bar
+  const monthTxns = transactions.filter((t) => localMonthKey(t.date) === monthKey);
+  const monthIncome = income.filter((i) => localMonthKey(i.date) === monthKey).reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const owedToMe = Object.values(stats?.personDebts ?? {}).reduce((s, p) => s + Math.max(0, p.netLent ?? 0), 0);
+  const savedThisMonth = monthTxns.filter((t) => t.type === 'savings').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const exploreLine = {
+    history: `${monthTxns.length} entr${monthTxns.length === 1 ? 'y' : 'ies'} this month`,
+    bills: rules.length ? (lateCount ? `${lateCount} late` : soon.length ? `${soon.length} due this week` : 'Nothing due this week') : 'Add rent, EMIs, SIPs',
+    stats: `Insights for ${monthAbbr}`,
+    budget: safeToday ? (safeToday.remaining < 0 ? 'Over budget' : `${rupees(safeToday.remaining)} left`) : budgetStatus.hasBudget ? 'Category limits set' : 'Set a monthly budget',
+    savings: savedThisMonth ? `${rupees(savedThisMonth)} in ${monthAbbr}` : 'SIPs, funds, goals',
+    income: monthIncome ? `${rupees(monthIncome)} in ${monthAbbr}` : 'Nothing yet this month',
+    people: owedToMe ? `${rupees(owedToMe)} owed to you` : 'Lend, borrow, settle',
+    trips: 'Split shared costs',
+    external: 'Spent for others',
+  };
+  const explorePages = SLOT_KEYS.filter((k) => !ui.tabs.includes(k));
 
   const pct = safeToday ? Math.min(100, (safeToday.spent / safeToday.limit) * 100) : 0;
   const overviewSection = (
@@ -119,38 +135,103 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
   );
 
   const addSection = (
-    <form className="home-add card" onSubmit={submitQuick} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 6px 6px 14px', marginBottom: 14 }}>
-      <Zap size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-      <input id="home-quick-entry" value={quick} onChange={(e) => setQuick(e.target.value)} autoComplete="off" enterKeyHint="done"
-        placeholder='Quick entry — try "chai 20"' aria-label="Quick entry: name and amount"
-        style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', boxShadow: 'none', outline: 'none', color: 'var(--text)', fontSize: 15, padding: '8px 0', fontFamily: 'inherit' }} />
-      <button type="submit" disabled={!quick.trim()} style={{ padding: '8px 14px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', background: quick.trim() ? 'var(--accent)' : 'var(--surface2)', color: quick.trim() ? '#fff' : 'var(--text-muted)', cursor: quick.trim() ? 'pointer' : 'default' }}>
-        Add
-      </button>
+    <form className="home-add card" onSubmit={submitQuick} style={{ padding: '6px 6px 6px 14px', marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Zap size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+        <input id="home-quick-entry" value={quick} onChange={(e) => setQuick(e.target.value)} autoComplete="off" enterKeyHint="done"
+          placeholder='Quick entry — type "chai 20"' aria-label="Quick entry: name and amount"
+          style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', boxShadow: 'none', outline: 'none', color: 'var(--text)', fontSize: 15, padding: '8px 0', fontFamily: 'inherit' }} />
+        <button type="submit" disabled={!preview} style={{ padding: '8px 14px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', background: preview ? 'var(--accent)' : 'var(--surface2)', color: preview ? '#fff' : 'var(--text-muted)', cursor: preview ? 'pointer' : 'default' }}>
+          Add
+        </button>
+      </div>
+      {quick.trim() && (
+        <div id="quick-preview" style={{ fontSize: 12, padding: '2px 0 6px 24px', color: preview ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
+          {preview
+            ? <>Expense · <strong style={{ color: 'var(--text)' }}>{preview.name}</strong> · {formatAmount(preview.amount)} · {categoryMeta(preview.category).label} · today</>
+            : 'Add an amount — e.g. "petrol 500" or "250 swiggy"'}
+        </div>
+      )}
     </form>
   );
 
-  const actionsSection = shell && (
-    <div className="home-actions" style={{ marginBottom: 14 }}>
-      <div className="card" style={{ padding: '14px 8px 6px', marginBottom: 12 }}>
-        <p className="section-label" style={{ margin: '0 8px 10px' }}>Quick add</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
-          {ADD_KINDS.map(({ key, label, Icon, color, bg }) => (
-            <Tile key={key} id={`quick-${key}`} label={label} onClick={() => shell.openAdd(key)}>
-              <span className="tile-icon" style={{ background: bg }}><Icon size={20} style={{ color }} /></span>
-            </Tile>
-          ))}
-        </div>
+  const billsSection = (
+    <div className="home-bills" style={{ marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '4px 4px 8px' }}>
+        <p className="section-label" style={{ margin: 0 }}>Bills & payments</p>
+        {shell && <button id="home-bills-all" onClick={() => shell.goTo('bills')} style={linkBtn}>{rules.length ? 'All bills' : 'Set up'}</button>}
       </div>
-      <div className="card" style={{ padding: '14px 8px 6px' }}>
-        <p className="section-label" style={{ margin: '0 8px 10px' }}>Manage money</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', rowGap: 4 }}>
-          {SHORTCUTS.map(({ key, label, Icon, color, go }) => (
-            <Tile key={key} id={`shortcut-${key}`} label={label} onClick={() => shell.goTo(...go)} badge={key === 'recurring' ? dueCount : 0}>
-              <span className="tile-icon tile-icon-solid" style={{ background: color }}><Icon size={19} style={{ color: '#fff' }} /></span>
-            </Tile>
-          ))}
+      {!rules.length ? (
+        <button className="card" onClick={() => shell?.goTo('bills')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px', border: 'none', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <span style={{ width: 38, height: 38, borderRadius: 12, background: 'var(--expense-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><CalendarClock size={17} style={{ color: 'var(--expense)' }} /></span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Never miss a due date</span>
+            <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Add rent, electricity, EMIs, SIPs — pay each with one tap</span>
+          </span>
+          <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
+        </button>
+      ) : !soon.length ? (
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px' }}>
+          <span style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--income-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={15} style={{ color: 'var(--income)' }} /></span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>Nothing due in the next 7 days</span>
         </div>
+      ) : (
+        <div className="card">
+          {soon.slice(0, 4).map((b, i) => {
+            const d = fromKey(b.dateKey);
+            const late = b.status === 'overdue';
+            return (
+              <div key={`${b.rule.id}|${b.dateKey}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderTop: i ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ width: 38, flexShrink: 0, textAlign: 'center', padding: '4px 0', borderRadius: 11, background: late ? 'var(--expense-bg)' : 'var(--surface2)' }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.1, color: late ? 'var(--expense)' : 'var(--text)' }}>{d.getDate()}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>{d.toLocaleDateString('en-IN', { month: 'short' })}</div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 650, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.rule.name}</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: late ? 'var(--expense)' : b.status === 'today' ? 'var(--lent)' : 'var(--text-muted)', marginTop: 1 }}>
+                    {b.rule.autoPost ? `Auto · ${dueLabel(b.dateKey, todayKey)}` : dueLabel(b.dateKey, todayKey)}
+                  </div>
+                </div>
+                <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{formatAmount(b.amount)}</span>
+                {!b.rule.autoPost && recurring?.post && (
+                  <button id={`home-pay-${b.rule.id}`} onClick={async () => {
+                    if (await recurring.post({ rule: b.rule, dateKey: b.dateKey, paidOn: b.dateKey > todayKey ? todayKey : null })) shell?.toast(`Paid ${b.rule.name} · ${formatAmount(b.amount)}`);
+                  }} style={{ padding: '7px 13px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: b.status === 'upcoming' ? 'var(--surface2)' : 'var(--income)', color: b.status === 'upcoming' ? 'var(--text-secondary)' : '#fff' }}>
+                    Pay
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {soon.length > 4 && (
+            <button onClick={() => shell?.goTo('bills')} style={{ width: '100%', padding: '10px', border: 'none', borderTop: '1px solid var(--border)', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+              {soon.length - 4} more
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const exploreSection = shell && explorePages.length > 0 && (
+    <div className="home-explore" style={{ marginBottom: 14 }}>
+      <p className="section-label" style={{ margin: '4px 4px 8px' }}>Explore</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+        {explorePages.map((k) => {
+          const { label, Icon, tone } = PAGE_META[k];
+          return (
+            <button key={k} id={`explore-${k}`} className="card explore-card" onClick={() => shell.goTo(k)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px', border: 'none', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', minWidth: 0 }}>
+              <span className="explore-icon" style={{ width: 36, height: 36, borderRadius: 12, background: `var(--${tone}-bg)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon size={17} strokeWidth={2} style={{ color: `var(--${tone})` }} />
+              </span>
+              <span style={{ minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{label}</span>
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{exploreLine[k]}</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -161,7 +242,7 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
       <>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '4px 4px 8px' }}>
           <p className="section-label" style={{ margin: 0 }}>Recent activity</p>
-          {shell && <button id="home-see-all" onClick={() => shell.goTo('history')} style={linkBtn}>See all</button>}
+          {shell && <button id="home-see-all" onClick={() => shell.goTo('history')} style={linkBtn}>All history</button>}
         </div>
         <div className="card" id="recent-entries">
           {recent.map((txn, i) => {
@@ -253,11 +334,9 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
   function section(key) {
     if (key === 'overview') return overviewSection;
     if (key === 'add') return addSection;
-    if (key === 'actions') return actionsSection;
+    if (key === 'bills') return billsSection;
+    if (key === 'explore') return exploreSection;
     if (key === 'recent') return recentSection;
-    if (key === 'due' && recurring) {
-      return <DueRecurringCard due={recurring.manualDue} onPost={recurring.post} onSkip={recurring.skip} onSkipAll={recurring.skipAllFor} compact collapsible />;
-    }
     return null;
   }
 
@@ -289,17 +368,6 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
         {homeSections.filter((s) => s.visible).map(({ key }) => <Fragment key={key}>{section(key)}</Fragment>)}
       </div>
     </div>
-  );
-}
-
-function Tile({ id, label, onClick, badge = 0, children }) {
-  return (
-    <button id={id} className="home-tile" onClick={onClick}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '4px 2px 10px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', position: 'relative' }}>
-      {children}
-      {badge > 0 && <span className="tile-badge">{badge > 9 ? '9+' : badge}</span>}
-      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{label}</span>
-    </button>
   );
 }
 

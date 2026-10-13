@@ -3,6 +3,7 @@ import { Zap } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { firebaseConfigError } from '../../services/firebase';
 import AuthScreen from './AuthScreen';
+import { markAppReady } from '../../app/ready';
 import { googleSignInAvailable } from '../../native/googleSignIn';
 import { isNative } from '../../native';
 import { RELEASES } from '../../utils/downloads';
@@ -77,10 +78,11 @@ export default function AuthGate({ children }) {
   const { user, loading, signIn, signUp, signInWithGoogle, resetPassword, resendVerification, signOut, deleteAccount, error, setError } = useAuth();
   const [authLoading, setAuthLoading] = useState(false);
 
-  if (firebaseConfigError) return <SetupRequired />;
+  if (firebaseConfigError) { markAppReady(); return <SetupRequired />; }
   if (loading || user === undefined) return <LoadingScreen />;
 
   if (!user) {
+    markAppReady();   // the sign-in screen is the first screen
     // Runs the action with the shared busy flag; errors are shown by useAuth.
     const busy = (fn) => async (...args) => {
       setAuthLoading(true);

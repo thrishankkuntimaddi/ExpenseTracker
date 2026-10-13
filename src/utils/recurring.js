@@ -104,9 +104,13 @@ export function monthlyEquivalent(rule) {
   }
 }
 
-/** Build the entry a posted occurrence creates. Income rules → income entry. */
-export function entryFromRule(rule, dateKey) {
-  const date = dateInputToISO(dateKey);
+/**
+ * Build the entry a posted occurrence creates. Income rules → income entry.
+ * `paidOnKey` dates the entry on the day it was actually paid (paying a bill
+ * early); the id still names the scheduled occurrence, so it stays idempotent.
+ */
+export function entryFromRule(rule, dateKey, paidOnKey = null) {
+  const date = dateInputToISO(paidOnKey ?? dateKey);
   const base = {
     id: occurrenceId(rule.id, dateKey),
     name: rule.name,

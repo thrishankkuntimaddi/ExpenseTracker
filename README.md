@@ -145,11 +145,15 @@ All data is private and scoped strictly to your account — `firestore.rules` on
 - Key metrics: total income, total expense, total savings, total given, net balance, average daily/weekly/monthly spend, and wastage percentage
 
 ### 📱 Phone layout
-- **Home is the menu** (PhonePe / GPay style): a month-overview card (spent, budget bar, today, safe to spend, balance — tap for Stats), a **quick entry** bar (`chai 20` ⏎ logs a categorised expense), **Quick add** tiles (Expense · Income · People · Savings) and **Manage money** tiles for every feature — History, Income, Insights, Calendar, Budget, Recurring (with a due badge), Goals, People, Billings, Trips, Reminders, Backup. Tiles open the exact section, and pages opened from a tile get a back arrow
-- **Bottom bar**: Home · two pages · **＋** · one page. ＋ opens one sheet to add an expense, income (income / borrowed / repaid to me), money with a person or savings from anywhere, and confirms with a short toast
-- **People** (who owes you, whom you owe) is now on the phone too, not only on desktop
-- Tap your **avatar** (top-right of every page) for **Profile**: account (photo or initials, sign-in method, entries, months, devices, member since), **Appearance** (Light / Dark / Auto), **Customize**, then every setting grouped into Preferences · Sync & devices · Your data · App · Account
-- **Customize**, synced to all your devices: the three bar pages beside Home and ＋, the page the app **opens on**, and the order and visibility of the Home sections. Bad or old values are repaired automatically — Home is always in the bar and the shortcut tiles can't be hidden
+Every way in leads somewhere different — nothing is offered twice.
+- **Home**: greeting, search and your avatar; the month-overview card (spent, budget bar, today, safe to spend, balance — tap for Stats); a **quick entry** bar that previews exactly what it will save (`petrol 500` → *Expense · Petrol · ₹500 · Fuel · today*); **Bills & payments** — what's late or due in the next 7 days, each with **Pay**; **Explore** — a card for every page that isn't in your bar, each with a live line (*₹11,389 left*, *₹600 owed to you*, *3 due this week*); recent activity
+- **Bottom bar**: Home · two pages · **＋** · one page. ＋ is the one place to add anything — expense, income (income / borrowed / repaid to me, with the people you lent to suggested), money with a person, savings
+- **Bills & payments**: the month as a timeline — paid, due today, late, coming up — with one-tap **Pay** (paying early dates it today), skip, month-by-month browsing, totals (this month · paid · to pay), presets (Rent, Electricity, Mobile, Internet, SIP, EMI, Insurance, Subscription) and every regular payment to pause or edit
+- **Budget**: without one, a ready-made budget from your last three months — one tap to use it; with one, what's left, safe per day, where the month will end, an envelope for every category you spent in, and the last six months against your budget
+- **Savings & goals**: saved this month, savings rate, all-time by kind (SIP, mutual fund, trading, cash), six months, goals, recent savings
+- **Income**: one summary (income · borrowed · repaid to you), income by source, the list; **Stats** leads with insights; **People** and **Trips & splits** are pages of their own
+- One header on every page (back arrow when opened from Home, title, actions, avatar); the launch intro stays until your data is ready — no second loading screen
+- Tap your **avatar** for **Profile**: account, **Appearance** (Light / Dark / Auto), **Customize** (the three bar pages, the page the app opens on, the order and visibility of Home sections — synced, and repaired if ever invalid), then every setting grouped into Preferences · Sync & devices · Your data · App · Account
 
 ### ⚙️ Settings & Data Management
 - **Export JSON**: download a full backup of all transactions, income, and settings (budgets, goals, category rules included)

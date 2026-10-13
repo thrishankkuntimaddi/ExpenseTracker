@@ -22,6 +22,9 @@ const { default: PlanTab } = await import('../features/plan/PlanTab');
 const { default: SettingsTab } = await import('../features/settings/SettingsTab');
 const { default: ProfilePage } = await import('../features/profile/ProfilePage');
 const { default: AddSheet } = await import('../components/AddSheet');
+const { default: BillsPage } = await import('../features/bills/BillsPage');
+const { default: BudgetPage } = await import('../features/budget/BudgetPage');
+const { default: SavingsPage } = await import('../features/savings/SavingsPage');
 const { default: DesktopDashboard } = await import('../components/DesktopDashboard');
 const { default: EditTransactionModal } = await import('../components/EditTransactionModal');
 const { default: RecurringRuleModal } = await import('../features/plan/RecurringRuleModal');
@@ -86,10 +89,11 @@ const common = {
 const render = (el) => renderToStaticMarkup(el);
 
 describe('screens render with planning features', () => {
-  it('Expenses tab shows safe-to-spend, due recurring and category chips', () => {
+  it('Home shows safe-to-spend, bills due and category chips', () => {
     const html = render(<TodayTab {...common} onAdd={noop} />);
     expect(html).toContain('Safe to spend today');
-    expect(html).toContain('recurring due');
+    expect(html).toContain('Bills &amp; payments');
+    expect(html).toContain('House rent');          // the rent rule is overdue → listed with Pay
     expect(html).toContain('Food &amp; Dining');
   });
 
@@ -100,13 +104,43 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Subscriptions');
   });
 
-  it('Stats tab shows insights, budget, category breakdown and calendar', () => {
+  it('Stats shows insights first, category breakdown and calendar — budget and goals live on their own pages', () => {
     const html = render(<StatsTab {...common} />);
     expect(html).toContain('Insights');
-    expect(html).toContain('Budget · this month');
     expect(html).toContain('By Category');
     expect(html).toContain('Spending Calendar');
-    expect(html).toContain('Savings Goals');
+    expect(html).not.toContain('Budget · this month');
+    expect(html).not.toContain('Savings Goals');
+    expect(html.split('Remaining Balance').length - 1).toBe(1);   // once, not twice
+    expect(html.indexOf('Insights')).toBeLessThan(html.indexOf('Spending Calendar'));
+  });
+
+  it('Bills page shows the month timeline, presets and every rule', () => {
+    const html = render(<BillsPage {...common} />);
+    expect(html).toContain('Bills &amp; payments');
+    expect(html).toContain('House rent');
+    expect(html).toContain('7 days late');                 // rent was due on the 1st (test clock: the 8th)
+    expect(html).toContain('id="preset-electricity"');
+    expect(html).toContain('All regular payments');
+    expect(html).toContain('Every 3rd · Subscriptions · auto');
+  });
+
+  it('Budget page: envelopes and six months when a budget is set; a ready-made one when not', () => {
+    const set = render(<BudgetPage {...common} />);
+    expect(set).toContain('Left to spend');
+    expect(set).toContain('By category');
+    expect(set).toContain('Last 6 months');
+    const none = render(<BudgetPage {...common} settings={{}} />);
+    expect(none).toContain('Your budget, ready to go');
+    expect(none).toContain('budget-use-suggestion');
+  });
+
+  it('Savings page shows rate, where it goes and goals', () => {
+    const html = render(<SavingsPage {...common} />);
+    expect(html).toContain('Saved this month');
+    expect(html).toContain('Where it goes');
+    expect(html).toContain('SIP');
+    expect(html).toContain('Emergency fund');
   });
 
   it('Plan tab lists budget, recurring rules and goals', () => {
@@ -134,7 +168,7 @@ describe('screens render with planning features', () => {
     expect(html).toContain('AR');                            // initials avatar
     expect(html).toContain('Member since February 2025');
     for (const t of ['Appearance', 'Customize', 'Bottom bar', 'Home screen', 'Open the app on', 'Preferences', 'Sync &amp; devices', 'Your data', 'Account', 'Reset']) expect(html).toContain(t);
-    expect(html).toContain('Home · Plan · Stats · Income');  // bar summary follows settings.ui (Home fixed first)
+    expect(html).toContain('Home · Bills · Stats · Income');  // bar summary follows settings.ui (Home fixed first; Plan → Bills)
     expect(html.match(/id="theme-(light|dark|system)"/g)).toHaveLength(3);   // one theme picker, not two
   });
 
@@ -149,10 +183,10 @@ describe('screens render with planning features', () => {
   });
 
   it('Home renders sections in the customised order and hides switched-off ones', () => {
-    const html = render(<TodayTab {...common} onAdd={noop} settings={{ ...settings, ui: { homeOrder: ['recent', 'add', 'overview', 'due'], homeHidden: ['overview'] } }} />);
+    const html = render(<TodayTab {...common} onAdd={noop} settings={{ ...settings, ui: { homeOrder: ['recent', 'add', 'overview', 'bills'], homeHidden: ['overview'] } }} />);
     expect(html).not.toContain('id="home-summary"');
     expect(html.indexOf('home-recent')).toBeLessThan(html.indexOf('home-add'));
-    expect(html).toContain('recurring due');
+    expect(html.indexOf('home-add')).toBeLessThan(html.indexOf('home-bills'));
   });
 
   it('Settings tab groups everything into collapsible sections with summaries', () => {
@@ -228,7 +262,7 @@ describe('screens render with planning features', () => {
     const { default: TripsList } = await import('../features/trips/components/TripsList');
     const list = render(<TripsList activeTrips={[trip]} closedTrips={[{ ...trip, id: 'c1', status: 'closed' }]} archivedTrips={[{ ...trip, id: 'a1', status: 'archived' }]}
       showHistory setShowHistory={noop} showArchived setShowArchived={noop} onOpen={noop} onShare={noop} onEdit={noop} onDelete={noop} onArchive={noop} onUnarchive={noop} onNew={noop} />);
-    expect(list).toContain('Active Trips (1)');
+    expect(list).toContain('Active trips · 1');
     expect(list).toContain('Trip History (1)');
     expect(list).toContain('Archived (1)');
     expect(list).toContain('Share summary');

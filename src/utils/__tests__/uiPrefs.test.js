@@ -7,13 +7,14 @@ describe('normaliseUi', () => {
       const ui = normaliseUi(raw);
       expect(ui.tabs).toEqual(DEFAULT_TABS);
       expect(ui.start).toBe('today');
-      expect(ui.home.map((s) => s.key)).toEqual(['overview', 'add', 'actions', 'due', 'recent']);
+      expect(ui.home.map((s) => s.key)).toEqual(['overview', 'add', 'bills', 'explore', 'recent']);
       expect(ui.home.every((s) => s.visible)).toBe(true);
     }
   });
 
   it('always yields three unique bar slots, never Home (it is fixed first)', () => {
-    expect(normaliseUi({ tabs: ['plan', 'plan', 'bogus', 'external'] }).tabs).toEqual(['plan', 'external', 'history']);
+    // 'plan' (3.5) now lives on the Bills page
+    expect(normaliseUi({ tabs: ['plan', 'plan', 'bogus', 'external'] }).tabs).toEqual(['bills', 'external', 'history']);
     // 3.4.0 saved four tabs including Home
     expect(normaliseUi({ tabs: ['today', 'history', 'income', 'stats'] }).tabs).toEqual(['history', 'income', 'stats']);
     for (const t of [[], ['today'], PAGE_KEYS, ['x', 'y']]) {
@@ -24,17 +25,19 @@ describe('normaliseUi', () => {
     }
   });
 
-  it('repairs the home order and never hides the shortcuts', () => {
-    const ui = normaliseUi({ homeOrder: ['recent', 'recent', 'nope', 'add'], homeHidden: ['actions', 'overview', 'zzz'] });
-    expect(ui.home.map((s) => s.key)).toEqual(['overview', 'recent', 'add', 'actions', 'due']);
-    expect(ui.home.find((s) => s.key === 'actions').visible).toBe(true);
+  it('repairs the home order and never hides Explore', () => {
+    const ui = normaliseUi({ homeOrder: ['recent', 'recent', 'nope', 'add'], homeHidden: ['explore', 'overview', 'zzz'] });
+    expect(ui.home.map((s) => s.key)).toEqual(['overview', 'recent', 'add', 'bills', 'explore']);
+    expect(ui.home.find((s) => s.key === 'explore').visible).toBe(true);
     expect(ui.home.find((s) => s.key === 'overview').visible).toBe(false);
   });
 
-  it('slots sections added later next to their default neighbour', () => {
-    // a 3.4.0 order without 'actions'
-    expect(normaliseUi({ homeOrder: ['recent', 'overview', 'due', 'add'] }).home.map((s) => s.key))
-      .toEqual(['recent', 'overview', 'due', 'add', 'actions']);
+  it('migrates earlier section names and slots new ones next to their neighbour', () => {
+    // 3.5.0: 'due' → 'bills', 'actions' → 'explore'
+    const ui = normaliseUi({ homeOrder: ['recent', 'overview', 'due', 'add', 'actions'], homeHidden: ['due'] });
+    expect(ui.home.map((s) => s.key)).toEqual(['recent', 'overview', 'bills', 'add', 'explore']);
+    expect(ui.home.find((s) => s.key === 'bills').visible).toBe(false);
+    expect(normaliseUi({ start: 'plan' }).start).toBe('bills');
   });
 
   it('rejects an unknown start page', () => {
@@ -43,7 +46,7 @@ describe('normaliseUi', () => {
   });
 
   it('round-trips through serialiseUi', () => {
-    const ui = normaliseUi({ tabs: ['plan', 'people', 'income'], start: 'plan', homeOrder: ['add', 'recent'], homeHidden: ['due'] });
+    const ui = normaliseUi({ tabs: ['budget', 'people', 'income'], start: 'budget', homeOrder: ['add', 'recent'], homeHidden: ['due'] });
     expect(normaliseUi(serialiseUi(ui))).toEqual(ui);
   });
 });
@@ -59,10 +62,10 @@ describe('move / setTabAt', () => {
 
   it('swaps when the chosen page is already in another slot', () => {
     expect(setTabAt(['history', 'income', 'stats'], 0, 'stats')).toEqual(['stats', 'income', 'history']);
-    expect(setTabAt(['history', 'income', 'stats'], 1, 'plan')).toEqual(['history', 'plan', 'stats']);
+    expect(setTabAt(['history', 'income', 'stats'], 1, 'budget')).toEqual(['history', 'budget', 'stats']);
     const t = ['history', 'income', 'stats'];
     expect(setTabAt(t, 0, 'today')).toBe(t);
     expect(setTabAt(t, 1, 'bogus')).toBe(t);
-    expect(setTabAt(t, 9, 'plan')).toBe(t);
+    expect(setTabAt(t, 9, 'budget')).toBe(t);
   });
 });

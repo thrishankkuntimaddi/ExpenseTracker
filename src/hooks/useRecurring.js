@@ -45,9 +45,9 @@ export function useRecurring({ uid, transactions, income, loaded, addTransaction
 
   const manualDue = useMemo(() => due.filter((d) => !d.rule.autoPost), [due]);
 
-  const post = useCallback(async ({ rule, dateKey }) => {
+  const post = useCallback(async ({ rule, dateKey, paidOn = null }) => {
     if (!uid) return false;
-    const { entry, target } = entryFromRule(rule, dateKey);
+    const { entry, target } = entryFromRule(rule, dateKey, paidOn);
     const ok = target === 'income' ? await addIncome(entry) : await addTransaction(entry);
     if (!ok) return false;
     const last = rule.lastHandledKey && rule.lastHandledKey > dateKey ? rule.lastHandledKey : dateKey;

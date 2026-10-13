@@ -16,21 +16,22 @@ const KINDS = [
   { key: 'income',  label: 'Income',  color: 'var(--income)'  },
 ];
 
-export default function RecurringRuleModal({ rule, categoryRules = {}, onSave, onDelete, onClose }) {
+export default function RecurringRuleModal({ rule, preset = null, categoryRules = {}, onSave, onDelete, onClose }) {
+  const init = rule ?? preset;   // a new rule can start from a preset (Rent, SIP …)
   const today = toKey(new Date());
-  const [kind, setKind] = useState(rule?.kind ?? 'expense');
-  const [name, setName] = useState(rule?.name ?? '');
-  const [amount, setAmount] = useState(rule?.amount != null ? String(rule.amount) : '');
-  const [category, setCategory] = useState(rule?.category ?? null);
-  const [categoryTouched, setCategoryTouched] = useState(!!rule?.category);
-  const [savingsType, setSavingsType] = useState(rule?.savingsType ?? 'sip');
-  const [platform, setPlatform] = useState(rule?.platform ?? '');
-  const [frequency, setFrequency] = useState(rule?.frequency ?? 'monthly');
-  const [dayOfMonth, setDayOfMonth] = useState(String(rule?.dayOfMonth ?? new Date().getDate()));
-  const [weekday, setWeekday] = useState(rule?.weekday ?? new Date().getDay());
-  const [startDate, setStartDate] = useState(rule?.startDate ?? today);
-  const [endDate, setEndDate] = useState(rule?.endDate ?? '');
-  const [autoPost, setAutoPost] = useState(rule?.autoPost ?? false);
+  const [kind, setKind] = useState(init?.kind ?? 'expense');
+  const [name, setName] = useState(init?.name ?? '');
+  const [amount, setAmount] = useState(init?.amount != null ? String(init.amount) : '');
+  const [category, setCategory] = useState(init?.category ?? null);
+  const [categoryTouched, setCategoryTouched] = useState(!!init?.category);
+  const [savingsType, setSavingsType] = useState(init?.savingsType ?? 'sip');
+  const [platform, setPlatform] = useState(init?.platform ?? '');
+  const [frequency, setFrequency] = useState(init?.frequency ?? 'monthly');
+  const [dayOfMonth, setDayOfMonth] = useState(String(init?.dayOfMonth ?? new Date().getDate()));
+  const [weekday, setWeekday] = useState(init?.weekday ?? new Date().getDay());
+  const [startDate, setStartDate] = useState(init?.startDate ?? today);
+  const [endDate, setEndDate] = useState(init?.endDate ?? '');
+  const [autoPost, setAutoPost] = useState(init?.autoPost ?? false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const suggested = kind === 'expense' ? inferCategory(name, categoryRules) : null;

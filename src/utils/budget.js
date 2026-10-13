@@ -2,7 +2,7 @@
 // settings.budgets = { total: number|null, categories: { [categoryKey]: number } }
 // All maths here is pure; the UI only renders what computeBudgetStatus returns.
 import { localMonthKey, localDateKey } from './dateHelpers';
-import { categoryOf, categoryMeta } from './categories';
+import { categoryOf, categoryMeta, categoryTotals } from './categories';
 import { sumAmounts } from './finance';
 
 export const EMPTY_BUDGETS = { total: null, categories: {} };
@@ -113,4 +113,19 @@ export function computeBudgetStatus({ budgets, transactions = [], monthKey, rule
     hasBudget: hasAnyBudget(b),
     total, categories, alerts,
   };
+}
+
+/**
+ * A starting budget from the previous three full months: the average
+ * monthly spend per category (rounded up to ₹100) and in total (to ₹500).
+ */
+export function suggestBudget(transactions = [], rules = {}, now = new Date()) {
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const keys = [1, 2, 3].map((i) => { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`; });
+  const past = transactions.filter((t) => keys.includes(localMonthKey(t.date)));
+  const months = new Set(past.map((t) => localMonthKey(t.date))).size || 1;
+  const totals = categoryTotals(past, rules);
+  const perCat = Object.fromEntries(totals.map((c) => [c.key, Math.ceil(c.amount / months / 100) * 100]).filter(([, v]) => v > 0));
+  const all = Math.ceil(totals.reduce((s, c) => s + c.amount, 0) / months / 500) * 500;
+  return { perCat, all, months, top: totals.slice(0, 3).map((c) => ({ ...c, monthly: c.amount / months })), hasData: totals.length > 0 };
 }

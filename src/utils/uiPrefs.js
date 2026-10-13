@@ -8,16 +8,19 @@
 
 /* Every phone page. Home ('today') is always the first bar item; the bar's
    other slots take any of SLOT_KEYS. */
-export const PAGE_KEYS = ['today', 'history', 'income', 'stats', 'plan', 'people', 'external'];
+export const PAGE_KEYS = ['today', 'history', 'bills', 'stats', 'budget', 'savings', 'income', 'people', 'trips', 'external'];
 export const SLOT_KEYS = PAGE_KEYS.filter((k) => k !== 'today');
 export const BAR_SLOTS = 3;
-export const DEFAULT_TABS = ['history', 'stats', 'plan'];
+export const DEFAULT_TABS = ['history', 'bills', 'stats'];
+/* Pages from earlier versions → where they live now */
+const LEGACY_PAGE = { plan: 'bills' };
+const LEGACY_SECTION = { due: 'bills', actions: 'explore' };
 
 export const HOME_SECTIONS = [
-  { key: 'overview', label: 'Month overview', hint: 'Spent, budget, today, safe to spend, balance' },
-  { key: 'add',      label: 'Quick entry',    hint: 'Type “chai 20” and press enter' },
-  { key: 'actions',  label: 'Shortcuts',      hint: 'One-tap tiles for every feature', locked: true },
-  { key: 'due',      label: 'Recurring due',  hint: 'Rent, SIPs and bills waiting to be logged' },
+  { key: 'overview', label: 'Month overview',  hint: 'Spent, budget, today, safe to spend, balance' },
+  { key: 'add',      label: 'Quick entry',     hint: 'Type “chai 20” and press enter' },
+  { key: 'bills',    label: 'Bills & payments', hint: 'What’s due this week, late or coming up' },
+  { key: 'explore',  label: 'Explore',         hint: 'Every page that isn’t in your bar', locked: true },
   { key: 'recent',   label: 'Recent activity', hint: 'Your last seven days' },
 ];
 const HOME_KEYS = HOME_SECTIONS.map((s) => s.key);
@@ -29,7 +32,8 @@ export function normaliseUi(raw) {
   const r = isObj(raw) ? raw : {};
 
   const tabs = [];
-  for (const k of Array.isArray(r.tabs) ? r.tabs : []) {
+  for (const raw of Array.isArray(r.tabs) ? r.tabs : []) {
+    const k = LEGACY_PAGE[raw] ?? raw;
     if (SLOT_KEYS.includes(k) && !tabs.includes(k) && tabs.length < BAR_SLOTS) tabs.push(k);
   }
   for (const k of [...DEFAULT_TABS, ...SLOT_KEYS]) {
@@ -37,11 +41,14 @@ export function normaliseUi(raw) {
     if (!tabs.includes(k)) tabs.push(k);
   }
 
-  const start = PAGE_KEYS.includes(r.start) ? r.start : 'today';
+  const startKey = LEGACY_PAGE[r.start] ?? r.start;
+  const start = PAGE_KEYS.includes(startKey) ? startKey : 'today';
 
-  const hidden = new Set(Array.isArray(r.homeHidden) ? r.homeHidden.filter((k) => HOME_KEYS.includes(k)) : []);
+  const section = (k) => LEGACY_SECTION[k] ?? k;
+  const hidden = new Set(Array.isArray(r.homeHidden) ? r.homeHidden.map(section).filter((k) => HOME_KEYS.includes(k)) : []);
   const order = [];
-  for (const k of Array.isArray(r.homeOrder) ? r.homeOrder : []) {
+  for (const raw of Array.isArray(r.homeOrder) ? r.homeOrder : []) {
+    const k = section(raw);
     if (HOME_KEYS.includes(k) && !order.includes(k)) order.push(k);
   }
   // Sections the saved order doesn't know yet (added in a later version)

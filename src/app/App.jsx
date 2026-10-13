@@ -33,7 +33,9 @@ const lazyPage = (load) => lazy(() => load().then((m) => {
 const HistoryTab       = lazyPage(() => import('../features/transactions/HistoryTab'));
 const IncomeTab        = lazyPage(() => import('../features/income/IncomeTab'));
 const StatsTab         = lazyPage(() => import('../features/stats/StatsTab'));
-const PlanTab          = lazyPage(() => import('../features/plan/PlanTab'));
+const BillsPage        = lazyPage(() => import('../features/bills/BillsPage'));
+const BudgetPage       = lazyPage(() => import('../features/budget/BudgetPage'));
+const SavingsPage      = lazyPage(() => import('../features/savings/SavingsPage'));
 const ExternalTab      = lazyPage(() => import('../features/external/ExternalTab'));
 const ProfilePage      = lazyPage(() => import('../features/profile/ProfilePage'));
 const PersonsPanel     = lazyPage(() => import('../features/persons/PersonsPanel'));
@@ -41,6 +43,7 @@ const DesktopDashboard = lazyPage(() => import('../components/DesktopDashboard')
 const AddSheet         = lazyPage(() => import('../components/AddSheet'));
 import UpdateBanner from '../components/UpdateBanner';
 import { ShellContext } from './shellContext';
+import { markAppReady } from './ready';
 import { PAGE_META, PAGE_COLOR } from './pages';
 import { normaliseUi } from '../utils/uiPrefs';
 
@@ -83,6 +86,9 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     patchSettings,
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   } = useFirestoreData(user.uid, user.email);
+
+  // Your data has arrived (from the device cache or the server): end the splash
+  useEffect(() => { if (loaded) markAppReady(); }, [loaded]);
 
   // Phone layout chosen in Profile → Customize (repaired if malformed)
   const ui = useMemo(() => normaliseUi(settings?.ui), [settings?.ui]);
@@ -218,7 +224,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   // (debounced — a burst of edits re-plans once).
   useEffect(() => { initReminders(); }, []);
   useEffect(() => {
-    onReminderTap((route) => { if (['today', 'plan', 'stats', 'history'].includes(route)) goTo(route); });
+    onReminderTap((route) => { if (['today', 'plan', 'bills', 'budget', 'stats', 'history'].includes(route)) goTo(route === 'plan' ? 'bills' : route); });
   }, [goTo]);
   useEffect(() => {
     if (!loaded) return undefined;
@@ -269,7 +275,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   const tabColors = PAGE_COLOR[theme === 'monoflow' ? 'dark' : 'light'];
   const dueCount = recurring.manualDue.length;
   const shell = {
-    user, goTo, back: goBack,
+    user, goTo, back: goBack, barTabs,
     showBack: !pageOrder.includes(activeTab) && activeTab !== 'profile',
     openProfile: () => goTo('profile'),
     openAdd: (kind = 'expense') => setAddKind(kind),
@@ -320,10 +326,11 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
             onDeleteTransaction={deleteTransaction}
           />
         )}
-        {activeTab === 'external' && (
+        {(activeTab === 'external' || activeTab === 'trips') && (
           <ExternalTab
-            key={pageOpts.mode ?? 'billings'}
-            initialMode={pageOpts.mode}
+            key={activeTab}
+            initialMode={activeTab === 'trips' ? 'trips' : 'billings'}
+            showModeToggle={false}
             user={user}
             transactions={transactions}
             income={income}
@@ -348,10 +355,14 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
             />
           </div>
         )}
-        {activeTab === 'plan' && (
-          <PlanTab
-            {...commonProps}
-          />
+        {(activeTab === 'bills' || activeTab === 'plan') && (
+          <BillsPage {...commonProps} />
+        )}
+        {activeTab === 'budget' && (
+          <BudgetPage {...commonProps} />
+        )}
+        {activeTab === 'savings' && (
+          <SavingsPage {...commonProps} />
         )}
         {activeTab === 'stats' && (
           <StatsTab
@@ -422,7 +433,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
               }}
             >
               <Icon size={19} strokeWidth={isActive ? 2.3 : 1.8} />
-              {key === 'plan' && dueCount > 0 && (
+              {key === 'bills' && dueCount > 0 && (
                 <span aria-label={`${dueCount} recurring entries due`} style={{
                   position: 'absolute', top: 4, left: 'calc(50% + 6px)',
                   minWidth: 14, height: 14, padding: '0 3px', borderRadius: 99,

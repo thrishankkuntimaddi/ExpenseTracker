@@ -29,7 +29,7 @@ export const TONES = [
 ];
 export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 /** The screen a tapped reminder opens. */
-export const REMINDER_ROUTE = { daily: 'today', recurring: 'plan', budget: 'plan', weekly: 'stats' };
+export const REMINDER_ROUTE = { daily: 'today', recurring: 'bills', budget: 'budget', weekly: 'stats' };
 
 export const DEFAULT_REMINDERS = {
   tone: 'friendly',

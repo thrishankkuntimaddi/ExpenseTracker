@@ -55,7 +55,7 @@ describe('recurring due tomorrow', () => {
     expect(day(items[0].at)).toBe(new Date(2026, 9, 14).toDateString());
     expect(items[0].title).toBe('2 entries due tomorrow');
     expect(items[0].body).toMatch(/Rent ₹15,000 and SIP ₹5,000/);
-    expect(items[0].route).toBe('plan');
+    expect(items[0].route).toBe('bills');
   });
   it('ignores paused rules and occurrences already handled', () => {
     expect(buildSchedule(NOW, cfg, { recurring: [{ ...rent, active: false }] })).toEqual([]);
@@ -123,7 +123,7 @@ describe('tone + preview', () => {
     const p = previewReminder('recurring', {}, { recurring: [] }, NOW);
     expect(p.example).toBe(true);
     expect(p.body).toMatch(/Rent/);
-    expect(p.route).toBe('plan');            // a tapped test opens the right screen
+    expect(p.route).toBe('bills');           // a tapped test opens the right screen
     expect(previewReminder('daily', {}, {}, NOW).title).toBeTruthy();
   });
 });

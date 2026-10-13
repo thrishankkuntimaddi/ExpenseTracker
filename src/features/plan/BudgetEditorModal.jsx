@@ -5,13 +5,12 @@ import { useMemo, useState } from 'react';
 import { Check, Wand2 } from 'lucide-react';
 import ModalShell, { Field, PrimaryButton, GhostButton } from '../../components/ModalShell';
 import { fieldStyle } from '../../components/formTokens';
-import { CATEGORIES, categoryTotals, categoryColor } from '../../utils/categories';
+import { CATEGORIES, categoryColor } from '../../utils/categories';
 import { CategoryIcon } from '../../components/CategoryPicker';
 import { currentTheme } from '../../utils/theme';
-import { localMonthKey, formatAmount } from '../../utils/dateHelpers';
-import { EMPTY_BUDGETS } from '../../utils/budget';
+import { formatAmount } from '../../utils/dateHelpers';
+import { EMPTY_BUDGETS, suggestBudget } from '../../utils/budget';
 
-const pad2 = (n) => String(n).padStart(2, '0');
 
 export default function BudgetEditorModal({ budgets, transactions = [], rules = {}, onSave, onClose }) {
   const b = budgets ?? EMPTY_BUDGETS;
@@ -20,16 +19,7 @@ export default function BudgetEditorModal({ budgets, transactions = [], rules = 
   const theme = currentTheme();
 
   // Average spend per category over the previous 3 full months (for suggestions)
-  const suggestion = useMemo(() => {
-    const now = new Date();
-    const keys = [1, 2, 3].map((i) => { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`; });
-    const past = transactions.filter((t) => keys.includes(localMonthKey(t.date)));
-    const monthsWithData = new Set(past.map((t) => localMonthKey(t.date))).size || 1;
-    const totals = categoryTotals(past, rules);
-    const perCat = Object.fromEntries(totals.map((c) => [c.key, Math.ceil(c.amount / monthsWithData / 100) * 100]));
-    const all = Math.ceil(totals.reduce((s, c) => s + c.amount, 0) / monthsWithData / 500) * 500;
-    return { perCat, all, hasData: totals.length > 0 };
-  }, [transactions, rules]);
+  const suggestion = useMemo(() => suggestBudget(transactions, rules), [transactions, rules]);
 
   function applySuggestion() {
     if (!suggestion.hasData) return;

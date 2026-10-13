@@ -15,6 +15,7 @@ import TripCloseModal from './TripCloseModal';
 import TripShareModal from './TripShareModal';
 import TripsList from './components/TripsList';
 import BackButton from '../../components/BackButton';
+import ProfileButton from '../../components/ProfileButton';
 
 export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction, reportError, headerExtra }) {
   const { trips, saveTrip, removeTrip } = useTrips(user?.uid, reportError);
@@ -96,9 +97,12 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
             </div>
           </div>
           {!active && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <button onClick={() => setNewOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, fontSize: 11, fontWeight: 700, background: 'var(--external-bg)', color: 'var(--external)', border: '1px solid var(--external-border)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
               <Plus size={13} /> New
             </button>
+              <ProfileButton />
+            </div>
           )}
         </div>
         {headerExtra}
