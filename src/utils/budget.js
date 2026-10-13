@@ -1,9 +1,11 @@
 // ─── Monthly budgets ─────────────────────────────────────────────
-// settings.budgets = { total: number|null, categories: { [categoryKey]: number } }
+// settings.budgets = { total: number|null, categories: { [categoryKey]: number }, deductions?: [{ id, name, amount }] }
 // All maths here is pure; the UI only renders what computeBudgetStatus returns.
 import { localMonthKey, localDateKey } from './dateHelpers';
 import { categoryOf, categoryMeta, categoryTotals } from './categories';
-import { sumAmounts } from './finance';
+import { sumAmounts, incomeKind } from './finance';
+import { monthBills } from './bills';
+import { occurrencesBetween, toKey } from './recurring';
 
 export const EMPTY_BUDGETS = { total: null, categories: {} };
 
@@ -129,3 +131,40 @@ export function suggestBudget(transactions = [], rules = {}, now = new Date()) {
   const all = Math.ceil(totals.reduce((s, c) => s + c.amount, 0) / months / 500) * 500;
   return { perCat, all, months, top: totals.slice(0, 3).map((c) => ({ ...c, monthly: c.amount / months })), hasData: totals.length > 0 };
 }
+
+/* ── The month's plan ──────────────────────────────────────────────
+   income − fixed payments (rent, EMIs, insurance, SIPs … from Bills)
+          − the spending budget
+          = what's left to save or spare.
+   Salary deductions (tax, PF …) never reach your account; they're listed
+   so you can see the gross figure, not subtracted again.
+   budgets.deductions = [{ id, name, amount }] */
+export function monthPlan({ budgets, rules: recurringRules = [], transactions = [], income = [], monthKey, todayKey }) {
+  const inMonth = (e) => localMonthKey(e.date) === monthKey;
+  const received = income.filter((i) => inMonth(i) && !i.isCarryForward && incomeKind(i) === 'income').reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const [y, m] = monthKey.split('-').map(Number);
+  const before = toKey(new Date(y, m - 1, 0)), last = toKey(new Date(y, m, 0));
+  const expected = recurringRules.filter((r) => r.kind === 'income' && r.active !== false)
+    .reduce((s, r) => s + occurrencesBetween(r, before, last).length * (Number(r.amount) || 0), 0);
+  const useExpected = received === 0 && expected > 0;
+  const incomeBase = useExpected ? expected : received;
+
+  const ids = new Set([...transactions, ...income].map((e) => e.id));
+  const bills = monthBills(recurringRules, ids, monthKey, todayKey ?? toKey(new Date()));
+  const fixedItems = bills.items.filter((i) => i.status !== 'skipped');
+  const fixedSavings = fixedItems.filter((i) => i.rule.kind === 'savings').reduce((s, i) => s + i.amount, 0);
+  const fixed = bills.total;
+
+  const deductions = (Array.isArray(budgets?.deductions) ? budgets.deductions : []).filter((d) => d && Number(d.amount) > 0);
+  const deductionTotal = deductions.reduce((s, d) => s + Number(d.amount), 0);
+  const spendBudget = Number(budgets?.total) > 0 ? Number(budgets.total) : null;
+
+  return {
+    incomeBase, received, expected, useExpected,
+    fixed, fixedSavings, fixedSpend: fixed - fixedSavings, fixedItems, fixedPaid: bills.paid,
+    spendBudget, deductions, deductionTotal, gross: incomeBase + deductionTotal,
+    free: incomeBase - fixed - (spendBudget ?? 0),
+  };
+}
+
+export const DEDUCTION_PRESETS = ['Income tax (TDS)', 'Provident fund (PF)', 'Professional tax', 'Group insurance'];

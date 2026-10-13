@@ -6,7 +6,11 @@
 //  • everything is off by default; each type has its own switch and time
 //  • at most one notification per type per day
 //  • daily nudge: skipped today if something was already logged today
-//  • recurring: the evening before an entry is due (one combined line)
+//  • bills: on the day a payment is due — "Have you paid rent?" — unless it
+//    was already paid or skipped (auto-pay and income rules never ask)
+//  • report: on the chosen report day — the month's report is ready
+//  • goals: once a month (each goal's day) — put this month's share aside,
+//    or, once reached, collect it from whoever holds it
 //  • budget: once when the month passes 80 %, once at 100 % — never repeated
 //    (`budgetAt` remembers when each alert was planned, per device)
 //  • weekly: one line on the chosen evening; real numbers only when it's
@@ -15,13 +19,14 @@
 import { localDateKey, localMonthKey, formatAmount as fullAmount } from './dateHelpers';
 import { occurrencesBetween, toKey } from './recurring';
 import { categoryOf, categoryMeta } from './categories';
+import { computeGoalProgress, isGoalOpen } from './goals';
 
 /* Notifications are one line: drop “.00” on whole rupees (₹15,000, not ₹15,000.00). */
 const formatAmount = (n) => (Math.round(n * 100) % 100 === 0
   ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Math.round(n))
   : fullAmount(n));
 
-export const REMINDER_TYPES = ['daily', 'recurring', 'budget', 'weekly'];
+export const REMINDER_TYPES = ['recurring', 'daily', 'budget', 'report', 'goals', 'weekly'];
 export const TONES = [
   { key: 'friendly', label: 'Friendly' },
   { key: 'brief',    label: 'Brief' },
@@ -29,14 +34,16 @@ export const TONES = [
 ];
 export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 /** The screen a tapped reminder opens. */
-export const REMINDER_ROUTE = { daily: 'today', recurring: 'bills', budget: 'budget', weekly: 'stats' };
+export const REMINDER_ROUTE = { daily: 'today', recurring: 'bills', budget: 'budget', weekly: 'stats', report: 'stats', goals: 'savings' };
 
 export const DEFAULT_REMINDERS = {
   tone: 'friendly',
   daily:     { enabled: false, time: '21:00', days: ALL_DAYS },
-  recurring: { enabled: false, time: '20:00' },
+  recurring: { enabled: false, time: '10:00' },
   budget:    { enabled: false, time: '19:00' },
   weekly:    { enabled: false, time: '19:00', day: 0 },
+  report:    { enabled: false, time: '09:00' },
+  goals:     { enabled: false, time: '11:00' },
 };
 
 /** Settings as stored (possibly partial / older) → complete config. */
@@ -87,17 +94,29 @@ const COPY = {
 function dailyCopy(tone, seed) { const [t, b] = pick(COPY.daily[tone] ?? COPY.daily.friendly, seed); return { title: t, body: b }; }
 
 function recurringCopy(tone, entries) {
-  const one = entries[0];
   const amount = (e) => formatAmount(e.amount);
-  const list = entries.length === 1
-    ? `${one.name} · ${amount(one)}`
-    : entries.length === 2
-      ? `${entries[0].name} ${amount(entries[0])} and ${entries[1].name} ${amount(entries[1])}`
-      : `${entries[0].name} ${amount(entries[0])}, ${entries[1].name} ${amount(entries[1])} and ${entries.length - 2} more`;
-  const anyIncome = entries.some((e) => e.kind === 'income');
-  const title = tone === 'brief' ? 'Due tomorrow' : anyIncome && entries.length === 1 ? 'Expected tomorrow' : entries.length === 1 ? 'Due tomorrow' : `${entries.length} entries due tomorrow`;
-  const tail = tone === 'coach' ? ' Make sure the money’s where it needs to be.' : '';
-  return { title, body: list + (tone === 'brief' ? '' : '.') + tail };
+  const names = entries.length <= 2 ? entries.map((e) => e.name).join(' and ') : `${entries[0].name}, ${entries[1].name} and ${entries.length - 2} more`;
+  const title = tone === 'brief' ? `Due today: ${names}` : `Have you paid ${names}?`;
+  const list = entries.length === 1 ? `${amount(entries[0])} is due today.` : `${entries.map((e) => `${e.name} ${amount(e)}`).join(' · ')} — due today.`;
+  const tail = tone === 'coach' ? ' Tap Pay once it’s done.' : tone === 'friendly' ? ' Mark it paid in one tap.' : '';
+  return { title, body: list + tail };
+}
+
+function reportCopy(tone, monthName) {
+  if (tone === 'brief') return { title: 'Monthly report', body: 'Your report is ready.' };
+  return {
+    title: `Your ${monthName} report is ready`,
+    body: tone === 'coach' ? 'What went up, what went down, what you missed — two minutes to plan next month.' : 'Income, spending, savings and what changed since last month.',
+  };
+}
+
+function goalCopy(tone, goal, p) {
+  const where = goal.heldWith ? ` from ${goal.heldWith}` : '';
+  if (p.done) return { title: `${goal.name}: goal reached`, body: `${formatAmount(p.saved)} saved — collect it${where} when you need it.` };
+  const share = formatAmount(p.monthlyDue);
+  const kept = goal.heldWith ? ` · kept with ${goal.heldWith}` : '';
+  if (tone === 'brief') return { title: `${goal.name}: ${share} this month`, body: `${formatAmount(p.saved)} of ${formatAmount(p.target)}${kept}.` };
+  return { title: `Put ${share} towards ${goal.name}`, body: `${formatAmount(p.saved)} of ${formatAmount(p.target)} so far${kept}.` + (tone === 'coach' ? ' Same day every month keeps it on track.' : '') };
 }
 
 function budgetCopy(tone, pct, { monthName, spent, limit, daysLeft }) {
@@ -164,13 +183,14 @@ function crossingDay(transactions, monthKey, limit, pct) {
 /**
  * @param {number} now   epoch ms
  * @param {object} cfg   normaliseReminders(settings.reminders)
- * @param {object} data  { transactions, income, recurring, budgets, categoryRules, budgetAt }
+ * @param {object} data  { transactions, income, recurring, budgets, categoryRules, budgetAt, goals, report }
  *   budgetAt: { 'YYYY-MM:80': epochMs, … } — when each budget alert was planned (per device)
  * @returns {Array<{ id, type, at, title, body, route, key }>} sorted by time
  */
 export function buildSchedule(now, cfg, data = {}, horizonDays = 14) {
   const c = normaliseReminders(cfg);
-  const { transactions = [], income = [], recurring = [], budgets = null, categoryRules = {}, budgetAt = {} } = data;
+  const { transactions = [], income = [], recurring = [], budgets = null, categoryRules = {}, budgetAt = {}, goals = [], report = null } = data;
+  const reportDay = Math.min(28, Math.max(1, Math.round(Number(report?.day)) || 1));
   const tone = c.tone;
   const today = startOfDay(now);
   const todayKey = toKey(today);
@@ -190,16 +210,35 @@ export function buildSchedule(now, cfg, data = {}, horizonDays = 14) {
       if (when > now && !(d === 0 && loggedToday)) push('daily', key, when, dailyCopy(tone, daySeed(date)), REMINDER_ROUTE.daily);
     }
 
-    // Recurring entries due tomorrow
+    // Bills due today: "Have you paid …?"
     if (c.recurring.enabled) {
       const when = at(date, c.recurring.time);
       if (when > now) {
-        const dueKey = toKey(addDays(date, 1));
         const due = recurring
-          .filter((r) => r.active !== false && !(r.lastHandledKey && r.lastHandledKey >= dueKey))
-          .filter((r) => occurrencesBetween(r, key, dueKey).includes(dueKey))
+          .filter((r) => r.active !== false && r.kind !== 'income' && !r.autoPost && !(r.lastHandledKey && r.lastHandledKey >= key))
+          .filter((r) => occurrencesBetween(r, toKey(addDays(date, -1)), key).includes(key))
           .sort((a, b) => Number(b.amount) - Number(a.amount));
         if (due.length) push('recurring', key, when, recurringCopy(tone, due), REMINDER_ROUTE.recurring);
+      }
+    }
+
+    // Monthly report day
+    if (c.report.enabled && date.getDate() === Math.min(reportDay, new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate())) {
+      const when = at(date, c.report.time);
+      if (when > now) push('report', key, when, reportCopy(tone, addDays(date, -date.getDate()).toLocaleString('en-IN', { month: 'long' })), REMINDER_ROUTE.report);
+    }
+
+    // Goals: once a month on each goal's day
+    if (c.goals.enabled) {
+      const when = at(date, c.goals.time);
+      if (when > now) {
+        goals.filter(isGoalOpen).forEach((g) => {
+          const gDay = Math.min(Number(g.remindDay) || 1, 28);
+          if (date.getDate() !== gDay) return;
+          const p = computeGoalProgress(g, transactions, date);
+          if (!p.done && !(p.monthlyDue > 0)) return;
+          push('goals', `${g.id}:${key}`, when, goalCopy(tone, g, p), REMINDER_ROUTE.goals);
+        });
       }
     }
 
@@ -252,7 +291,9 @@ export function previewReminder(type, cfg, data, now = Date.now()) {
   // Nothing to plan from the real data (no budget / no recurring due) — show an example
   const examples = {
     daily:     dailyCopy(c.tone, 0),
-    recurring: recurringCopy(c.tone, [{ name: 'Rent', amount: 15000, kind: 'expense' }]),
+    recurring: recurringCopy(c.tone, [{ name: 'Rent', amount: 13000, kind: 'expense' }]),
+    report:    reportCopy(c.tone, new Date(new Date(now).getFullYear(), new Date(now).getMonth() - 1, 1).toLocaleString('en-IN', { month: 'long' })),
+    goals:     goalCopy(c.tone, { name: 'Bike', heldWith: 'Pritam' }, { done: false, saved: 40000, target: 100000, monthlyDue: 20000 }),
     budget:    budgetCopy(c.tone, 80, { monthName: new Date(now).toLocaleString('en-IN', { month: 'long' }), spent: 16400, limit: 20000, daysLeft: 9 }),
     weekly:    weeklyCopy(c.tone, { total: 4320, prevTotal: 5100, top: { label: 'Food & Dining', amount: 1850 } }),
   };

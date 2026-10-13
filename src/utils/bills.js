@@ -84,12 +84,16 @@ export function dueLabel(dateKey, todayKey) {
 
 /* One-tap starting points for "Add a bill" */
 export const BILL_PRESETS = [
-  { key: 'rent',        label: 'Rent',        name: 'House rent',       kind: 'expense', category: 'rent' },
-  { key: 'electricity', label: 'Electricity', name: 'Electricity bill', kind: 'expense', category: 'bills' },
-  { key: 'mobile',      label: 'Mobile',      name: 'Mobile recharge',  kind: 'expense', category: 'bills' },
-  { key: 'internet',    label: 'Internet',    name: 'Internet',         kind: 'expense', category: 'bills' },
-  { key: 'sip',         label: 'SIP',         name: 'Mutual fund SIP',  kind: 'savings', savingsType: 'sip' },
-  { key: 'emi',         label: 'EMI',         name: 'Loan EMI',         kind: 'expense', category: 'bills' },
-  { key: 'insurance',   label: 'Insurance',   name: 'Insurance premium', kind: 'expense', category: 'health', frequency: 'yearly' },
-  { key: 'ott',         label: 'Subscription', name: 'Netflix',         kind: 'expense', category: 'subscriptions' },
+  { key: 'rent',        label: 'Rent',             name: 'House rent',        kind: 'expense', category: 'rent', dayOfMonth: 5 },
+  { key: 'electricity', label: 'Electricity',      name: 'Electricity bill',  kind: 'expense', category: 'bills' },
+  { key: 'mobile',      label: 'Mobile',           name: 'Mobile recharge',   kind: 'expense', category: 'bills' },
+  { key: 'internet',    label: 'Internet',         name: 'Internet',          kind: 'expense', category: 'bills' },
+  { key: 'home',        label: 'Send home',        name: 'Money to parents',  kind: 'expense', category: 'family' },
+  { key: 'emi',         label: 'Loan EMI',         name: 'Loan EMI',          kind: 'expense', category: 'bills' },
+  { key: 'sip',         label: 'SIP',              name: 'Mutual fund SIP',   kind: 'savings', savingsType: 'sip' },
+  { key: 'fd',          label: 'FD / RD',          name: 'Recurring deposit', kind: 'savings', savingsType: 'other' },
+  { key: 'term',        label: 'Term insurance',   name: 'Term insurance',    kind: 'expense', category: 'health', frequency: 'yearly' },
+  { key: 'health',      label: 'Health insurance', name: 'Health insurance',  kind: 'expense', category: 'health', frequency: 'yearly' },
+  { key: 'policy',      label: 'LIC / policy',     name: 'LIC premium',       kind: 'expense', category: 'bills', frequency: 'yearly' },
+  { key: 'ott',         label: 'Subscription',     name: 'Netflix',           kind: 'expense', category: 'subscriptions' },
 ];

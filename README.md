@@ -1,6 +1,6 @@
 # ⚡ Expense Tracker — Personal Finance, Reimagined
 
-> **Smart, cloud-synced personal finance tracking with auto-categorised spending, monthly budgets with a daily "safe to spend", recurring entries, savings goals, plain-language insights, person ledgers, wastage analytics and billing sessions — on the web, Android, Mac, Windows and Linux, all on one account, with reminders and automatic updates.**
+> **Smart, cloud-synced personal finance tracking with auto-categorised spending, monthly budgets with a daily "safe to spend", recurring entries, savings goals, a monthly report, debts, wastage analytics and billing sessions — on the web, Android, Mac, Windows and Linux, all on one account, with reminders and automatic updates.**
 
 ---
 
@@ -13,7 +13,7 @@ Unlike basic spreadsheet trackers, this app:
 - **Categorises spending automatically** — "Swiggy", "petrol", "Netflix" are tagged Food / Fuel / Subscriptions as you type, using an India-aware keyword engine. Override once and it remembers.
 - **Budgets with pace, not just a cap** — a monthly limit (optionally per category) gives you a *safe-to-spend-today* number, a projected month end, and warnings when the run-rate will overshoot.
 - **Logs recurring entries for you** — rent, EMIs, SIPs, salary and subscriptions post on schedule, either silently or with a one-tap confirm.
-- **Explains your month in plain language** — an offline insights engine surfaces things like "Food is up 32% vs this time last month" and "5 no-spend days".
+- **A monthly report on the day you choose** — salary to salary: what went up, what went down, bills you missed, categories over budget.
 - **Tracks money with people** — lent, borrowed, repaid and gifted amounts roll up into all-time per-person balances.
 - **Tracks wastage** at the transaction level — mark any expense as wasted (single-tap) or set a partial waste amount (double-tap), giving you an instant "wastage percentage" of your spending.
 - **Manages external/proxy transactions** — record money you spend on behalf of someone else, log the settlement, and track net profit/loss per session.
@@ -81,33 +81,34 @@ All data is private and scoped strictly to your account — `firestore.rules` on
 - Category breakdown bars on Stats and the desktop dashboard; category chips filter History
 
 ### 🎯 Monthly Budget
-- Set a **total monthly cap** and/or **per-category caps** (Plan tab, or the pencil on any budget card); *Suggest from history* pre-fills them from your last three months
-- Every budget bar carries a **pace marker** showing where the month is today, so "40% spent at 60% of the month" reads at a glance
-- **Safe to spend today** — what's left, spread over the remaining days — shown on the Expenses tab header, Stats and the dashboard
-- Status: on track · pace too fast (projected to exceed) · nearly spent (≥85%) · over budget, with a projected month-end figure
+- **The month's plan** on top: income (received, or your recurring salary before it arrives) − **fixed payments** (rent, EMIs, insurance, SIPs — from Bills) − the spending budget = **left to save or spare**
+- **Taken from salary**: list deductions (Income tax/TDS, PF, professional tax …) to see your gross pay; they're shown, never subtracted twice
+- A **total monthly cap** and/or **per-category caps**; with none set, a ready-made budget from your last three months, one tap to use
+- Every budget bar carries a **pace marker**; **safe to spend today**, projected month end, an envelope per category, six months against the budget
 
 ### 🔁 Recurring Entries
 - Rules for **expenses, savings or income** that repeat daily / weekly / monthly / yearly (day-of-month clamps to short months: the 31st becomes the 28th in February)
-- **Auto-post** rules are logged silently on their due date when you open the app; **ask-me** rules show a *Log / Skip* card on the Expenses tab, dashboard and Plan tab — handy when the amount varies
+- **Auto-post** rules are logged silently on their due date when you open the app; **ask-me** rules show a *Log / Skip* card on Home and in Bills — handy when the amount varies
 - Posted occurrences use a **deterministic id** (`rec_<rule>_<date>`), so two devices or a retry can never double-log
 - Pause / resume, end dates, "next on …", and a monthly committed total ("₹18,649/mo goes to recurring expenses")
 
 ### 🏁 Savings Goals
-- Goals (emergency fund, a trip, a laptop) with a target, optional deadline and a start date
-- Progress is **derived from your savings entries** — optionally only one savings type (SIP, Mutual Fund …) or entries matching a keyword — so there is nothing to log twice
-- Shows ₹/month needed to hit the deadline, on-track / behind-pace, or an ETA at the current rate
+- A goal has an amount, *needed by* month, a **monthly share** (suggested from the two), **where the money is kept** (cash, a person you trust, a bank) and a reminder day
+- **Add money** logs a savings entry for that goal; **Moved it** hands the money to someone / somewhere else and keeps the history ("was with Pritam until 3 Mar"); **Used it** ends a goal used before it was reached; once reached, **Collected**
+- Finished goals stay listed (reached & collected · used early · closed) and can be reopened. Goals made before 3.7 still count savings by type / keyword
 
-### 💡 Insights
-- A rule-based, fully offline engine turns the ledger into short observations for the current month: month-to-date vs the same point last month, projected month end, biggest category and sharp category jumps, most frequent merchant, no-spend days, this week vs last, weekend vs weekday, wastage, savings rate, biggest single expense, money still owed to you, budget alerts and recurring commitments
-- Sorted by what matters most (budget overruns first); shown on Stats and the dashboard
+### 🧾 Monthly report
+- One report a month on the day you choose (Stats → Monthly report), instead of insights that change every time you look
+- Covers **salary to salary**: from the day last month's main income arrived to the report day (or this month's salary, if that came first)
+- Income, spent (vs the report before), saved (savings rate), left; categories that **went up**, **went down**, stayed about the same, started or stopped; bills **missed or skipped**; categories **over budget**; per-day spend, no-spend days, biggest expense. Browse earlier reports with ‹ ›
 
-### 📅 Spending Calendar
-- A month heat-map — each day shaded by how much was spent; tap a day for its entries, browse earlier months, and see no-spend days and the peak day at a glance
+### 📅 One month for the whole app
+- Every page shows **the same month**: switch it on Home's overview card, any page header, or the Stats calendar, and Home, History, Income, Stats, Bills, Budget and Savings all follow. **Now** jumps back to the current month
+- Adding an entry while looking at an earlier month dates it in that month
+- What carries over: debts (until settled), open billings, unpaid bills, and — with carry forward on — the month's leftover as next month's income
 
 ### 📥 Income Management
-- Log multiple income sources per month (salary, freelance, dividends, etc.)
-- Three kinds of inflow: **income**, **borrowed** money, and **repayments received** from people you lent to
-- Income is displayed per-period with a live running balance
+- Everything that came in, for the month on screen: income (salary, parents, freelance …), money **borrowed**, and money **paid back to you** — by source, with a running list
 
 ### ↪ Month Carry Forward
 - From a start month (default **November 2026**), whatever was left at the end of a month appears as an **auto** income line in the next: "Carried forward from October 2026"
@@ -116,8 +117,10 @@ All data is private and scoped strictly to your account — `firestore.rules` on
 - Settings → *Month Carry Forward*: toggle on/off, pick the first month that receives a carry, and choose whether a **deficit** (negative leftover) is carried too (off by default — an overspent month simply carries nothing)
 - Counted in that month's total income, remaining balance and the 6-month trend; **not** counted by budgets or the savings-rate insight, which look at real spending and earned income
 
-### 👥 Person Ledgers
-- Lent / borrowed / repaid / gifted entries roll up into **all-time per-person balances** (what you owe, what you're owed)
+### ↔ Debts
+- Per person: **lent**, **got back**, **borrowed**, **paid back** — from transactions *and* income, so money returned to you closes the debt. Owe you · You owe · Settled
+- **Given (no return expected)** is spending, logged from Expense → *Given to someone*; it never appears in Debts
+- A person's page: the balance, one-tap *Got money back* / *Pay back* (pre-filled), and every entry to edit or delete
 
 ### 🔗 External / Proxy Transactions
 - Record transactions where you pay on behalf of a client/person (e.g., buying materials for a freelance job)
@@ -139,21 +142,15 @@ All data is private and scoped strictly to your account — `firestore.rules` on
 - The Stats tab shows **total waste** and **waste as % of total spending**
 
 ### 📊 Stats & Analytics
-- **Pie chart**: breakdown of Expense vs. Savings vs. Given (money given to others)
-- **Bar chart**: last 14 days of daily Expense + Savings
-- **Area chart**: 6-month Income vs. Expense trend
-- Key metrics: total income, total expense, total savings, total given, net balance, average daily/weekly/monthly spend, and wastage percentage
+- For the month on screen: remaining balance and breakdown (income, spent, saved, wasted, you owe, owed to you, averages), the **spending calendar**, **spending by category**, where the money went (donut), then the **monthly report**
 
 ### 📱 Phone layout
 Every way in leads somewhere different — nothing is offered twice.
-- **Home**: greeting, search and your avatar; the month-overview card (spent, budget bar, today, safe to spend, balance — tap for Stats); a **quick entry** bar that previews exactly what it will save (`petrol 500` → *Expense · Petrol · ₹500 · Fuel · today*); **Bills & payments** — what's late or due in the next 7 days, each with **Pay**; **Explore** — a card for every page that isn't in your bar, each with a live line (*₹11,389 left*, *₹600 owed to you*, *3 due this week*); recent activity
-- **Bottom bar**: Home · two pages · **＋** · one page. ＋ is the one place to add anything — expense, income (income / borrowed / repaid to me, with the people you lent to suggested), money with a person, savings
-- **Bills & payments**: the month as a timeline — paid, due today, late, coming up — with one-tap **Pay** (paying early dates it today), skip, month-by-month browsing, totals (this month · paid · to pay), presets (Rent, Electricity, Mobile, Internet, SIP, EMI, Insurance, Subscription) and every regular payment to pause or edit
-- **Budget**: without one, a ready-made budget from your last three months — one tap to use it; with one, what's left, safe per day, where the month will end, an envelope for every category you spent in, and the last six months against your budget
-- **Savings & goals**: saved this month, savings rate, all-time by kind (SIP, mutual fund, trading, cash), six months, goals, recent savings
-- **Income**: one summary (income · borrowed · repaid to you), income by source, the list; **Stats** leads with insights; **People** and **Trips & splits** are pages of their own
-- One header on every page (back arrow when opened from Home, title, actions, avatar); the launch intro stays until your data is ready — no second loading screen
-- Tap your **avatar** for **Profile**: account, **Appearance** (Light / Dark / Auto), **Customize** (the three bar pages, the page the app opens on, the order and visibility of Home sections — synced, and repaired if ever invalid), then every setting grouped into Preferences · Sync & devices · Your data · App · Account
+- **Home**: greeting, search and your avatar; the month card (‹ month › switcher, spent, budget bar, today, safe to spend, balance); a **quick entry** bar with a live preview; **bills due** — only when something is due or late, each with **Pay**; **Explore** — Income, Trips, Billings, Bills, Budget, Debts, Savings (minus what's in your bar), each with a live line; recent activity
+- **Bottom bar**: Home · two pages · **＋** · one page. ＋ adds anything — **Expense** (spent, or given to someone), **Income**, **Debt** (lent · borrowed · got back · paid back) and **Savings** (optionally for a goal, and where it's kept). Every kind opens on the amount with the keypad up
+- **Bills & payments**: the month's timeline with one-tap **Pay**, skip, totals and every regular payment; common payments (Rent on the 5th, Electricity, Mobile, Internet, Send home, Loan EMI, SIP, FD/RD, Term & Health insurance, LIC, Subscription) while you set up
+- **Budget**, **Savings & goals**, **Income**, **Stats**, **Debts**, **Trips & splits**, **Billings** — pages of their own, one header style everywhere
+- Tap your **avatar** for **Profile**: account, **Theme** in one row, **Reminders** as tiles, **Customize** (bar pages, start page, Home sections), then Money · Sync & devices · Your data (incl. *Load past data*) · App · Account
 
 ### ⚙️ Settings & Data Management
 - **Export JSON**: download a full backup of all transactions, income, and settings (budgets, goals, category rules included)
@@ -166,13 +163,15 @@ Every way in leads somewhere different — nothing is offered twice.
 - **Updates**: current version and build, *Check for updates*, and *Restart to update* / *Install* when one is waiting
 
 ### 🔔 Reminders
-Four optional reminders, all off until you switch them on (Settings → Reminders), each with its own time:
-- **Daily nudge** — on the days you choose; skipped if you already logged something that day
-- **Recurring due** — the evening before rent, an EMI or a subscription is due (one combined line)
-- **Budget** — once when the month passes 80 %, once at 100 %; never repeated
+Six optional reminders, all off until you tap their tile (Profile → Reminders), each with its own time:
+- **Bills due** — "Have you paid rent?" on the day a bill is due (never for auto-paid bills or income)
+- **Log the day** — on the days you choose; skipped if you already logged something that day
+- **Budget check** — once when the month passes 80 %, once at 100 %
+- **Monthly report** — on your report day
+- **Goals** — on each goal's day: this month's share to put aside, or, once reached, a nudge to collect it
 - **Weekly summary** — your week in one line on the evening you pick
 
-At most one per type per day, quiet (no sound), and never while you're using the app. Tapping one opens the right screen (Expenses, Plan or Stats). The settings sync across devices, but *"Deliver reminders on this device"* is per device, so you don't get the same reminder on your phone and your laptop. *Send a test* shows one right away. See [What each platform can do](#what-each-platform-can-do) for when they can arrive.
+At most one per type per day, quiet (no sound). Tapping one opens the right page. The settings sync across devices; *Reminders on this device* is per device. *Send a test* shows one right away. See [What each platform can do](#what-each-platform-can-do) for when they can arrive.
 
 ### 🌙 Theming
 - **Light**, **dark** or **follow the device** — chosen per device, applied before the first paint (no flash)
@@ -180,8 +179,8 @@ At most one per type per day, quiet (no sound), and never while you're using the
 - In the Android app the status and navigation bars follow the theme
 
 ### 📱 Responsive layout
-- **Mobile**: a five-slot bottom bar (Expenses, History, Income, Stats, More). Plan, Billings and Settings live behind **More**, which shows a badge when recurring entries are waiting. **Swipe left or right** anywhere to move between all seven pages; the bar's last slot takes the name and icon of whichever More page you are on. Swipes are ignored inside chip rows, wide charts and dialogs, and near the screen edges so the OS back gesture keeps working
-- **Desktop** (≥1024px): a unified `DesktopDashboard` with Dashboard / History / Billings / People / Plan / Settings sections and a planning row (insights · budget · categories · calendar)
+- **Phone**: the bottom bar above; swipe between bar pages (ignored inside chip rows, charts, dialogs and near the screen edges)
+- **Desktop & web** (≥1024px): the **same pages** with a sidebar — Overview (Home, History, Stats) · Money (Income, Bills, Budget, Savings) · With others (Trips, Billings, Debts) — **+ Add** at the top and your profile at the bottom; Home and Stats use two columns, the rest a comfortable reading width; Add opens as a centred dialog
 - The website is installable (Add to Home Screen) and works offline; the Android and desktop apps carry the whole app inside, so they open instantly with no connection
 - Firestore's persistent on-device cache paints the UI instantly and queues writes while offline. Sign-out waits until unsent changes are uploaded (or asks before discarding them)
 
@@ -218,7 +217,7 @@ After any update the app says *"Updated to vX"* once. Settings shows the version
 | **Build Tool** | Vite — `vite build` for the website (base `/ExpenseTracker/`), `vite build --mode native` for the apps (`dist-native/`, no service worker) |
 | **Deployment** | GitHub Actions → GitHub Pages (website + Android OTA bundle) and GitHub Releases (APK, DMG, EXE, AppImage, `latest.json`) |
 | **Linting** | ESLint 9 (flat config) |
-| **Testing** | Vitest (unit tests for finance, categories, budget, recurring, insights, goals, dates and import/export; server-render smoke tests for every screen) |
+| **Testing** | Vitest (unit tests for finance, categories, budget, recurring, report, debts, goals, dates and import/export; server-render smoke tests for every screen) |
 
 ---
 
@@ -245,20 +244,25 @@ ExpenseTracker/
 ├── src/
 │   ├── main.jsx                # React 19 createRoot entry
 │   ├── index.css               # Global styles, CSS tokens (light + MonoFlow themes)
-│   ├── app/App.jsx             # Root: AuthGate → AuthenticatedApp (mobile/desktop split)
+│   ├── app/App.jsx             # Root: AuthGate → AuthenticatedApp — one shell: phone bar or desktop sidebar, the same pages
+│   ├── app/month.js            # The app-wide month every page follows
 │   │
 │   ├── features/
 │   │   ├── auth/               # AuthGate, login and sign-up pages
-│   │   ├── transactions/       # TodayTab (quick add, safe-to-spend, due recurring), HistoryTab (search, filters, wastage, edit)
+│   │   ├── transactions/       # TodayTab (Home), HistoryTab (search, filters, wastage, edit)
 │   │   ├── income/             # IncomeTab
 │   │   ├── external/           # Billing sessions (ExternalTab) + share receipt, Billings ⇄ Trips switch
 │   │   ├── trips/              # Trips & Splits: members, expenses, settle-up plan, close → ledger
-│   │   ├── persons/            # Person ledgers
-│   │   ├── plan/               # PlanTab: budget editor, recurring rules, savings goals (+ reusable cards)
-│   │   ├── stats/              # Charts, key metrics, InsightsCard, CategoryBreakdown, SpendingCalendar
-│   │   └── settings/           # Theme, import/export (JSON + CSV), account
+│   │   ├── debts/              # Debts: lent · borrowed · got back · paid back, per person
+│   │   ├── bills/              # Bills & payments timeline
+│   │   ├── budget/             # Budget: month plan, envelopes, six months
+│   │   ├── savings/            # Savings & goals
+│   │   ├── plan/               # Shared modals and cards: recurring rule, budget editor, goals
+│   │   ├── stats/              # Stats, CategoryBreakdown, SpendingCalendar, ReportCard
+│   │   ├── profile/            # Profile: theme, reminders, customize
+│   │   └── settings/           # Settings sections, reminders card, import/export (JSON + CSV), account
 │   │
-│   ├── components/             # DesktopDashboard, modals, UpdateBanner, ErrorBoundary, PeriodSelector, …
+│   ├── components/             # AddSheet, MonthSwitcher, Page (header/sections), modals, UpdateBanner, …
 │   ├── native/                 # Platform layer: index.js (detection, back button, status bar), updates.js,
 │   │                           #   reminders.js (delivery), googleSignIn.js (Android + desktop)
 │   │
@@ -282,10 +286,12 @@ ExpenseTracker/
 │       ├── categories.js       # Category list, keyword inference, learned rules, per-category totals
 │       ├── split.js            # Trip splitting: shares, pay-groups as one wallet, minimal who-pays-whom transfers
 │       ├── carryForward.js     # Month-to-month leftover chain → synthetic "carried forward" income lines
-│       ├── budget.js           # Budget status: spent vs limit, pace, projection, safe-to-spend-today
+│       ├── budget.js           # Budget status, suggested budget, the month's plan
 │       ├── recurring.js        # Occurrence generation, due/next, deterministic ids, entry builder
-│       ├── goals.js            # Savings-goal progress, needed-per-month, ETA
-│       ├── insights.js         # Rule-based insights engine (pure, offline)
+│       ├── goals.js            # Goals: progress, monthly share, held with, move / used / collected
+│       ├── debts.js            # Debts ledger across transactions and income
+│       ├── report.js           # Monthly report: salary-to-salary window, what changed, missed bills
+│       ├── bills.js            # Bill occurrences and status, presets
 │       ├── smartInput.js       # "chai 20" quick-entry parsing
 │       ├── exportHelpers.js    # CSV export (round-trips through importHelpers)
 │       ├── importHelpers.js    # CSV parser, stable import ids
@@ -479,7 +485,7 @@ Posted recurring occurrences are ordinary transaction / income documents whose i
 - [x] **Recurring Transactions**: auto-post or one-tap confirm for rent, SIPs, salary, subscriptions
 - [x] **Spending Categories**: auto-inferred, learnable, with breakdowns and filters
 - [x] **Savings Goals**: progress derived from savings entries
-- [x] **Insights**: rule-based, offline plain-language summaries
+- [x] **Monthly report**: salary to salary, on the day you choose
 - [x] **CSV Export**
 - [ ] **Multi-currency Support**: record transactions in foreign currencies with exchange rate conversion
 - [ ] **Receipt OCR**: upload a photo of a receipt and auto-extract the amount and merchant name
@@ -494,14 +500,17 @@ Posted recurring occurrences are ordinary transaction / income documents whose i
 
 | Screen | Description |
 |---|---|
-| **Expenses Tab** | Month at a glance (spent, today, budget left or balance), quick-add form with auto-suggested category chips and "chai 20" quick entry, due recurring card, recent entries from the last 7 days |
-| **History Tab** | Full transaction log with search, type and category filters, period selector, inline wastage marking, and edit modal |
-| **Income Tab** | Month-grouped income entries with lock badges for closed months; add income with category |
-| **Billings Tab** | Proxy session manager — open sessions with amount paid + settlement; closed session ledger |
-| **Plan Tab** | Monthly budget (total + per category), recurring rules with due / upcoming, savings goals |
-| **Stats Tab** | Insights, budget, category breakdown, spending calendar, pie, 14-day bar and 6-month area charts + KPI cards |
-| **Settings Tab** | Sync status and devices, reminders, theme, carry forward, export / import (JSON + CSV), get the apps, updates, account, reset |
-| **Desktop Dashboard** | Summary strip, quick entry, entries, income, analytics, plus a planning row (insights · budget · categories · calendar) |
+| **Home** | Month card with the month switcher, quick entry, bills due (only when something is), Explore, recent activity |
+| **History** | Every entry for the month on screen — search (this month or all months), type and category filters, wastage, edit |
+| **Income** | What came in that month: total, by source, the list |
+| **Stats** | Balance and breakdown, spending calendar, categories, distribution, monthly report |
+| **Bills & payments** | The month's timeline with one-tap Pay, every regular payment |
+| **Budget** | The month's plan (income − fixed − budget), salary deductions, envelopes, six months |
+| **Savings & goals** | Savings rate, where it goes, goals with holder / move / used / collect |
+| **Debts** | Owe you · You owe · Settled; a page per person |
+| **Trips & Billings** | Group trips settled fairly; money spent for others |
+| **Profile** | Account, theme, reminder tiles, customize, settings, data, updates |
+| **Desktop & web** | The same pages with a sidebar and a centred Add dialog |
 
 ---
 

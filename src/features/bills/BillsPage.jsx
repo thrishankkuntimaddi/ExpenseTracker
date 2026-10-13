@@ -4,7 +4,7 @@
 // what's late and what's coming. Pay with one tap (even early); add a bill
 // from a preset. Built on the recurring rules.
 import { useMemo, useState } from 'react';
-import { Plus, Check, ChevronLeft, ChevronRight, Zap, Pause, Play, Pencil, CalendarClock, ReceiptText, SkipForward } from 'lucide-react';
+import { Plus, Check, Zap, Pause, Play, Pencil, CalendarClock, ReceiptText, SkipForward } from 'lucide-react';
 import { PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill } from '../../components/Page';
 import RecurringRuleModal from '../plan/RecurringRuleModal';
 import DueRecurringCard from '../plan/components/DueRecurringCard';
@@ -13,6 +13,7 @@ import { monthBills, dueLabel, BILL_PRESETS } from '../../utils/bills';
 import { describeSchedule, fromKey, toKey, monthlyEquivalent } from '../../utils/recurring';
 import { EMPTY_RULES, categoryMeta } from '../../utils/categories';
 import { useShell } from '../../app/shellContext';
+import { useViewMonth } from '../../app/month';
 
 const STATUS = {
   paid:     { label: 'Paid',     color: 'var(--income)' },
@@ -24,13 +25,10 @@ const STATUS = {
 const KIND_COLOR = { expense: 'var(--expense)', savings: 'var(--savings)', income: 'var(--income)' };
 const KIND_BG = { expense: 'var(--expense-bg)', savings: 'var(--savings-bg)', income: 'var(--income-bg)' };
 
-const monthKeyOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-const shiftMonth = (key, n) => { const [y, m] = key.split('-').map(Number); return monthKeyOf(new Date(y, m - 1 + n, 1)); };
-
-export default function BillsPage({ transactions = [], income = [], recurring, settings }) {
+export default function BillsPage({ transactions = [], income = [], recurring, settings, selectedPeriod }) {
   const shell = useShell();
   const todayKey = toKey(new Date());
-  const [monthKey, setMonthKey] = useState(todayKey.slice(0, 7));
+  const { month: monthKey } = useViewMonth(selectedPeriod);   // the app-wide month
   const [ruleModal, setRuleModal] = useState(null);   // null | { rule } | { preset }
   const [busy, setBusy] = useState({});
   const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
@@ -62,19 +60,14 @@ export default function BillsPage({ transactions = [], income = [], recurring, s
 
   return (
     <div className="tab-root bills-page">
-      <PageHeader title="Bills & payments" subtitle="Rent, EMIs, SIPs, utilities, subscriptions"
+      <PageHeader title="Bills & payments" subtitle="Rent, EMIs, SIPs, insurance, utilities" month
         actions={<HeaderAction id="bills-add" Icon={Plus} label="Add" onClick={() => setRuleModal({ preset: null })} />} />
 
       <div className="tab-body">
         {/* ── Month summary ── */}
         <div className="card" style={{ padding: '14px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <button aria-label="Previous month" onClick={() => setMonthKey((m) => shiftMonth(m, -1))} style={navBtn}><ChevronLeft size={16} /></button>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{monthLabel}</span>
-            <button aria-label="Next month" onClick={() => setMonthKey((m) => shiftMonth(m, 1))} style={navBtn}><ChevronRight size={16} /></button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12 }}>
-            <Figure label="This month" value={formatAmount(month.total)} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            <Figure label={isThisMonth ? 'This month' : monthLabel.split(' ')[0]} value={formatAmount(month.total)} />
             <Figure label="Paid" value={formatAmount(month.paid)} color="var(--income)" />
             <Figure label={month.overdueCount ? `${month.overdueCount} late` : 'To pay'} value={formatAmount(month.remaining)} color={month.overdueCount ? 'var(--expense)' : 'var(--text)'} />
           </div>
@@ -97,7 +90,7 @@ export default function BillsPage({ transactions = [], income = [], recurring, s
         <SectionHeading id="bills-timeline" title={isThisMonth ? 'This month' : monthLabel} hint={month.items.length ? `${month.items.length} payment${month.items.length === 1 ? '' : 's'}` : undefined} />
         {month.items.length === 0 ? (
           <EmptyState Icon={ReceiptText} title={rules.length ? 'Nothing due this month' : 'Never miss a due date'}
-            text={rules.length ? 'No regular payments fall in this month.' : 'Add rent, electricity, EMIs, SIPs and subscriptions once. See what’s due, pay with one tap, get a reminder the evening before.'}
+            text={rules.length ? 'No regular payments fall in this month.' : 'Add rent, electricity, EMIs, SIPs, insurance once. See what’s due, pay with one tap, and get a “Have you paid?” reminder on the day.'}
             action={!rules.length && <PrimaryPill id="bills-empty-add" Icon={Plus} onClick={() => setRuleModal({ preset: null })}>Add your first bill</PrimaryPill>} />
         ) : (
           <div className="card">
@@ -144,15 +137,15 @@ export default function BillsPage({ transactions = [], income = [], recurring, s
         )}
 
         {/* ── Quick add from presets ── */}
-        <SectionHeading title="Add a bill" />
-        <div className="chip-row" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
+        {rules.filter((r) => r.kind !== 'income').length < 4 && <SectionHeading title="Common payments" hint="tap to add" />}
+        {rules.filter((r) => r.kind !== 'income').length < 4 && <div className="chip-row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingBottom: 2 }}>
           {BILL_PRESETS.map((p) => (
             <button key={p.key} id={`preset-${p.key}`} onClick={() => setRuleModal({ preset: { ...p, frequency: p.frequency ?? 'monthly' } })}
-              style={{ flexShrink: 0, padding: '8px 14px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 650, fontFamily: 'inherit', cursor: 'pointer' }}>
+              style={{ flexShrink: 0, padding: '8px 14px', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 650, fontFamily: 'inherit', cursor: 'pointer' }}>
               {p.label}
             </button>
           ))}
-        </div>
+        </div>}
 
         {/* ── Every rule, to manage ── */}
         {rules.length > 0 && (
@@ -200,6 +193,5 @@ function Figure({ label, value, color = 'var(--text)' }) {
   );
 }
 
-const navBtn = { width: 30, height: 30, border: 'none', background: 'var(--surface2)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' };
 const roundBtn = { width: 30, height: 30, borderRadius: '50%', background: 'var(--surface2)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
 const pillBtn = { padding: '7px 13px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };

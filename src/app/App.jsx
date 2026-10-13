@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Settings2 } from 'lucide-react';
 import { useFirestoreData } from '../hooks/useFirestoreData';
 import { useRecurring } from '../hooks/useRecurring';
 import { useDevices } from '../hooks/useDevices';
@@ -9,7 +9,7 @@ import { overlayOpen } from '../hooks/useEscape';
 import { initReminders, onReminderTap, updateReminderInput } from '../native/reminders';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 import { usePWAInstall } from '../hooks/usePWAInstall';
-import { getDefaultPeriod } from '../utils/periodHelpers';
+import { getDefaultPeriod, getCurrentMonthValue } from '../utils/periodHelpers';
 import { formatAmount } from '../utils/dateHelpers';
 import { clearLegacyDataCache } from '../utils/storage';
 import { learnCategoryRule } from '../utils/categories';
@@ -38,20 +38,24 @@ const BudgetPage       = lazyPage(() => import('../features/budget/BudgetPage'))
 const SavingsPage      = lazyPage(() => import('../features/savings/SavingsPage'));
 const ExternalTab      = lazyPage(() => import('../features/external/ExternalTab'));
 const ProfilePage      = lazyPage(() => import('../features/profile/ProfilePage'));
-const PersonsPanel     = lazyPage(() => import('../features/persons/PersonsPanel'));
-const DesktopDashboard = lazyPage(() => import('../components/DesktopDashboard'));
+const DebtsPage        = lazyPage(() => import('../features/debts/DebtsPage'));
 const AddSheet         = lazyPage(() => import('../components/AddSheet'));
 import UpdateBanner from '../components/UpdateBanner';
 import { ShellContext } from './shellContext';
 import { markAppReady } from './ready';
-import { PAGE_META, PAGE_COLOR } from './pages';
+import { PAGE_META, PAGE_COLOR, DESKTOP_NAV } from './pages';
+import Avatar from '../components/Avatar';
+import { displayNameOf } from './shellContext';
 import { normaliseUi } from '../utils/uiPrefs';
 
-/* Mobile navigation, PhonePe / GPay style:
-   • bottom bar: Home · two pages · "+" (add anything) · one page — the three
-     pages are chosen in Profile → Customize; swiping moves between them
-   • every other page is a tile on Home (and opens with a back arrow)
-   • Profile & settings: the avatar at the top of every page */
+/* One app on every screen — the same pages, the same headers:
+   • phone: bottom bar Home · page · "+" · page · page (chosen in Profile →
+     Customize); every other page is a card in Home → Explore and opens with
+     a back arrow; swiping moves between bar pages
+   • desktop / web (≥1024px): a sidebar with every page and "+ Add"
+   • the avatar opens Profile & settings
+   • one month for the whole app: change it on any page (or in the Stats
+     calendar) and every page follows; "Now" returns to this month */
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
@@ -71,11 +75,16 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   const [chosenTab, setActiveTab]           = useState(null);     // null until the user moves: show the start page
   const [backStack, setBackStack]           = useState([]);       // pages opened from tiles / the avatar return here
   const [slideDir, setSlideDir]             = useState(null);   // 'left' | 'right' | null — page transition
-  const [addKind, setAddKind]               = useState(null);   // the "+" sheet: null | 'expense' | 'income' | 'person' | 'savings'
+  const [addKind, setAddKind]               = useState(null);   // the "+" sheet: null | { kind: 'expense' | 'income' | 'debt' | 'savings', …options }
   const [pageOpts, setPageOpts]             = useState({});     // deep link into a page: { anchor, focus, mode, openGroup }
   const [toastMsg, setToastMsg]             = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState(() => getDefaultPeriod());
   const isDesktop = useIsDesktop();
+  // The month every page shows
+  const viewMonth = selectedPeriod.type === 'current_month' || selectedPeriod.type === 'select_month' ? selectedPeriod.value : getCurrentMonthValue();
+  const setViewMonth = useCallback((key) => {
+    setSelectedPeriod({ type: key === getCurrentMonthValue() ? 'current_month' : 'select_month', value: key });
+  }, []);
   const { isStandalone, canInstallNative, triggerInstall } = usePWAInstall();
 
   const {
@@ -174,11 +183,11 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     if (opts.openGroup) { try { localStorage.setItem(`et_settings_open_${opts.openGroup}`, '1'); } catch { /* storage unavailable */ } }
     setPageOpts({ ...opts, at: Date.now() });
     if (key === activeTab && !opts.mode) return;
-    const inBar = pageOrder.includes(key);
+    const inBar = isDesktop || pageOrder.includes(key);
     setBackStack((st) => (inBar ? [] : [...st, activeTab]));
     setSlideDir(dir ?? (inBar && pageOrder.includes(activeTab) && pageOrder.indexOf(key) < pageOrder.indexOf(activeTab) ? 'right' : 'left'));
     setActiveTab(key);
-  }, [activeTab, pageOrder]);
+  }, [activeTab, pageOrder, isDesktop]);
   const goBack = useCallback(() => {
     const prev = backStack[backStack.length - 1] ?? ui.start;
     setBackStack((st) => st.slice(0, -1));
@@ -224,16 +233,16 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   // (debounced — a burst of edits re-plans once).
   useEffect(() => { initReminders(); }, []);
   useEffect(() => {
-    onReminderTap((route) => { if (['today', 'plan', 'bills', 'budget', 'stats', 'history'].includes(route)) goTo(route === 'plan' ? 'bills' : route); });
+    onReminderTap((route) => { if (['today', 'plan', 'bills', 'budget', 'stats', 'history', 'savings'].includes(route)) goTo(route === 'plan' ? 'bills' : route); });
   }, [goTo]);
   useEffect(() => {
     if (!loaded) return undefined;
     const t = setTimeout(() => updateReminderInput({
       cfg: settings?.reminders,
-      data: { transactions, income, recurring: recurring.rules, budgets: settings?.budgets, categoryRules: settings?.categoryRules },
+      data: { transactions, income, recurring: recurring.rules, budgets: settings?.budgets, categoryRules: settings?.categoryRules, goals: settings?.goals, report: settings?.report },
     }), 800);
     return () => clearTimeout(t);
-  }, [loaded, settings?.reminders, settings?.budgets, settings?.categoryRules, transactions, income, recurring.rules]);
+  }, [loaded, settings?.reminders, settings?.budgets, settings?.categoryRules, settings?.goals, settings?.report, transactions, income, recurring.rules]);
 
   const swipe = useSwipeNavigation({ order: pageOrder, active: activeTab, onChange: goTo, enabled: !isDesktop && !addKind && pageOrder.includes(activeTab) });
 
@@ -246,41 +255,16 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     recurring, onPatchSettings: patchSettings, onLearnCategory: learnCategory, reportError,
   };
 
-  /* ── DESKTOP ── */
-  if (isDesktop) {
-    return (
-      <div style={{ width: '100%', minHeight: '100%', overflow: 'auto', background: 'var(--bg)' }}>
-        <Suspense fallback={null}>
-        <DesktopDashboard
-          {...commonProps}
-          onAddTransaction={addTransaction}
-          onUpdateTransaction={updateTransaction}
-          onDeleteTransaction={deleteTransaction}
-          onAddIncome={addIncome}
-          onUpdateIncome={updateIncome}
-          onDeleteIncome={deleteIncome}
-          onSignOut={signOut}
-          onDeleteAccount={deleteAccount}
-          onResetPassword={resetPassword}
-          onResendVerification={resendVerification}
-          onSmartAdd={smartAddEntry}
-        />
-        </Suspense>
-        {errorBanner}
-      </div>
-    );
-  }
-
-  /* ── MOBILE ── */
   const tabColors = PAGE_COLOR[theme === 'monoflow' ? 'dark' : 'light'];
   const dueCount = recurring.manualDue.length;
   const shell = {
-    user, goTo, back: goBack, barTabs,
-    showBack: !pageOrder.includes(activeTab) && activeTab !== 'profile',
+    user, goTo, back: goBack, barTabs, desktop: isDesktop, active: activeTab,
+    showBack: !isDesktop && !pageOrder.includes(activeTab) && activeTab !== 'profile',
     openProfile: () => goTo('profile'),
-    openAdd: (kind = 'expense') => setAddKind(kind),
+    openAdd: (kind = 'expense', opts = {}) => setAddKind({ kind, ...opts }),
     toast: setToastMsg,
     attention: sync.error != null,
+    month: viewMonth, setMonth: setViewMonth,
   };
   // Bar: Home · slot 1 · "+" · slot 2 · slot 3
   const barItems = [
@@ -291,104 +275,89 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     { key: barTabs[2], ...PAGE_META[barTabs[2]] },
   ];
 
-  return (
-    <ShellContext.Provider value={shell}>
-    <div className="mobile-shell" style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
-      <div
-        {...swipe}
+  const page = (
+    <Suspense fallback={null}>
+    {activeTab === 'today' && (
+      <TodayTab {...commonProps} onAdd={smartAddEntry} />
+    )}
+    {activeTab === 'history' && (
+      <HistoryTab
+        {...commonProps}
+        onUpdateTransaction={updateTransaction}
+        onDeleteTransaction={deleteTransaction}
+        onAddTransaction={addTransaction}
+        onAddIncome={addIncome}
+      />
+    )}
+    {activeTab === 'income' && (
+      <IncomeTab
+        {...commonProps}
+        onAddIncome={addIncome}
+        onUpdateIncome={updateIncome}
+        onDeleteIncome={deleteIncome}
+        onAddTransaction={addTransaction}
+        onDeleteTransaction={deleteTransaction}
+      />
+    )}
+    {(activeTab === 'external' || activeTab === 'trips') && (
+      <ExternalTab
         key={activeTab}
-        className={`mobile-page${slideDir === 'left' ? ' page-slide-left' : slideDir === 'right' ? ' page-slide-right' : ''}`}
-        style={{ flex: 1, overflow: 'auto' }}
-      >
-        <Suspense fallback={null}>
-        {activeTab === 'today' && (
-          <TodayTab
-            {...commonProps}
-            onAdd={smartAddEntry}
-          />
-        )}
-        {activeTab === 'history' && (
-          <HistoryTab
-            {...commonProps}
-            onUpdateTransaction={updateTransaction}
-            onDeleteTransaction={deleteTransaction}
-            onAddTransaction={addTransaction}
-            onAddIncome={addIncome}
-          />
-        )}
-        {activeTab === 'income' && (
-          <IncomeTab
-            {...commonProps}
-            onAddIncome={addIncome}
-            onUpdateIncome={updateIncome}
-            onDeleteIncome={deleteIncome}
-            onAddTransaction={addTransaction}
-            onDeleteTransaction={deleteTransaction}
-          />
-        )}
-        {(activeTab === 'external' || activeTab === 'trips') && (
-          <ExternalTab
-            key={activeTab}
-            initialMode={activeTab === 'trips' ? 'trips' : 'billings'}
-            showModeToggle={false}
-            user={user}
-            transactions={transactions}
-            income={income}
-            onAddIncome={addIncome}
-            onUpdateIncome={updateIncome}
-            onDeleteIncome={deleteIncome}
-            onAddTransaction={addTransaction}
-            onUpdateTransaction={updateTransaction}
-            onDeleteTransaction={deleteTransaction}
-            selectedPeriod={selectedPeriod}
-            theme={theme}
-            reportError={reportError}
-          />
-        )}
-        {activeTab === 'people' && (
-          <div className="mobile-people-host" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <PersonsPanel
-              transactions={transactions}
-              onAddTransaction={addTransaction}
-              onUpdateTransaction={updateTransaction}
-              onDeleteTransaction={deleteTransaction}
-            />
-          </div>
-        )}
-        {(activeTab === 'bills' || activeTab === 'plan') && (
-          <BillsPage {...commonProps} />
-        )}
-        {activeTab === 'budget' && (
-          <BudgetPage {...commonProps} />
-        )}
-        {activeTab === 'savings' && (
-          <SavingsPage {...commonProps} />
-        )}
-        {activeTab === 'stats' && (
-          <StatsTab
-            {...commonProps}
-          />
-        )}
-        {activeTab === 'profile' && (
-          <ProfilePage
-            {...commonProps}
-            onBack={goBack}
-            onSignOut={signOut}
-            onDeleteAccount={deleteAccount}
-            onResetPassword={resetPassword}
-            onResendVerification={resendVerification}
-          />
-        )}
-        </Suspense>
-      </div>
+        initialMode={activeTab === 'trips' ? 'trips' : 'billings'}
+        showModeToggle={false}
+        user={user}
+        transactions={transactions}
+        income={income}
+        onAddIncome={addIncome}
+        onUpdateIncome={updateIncome}
+        onDeleteIncome={deleteIncome}
+        onAddTransaction={addTransaction}
+        onUpdateTransaction={updateTransaction}
+        onDeleteTransaction={deleteTransaction}
+        selectedPeriod={selectedPeriod}
+        theme={theme}
+        reportError={reportError}
+      />
+    )}
+    {activeTab === 'people' && (
+      <DebtsPage
+        {...commonProps}
+        onAddTransaction={addTransaction}
+        onUpdateTransaction={updateTransaction}
+        onDeleteTransaction={deleteTransaction}
+        onAddIncome={addIncome}
+        onUpdateIncome={updateIncome}
+        onDeleteIncome={deleteIncome}
+      />
+    )}
+    {(activeTab === 'bills' || activeTab === 'plan') && <BillsPage {...commonProps} />}
+    {activeTab === 'budget' && <BudgetPage {...commonProps} />}
+    {activeTab === 'savings' && <SavingsPage {...commonProps} />}
+    {activeTab === 'stats' && <StatsTab {...commonProps} />}
+    {activeTab === 'profile' && (
+      <ProfilePage
+        {...commonProps}
+        onBack={isDesktop ? null : goBack}
+        onSignOut={signOut}
+        onDeleteAccount={deleteAccount}
+        onResetPassword={resetPassword}
+        onResendVerification={resendVerification}
+        onAddTransaction={addTransaction}
+        onAddIncome={addIncome}
+      />
+    )}
+    </Suspense>
+  );
 
+  const overlays = (
+    <>
       {errorBanner}
 
       {addKind && (
         <Suspense fallback={null}>
           <AddSheet
             {...commonProps}
-            initialKind={addKind}
+            initialKind={addKind.kind}
+            options={addKind}
             onAdd={smartAddEntry}
             onAddIncome={addIncome}
             onClose={() => setAddKind(null)}
@@ -399,19 +368,87 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
 
       {toastMsg && (
         <div role="status" className="app-toast" key={toastMsg} style={{
-          position: 'fixed', left: 16, right: 16, bottom: 'calc(92px + env(safe-area-inset-bottom, 0px))', zIndex: 950,
+          position: 'fixed', left: 16, right: 16, bottom: isDesktop ? 28 : 'calc(92px + env(safe-area-inset-bottom, 0px))', zIndex: 950,
           maxWidth: 420, margin: '0 auto', padding: '11px 16px', borderRadius: 16, textAlign: 'center',
           fontSize: 13, fontWeight: 600, color: 'var(--toast-text, #fff)', background: 'var(--toast-bg, rgba(28,28,32,.92))',
           boxShadow: '0 10px 30px -10px rgba(0,0,0,.45)', animation: 'toastIn .22s cubic-bezier(0.16,1,0.3,1)',
         }}>{toastMsg}</div>
       )}
+    </>
+  );
+
+  /* ── DESKTOP / WEB: sidebar + the same pages ── */
+  if (isDesktop) {
+    return (
+      <ShellContext.Provider value={shell}>
+      <div className="desktop-shell" style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
+        <aside className="desktop-sidebar" aria-label="Pages">
+          <div className="desktop-brand">
+            <img src={import.meta.env.BASE_URL + 'icon-192.png'} alt="" width={30} height={30} />
+            <span>Expense Tracker</span>
+          </div>
+          <button id="desktop-add" className="desktop-add" onClick={() => setAddKind({ kind: 'expense' })}>
+            <Plus size={17} strokeWidth={2.4} /> Add
+          </button>
+          <nav className="desktop-nav">
+            {DESKTOP_NAV.map((group) => (
+              <div key={group.title} className="desktop-nav-group">
+                <div className="desktop-nav-title">{group.title}</div>
+                {group.keys.map((k) => {
+                  const { label, Icon } = PAGE_META[k];
+                  const on = activeTab === k || (k === 'bills' && activeTab === 'plan');
+                  return (
+                    <button key={k} id={`side-${k}`} className={`desktop-nav-item${on ? ' on' : ''}`} onClick={() => goTo(k)} aria-current={on ? 'page' : undefined}
+                      style={on ? { color: tabColors[k] } : undefined}>
+                      <Icon size={17} strokeWidth={on ? 2.3 : 1.9} />
+                      <span>{label}</span>
+                      {k === 'bills' && dueCount > 0 && <span className="desktop-nav-badge">{dueCount > 9 ? '9+' : dueCount}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
+          <button id="side-profile" className={`desktop-profile${activeTab === 'profile' ? ' on' : ''}`} onClick={() => goTo('profile')}>
+            <Avatar user={user} size={32} />
+            <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+              <span className="desktop-profile-name">{displayNameOf(user)}</span>
+              <span className="desktop-profile-sub">Profile & settings</span>
+            </span>
+            <Settings2 size={15} />
+            {shell.attention && <span className="desktop-attention" aria-hidden />}
+          </button>
+        </aside>
+        <main key={activeTab} className={`desktop-main page-${activeTab}`}>
+          {page}
+        </main>
+        {overlays}
+      </div>
+      </ShellContext.Provider>
+    );
+  }
+
+  /* ── PHONE ── */
+  return (
+    <ShellContext.Provider value={shell}>
+    <div className="mobile-shell" style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
+      <div
+        {...swipe}
+        key={activeTab}
+        className={`mobile-page page-${activeTab}${slideDir === 'left' ? ' page-slide-left' : slideDir === 'right' ? ' page-slide-right' : ''}`}
+        style={{ flex: 1, overflow: 'auto' }}
+      >
+        {page}
+      </div>
+
+      {overlays}
 
       {/* ── Bottom bar: Home · 2 pages · + · 1 page ── */}
       <nav style={{ flexShrink: 0, display: 'flex', alignItems: 'center', background: 'var(--nav-bg)', borderTop: '1px solid var(--nav-border)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         {barItems.map(({ key, label, Icon }) => {
           if (key === 'add') {
             return (
-              <button key="add" id="tab-add" className="nav-add" aria-label="Add an entry" onClick={() => setAddKind('expense')}
+              <button key="add" id="tab-add" className="nav-add" aria-label="Add an entry" onClick={() => setAddKind({ kind: 'expense' })}
                 style={{ flex: '0 0 auto', width: 50, height: 50, margin: '0 6px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'var(--accent)' }}>
                 <Plus size={24} strokeWidth={2.4} />
               </button>

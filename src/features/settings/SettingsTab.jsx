@@ -3,7 +3,7 @@ import {
   Download, Upload, Trash2, Info,
   ChevronRight, Moon, Sun, Monitor, FileSpreadsheet,
   Database, Palette, LogOut, RotateCcw, Smartphone, ArrowRightLeft, KeyRound, MailCheck,
-  Cloud, CloudOff, RefreshCw, AlertTriangle, Laptop, X, UserX, Eraser, Bell,
+  Cloud, CloudOff, RefreshCw, AlertTriangle, Laptop, X, UserX, Eraser,
 } from 'lucide-react';
 import { deleteAllUserData, bulkImport, exportAllUserData, restoreBackup } from '../../services/firestore';
 import { parseBackup, describeBackup } from '../../utils/backup';
@@ -19,8 +19,7 @@ import { getCarrySettings } from '../../utils/carryForward';
 import { formatMonthLabel } from '../../utils/periodHelpers';
 import { todayInputValue } from '../../utils/dateHelpers';
 import RecentlyDeletedModal from '../../components/RecentlyDeletedModal';
-import RemindersCard from './RemindersCard';
-import { normaliseReminders, anyReminderOn, REMINDER_TYPES } from '../../utils/reminders';
+import LoadMonthlyData from '../../components/LoadMonthlyData';
 import { useUpdateState, checkForUpdates, restartToUpdate, THIS_BUILD, APK_URL } from '../../native/updates';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import PWAInstallModal from '../../components/PWAInstallModal';
@@ -38,7 +37,7 @@ export default function SettingsTab({
   onTriggerInstall,
   onPatchSettings,
   onResetPassword, onResendVerification, onDeleteAccount,
-  devices, recurring,
+  devices,
   embedded = false,   // inside the phone Profile page: no page header, Appearance lives up there
 }) {
   const [feedback, setFeedback]       = useState(null);
@@ -52,9 +51,7 @@ export default function SettingsTab({
   const [showAllDevices, setShowAllDevices] = useState(false);
   const sync = useSyncStatus();
   const update = useUpdateState();
-  const remCfg = normaliseReminders(settings?.reminders);
-  const remOn = REMINDER_TYPES.filter((t) => remCfg[t].enabled).length;
-  const remindersSummary = anyReminderOn(remCfg) ? `${remOn} on` : 'Off';
+  const [showLoadPast, setShowLoadPast] = useState(false);
   const [arch, setArch] = useState(null);
   useEffect(() => { if (!isNative) detectArch().then(setArch); }, []);
   const download = isNative ? null : pickDownload(typeof navigator !== 'undefined' ? navigator.userAgent : '', arch);
@@ -211,13 +208,7 @@ export default function SettingsTab({
               </div>
             )}
 
-            {/* ── Reminders ── */}
-            <Section title="Preferences">
-            <Group id="reminders" color="var(--expense)" title="Reminders" Icon={Bell} summary={remindersSummary}>
-              <RemindersCard settings={settings} onPatchSettings={onPatchSettings}
-                transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} />
-            </Group>
-
+            <Section title="Money">
             {/* ── Theme (per device) ── */}
             {!embedded && <Group id="appearance" color="var(--accent)" title="Appearance" Icon={Palette} summary={themePref === 'system' ? `System (${isMonoflow ? 'dark' : 'light'} now)` : isMonoflow ? 'Dark' : 'Light'}>
               <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -336,6 +327,7 @@ export default function SettingsTab({
               <ActionRow id="btn-recently-deleted" Icon={RotateCcw} label="Recently Deleted" sub={`${recentlyDeleted.length} ${recentlyDeleted.length === 1 ? 'item' : 'items'} in trash — view or revert`} iconColor="var(--expense)" onClick={() => setShowTrashModal(true)} />
               <ActionRow id="btn-export" Icon={Download} label={exporting ? 'Preparing backup…' : 'Export Backup (JSON)'} sub="Everything: transactions, income, billings, trips, recurring, trash, settings" iconColor="var(--savings)" onClick={() => !exporting && handleExport()} />
               <ActionRow id="btn-export-csv" Icon={FileSpreadsheet} label="Export Spreadsheet (CSV)" sub="With categories — opens in Excel / Google Sheets; re-importable" iconColor="var(--income)" onClick={handleExportCSV} />
+              <ActionRow id="btn-load-past-data" Icon={Upload} label="Load past data" sub="Paste a month of old entries — “5 groceries 450” per line" iconColor="var(--lent)" onClick={() => setShowLoadPast(true)} />
               <ActionRow id="btn-import" Icon={Upload}   label={importing ? 'Importing…' : 'Import Data'}   sub="Restore a JSON backup — safe to re-run, never duplicates"          iconColor="var(--accent)"  onClick={() => !importing && fileInputRef.current?.click()} />
               <ActionRow id="btn-csv"    Icon={FileSpreadsheet} label={importing ? 'Importing…' : 'Import CSV'}  sub="Import .csv file (date,name,amount,type) → cloud"    iconColor="var(--income)"  onClick={() => !importing && csvInputRef.current?.click()} lastRow />
               <input ref={fileInputRef} type="file" accept=".json"     style={{ display: 'none' }} onChange={handleImport}    />
@@ -506,6 +498,7 @@ export default function SettingsTab({
           confirmLabel="Sign out anyway" ConfirmIcon={LogOut}
           onConfirm={() => { const o = confirming.opts; setConfirming(null); handleSignOut({ ...o, force: true }); }} onCancel={() => setConfirming(null)} />
       )}
+      {showLoadPast && <LoadMonthlyData onClose={() => setShowLoadPast(false)} transactions={transactions} income={income} />}
       <RecentlyDeletedModal
         isOpen={showTrashModal}
         onClose={() => setShowTrashModal(false)}

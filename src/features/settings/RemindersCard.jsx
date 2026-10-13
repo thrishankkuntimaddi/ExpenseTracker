@@ -1,8 +1,9 @@
 // ─── Settings → Reminders ────────────────────────────────────────
 // Which reminders, when, and in what tone sync across devices; whether THIS
 // device delivers them is a per-device switch. Everything is off by default.
+// Shown as tiles: tap one to switch it on (or open its time / days).
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, BellOff, PenLine, CalendarClock, Target, BarChart3, Send, Power } from 'lucide-react';
+import { Bell, BellOff, PenLine, CalendarClock, Target, BarChart3, Send, Power, FileText, Flag } from 'lucide-react';
 import {
   normaliseReminders, buildSchedule, previewReminder, anyReminderOn, TONES, ALL_DAYS,
 } from '../../utils/reminders';
@@ -10,12 +11,15 @@ import {
   deviceDelivery, notificationPermission, requestNotificationPermission, sendTest, DELIVERY_NOTE,
 } from '../../native/reminders';
 import { autostart, platform } from '../../native';
+import { ordinal, getReportSettings } from '../../utils/report';
 
 const TYPES = [
-  { key: 'daily',     Icon: PenLine,       label: 'Daily nudge',        sub: 'Evening reminder to log the day — skipped if you already did' },
-  { key: 'recurring', Icon: CalendarClock, label: 'Recurring due',      sub: 'The evening before rent, EMIs or subscriptions are due' },
-  { key: 'budget',    Icon: Target,        label: 'Budget check',       sub: 'Once at 80 % of the month’s budget, once at 100 %' },
-  { key: 'weekly',    Icon: BarChart3,     label: 'Weekly summary',     sub: 'One line on how the week went' },
+  { key: 'recurring', Icon: CalendarClock, tone: 'expense', label: 'Bills due',       sub: '“Have you paid rent?” on the day a bill is due' },
+  { key: 'daily',     Icon: PenLine,       tone: 'accent',  label: 'Log the day',     sub: 'An evening nudge — skipped if you already logged' },
+  { key: 'budget',    Icon: Target,        tone: 'lent',    label: 'Budget check',    sub: 'Once at 80 % of the month’s budget, once at 100 %' },
+  { key: 'report',    Icon: FileText,      tone: 'savings', label: 'Monthly report',  sub: 'On your report day — what changed this month' },
+  { key: 'goals',     Icon: Flag,          tone: 'income',  label: 'Goals',           sub: 'Each goal’s day: put this month’s share aside, or collect it' },
+  { key: 'weekly',    Icon: BarChart3,     tone: 'given',   label: 'Weekly summary',  sub: 'One line on how the week went' },
 ];
 const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -29,13 +33,14 @@ const whenLabel = (ms) => {
 
 export default function RemindersCard({ settings, onPatchSettings, transactions = [], income = [], recurringRules = [] }) {
   const cfg = useMemo(() => normaliseReminders(settings?.reminders), [settings?.reminders]);
-  const data = useMemo(() => ({ transactions, income, recurring: recurringRules, budgets: settings?.budgets, categoryRules: settings?.categoryRules }),
-    [transactions, income, recurringRules, settings?.budgets, settings?.categoryRules]);
+  const data = useMemo(() => ({ transactions, income, recurring: recurringRules, budgets: settings?.budgets, categoryRules: settings?.categoryRules, goals: settings?.goals, report: settings?.report }),
+    [transactions, income, recurringRules, settings?.budgets, settings?.categoryRules, settings?.goals, settings?.report]);
 
   const [deviceOn, setDeviceOn] = useState(deviceDelivery.get);
   const [perm, setPerm] = useState('prompt');
   const [loginOn, setLoginOn] = useState(false);
-  const [previewType, setPreviewType] = useState('daily');
+  const [previewType, setPreviewType] = useState('recurring');
+  const [selected, setSelected] = useState(null);
   const [note, setNote] = useState(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 60_000); return () => clearInterval(t); }, []);
@@ -64,6 +69,14 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
     // Turning on the first reminder also turns this device on (asks permission once)
     if (turningOn && !deviceOn && !(await turnDeviceOn(true))) return;
     setType(type, { enabled: turningOn });
+    setSelected(turningOn ? type : null);
+    setPreviewType(type);
+  }
+  // A tile: off → switch on; on → open its settings (again → close)
+  function tapTile(type) {
+    if (!cfg[type].enabled) return toggleType(type);
+    setSelected((s) => (s === type ? null : type));
+    setPreviewType(type);
   }
 
   const next = useMemo(() => (deviceOn ? buildSchedule(now, cfg, data)[0] : null), [deviceOn, cfg, data, now]);
@@ -102,49 +115,64 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
         </div>
       )}
 
-      {/* Types */}
-      {TYPES.map(({ key, Icon, label, sub }) => {
+      {/* Types: tiles */}
+      <div className="reminder-tiles" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8, padding: '12px 16px' }}>
+        {TYPES.map(({ key, Icon, label, tone }) => {
+          const t = cfg[key];
+          const on = t.enabled;
+          const sel = selected === key;
+          return (
+            <button key={key} id={`reminder-${key}`} className="reminder-tile" aria-pressed={on} onClick={() => tapTile(key)}
+              style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, padding: '12px 12px 10px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
+                border: `1.5px solid ${sel ? `var(--${tone})` : on ? `var(--${tone}-border, var(--border))` : 'var(--border)'}`, background: on ? `var(--${tone}-bg)` : 'var(--surface2)' }}>
+              <span style={{ width: 30, height: 30, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: on ? `var(--${tone})` : 'var(--surface)', color: on ? '#fff' : 'var(--text-muted)' }}><Icon size={15} /></span>
+              <span style={{ fontSize: 13, fontWeight: 750, color: 'var(--text)' }}>{label}</span>
+              <span style={{ fontSize: 11, fontWeight: 650, color: on ? `var(--${tone})` : 'var(--text-muted)' }}>
+                {on ? `On · ${t.time}${key === 'weekly' ? ` · ${DAY_NAMES[t.day ?? 0].slice(0, 3)}` : ''}` : 'Off — tap to turn on'}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {selected && cfg[selected]?.enabled && (() => {
+        const { key, label, sub } = TYPES.find((x) => x.key === selected);
         const t = cfg[key];
         return (
-          <div key={key} style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <Icon size={16} style={{ color: t.enabled ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0 }} />
+          <div id="reminder-detail" style={{ margin: '0 16px 12px', padding: '12px 14px', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{label}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{label}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, lineHeight: 1.45 }}>{sub}</div>
               </div>
-              <button id={`reminder-${key}`} className={`toggle-track ${t.enabled ? 'on' : ''}`} aria-label={label} aria-pressed={t.enabled} onClick={() => toggleType(key)}>
-                <span className="toggle-thumb" />
-              </button>
+              <button className="toggle-track on" aria-label={`Turn off ${label}`} aria-pressed onClick={() => toggleType(key)}><span className="toggle-thumb" /></button>
             </div>
-            {t.enabled && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 10, paddingLeft: 28 }}>
-                <input type="time" value={t.time} aria-label={`${label} time`} onChange={(e) => e.target.value && setType(key, { time: e.target.value })}
-                  style={{ padding: '6px 8px', borderRadius: 9, fontSize: 12, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit' }} />
-                {key === 'daily' && ALL_DAYS.map((d) => {
-                  const on = (t.days ?? ALL_DAYS).includes(d);
-                  return (
-                    <button key={d} aria-label={DAY_NAMES[d]} aria-pressed={on}
-                      onClick={() => { const days = on ? (t.days ?? ALL_DAYS).filter((x) => x !== d) : [...(t.days ?? []), d].sort(); if (days.length) setType('daily', { days }); }}
-                      style={{ width: 28, height: 28, borderRadius: 99, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border)'}`, background: on ? 'var(--accent-bg)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-muted)' }}>
-                      {DAY_LETTERS[d]}
-                    </button>
-                  );
-                })}
-                {key === 'weekly' && (
-                  <select value={t.day ?? 0} aria-label="Day of the week" onChange={(e) => setType('weekly', { day: Number(e.target.value) })}
-                    style={{ padding: '6px 8px', borderRadius: 9, fontSize: 12, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit' }}>
-                    {DAY_NAMES.map((n, i) => <option key={n} value={i}>{n}</option>)}
-                  </select>
-                )}
-                {key === 'budget' && !(Number(settings?.budgets?.total) > 0) && (
-                  <span style={{ fontSize: 11, color: 'var(--lent)' }}>Set a monthly budget in Plan for this to work.</span>
-                )}
-              </div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+              <input type="time" value={t.time} aria-label={`${label} time`} onChange={(e) => e.target.value && setType(key, { time: e.target.value })}
+                style={{ padding: '6px 8px', borderRadius: 9, fontSize: 12, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit' }} />
+              {key === 'daily' && ALL_DAYS.map((d) => {
+                const on = (t.days ?? ALL_DAYS).includes(d);
+                return (
+                  <button key={d} aria-label={DAY_NAMES[d]} aria-pressed={on}
+                    onClick={() => { const days = on ? (t.days ?? ALL_DAYS).filter((x) => x !== d) : [...(t.days ?? []), d].sort(); if (days.length) setType('daily', { days }); }}
+                    style={{ width: 28, height: 28, borderRadius: 99, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border)'}`, background: on ? 'var(--accent-bg)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-muted)' }}>
+                    {DAY_LETTERS[d]}
+                  </button>
+                );
+              })}
+              {key === 'weekly' && (
+                <select value={t.day ?? 0} aria-label="Day of the week" onChange={(e) => setType('weekly', { day: Number(e.target.value) })}
+                  style={{ padding: '6px 8px', borderRadius: 9, fontSize: 12, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit' }}>
+                  {DAY_NAMES.map((n, i) => <option key={n} value={i}>{n}</option>)}
+                </select>
+              )}
+              {key === 'budget' && !(Number(settings?.budgets?.total) > 0) && <span style={{ fontSize: 11, color: 'var(--lent)' }}>Set a monthly budget on the Budget page for this to work.</span>}
+              {key === 'report' && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Report day: the {ordinal(getReportSettings(settings).day)} — change it in Stats → Monthly report.</span>}
+              {key === 'goals' && !(settings?.goals ?? []).some((g) => !g.status || g.status === 'active') && <span style={{ fontSize: 11, color: 'var(--lent)' }}>Add a goal on the Savings page for this to work.</span>}
+            </div>
           </div>
         );
-      })}
+      })()}
 
       {/* Tone + preview + test */}
       <div style={{ padding: '12px 16px 14px', borderTop: '1px solid var(--border)' }}>

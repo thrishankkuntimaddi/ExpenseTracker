@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseQuickEntry } from '../smartInput';
-import { computeGoalProgress } from '../goals';
+import { computeGoalProgress, moveGoal, endGoal, reopenGoal, isGoalOpen } from '../goals';
 import { recordsToCSV } from '../exportHelpers';
 import { csvToRecords } from '../importHelpers';
 
@@ -84,5 +84,32 @@ describe('pickDownload', async () => {
   it('iPhone / iPad get no download (the web app is the app)', () => {
     expect(pickDownload('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Safari/604.1')).toBeNull();
     expect(pickDownload('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1')).toBeNull();
+  });
+});
+
+describe('goals: held with someone, moved, used, collected', () => {
+  const goal = { id: 'g', name: 'Bike', target: 100000, monthly: 20000, heldWith: 'Pritam', linked: true, startDate: '2026-10-01' };
+  const put = (id, amount, d, extra = {}) => ({ id, type: 'savings', goalId: 'g', amount, date: new Date(2026, 9, d, 12).toISOString(), ...extra });
+  it('only its own savings count; this month’s share is tracked', () => {
+    const tx = [put('a', 20000, 2), { id: 'x', type: 'savings', amount: 999, date: new Date(2026, 9, 3).toISOString() }];
+    const p = computeGoalProgress(goal, tx, new Date(2026, 9, 13));
+    expect(p).toMatchObject({ saved: 20000, savedThisMonth: 20000, monthlyDue: 0, done: false });
+    expect(p.byHolder).toEqual({ Pritam: 20000 });
+  });
+  it('moving keeps the history; ending and reopening', () => {
+    const moved = moveGoal(goal, 'Muzammil', '2026-12-01');
+    expect(moved.heldWith).toBe('Muzammil');
+    expect(moved.moves).toEqual([{ date: '2026-12-01', from: 'Pritam', to: 'Muzammil' }]);
+    expect(moveGoal(moved, ' Muzammil ', '2026-12-02')).toBe(moved);
+    const used = endGoal(moved, 'used', '2027-01-10', 'Hospital');
+    expect(isGoalOpen(used)).toBe(false);
+    expect(used).toMatchObject({ status: 'used', endedOn: '2027-01-10', endNote: 'Hospital' });
+    expect(isGoalOpen(reopenGoal(used))).toBe(true);
+    expect(reopenGoal(used).endNote).toBeUndefined();
+  });
+  it('older goals still count savings by type', () => {
+    const old = { id: 'o', name: 'Old', target: 1000, savingsType: 'sip' };
+    const p = computeGoalProgress(old, [{ id: 's', type: 'savings', savingsType: 'sip', amount: 400, date: new Date().toISOString() }]);
+    expect(p.saved).toBe(400);
   });
 });

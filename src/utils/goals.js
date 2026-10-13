@@ -1,12 +1,31 @@
 // ─── Savings goals ───────────────────────────────────────────────
-// settings.goals = [{ id, name, target, deadline?: 'YYYY-MM-DD', startDate: 'YYYY-MM-DD',
-//                     savingsType?: key|null, keyword?: string, color?: string }]
-// Progress is derived from savings transactions, never stored.
+// settings.goals = [{
+//   id, name, target, startDate: 'YYYY-MM-DD', deadline?: 'YYYY-MM-DD',
+//   monthly?: number              planned amount per month (reminder + pace)
+//   heldWith?: string             where the money sits: "Cash", "Pritam", "HDFC savings"
+//   moves?: [{ date, from, to }]  every time the money changed hands
+//   status?: 'active' | 'collected' | 'used' | 'closed'
+//   endedOn?: 'YYYY-MM-DD', endNote?: string
+//   linked?: true                 only savings entries tagged with goalId count
+//   savingsType?, keyword?        (older goals) which savings entries count
+// }]
+// Money put towards a goal is an ordinary savings entry with goalId (and
+// heldWith), so balances stay right. Progress is derived, never stored.
 import { localDateKey } from './dateHelpers';
 import { sumAmounts } from './finance';
 
+export const GOAL_STATUS = {
+  active:    { label: 'In progress' },
+  collected: { label: 'Reached & collected' },
+  used:      { label: 'Used before reaching it' },
+  closed:    { label: 'Closed' },
+};
+export const isGoalOpen = (g) => !g?.status || g.status === 'active';
+
 export function goalMatches(goal, txn) {
   if (txn.type !== 'savings') return false;
+  if (txn.goalId) return txn.goalId === goal.id;
+  if (goal.linked) return false;
   const day = localDateKey(txn.date);
   if (!day) return false;
   if (goal.startDate && day < goal.startDate) return false;
@@ -18,6 +37,8 @@ export function goalMatches(goal, txn) {
   }
   return true;
 }
+
+const monthKeyOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
 export function computeGoalProgress(goal, transactions = [], now = new Date()) {
   const matched = transactions.filter((t) => goalMatches(goal, t));
@@ -45,9 +66,32 @@ export function computeGoalProgress(goal, transactions = [], now = new Date()) {
     eta = d;
   }
 
+  const thisMonth = monthKeyOf(now);
+  const savedThisMonth = sumAmounts(matched.filter((t) => localDateKey(t.date)?.slice(0, 7) === thisMonth));
+  // Where the money sits: per holder, from each entry's heldWith (else the goal's)
+  const byHolder = {};
+  matched.forEach((t) => { const h = (goal.heldWith || t.heldWith || t.platform || 'Not set').trim(); byHolder[h] = (byHolder[h] ?? 0) + (Number(t.amount) || 0); });
+
   return {
     saved, target, pct, remaining, done: remaining <= 0 && target > 0,
     count: matched.length, ratePerMonth, monthsLeft, neededPerMonth, onTrack, daysLeft, eta,
     overdue: goal.deadline ? goal.deadline < todayKey && remaining > 0 : false,
+    savedThisMonth, entries: matched, byHolder,
+    monthlyDue: Number(goal.monthly) > 0 ? Math.max(0, Number(goal.monthly) - savedThisMonth) : 0,
   };
 }
+
+/** Move the money to someone / somewhere else (keeps the history). */
+export function moveGoal(goal, to, dateKey) {
+  const from = goal.heldWith || '';
+  const next = String(to ?? '').trim();
+  if (!next || next === from) return goal;
+  return { ...goal, heldWith: next, moves: [...(goal.moves ?? []), { date: dateKey, from, to: next }] };
+}
+
+/** Finish a goal: 'collected' (reached and taken back), 'used' (spent early), 'closed'. */
+export function endGoal(goal, status, dateKey, note) {
+  if (!GOAL_STATUS[status] || status === 'active') return goal;
+  return { ...goal, status, endedOn: dateKey, endNote: note?.trim() || undefined };
+}
+export const reopenGoal = (goal) => { const { endedOn: _e, endNote: _n, ...rest } = goal; return { ...rest, status: 'active' }; };

@@ -4,7 +4,7 @@ import { isCarryForward } from '../../utils/carryForward';
 import { formatAmount, groupByDay } from '../../utils/dateHelpers';
 import { sumAmounts } from '../../utils/finance';
 import { filterItemsByPeriod } from '../../utils/periodHelpers';
-import PeriodSelector from '../../components/PeriodSelector';
+import { useViewMonth, monthName } from '../../app/month';
 import EditIncomeModal from '../../components/EditIncomeModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { useStats } from '../../hooks/useStats';
@@ -14,9 +14,10 @@ import { useShell } from '../../app/shellContext';
 
 export default function IncomeTab({
   income: rawIncome = [], onUpdateIncome, onDeleteIncome,
-  selectedPeriod, onPeriodChange,
+  selectedPeriod: periodProp,
   transactions = [], onDeleteTransaction, theme, settings,
 }) {
+  const { month, period: selectedPeriod } = useViewMonth(periodProp);
   // `income` here includes the synthetic carry-forward lines; rawIncome is what is stored
   const { income } = useStats(transactions, rawIncome, selectedPeriod, theme, settings);
   const [editingEntry, setEditingEntry] = useState(null);
@@ -61,7 +62,7 @@ export default function IncomeTab({
     filtInc.forEach((i) => { const k = (i.name || 'Other').trim(); m[k] = m[k] ?? { name: k, amount: 0, count: 0 }; m[k].amount += Number(i.amount) || 0; m[k].count += 1; });
     return Object.values(m).sort((a, b) => b.amount - a.amount);
   }, [filtInc]);
-  const periodLabel = selectedPeriod?.type === 'current_month' ? 'this month' : 'this period';
+  const periodLabel = monthName(month);
   const shell = useShell();
 
 
@@ -96,10 +97,8 @@ export default function IncomeTab({
       )}
 
       {/* Header */}
-      <PageHeader title="Income" subtitle="Salary, borrowed money, repayments"
-        actions={shell && <HeaderAction id="income-add" Icon={Plus} label="Add" onClick={() => shell.openAdd('income')} />}>
-        <PeriodSelector period={selectedPeriod} onChange={onPeriodChange} transactions={transactions || []} income={income} />
-      </PageHeader>
+      <PageHeader title="Income" subtitle="Everything that came in — salary, family, borrowed, paid back" month
+        actions={shell && <HeaderAction id="income-add" Icon={Plus} label="Add" onClick={() => shell.openAdd('income')} />} />
 
       {/* Body */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -113,7 +112,7 @@ export default function IncomeTab({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
                 <HeroFigure label="Income" value={formatAmount(kindTotals.income)} />
                 <HeroFigure label="Borrowed" value={formatAmount(kindTotals.borrowed)} />
-                <HeroFigure label="Repaid to you" value={formatAmount(kindTotals.repayment)} />
+                <HeroFigure label="Paid back to you" value={formatAmount(kindTotals.repayment)} />
               </div>
             </div>
 

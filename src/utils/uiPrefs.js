@@ -19,7 +19,7 @@ const LEGACY_SECTION = { due: 'bills', actions: 'explore' };
 export const HOME_SECTIONS = [
   { key: 'overview', label: 'Month overview',  hint: 'Spent, budget, today, safe to spend, balance' },
   { key: 'add',      label: 'Quick entry',     hint: 'Type “chai 20” and press enter' },
-  { key: 'bills',    label: 'Bills & payments', hint: 'What’s due this week, late or coming up' },
+  { key: 'bills',    label: 'Bills due',       hint: 'Shows up only when a payment is due or late' },
   { key: 'explore',  label: 'Explore',         hint: 'Every page that isn’t in your bar', locked: true },
   { key: 'recent',   label: 'Recent activity', hint: 'Your last seven days' },
 ];

@@ -6,7 +6,7 @@ import Avatar from './Avatar';
 
 export default function ProfileButton() {
   const shell = useShell();
-  if (!shell) return null;
+  if (!shell || shell.desktop) return null;   // desktop: Profile is in the sidebar
   return (
     <button id="btn-open-profile" className="profile-button" onClick={shell.openProfile}
       aria-label="Profile and settings" title="Profile and settings"

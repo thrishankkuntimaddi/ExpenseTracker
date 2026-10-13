@@ -1,35 +1,25 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+// ─── Stats ───────────────────────────────────────────────────────
+// The month the app is on (switch it here or in the calendar — every page
+// follows): balance and breakdown, the spending calendar, categories, the
+// distribution, and the monthly report on the day you choose.
+import { useState, useMemo } from 'react';
 import {
-  TrendingUp, TrendingDown, PiggyBank, Users,
+  TrendingUp, TrendingDown, PiggyBank,
   Scale, Flame, CalendarDays,
   ChevronDown, ChevronUp,
-  ArrowDownLeft, ArrowUpRight,
+  ArrowDownLeft, ArrowUpRight, FileText, ChevronRight,
 } from 'lucide-react';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, AreaChart, Area, CartesianGrid,
-} from 'recharts';
+import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { formatAmount } from '../../utils/dateHelpers';
-import { getCurrentMonthValue } from '../../utils/periodHelpers';
-import { computeBudgetStatus } from '../../utils/budget';
-import { generateInsights } from '../../utils/insights';
 import { categoryTotals, EMPTY_RULES } from '../../utils/categories';
-import PeriodSelector from '../../components/PeriodSelector';
+import { latestReportDay, getReportSettings, windowLabel, reportWindow } from '../../utils/report';
+import { toKey, fromKey } from '../../utils/recurring';
 import { useStats } from '../../hooks/useStats';
-import InsightsCard from './components/InsightsCard';
+import { useViewMonth, monthName } from '../../app/month';
 import CategoryBreakdown from './components/CategoryBreakdown';
 import SpendingCalendar from './components/SpendingCalendar';
+import ReportCard from './components/ReportCard';
 import { PageHeader } from '../../components/Page';
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  return isMobile;
-}
 
 /* ── Custom Tooltip ── */
 function ChartTip({ active, payload, label }) {
@@ -124,326 +114,123 @@ function AvgCard({ label, value, Icon }) {
   );
 }
 
-export default function StatsTab({ transactions, income, selectedPeriod, onPeriodChange, theme, settings, recurring }) {
-  const { stats, filtTxns, filtInc, pieData, barData, areaData, areaData4, C } = useStats(transactions, income, selectedPeriod, theme, settings);
-  const isMobile = useIsMobile();
-
+export default function StatsTab({ transactions, income, selectedPeriod, theme, settings, recurring, onPatchSettings }) {
+  const { month, setMonth, period } = useViewMonth(selectedPeriod);
+  const { stats, filtTxns, filtInc, pieData } = useStats(transactions, income, period, theme, settings);
   const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
-  const isMonthPeriod = selectedPeriod.type === 'current_month' || selectedPeriod.type === 'select_month';
-  const budgetMonth = isMonthPeriod ? selectedPeriod.value : getCurrentMonthValue();
-
-  const budgetStatus = useMemo(
-    () => computeBudgetStatus({ budgets: settings?.budgets, transactions, monthKey: budgetMonth, rules: categoryRules }),
-    [settings?.budgets, transactions, budgetMonth, categoryRules],
-  );
-  const currentBudgetStatus = useMemo(
-    () => (budgetMonth === getCurrentMonthValue() ? budgetStatus : computeBudgetStatus({ budgets: settings?.budgets, transactions, monthKey: getCurrentMonthValue(), rules: categoryRules })),
-    [budgetStatus, budgetMonth, settings?.budgets, transactions, categoryRules],
-  );
-  const insights = useMemo(
-    () => generateInsights({ transactions, income, rules: categoryRules, budgetStatus: currentBudgetStatus, recurringRules: recurring?.rules ?? [] }),
-    [transactions, income, categoryRules, currentBudgetStatus, recurring?.rules],
-  );
   const catTotals = useMemo(() => categoryTotals(filtTxns, categoryRules), [filtTxns, categoryRules]);
 
-  const trendData = isMobile ? (areaData4 || areaData.slice(-4)) : areaData;
-  const trendTitle = isMobile ? "4-Month Trend — All Financials" : "6-Month Trend — All Financials";
+  // A fresh report (published in the last three days) gets a banner at the top
+  const todayKey = toKey(new Date());
+  const { day } = getReportSettings(settings);
+  const latest = latestReportDay(day, todayKey);
+  const fresh = (fromKey(todayKey) - fromKey(latest)) / 86400000 <= 3;
+  const freshWin = fresh ? reportWindow(latest, income) : null;
 
   const positive  = stats.balance >= 0;
   const hasData   = filtTxns.length > 0 || filtInc.length > 0;
   const hasPieData = pieData.length > 0;
 
-  const barScrollRef = useRef(null);
-  const trendScrollRef = useRef(null);
-
-  // Auto-scroll charts to the far right so current day/month is immediately visible
-  useEffect(() => {
-    const scrollToRight = (ref) => {
-      if (ref.current) {
-        ref.current.scrollLeft = ref.current.scrollWidth;
-      }
-    };
-    const timer = setTimeout(() => {
-      scrollToRight(barScrollRef);
-      scrollToRight(trendScrollRef);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [barData, trendData]);
-
   return (
-    <div className="tab-root">
+    <div className="tab-root stats-page">
+      <PageHeader title="Stats" subtitle={`${monthName(month, { month: 'long' })} · calendar, categories, report`} month />
 
-      {/* Header */}
-      <PageHeader title="Stats" subtitle="Insights, categories, trends">
-        <PeriodSelector period={selectedPeriod} onChange={onPeriodChange} transactions={transactions} income={income} />
-      </PageHeader>
-
-      {/* Content */}
       <div className="tab-body">
-
-        {!hasData ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            height: '60%', gap: 12,
-          }}>
-            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Scale size={26} style={{ color: 'var(--text-muted)' }} />
-            </div>
-            <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>No data for this period</p>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Add transactions to see stats</p>
-          </div>
-        ) : (
-          <div className="stats-layout">
-
-            {/* ── LEFT COLUMN ── */}
-            <div className="stats-left">
-
-              {/* Balance Hero */}
-              <div className={`hero-card ${positive ? 'hero-income' : 'hero-expense'}`} style={{
-                borderRadius: 16, padding: '20px 22px', marginBottom: 14,
-                background: positive ? 'var(--income)' : 'var(--expense)',
-                boxShadow: 'var(--shadow-md)',
-              }}>
-                <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.7)', marginBottom: 6 }}>
-                  Remaining Balance
-                </p>
-                <p style={{ fontSize: 32, fontWeight: 800, color: '#fff', lineHeight: 1.1, marginBottom: 4 }}>
-                  {formatAmount(stats.balance)}
-                </p>
-                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
-                  Income − Expense − Savings − Given
-                </p>
-              </div>
-
-              {/* Insights — always about the current month: the most useful thing here, so first */}
-              <div style={{ marginBottom: 14 }}>
-                <InsightsCard insights={insights} />
-              </div>
-
-              {/* Spending Averages */}
-              <Section title="Spending Averages">
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
-                  <AvgCard label="Per Day"   value={stats.avgDay}   Icon={CalendarDays} />
-                  <AvgCard label="Per Week"  value={stats.avgWeek}  Icon={CalendarDays} />
-                  <AvgCard label="Per Month" value={stats.avgMonth} Icon={Scale}        />
-                </div>
-              </Section>
-
-              {/* Calendar heat-map */}
-              <Section id="stats-calendar" title="Spending Calendar">
-                <div style={{ marginTop: 8 }}>
-                  <SpendingCalendar key={budgetMonth} transactions={transactions} initialMonth={budgetMonth} rules={categoryRules} theme={theme} />
-                </div>
-              </Section>
-
-            </div>
-
-            {/* ── RIGHT COLUMN ── */}
-            <div className="stats-right">
-
-              {/* Breakdown Metric Cards */}
-              <Section title="Breakdown">
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginTop: 8 }}>
-
-                  {/* Income */}
-                  <MetricCard
-                    label="Total Income"
-                    value={stats.totalIncome}
-                    color="var(--income)" bg="var(--income-bg)" border="var(--income-border)"
-                    Icon={TrendingUp}
-                    sub={`Pure: ${formatAmount(stats.pureIncome)}`}
-                  />
-
-                  {/* 3. Total Expense */}
-                  <MetricCard
-                    label="Total Expense"
-                    value={stats.totalExpense}
-                    color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)"
-                    Icon={TrendingDown}
-                  />
-
-                  {/* 4. Savings */}
-                  <MetricCard
-                    label="Savings"
-                    value={stats.totalSavings}
-                    color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)"
-                    Icon={PiggyBank}
-                  />
-
-                  {/* 5. Total Wastage */}
-                  <MetricCard
-                    label="Total Wastage"
-                    value={stats.totalWaste}
-                    color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)"
-                    Icon={Flame}
-                    sub={`${stats.wastePercent}% of expenses`}
-                  />
-
-                  {/* 6. Debt Left (I owe others) — always show all-time */}
-                  <MetricCard
-                    label="Debt Left (You Owe)"
-                    value={stats.allTimeNetOwed}
-                    color="var(--borrowed)" bg="var(--borrowed-bg, var(--expense-bg))" border="var(--borrowed-border, var(--expense-border))"
-                    Icon={ArrowDownLeft}
-                    sub={stats.allTimeNetOwed > 0 ? 'Still unpaid to others' : 'All clear ✓'}
-                  />
-
-                  {/* 7. Amount Should Return (others owe me) */}
-                  <MetricCard
-                    label="To Collect (Owed to You)"
-                    value={stats.allTimeNetLent}
-                    color="var(--lent)" bg="var(--lent-bg, var(--savings-bg))" border="var(--lent-border, var(--savings-border))"
-                    Icon={ArrowUpRight}
-                    sub={stats.allTimeNetLent > 0 ? 'Others still owe you' : 'All returned ✓'}
-                  />
-
-                </div>
-              </Section>
-
-              {/* Where the money went, by category */}
-              {catTotals.length > 0 && (
-                <Section title="Spending by Category">
-                  <div style={{ marginTop: 8 }}>
-                    <CategoryBreakdown totals={catTotals} theme={theme} />
-                  </div>
-                </Section>
-              )}
-
-              {/* Donut Chart */}
-              <Section title="Distribution (Donut)">
-                {hasPieData ? (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 16, marginTop: 8,
-                    background: 'var(--surface)', borderRadius: 14,
-                    border: '1px solid var(--border)', padding: 14,
-                  }}>
-                    <ResponsiveContainer width={120} height={120}>
-                      <PieChart>
-                        <Pie
-                          data={pieData}
-                          cx="50%" cy="50%"
-                          innerRadius={34} outerRadius={55}
-                          dataKey="value" paddingAngle={3}
-                        >
-                          {pieData.map((e, i) => (
-                            <Cell key={i} fill={e.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<ChartTip />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                      {pieData.map(d => (
-                        <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                          <div style={{
-                            width: 10, height: 10, borderRadius: 3,
-                            background: d.color, flexShrink: 0,
-                          }} />
-                          <div>
-                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)' }}>{d.name}</div>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatAmount(d.value)}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: 12 }}>
-                    No breakdown data
-                  </div>
-                )}
-              </Section>
-
-              {/* Daily Bar Chart (Horizontally Scrollable) */}
-              <Section title="Last 14 Days — Daily Spending">
-                <div
-                  ref={barScrollRef}
-                  style={{
-                    background: 'var(--surface)', borderRadius: 14,
-                    border: '1px solid var(--border)', padding: 14, marginTop: 8,
-                    overflowX: 'auto', WebkitOverflowScrolling: 'touch',
-                  }}
-                >
-                  <div style={{ minWidth: 480, height: 150 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={barData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                        <XAxis dataKey="day" tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                        <Tooltip content={<ChartTip />} cursor={{ fill: 'var(--surface2)' }} />
-                        <Bar dataKey="Expense" fill={C.expense} radius={[4, 4, 0, 0]} maxBarSize={18} />
-                        <Bar dataKey="Savings" fill={C.savings} radius={[4, 4, 0, 0]} maxBarSize={18} />
-                        <Bar dataKey="Lent"    fill={C.lent}    radius={[4, 4, 0, 0]} maxBarSize={18} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </Section>
-
-              {/* Area Chart: Trend (All 4 Series + Horizontally Scrollable) */}
-              <Section title={trendTitle}>
-                <div
-                  ref={trendScrollRef}
-                  style={{
-                    background: 'var(--surface)', borderRadius: 14,
-                    border: '1px solid var(--border)', padding: 14, marginTop: 8,
-                    overflowX: 'auto', WebkitOverflowScrolling: 'touch',
-                  }}
-                >
-                  <div style={{ minWidth: isMobile ? 360 : 520, height: 170 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={trendData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="incGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor={C.income}       stopOpacity={0.3} />
-                            <stop offset="95%" stopColor={C.income}       stopOpacity={0}   />
-                          </linearGradient>
-                          <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor={C.expense}      stopOpacity={0.3} />
-                            <stop offset="95%" stopColor={C.expense}      stopOpacity={0}   />
-                          </linearGradient>
-                          <linearGradient id="savGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor={C.savings}      stopOpacity={0.3} />
-                            <stop offset="95%" stopColor={C.savings}      stopOpacity={0}   />
-                          </linearGradient>
-                          <linearGradient id="lentGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor={C.lent}         stopOpacity={0.3} />
-                            <stop offset="95%" stopColor={C.lent}         stopOpacity={0}   />
-                          </linearGradient>
-                          <linearGradient id="repaidGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor={C.borrowed}     stopOpacity={0.3} />
-                            <stop offset="95%" stopColor={C.borrowed}     stopOpacity={0}   />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                        <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                        <Tooltip content={<ChartTip />} />
-                        <Area type="monotone" dataKey="Income"       stroke={C.income}   strokeWidth={2} fill="url(#incGrad)"    dot={{ r: 3, fill: C.income }}   />
-                        <Area type="monotone" dataKey="Expense"      stroke={C.expense}  strokeWidth={2} fill="url(#expGrad)"    dot={{ r: 3, fill: C.expense }}  />
-                        <Area type="monotone" dataKey="Savings"      stroke={C.savings}  strokeWidth={2} fill="url(#savGrad)"    dot={{ r: 3, fill: C.savings }}  />
-                        <Area type="monotone" dataKey="Lent"         stroke={C.lent}     strokeWidth={2} fill="url(#lentGrad)"   dot={{ r: 3, fill: C.lent }}     />
-                        <Area type="monotone" dataKey="Debt Repaid"  stroke={C.borrowed} strokeWidth={2} fill="url(#repaidGrad)" dot={{ r: 3, fill: C.borrowed }} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 10, flexWrap: 'wrap' }}>
-                    <ChartLegend color={C.income}   label="Income"      />
-                    <ChartLegend color={C.expense}  label="Expense"     />
-                    <ChartLegend color={C.savings}  label="Savings"     />
-                    <ChartLegend color={C.lent}     label="Lent"        />
-                    <ChartLegend color={C.borrowed} label="Debt Repaid" />
-                  </div>
-                </div>
-              </Section>
-
-
-            </div>
-          </div>
+        {freshWin && (
+          <button id="report-banner" className="card" onClick={() => document.getElementById('stats-report')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 14, border: 'none', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <span style={{ width: 36, height: 36, borderRadius: 12, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><FileText size={17} style={{ color: 'var(--accent)' }} /></span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 750, color: 'var(--text)' }}>Your monthly report is ready</span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{windowLabel(freshWin.start, freshWin.last)} — what went up, down and what you missed</span>
+            </span>
+            <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
+          </button>
         )}
-      </div>
 
+        <div className="stats-layout">
+          {/* ── LEFT: balance, breakdown, calendar ── */}
+          <div className="stats-left">
+            <div className={`hero-card ${positive ? 'hero-income' : 'hero-expense'}`} style={{
+              borderRadius: 16, padding: '20px 22px', marginBottom: 14,
+              background: positive ? 'var(--income)' : 'var(--expense)', boxShadow: 'var(--shadow-md)',
+            }}>
+              <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.75)', marginBottom: 6 }}>
+                Remaining balance · {monthName(month, { month: 'short', year: 'numeric' })}
+              </p>
+              <p style={{ fontSize: 32, fontWeight: 800, color: '#fff', lineHeight: 1.1, marginBottom: 4 }}>{formatAmount(stats.balance)}</p>
+              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>Money in − spent − saved − given − lent</p>
+            </div>
+
+            <Section title="Breakdown">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginTop: 8 }}>
+                <MetricCard label="Income" value={stats.totalIncome} color="var(--income)" bg="var(--income-bg)" border="var(--income-border)" Icon={TrendingUp} sub={`Earned: ${formatAmount(stats.pureIncome)}`} />
+                <MetricCard label="Spent" value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={TrendingDown} />
+                <MetricCard label="Saved" value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" Icon={PiggyBank} />
+                <MetricCard label="Wasted" value={stats.totalWaste} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={Flame} sub={`${stats.wastePercent}% of spending`} />
+                <MetricCard label="You owe" value={stats.allTimeNetOwed} color="var(--borrowed)" bg="var(--borrowed-bg, var(--expense-bg))" border="var(--borrowed-border, var(--expense-border))" Icon={ArrowDownLeft} sub={stats.allTimeNetOwed > 0 ? 'All months, still open' : 'All clear ✓'} />
+                <MetricCard label="Owed to you" value={stats.allTimeNetLent} color="var(--lent)" bg="var(--lent-bg, var(--savings-bg))" border="var(--lent-border, var(--savings-border))" Icon={ArrowUpRight} sub={stats.allTimeNetLent > 0 ? 'All months, still open' : 'All returned ✓'} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 10 }}>
+                <AvgCard label="Per day"   value={stats.avgDay}   Icon={CalendarDays} />
+                <AvgCard label="Per week"  value={stats.avgWeek}  Icon={CalendarDays} />
+                <AvgCard label="Per month" value={stats.avgMonth} Icon={Scale}        />
+              </div>
+            </Section>
+
+            <Section id="stats-calendar" title="Spending calendar">
+              <div style={{ marginTop: 8 }}>
+                <SpendingCalendar transactions={transactions} month={month} onMonthChange={setMonth} rules={categoryRules} theme={theme} />
+              </div>
+            </Section>
+          </div>
+
+          {/* ── RIGHT: categories, distribution, report ── */}
+          <div className="stats-right">
+            <Section title="Spending by category">
+              <div style={{ marginTop: 8 }}>
+                {catTotals.length > 0
+                  ? <CategoryBreakdown totals={catTotals} theme={theme} />
+                  : <div className="card" style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>No spending in {monthName(month, { month: 'long' })}{hasData ? '' : ' yet'}.</div>}
+              </div>
+            </Section>
+
+            <Section title="Where the money went">
+              {hasPieData ? (
+                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8, padding: 14 }}>
+                  <ResponsiveContainer width={120} height={120}>
+                    <PieChart>
+                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={34} outerRadius={55} dataKey="value" paddingAngle={3}>
+                        {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                      </Pie>
+                      <Tooltip content={<ChartTip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                    {pieData.map(d => (
+                      <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: 3, background: d.color, flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)' }}>{d.name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatAmount(d.value)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="card" style={{ marginTop: 8, padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>Nothing went out in {monthName(month, { month: 'long' })}.</div>
+              )}
+            </Section>
+
+            <Section title="Monthly report">
+              <div style={{ marginTop: 8 }}>
+                <ReportCard transactions={transactions} income={income} settings={settings} recurringRules={recurring?.rules ?? []} onPatchSettings={onPatchSettings} />
+              </div>
+            </Section>
+          </div>
+        </div>
+      </div>
 
       <style>{`
         @media (min-width: 1024px) {
@@ -457,11 +244,3 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
   );
 }
 
-function ChartLegend({ color, label }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-      <div style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
-      <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{label}</span>
-    </div>
-  );
-}

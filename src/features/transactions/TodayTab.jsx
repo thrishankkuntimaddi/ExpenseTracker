@@ -1,8 +1,7 @@
 import { useMemo, useState, Fragment } from 'react';
-import { Coins, Users, Search, Zap, ArrowUpRight, ChevronRight, CalendarClock, Check } from 'lucide-react';
+import { Coins, Users, Search, Zap, ArrowUpRight } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount, todayInputValue, dateInputToISO, isoToMonth, localMonthKey } from '../../utils/dateHelpers';
-import { getCurrentMonthValue } from '../../utils/periodHelpers';
 import { TRANSACTION_TYPES as TYPES, getDirectionMeta } from '../../utils/typeConfig';
 import { useStats } from '../../hooks/useStats';
 import { inferCategory, categoryOf, categoryMeta, EMPTY_RULES } from '../../utils/categories';
@@ -13,35 +12,37 @@ import { toKey, fromKey } from '../../utils/recurring';
 import { CategoryBadge } from '../../components/CategoryPicker';
 import ProfileButton from '../../components/ProfileButton';
 import { useShell } from '../../app/shellContext';
-import { PAGE_META } from '../../app/pages';
-import { normaliseUi, SLOT_KEYS } from '../../utils/uiPrefs';
+import { PAGE_META, EXPLORE_ORDER } from '../../app/pages';
+import { normaliseUi } from '../../utils/uiPrefs';
+import { useViewMonth, monthName } from '../../app/month';
+import { debtLedger, debtTotals } from '../../utils/debts';
+import MonthSwitcher from '../../components/MonthSwitcher';
 
 const linkBtn = { padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
 const rupees = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;   // compact: no paise
 const capitalise = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
-export default function TodayTab({ transactions = [], income = [], onAdd, theme, settings, recurring }) {
+export default function TodayTab({ transactions = [], income = [], onAdd, theme, settings, recurring, selectedPeriod }) {
   const shell = useShell();
   const ui = useMemo(() => normaliseUi(settings?.ui), [settings?.ui]);
   const homeSections = ui.home;
-  const { stats } = useStats(transactions, income, { type: 'current_month', value: getCurrentMonthValue() }, theme, settings);
+  const { month: monthKey, isNow, period } = useViewMonth(selectedPeriod);
+  const { stats } = useStats(transactions, income, period, theme, settings);
   const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
   const [quick, setQuick] = useState('');
-  const monthKey = getCurrentMonthValue();
 
   const budgetStatus = useMemo(
     () => computeBudgetStatus({ budgets: settings?.budgets, transactions, monthKey, rules: categoryRules }),
     [settings?.budgets, transactions, monthKey, categoryRules],
   );
-  const safeToday = budgetStatus.hasBudget && budgetStatus.total.limit ? budgetStatus.total : null;
+  const safeToday = budgetStatus.hasBudget && budgetStatus.total.limit ? budgetStatus.total : null;   // budget for the month on screen
 
   const now = new Date();
   const todayKey = toKey(now);
   const todayExpense = transactions
     .filter((t) => t.type === 'expense' && new Date(t.date).toDateString() === now.toDateString())
     .reduce((s, t) => s + t.amount, 0);
-  const monthShort = now.toLocaleDateString('en-IN', { month: 'long' });
-  const monthAbbr = now.toLocaleDateString('en-IN', { month: 'short' });
+  const monthAbbr = monthName(monthKey, { month: 'short' });
   const hour = now.getHours();
   const greeting = hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
@@ -56,13 +57,13 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
   const soon = upcomingBills(rules, existingIds, todayKey, 7);
   const lateCount = soon.filter((b) => b.status === 'overdue').length;
 
-  // Recent entries: the last 7 days, newest first
+  // Recent entries: the last 7 days, newest first (an earlier month: its last entries)
   const recent = useMemo(() => {
     const since = new Date(); since.setHours(0, 0, 0, 0); since.setDate(since.getDate() - 6);
-    return transactions.filter(t => new Date(t.date) >= since)
+    return transactions.filter(t => (isNow ? new Date(t.date) >= since : localMonthKey(t.date) === monthKey))
       .sort((a, b) => new Date(b.date) - new Date(a.date) || String(b.id).localeCompare(String(a.id)))
       .slice(0, 6);
-  }, [transactions]);
+  }, [transactions, isNow, monthKey]);
   const dayLabel = (iso) => {
     const d = new Date(iso); const today = new Date(); const y = new Date(); y.setDate(today.getDate() - 1);
     return d.toDateString() === today.toDateString() ? 'Today' : d.toDateString() === y.toDateString() ? 'Yesterday' : d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -84,32 +85,33 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
   // Explore: one live line per page that isn't already in the bar
   const monthTxns = transactions.filter((t) => localMonthKey(t.date) === monthKey);
   const monthIncome = income.filter((i) => localMonthKey(i.date) === monthKey).reduce((s, i) => s + (Number(i.amount) || 0), 0);
-  const owedToMe = Object.values(stats?.personDebts ?? {}).reduce((s, p) => s + Math.max(0, p.netLent ?? 0), 0);
+  const debts = debtTotals(debtLedger(transactions, income));
   const savedThisMonth = monthTxns.filter((t) => t.type === 'savings').reduce((s, t) => s + (Number(t.amount) || 0), 0);
   const exploreLine = {
     history: `${monthTxns.length} entr${monthTxns.length === 1 ? 'y' : 'ies'} this month`,
     bills: rules.length ? (lateCount ? `${lateCount} late` : soon.length ? `${soon.length} due this week` : 'Nothing due this week') : 'Add rent, EMIs, SIPs',
-    stats: `Insights for ${monthAbbr}`,
+    stats: `Calendar & report · ${monthAbbr}`,
     budget: safeToday ? (safeToday.remaining < 0 ? 'Over budget' : `${rupees(safeToday.remaining)} left`) : budgetStatus.hasBudget ? 'Category limits set' : 'Set a monthly budget',
     savings: savedThisMonth ? `${rupees(savedThisMonth)} in ${monthAbbr}` : 'SIPs, funds, goals',
     income: monthIncome ? `${rupees(monthIncome)} in ${monthAbbr}` : 'Nothing yet this month',
-    people: owedToMe ? `${rupees(owedToMe)} owed to you` : 'Lend, borrow, settle',
+    people: debts.owedToYou ? `${rupees(debts.owedToYou)} owed to you` : debts.youOwe ? `You owe ${rupees(debts.youOwe)}` : 'Lent, borrowed, paid back',
     trips: 'Split shared costs',
     external: 'Spent for others',
   };
-  const explorePages = SLOT_KEYS.filter((k) => !ui.tabs.includes(k));
+  const explorePages = EXPLORE_ORDER.filter((k) => !ui.tabs.includes(k));
 
   const pct = safeToday ? Math.min(100, (safeToday.spent / safeToday.limit) * 100) : 0;
   const overviewSection = (
     <div className="home-hero" id="home-summary" role={shell ? 'button' : undefined} tabIndex={shell ? 0 : undefined}
-      onClick={() => shell?.goTo('stats')} style={{ marginBottom: 14, padding: '16px 18px 14px', borderRadius: 26, color: '#fff', cursor: shell ? 'pointer' : 'default', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8 }}>Spent in {monthShort}</span>
+      onClick={(e) => { if (!e.target.closest('.month-switcher')) shell?.goTo('stats'); }} style={{ marginBottom: 14, padding: '14px 18px 14px', borderRadius: 26, color: '#fff', cursor: shell ? 'pointer' : 'default', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+        {shell ? <MonthSwitcher tone="hero" compact /> : <span style={{ fontSize: 12, fontWeight: 700 }}>{monthName(monthKey)}</span>}
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, opacity: 0.85 }}>
-          {safeToday ? (safeToday.status === 'over' ? 'Over budget' : `${Math.round(pct)}% of budget`) : 'Insights'} <ArrowUpRight size={13} />
+          {safeToday ? (safeToday.status === 'over' ? 'Over budget' : `${Math.round(pct)}% of budget`) : 'Stats'} <ArrowUpRight size={13} />
         </span>
       </div>
-      <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8, marginTop: 10 }}>Spent</div>
+      <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 0, fontVariantNumeric: 'tabular-nums' }}>
         {formatAmount(stats?.totalExpense ?? 0)}
       </div>
       {safeToday && (
@@ -125,8 +127,8 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
         </>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.18)' }}>
-        <Metric label="Today" value={formatAmount(todayExpense)} />
-        {safeToday && safeToday.status !== 'over'
+        {isNow ? <Metric label="Today" value={formatAmount(todayExpense)} /> : <Metric label="Income" value={formatAmount(stats?.totalIncome ?? 0)} />}
+        {isNow && safeToday && safeToday.status !== 'over'
           ? <Metric label="Safe to spend today" value={formatAmount(safeToday.safeToday)} />
           : <Metric label="Saved" value={formatAmount(stats?.totalSavings ?? 0)} />}
         <Metric label="Balance" value={formatAmount(stats?.balance ?? 0)} />
@@ -155,61 +157,46 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
     </form>
   );
 
-  const billsSection = (
+  // Only when something needs paying — setting bills up lives on the Bills page
+  const billsSection = soon.length > 0 && (
     <div className="home-bills" style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '4px 4px 8px' }}>
-        <p className="section-label" style={{ margin: 0 }}>Bills & payments</p>
-        {shell && <button id="home-bills-all" onClick={() => shell.goTo('bills')} style={linkBtn}>{rules.length ? 'All bills' : 'Set up'}</button>}
+        <p className="section-label" style={{ margin: 0 }}>{lateCount ? `Due · ${lateCount} late` : 'Due this week'}</p>
+        {shell && <button id="home-bills-all" onClick={() => shell.goTo('bills')} style={linkBtn}>All bills</button>}
       </div>
-      {!rules.length ? (
-        <button className="card" onClick={() => shell?.goTo('bills')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px', border: 'none', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
-          <span style={{ width: 38, height: 38, borderRadius: 12, background: 'var(--expense-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><CalendarClock size={17} style={{ color: 'var(--expense)' }} /></span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Never miss a due date</span>
-            <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Add rent, electricity, EMIs, SIPs — pay each with one tap</span>
-          </span>
-          <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
-        </button>
-      ) : !soon.length ? (
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px' }}>
-          <span style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--income-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={15} style={{ color: 'var(--income)' }} /></span>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>Nothing due in the next 7 days</span>
-        </div>
-      ) : (
-        <div className="card">
-          {soon.slice(0, 4).map((b, i) => {
-            const d = fromKey(b.dateKey);
-            const late = b.status === 'overdue';
-            return (
-              <div key={`${b.rule.id}|${b.dateKey}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderTop: i ? '1px solid var(--border)' : 'none' }}>
-                <div style={{ width: 38, flexShrink: 0, textAlign: 'center', padding: '4px 0', borderRadius: 11, background: late ? 'var(--expense-bg)' : 'var(--surface2)' }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.1, color: late ? 'var(--expense)' : 'var(--text)' }}>{d.getDate()}</div>
-                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>{d.toLocaleDateString('en-IN', { month: 'short' })}</div>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 650, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.rule.name}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: late ? 'var(--expense)' : b.status === 'today' ? 'var(--lent)' : 'var(--text-muted)', marginTop: 1 }}>
-                    {b.rule.autoPost ? `Auto · ${dueLabel(b.dateKey, todayKey)}` : dueLabel(b.dateKey, todayKey)}
-                  </div>
-                </div>
-                <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{formatAmount(b.amount)}</span>
-                {!b.rule.autoPost && recurring?.post && (
-                  <button id={`home-pay-${b.rule.id}`} onClick={async () => {
-                    if (await recurring.post({ rule: b.rule, dateKey: b.dateKey, paidOn: b.dateKey > todayKey ? todayKey : null })) shell?.toast(`Paid ${b.rule.name} · ${formatAmount(b.amount)}`);
-                  }} style={{ padding: '7px 13px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: b.status === 'upcoming' ? 'var(--surface2)' : 'var(--income)', color: b.status === 'upcoming' ? 'var(--text-secondary)' : '#fff' }}>
-                    Pay
-                  </button>
-                )}
+      <div className="card">
+        {soon.slice(0, 4).map((b, i) => {
+          const d = fromKey(b.dateKey);
+          const late = b.status === 'overdue';
+          return (
+            <div key={`${b.rule.id}|${b.dateKey}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderTop: i ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ width: 38, flexShrink: 0, textAlign: 'center', padding: '4px 0', borderRadius: 11, background: late ? 'var(--expense-bg)' : 'var(--surface2)' }}>
+                <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.1, color: late ? 'var(--expense)' : 'var(--text)' }}>{d.getDate()}</div>
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>{d.toLocaleDateString('en-IN', { month: 'short' })}</div>
               </div>
-            );
-          })}
-          {soon.length > 4 && (
-            <button onClick={() => shell?.goTo('bills')} style={{ width: '100%', padding: '10px', border: 'none', borderTop: '1px solid var(--border)', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-              {soon.length - 4} more
-            </button>
-          )}
-        </div>
-      )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 650, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.rule.name}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: late ? 'var(--expense)' : b.status === 'today' ? 'var(--lent)' : 'var(--text-muted)', marginTop: 1 }}>
+                  {b.rule.autoPost ? `Auto · ${dueLabel(b.dateKey, todayKey)}` : dueLabel(b.dateKey, todayKey)}
+                </div>
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{formatAmount(b.amount)}</span>
+              {!b.rule.autoPost && recurring?.post && (
+                <button id={`home-pay-${b.rule.id}`} onClick={async () => {
+                  if (await recurring.post({ rule: b.rule, dateKey: b.dateKey, paidOn: b.dateKey > todayKey ? todayKey : null })) shell?.toast(`Paid ${b.rule.name} · ${formatAmount(b.amount)}`);
+                }} style={{ padding: '7px 13px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: b.status === 'upcoming' ? 'var(--surface2)' : 'var(--income)', color: b.status === 'upcoming' ? 'var(--text-secondary)' : '#fff' }}>
+                  Pay
+                </button>
+              )}
+            </div>
+          );
+        })}
+        {soon.length > 4 && (
+          <button onClick={() => shell?.goTo('bills')} style={{ width: '100%', padding: '10px', border: 'none', borderTop: '1px solid var(--border)', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+            {soon.length - 4} more
+          </button>
+        )}
+      </div>
     </div>
   );
 
@@ -241,7 +228,7 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
     {recent.length > 0 ? (
       <>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '4px 4px 8px' }}>
-          <p className="section-label" style={{ margin: 0 }}>Recent activity</p>
+          <p className="section-label" style={{ margin: 0 }}>{isNow ? 'Recent activity' : `Last entries in ${monthName(monthKey, { month: 'long' })}`}</p>
           {shell && <button id="home-see-all" onClick={() => shell.goTo('history')} style={linkBtn}>All history</button>}
         </div>
         <div className="card" id="recent-entries">
@@ -320,7 +307,7 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
         </div>
         <div style={{ textAlign: 'center' }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>
-            Nothing logged this week
+            {isNow ? 'Nothing logged this week' : `Nothing logged in ${monthName(monthKey, { month: 'long' })}`}
           </p>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
             Add an entry above — it shows up here
@@ -365,7 +352,16 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
       </div>
 
       <div className="home-body" style={{ flex: 1, overflow: 'auto', padding: '14px 16px 20px' }}>
-        {homeSections.filter((s) => s.visible).map(({ key }) => <Fragment key={key}>{section(key)}</Fragment>)}
+        {shell?.desktop ? (
+          // Wide screens: what you do (overview, entry, bills) beside where to go (explore, recent)
+          <div className="home-columns">
+            {[['overview', 'add', 'bills'], ['explore', 'recent']].map((keys, i) => (
+              <div key={i} className="home-column">
+                {homeSections.filter((s) => s.visible && keys.includes(s.key)).map(({ key }) => <Fragment key={key}>{section(key)}</Fragment>)}
+              </div>
+            ))}
+          </div>
+        ) : homeSections.filter((s) => s.visible).map(({ key }) => <Fragment key={key}>{section(key)}</Fragment>)}
       </div>
     </div>
   );

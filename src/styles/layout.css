@@ -87,3 +87,78 @@ nav button.nav-add {
 /* ── Toast ──────────────────────────────────────────────────────── */
 [data-theme="monoflow"] { --toast-bg: rgba(236,238,243,.95); --toast-text: #0B0D12; }
 @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* ══════════════════════════════════════════════════════════════════
+   DESKTOP / WEB (≥1024px): a sidebar with every page, then the very same
+   pages as the phone — one app, one look.
+══════════════════════════════════════════════════════════════════ */
+.desktop-sidebar {
+  width: 236px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px;
+  padding: 18px 12px 14px; overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: var(--nav-bg);
+}
+.desktop-brand { display: flex; align-items: center; gap: 10px; padding: 2px 10px 12px; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; color: var(--text); }
+.desktop-brand img { border-radius: 9px; }
+.desktop-add {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  height: 42px; margin: 0 4px 6px; border: none; cursor: pointer;
+  font-size: 14px; font-weight: 750; font-family: inherit; color: #fff;
+  background: linear-gradient(145deg, #6366F1, #8B5CF6) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 8px 18px -8px rgba(99,102,241,.7);
+}
+[data-theme="monoflow"] .desktop-add { background: linear-gradient(145deg, #7C83FF, #A78BFA) !important; color: #0B0D12; }
+.desktop-nav { display: flex; flex-direction: column; }
+.desktop-nav-title { padding: 14px 12px 5px; font-size: 10px; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.desktop-nav-item {
+  width: 100%; display: flex; align-items: center; gap: 11px; padding: 9px 12px; margin: 1px 0;
+  border: none; background: transparent; cursor: pointer; text-align: left;
+  font-size: 13.5px; font-weight: 600; font-family: inherit; color: var(--text-secondary);
+}
+.desktop-nav-item:hover { background: var(--surface2); filter: none !important; }
+.desktop-nav-item.on { background: var(--surface2); font-weight: 750; }
+.desktop-nav-item span:not(.desktop-nav-badge) { flex: 1; }
+.desktop-nav-badge {
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--expense); color: #fff; font-size: 10px; font-weight: 800;
+}
+.desktop-profile {
+  position: relative; margin-top: auto; display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border: none; background: transparent; cursor: pointer; font-family: inherit; color: var(--text-muted);
+}
+.desktop-profile:hover, .desktop-profile.on { background: var(--surface2); filter: none !important; }
+.desktop-profile-name { display: block; font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.desktop-profile-sub { display: block; font-size: 11px; color: var(--text-muted); }
+.desktop-attention { position: absolute; top: 8px; left: 34px; width: 9px; height: 9px; border-radius: 50%; background: var(--expense); }
+.desktop-profile .et-avatar { border-radius: 50% !important; }
+
+.desktop-main { flex: 1; min-width: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+.desktop-main > .tab-root, .desktop-main > div > .tab-root { width: 100%; max-width: 1120px; margin: 0 auto; }
+.desktop-main .tab-header { margin: 16px 20px 0; border-radius: 24px; }
+.desktop-main .tab-body, .desktop-main .home-body { padding: 18px 20px 40px !important; }
+/* Pages that read best as one column stay a comfortable width */
+.desktop-main:is(.page-bills, .page-budget, .page-savings, .page-people, .page-income, .page-profile) > .tab-root { max-width: 860px; }
+.desktop-main.page-profile .settings-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+
+/* Home on a wide screen: what you do · where to go */
+.home-columns { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.home-column { min-width: 0; }
+
+/* "Add" opens as a centred dialog instead of a bottom sheet */
+.sheet-centered { align-items: center !important; padding: 24px; }
+.sheet-centered .add-sheet { border-radius: 26px !important; max-height: 90vh !important; padding-bottom: 20px !important; }
+.sheet-centered .sheet-grip { display: none; }
+
+/* ── Month switcher + Add sheet choices ─────────────────────────── */
+.month-switcher button { border-radius: 50% !important; }
+.month-switcher #month-now { border-radius: 99px !important; }
+.add-amount { border-radius: 18px; }
+.segmented { border-radius: 99px; }
+/* Tiles and rows are cards, not capsules (glass.css rounds every button) */
+.reminder-tile { border-radius: 18px !important; }
+.debt-row, .desktop-nav-item, .desktop-profile { border-radius: 14px !important; }
+.add-kind { border-radius: 16px !important; }
+.add-amount #add-amount, .add-amount #add-amount:focus {
+  background: transparent !important; border: none !important; box-shadow: none !important; outline: none !important;
+}

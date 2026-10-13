@@ -4,8 +4,10 @@
 // subtitle, actions, then the profile avatar.
 import BackButton from './BackButton';
 import ProfileButton from './ProfileButton';
+import MonthSwitcher from './MonthSwitcher';
 
-export function PageHeader({ title, subtitle, actions, children }) {
+/* `month`: show the app-wide month switcher under the title */
+export function PageHeader({ title, subtitle, actions, month = false, children }) {
   return (
     <div className="tab-header page-header">
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -17,6 +19,7 @@ export function PageHeader({ title, subtitle, actions, children }) {
         {actions}
         <ProfileButton />
       </div>
+      {month && <div className="page-month" style={{ marginTop: 10 }}><MonthSwitcher /></div>}
       {children && <div style={{ marginTop: 12 }}>{children}</div>}
     </div>
   );

@@ -18,14 +18,14 @@ const { default: TodayTab } = await import('../features/transactions/TodayTab');
 const { default: HistoryTab } = await import('../features/transactions/HistoryTab');
 const { default: IncomeTab } = await import('../features/income/IncomeTab');
 const { default: StatsTab } = await import('../features/stats/StatsTab');
-const { default: PlanTab } = await import('../features/plan/PlanTab');
+const { default: DebtsPage } = await import('../features/debts/DebtsPage');
+const { ShellContext } = await import('../app/shellContext');
 const { default: SettingsTab } = await import('../features/settings/SettingsTab');
 const { default: ProfilePage } = await import('../features/profile/ProfilePage');
 const { default: AddSheet } = await import('../components/AddSheet');
 const { default: BillsPage } = await import('../features/bills/BillsPage');
 const { default: BudgetPage } = await import('../features/budget/BudgetPage');
 const { default: SavingsPage } = await import('../features/savings/SavingsPage');
-const { default: DesktopDashboard } = await import('../components/DesktopDashboard');
 const { default: EditTransactionModal } = await import('../components/EditTransactionModal');
 const { default: RecurringRuleModal } = await import('../features/plan/RecurringRuleModal');
 const { default: BudgetEditorModal } = await import('../features/plan/BudgetEditorModal');
@@ -92,9 +92,21 @@ describe('screens render with planning features', () => {
   it('Home shows safe-to-spend, bills due and category chips', () => {
     const html = render(<TodayTab {...common} onAdd={noop} />);
     expect(html).toContain('Safe to spend today');
-    expect(html).toContain('Bills &amp; payments');
+    expect(html).toMatch(/Due · \d+ late/);
     expect(html).toContain('House rent');          // the rent rule is overdue → listed with Pay
     expect(html).toContain('Food &amp; Dining');
+  });
+
+  it('Home: no bills section when nothing is due; Explore in the chosen order', () => {
+    const shell = { goTo: noop, barTabs: ['history', 'bills', 'stats'], month: month(iso(0)), setMonth: noop, user: common.user, openProfile: noop, openAdd: noop, toast: noop };
+    const html = render(<ShellContext.Provider value={shell}><TodayTab {...common} onAdd={noop} recurring={{ ...recurring, rules: [] }} /></ShellContext.Provider>);
+    expect(html).not.toContain('home-bills');
+    const order = ['income', 'trips', 'external', 'budget', 'people', 'savings'].map((k) => html.indexOf(`id="explore-${k}"`));
+    expect(order.every((i) => i > 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(html).not.toContain('id="explore-bills"');      // it's in the bar
+    expect(html).toContain('₹600 owed to you');            // Ravi: lent 1,000, paid back 400 (as income)
+    expect(html).toContain('id="month-prev"');              // the month switcher sits on the overview card
   });
 
   it('History tab shows search, category filter chips and badges', () => {
@@ -104,15 +116,19 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Subscriptions');
   });
 
-  it('Stats shows insights first, category breakdown and calendar — budget and goals live on their own pages', () => {
+  it('Stats: balance, breakdown, calendar, categories, distribution, then the monthly report', () => {
     const html = render(<StatsTab {...common} />);
-    expect(html).toContain('Insights');
-    expect(html).toContain('By Category');
-    expect(html).toContain('Spending Calendar');
-    expect(html).not.toContain('Budget · this month');
-    expect(html).not.toContain('Savings Goals');
-    expect(html.split('Remaining Balance').length - 1).toBe(1);   // once, not twice
-    expect(html.indexOf('Insights')).toBeLessThan(html.indexOf('Spending Calendar'));
+    const at = (t) => html.indexOf(t);
+    for (const t of ['Remaining balance', 'Breakdown', 'Spending Calendar', 'Spending by category', 'Where the money went', 'Monthly report']) expect(at(t)).toBeGreaterThan(-1);
+    expect(at('Breakdown')).toBeLessThan(at('Spending Calendar'));
+    expect(at('Spending Calendar')).toBeLessThan(at('Spending by category'));
+    expect(at('Spending by category')).toBeLessThan(at('Where the money went'));
+    expect(html).toContain('id="report-day"');
+    expect(html).not.toContain('Last 14 Days');
+    expect(html).not.toContain('Month Trend');
+    expect(html).not.toContain('id="report-banner"');        // report day is the 1st, the clock the 8th: the banner only shows for 3 days
+    const fresh = render(<StatsTab {...common} settings={{ ...settings, report: { day: 7 } }} />);
+    expect(fresh).toContain('id="report-banner"');
   });
 
   it('Bills page shows the month timeline, presets and every rule', () => {
@@ -120,7 +136,8 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Bills &amp; payments');
     expect(html).toContain('House rent');
     expect(html).toContain('7 days late');                 // rent was due on the 1st (test clock: the 8th)
-    expect(html).toContain('id="preset-electricity"');
+    expect(html).toContain('id="preset-electricity"');     // only two bills so far → common payments shown
+    expect(html).toContain('id="preset-term"');
     expect(html).toContain('All regular payments');
     expect(html).toContain('Every 3rd · Subscriptions · auto');
   });
@@ -128,6 +145,9 @@ describe('screens render with planning features', () => {
   it('Budget page: envelopes and six months when a budget is set; a ready-made one when not', () => {
     const set = render(<BudgetPage {...common} />);
     expect(set).toContain('Left to spend');
+    expect(set).toContain('id="budget-plan"');
+    expect(set).toContain('Left to save or spare');
+    expect(set).toContain('Add tax, PF…');
     expect(set).toContain('By category');
     expect(set).toContain('Last 6 months');
     const none = render(<BudgetPage {...common} settings={{}} />);
@@ -137,27 +157,38 @@ describe('screens render with planning features', () => {
 
   it('Savings page shows rate, where it goes and goals', () => {
     const html = render(<SavingsPage {...common} />);
-    expect(html).toContain('Saved this month');
+    expect(html).toContain('Saved in October');
     expect(html).toContain('Where it goes');
     expect(html).toContain('SIP');
     expect(html).toContain('Emergency fund');
   });
 
-  it('Plan tab lists budget, recurring rules and goals', () => {
-    const html = render(<PlanTab {...common} />);
-    expect(html).toContain('Monthly Budget');
-    expect(html).toContain('House rent');
-    expect(html).toContain('Monthly on the 3rd');
-    expect(html).toContain('paused');
-    expect(html).toContain('Emergency fund');
-    expect(html).toContain('Log all');
+  it('Debts: money paid back as income counts; gifts are left out', () => {
+    const tx = [...transactions, { id: 'g', type: 'person', direction: 'given_gift', name: 'Sita', amount: 300, date: iso(1) }];
+    const html = render(<DebtsPage {...common} transactions={tx} />);
+    expect(html).toContain('Owed to you');
+    expect(html).toContain('Ravi');
+    expect(html).toContain('₹600.00');
+    expect(html).not.toContain('Sita');
+    const empty = render(<DebtsPage {...common} transactions={[]} income={[]} />);
+    expect(empty).toContain('No debts yet');
   });
 
-  it('Plan tab renders its empty states', () => {
-    const html = render(<PlanTab {...common} settings={{}} recurring={{ ...recurring, rules: [], manualDue: [], upcoming: [] }} />);
-    expect(html).toContain('No budget set');
-    expect(html).toContain('Nothing repeats yet');
-    expect(html).toContain('No savings goals yet');
+  it('Goals: kept with someone, monthly share, move / used / collect', () => {
+    const goals = [
+      { id: 'g2', name: 'Bike', target: 100000, monthly: 20000, heldWith: 'Pritam', linked: true, startDate: '2026-09-01', moves: [] },
+      { id: 'g3', name: 'Phone', target: 1000, linked: true, heldWith: 'Cash', startDate: '2026-09-01' },
+      { id: 'g4', name: 'Trip', target: 5000, linked: true, status: 'used', endedOn: '2026-09-20', endNote: 'Hospital' },
+    ];
+    const tx = [...transactions, { id: 'gs', type: 'savings', goalId: 'g3', amount: 1000, date: iso(1) }];
+    const html = render(<SavingsPage {...common} transactions={tx} settings={{ ...settings, goals }} />);
+    expect(html).toContain('Kept with <strong');
+    expect(html).toContain('Pritam');
+    expect(html).toContain('₹20,000.00 still to put aside this month');
+    expect(html).toContain('id="goal-move-g2"');
+    expect(html).toContain('id="goal-used-g2"');
+    expect(html).toContain('id="goal-collect-g3"');        // reached → collect it
+    expect(html).toContain('Finished · 1');
   });
 
   it('Profile shows the account, appearance, customize and every settings section', () => {
@@ -167,19 +198,27 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Asha Rao');
     expect(html).toContain('AR');                            // initials avatar
     expect(html).toContain('Member since February 2025');
-    for (const t of ['Appearance', 'Customize', 'Bottom bar', 'Home screen', 'Open the app on', 'Preferences', 'Sync &amp; devices', 'Your data', 'Account', 'Reset']) expect(html).toContain(t);
+    for (const t of ['Theme', 'Reminders', 'Customize', 'Bottom bar', 'Home screen', 'Open the app on', 'Money', 'Sync &amp; devices', 'Your data', 'Account', 'Reset']) expect(html).toContain(t);
+    for (const k of ['recurring', 'daily', 'budget', 'report', 'goals', 'weekly']) expect(html).toContain(`id="reminder-${k}"`);
     expect(html).toContain('Home · Bills · Stats · Income');  // bar summary follows settings.ui (Home fixed first; Plan → Bills)
     expect(html.match(/id="theme-(light|dark|system)"/g)).toHaveLength(3);   // one theme picker, not two
   });
 
-  it('the + sheet offers all four kinds and shows the right form', () => {
-    const html = render(<AddSheet {...common} onAdd={noop} onAddIncome={noop} onClose={noop} />);
-    for (const k of ['expense', 'income', 'person', 'savings']) expect(html).toContain(`id="add-kind-${k}"`);
-    expect(html).toContain('btn-save-entry');
-    expect(html).not.toContain('id="type-expense"');   // the sheet's tabs replace the form's own switcher
-    const inc = render(<AddSheet {...common} initialKind="income" onAdd={noop} onAddIncome={noop} onClose={noop} />);
-    expect(inc).toContain('btn-save-income');
-    expect(inc).toContain('Repaid to me');
+  it('the + sheet: four kinds, each opening on the amount (keypad up)', () => {
+    const kinds = { expense: 'btn-save-entry', income: 'btn-save-income', debt: 'btn-save-debt', savings: 'btn-save-savings' };
+    for (const [kind, save] of Object.entries(kinds)) {
+      const html = render(<AddSheet {...common} initialKind={kind} onAdd={noop} onAddIncome={noop} onClose={noop} />);
+      for (const k of Object.keys(kinds)) expect(html).toContain(`id="add-kind-${k}"`);
+      expect(html).toContain(save);
+      expect(html).toMatch(/<input id="add-amount"[^>]*autofocus/i);
+    }
+    const exp = render(<AddSheet {...common} onAdd={noop} onAddIncome={noop} onClose={noop} />);
+    expect(exp).toContain('Given to someone');
+    const debt = render(<AddSheet {...common} initialKind="person" onAdd={noop} onAddIncome={noop} onClose={noop} />);
+    for (const m of ['lent', 'borrowed', 'got_back', 'paid_back']) expect(debt).toContain(`id="debt-move-${m}"`);
+    const sav = render(<AddSheet {...common} initialKind="savings" options={{ goalId: 'g1' }} onAdd={noop} onAddIncome={noop} onClose={noop} />);
+    expect(sav).toContain('id="savings-goal-g1"');
+    expect(sav).toContain('placeholder="Emergency fund (optional name)"');   // pre-selected goal
   });
 
   it('Home renders sections in the customised order and hides switched-off ones', () => {
@@ -191,7 +230,7 @@ describe('screens render with planning features', () => {
 
   it('Settings tab groups everything into collapsible sections with summaries', () => {
     const html = render(<SettingsTab {...common} onThemePrefChange={noop} onSignOut={noop} isStandalone />);
-    for (const title of ['Sync', 'Reminders', 'Appearance', 'Month Carry Forward', 'Data Management', 'Account', 'Reset']) expect(html).toContain(title);
+    for (const title of ['Sync', 'Appearance', 'Month Carry Forward', 'Data Management', 'Account', 'Reset']) expect(html).toContain(title);
     expect(html).toContain('Backup, import, export, trash');   // closed groups show a summary line
     expect(html).toContain('aria-expanded="false"');
   });
@@ -212,18 +251,6 @@ describe('screens render with planning features', () => {
     expect(html).toContain('99,481');
     // total income = 60000 salary + 400 repayment + 46,550 carry
     expect(html).toContain('1,06,950');
-  });
-
-  it('Desktop dashboard renders the planning row and nav', () => {
-    const html = render(
-      <DesktopDashboard {...common} onAddTransaction={noop} onUpdateTransaction={noop} onDeleteTransaction={noop}
-        onAddIncome={noop} onUpdateIncome={noop} onDeleteIncome={noop} onThemePrefChange={noop} onSignOut={noop} />,
-    );
-    expect(html).toContain('Plan');
-    expect(html).toContain('People');
-    expect(html).toContain('Insights');
-    expect(html).toContain('Spending Calendar');
-    expect(html).toContain('Safe to spend today');
   });
 
   it('Trips: detail shows the settle-up plan, close modal offers ledger posting', async () => {
@@ -274,7 +301,7 @@ describe('screens render with planning features', () => {
     expect(render(<RecurringRuleModal rule={null} onSave={noop} onClose={noop} />)).toContain('New Recurring Entry');
     expect(render(<RecurringRuleModal rule={rules[0]} onSave={noop} onDelete={noop} onClose={noop} />)).toContain('Edit Recurring');
     expect(render(<BudgetEditorModal budgets={settings.budgets} transactions={transactions} onSave={noop} onClose={noop} />)).toContain('Suggest from history');
-    expect(render(<GoalModal goal={settings.goals[0]} onSave={noop} onDelete={noop} onClose={noop} />)).toContain('Edit Goal');
+    expect(render(<GoalModal goal={settings.goals[0]} onSave={noop} onDelete={noop} onClose={noop} />)).toContain('Edit goal');
   });
 });
 

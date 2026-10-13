@@ -1,7 +1,7 @@
 // ─── Savings & goals (phone) ─────────────────────────────────────
-// Where the money you put away goes: this month vs income (savings rate),
-// all-time by kind (SIP, mutual fund, trading, cash …), the last six months,
-// your goals, and the latest savings entries.
+// Where the money you put away goes: the month on screen vs income (savings
+// rate), all-time by kind (SIP, mutual fund, trading, cash …), six months,
+// your goals (where each one's money is kept), and that month's entries.
 import { useMemo, useState } from 'react';
 import { Plus, PiggyBank } from 'lucide-react';
 import { PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill } from '../../components/Page';
@@ -9,17 +9,17 @@ import GoalsCard from '../plan/components/GoalsCard';
 import GoalModal from '../plan/GoalModal';
 import { SAVINGS_TYPES, getSavingsType } from '../../utils/typeConfig';
 import { formatAmount, localMonthKey } from '../../utils/dateHelpers';
-import { getCurrentMonthValue } from '../../utils/periodHelpers';
 import { generateId } from '../../utils/storage';
 import { useShell } from '../../app/shellContext';
+import { useViewMonth, monthName } from '../../app/month';
 
 const sum = (list) => list.reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
-export default function SavingsPage({ transactions = [], income = [], settings, onPatchSettings }) {
+export default function SavingsPage({ transactions = [], income = [], settings, onPatchSettings, selectedPeriod }) {
   const shell = useShell();
   const [goalModal, setGoalModal] = useState(null);
   const goals = settings?.goals ?? [];
-  const monthKey = getCurrentMonthValue();
+  const { month: monthKey } = useViewMonth(selectedPeriod);
 
   const savings = useMemo(() => transactions.filter((t) => t.type === 'savings').sort((a, b) => new Date(b.date) - new Date(a.date)), [transactions]);
   const thisMonth = useMemo(() => sum(savings.filter((t) => localMonthKey(t.date) === monthKey)), [savings, monthKey]);
@@ -34,23 +34,26 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
   }, [savings]);
 
   const months = useMemo(() => {
-    const now = new Date();
+    const [vy, vm] = monthKey.split('-').map(Number);
+    const now = new Date(vy, vm - 1, 1);
     return [5, 4, 3, 2, 1, 0].map((i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       return { key, label: d.toLocaleDateString('en-IN', { month: 'short' }), amount: sum(savings.filter((t) => localMonthKey(t.date) === key)) };
     });
-  }, [savings]);
+  }, [savings, monthKey]);
   const maxMonth = Math.max(1, ...months.map((m) => m.amount));
 
   function saveGoal(g) {
     const list = g.id ? goals.map((x) => (x.id === g.id ? { ...x, ...g } : x)) : [...goals, { ...g, id: generateId() }];
     onPatchSettings({ goals: list });
   }
+  const updateGoal = (g) => onPatchSettings({ goals: goals.map((x) => (x.id === g.id ? g : x)) });
+  const monthEntries = savings.filter((t) => localMonthKey(t.date) === monthKey);
 
   return (
     <div className="tab-root savings-page">
-      <PageHeader title="Savings & goals" subtitle="SIPs, mutual funds, deposits — and what they're for"
+      <PageHeader title="Savings & goals" subtitle="SIPs, funds, cash — and what they're for" month
         actions={<HeaderAction id="savings-add" Icon={Plus} label="Save" onClick={() => shell?.openAdd('savings')} />} />
 
       <div className="tab-body">
@@ -60,7 +63,7 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
             action={<PrimaryPill id="savings-empty-add" Icon={Plus} tone="savings" onClick={() => shell?.openAdd('savings')}>Add savings</PrimaryPill>} />
         ) : (
           <div className="card" style={{ padding: 16 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Saved this month</span>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Saved in {monthName(monthKey, { month: 'long' })}</span>
             <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--savings)', margin: '2px 0 0' }}>{formatAmount(thisMonth)}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
               <Figure label="Savings rate" value={rate != null ? `${rate}% of income` : '—'} />
@@ -103,20 +106,21 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
         )}
 
         <div id="savings-goals" style={{ marginTop: 20 }} />
-        <GoalsCard goals={goals} transactions={transactions} onAdd={() => setGoalModal('new')} onEdit={(g) => setGoalModal(g)} />
+        <GoalsCard goals={goals} transactions={transactions} onAdd={() => setGoalModal('new')} onEdit={(g) => setGoalModal(g)}
+          onUpdate={updateGoal} onContribute={(g) => shell?.openAdd('savings', { goalId: g.id })} />
 
-        {savings.length > 0 && (
+        {monthEntries.length > 0 && (
           <>
-            <SectionHeading title="Recent" />
+            <SectionHeading title={`Saved in ${monthName(monthKey, { month: 'long' })}`} />
             <div className="card">
-              {savings.slice(0, 6).map((t, i) => {
+              {monthEntries.slice(0, 12).map((t, i) => {
                 const st = getSavingsType(t.savingsType ?? 'cash');
                 return (
                   <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderTop: i ? '1px solid var(--border)' : 'none' }}>
                     <span style={{ width: 30, height: 30, borderRadius: 10, background: 'var(--savings-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><st.Icon size={14} style={{ color: st.color }} /></span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 650, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {st.label}{t.platform ? ` · ${t.platform}` : ''}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {st.label}{t.platform ? ` · ${t.platform}` : ''}{t.goalId ? ` · ${goals.find((g) => g.id === t.goalId)?.name ?? 'goal'}` : ''}{t.heldWith ? ` · with ${t.heldWith}` : ''}</div>
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 750, color: 'var(--savings)' }}>{formatAmount(t.amount)}</span>
                   </div>

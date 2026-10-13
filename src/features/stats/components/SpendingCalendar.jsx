@@ -1,8 +1,11 @@
 // ─── SpendingCalendar ─────────────────────────────────────────────
 // A month heat-map: each day shaded by how much was spent. Tap a day to
-// see its entries. Months with no data can still be browsed.
+// see its entries. Months with no data can still be browsed. Pass `month` +
+// `onMonthChange` to drive it from the app-wide month (Stats does), so
+// changing the calendar's month moves every page; "Now" jumps back.
 import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
+import MonthSwitcher from '../../../components/MonthSwitcher';
 import { formatAmount, localDateKey, localMonthKey } from '../../../utils/dateHelpers';
 import { sumAmounts } from '../../../utils/finance';
 import { categoryOf, categoryColor } from '../../../utils/categories';
@@ -11,10 +14,13 @@ import { CategoryIcon } from '../../../components/CategoryPicker';
 const pad2 = (n) => String(n).padStart(2, '0');
 const DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-export default function SpendingCalendar({ transactions = [], initialMonth, rules = {}, theme }) {
+export default function SpendingCalendar({ transactions = [], initialMonth, month, onMonthChange, rules = {}, theme }) {
   const nowKey = localMonthKey(new Date().toISOString());
-  const [monthKey, setMonthKey] = useState(initialMonth ?? nowKey);
+  const [ownMonth, setOwnMonth] = useState(initialMonth ?? nowKey);
+  const monthKey = month ?? ownMonth;
   const [selected, setSelected] = useState(null);
+  const [selMonth, setSelMonth] = useState(monthKey);
+  if (selMonth !== monthKey) { setSelMonth(monthKey); setSelected(null); }   // a new month clears the picked day
 
   const [y, m] = monthKey.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
@@ -39,11 +45,7 @@ export default function SpendingCalendar({ transactions = [], initialMonth, rule
   const spentDays = values.filter((v) => v > 0).length;
   const elapsed = monthKey === nowKey ? new Date().getDate() : monthKey < nowKey ? daysInMonth : 0;
 
-  function shift(n) {
-    const d = new Date(y, m - 1 + n, 1);
-    setMonthKey(`${d.getFullYear()}-${pad2(d.getMonth() + 1)}`);
-    setSelected(null);
-  }
+  const changeMonth = (key) => { (onMonthChange ?? setOwnMonth)(key); setSelected(null); };
 
   const cells = [];
   for (let i = 0; i < firstDow; i++) cells.push(null);
@@ -53,18 +55,12 @@ export default function SpendingCalendar({ transactions = [], initialMonth, rule
 
   return (
     <div className="card" style={{ padding: '14px 16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <CalendarDays size={13} style={{ color: 'var(--text-muted)' }} />
           <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Spending Calendar</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <NavBtn onClick={() => shift(-1)} aria="Previous month"><ChevronLeft size={13} /></NavBtn>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', minWidth: 90, textAlign: 'center' }}>
-            {new Date(y, m - 1, 1).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
-          </span>
-          <NavBtn onClick={() => shift(1)} disabled={monthKey >= nowKey} aria="Next month"><ChevronRight size={13} /></NavBtn>
-        </div>
+        <MonthSwitcher month={monthKey} onChange={changeMonth} compact />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
@@ -128,10 +124,3 @@ export default function SpendingCalendar({ transactions = [], initialMonth, rule
   );
 }
 
-function NavBtn({ children, onClick, disabled, aria }) {
-  return (
-    <button type="button" onClick={onClick} disabled={disabled} aria-label={aria} style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {children}
-    </button>
-  );
-}

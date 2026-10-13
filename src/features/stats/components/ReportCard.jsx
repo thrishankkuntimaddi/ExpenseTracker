@@ -1,0 +1,117 @@
+// ─── Monthly report ──────────────────────────────────────────────
+// One report a month, on the day you pick, covering salary to salary (see
+// utils/report.js): totals, what went up / down / stayed steady, bills you
+// missed, categories over budget. Browse earlier reports with ‹ ›.
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus, AlertCircle, Target, FileText } from 'lucide-react';
+import { buildReport, latestReportDay, shiftReportDay, windowLabel, getReportSettings, ordinal } from '../../../utils/report';
+import { toKey, fromKey } from '../../../utils/recurring';
+import { EMPTY_RULES } from '../../../utils/categories';
+
+const rupees = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;
+
+export default function ReportCard({ transactions = [], income = [], settings, recurringRules = [], onPatchSettings }) {
+  const { day } = getReportSettings(settings);
+  const todayKey = toKey(new Date());
+  const latest = latestReportDay(day, todayKey);
+  const [back, setBack] = useState(0);   // how many reports before the latest
+  const reportKey = shiftReportDay(latest, day, -back);
+  const r = buildReport({
+    transactions, income, rules: settings?.categoryRules ?? EMPTY_RULES, recurring: recurringRules,
+    budgets: settings?.budgets, reportKey, day, todayKey,
+  });
+  const nextOn = fromKey(shiftReportDay(latest, day, 1)).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
+
+  const nav = { width: 30, height: 30, border: 'none', background: 'var(--surface2)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 };
+
+  return (
+    <div className="card report-card" id="stats-report" style={{ padding: 0, overflow: 'hidden', scrollMarginTop: 12 }}>
+      <div style={{ padding: '14px 16px 12px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)' }}>
+        <span style={{ width: 34, height: 34, borderRadius: 11, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><FileText size={16} style={{ color: 'var(--accent)' }} /></span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 750, color: 'var(--text)' }}>{back === 0 ? 'Latest report' : 'Earlier report'}</div>
+          <div id="report-window" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{windowLabel(r.start, r.last)} · {r.days} days</div>
+        </div>
+        <button aria-label="Earlier report" id="report-prev" onClick={() => setBack((b) => b + 1)} style={nav}><ChevronLeft size={15} /></button>
+        <button aria-label="Later report" id="report-next" onClick={() => setBack((b) => Math.max(0, b - 1))} disabled={back === 0} style={{ ...nav, opacity: back === 0 ? 0.35 : 1 }}><ChevronRight size={15} /></button>
+      </div>
+
+      {r.empty ? (
+        <div style={{ padding: '18px 16px', fontSize: 13, color: 'var(--text-muted)' }}>Nothing was logged in these days.</div>
+      ) : (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, padding: '12px 16px' }}>
+            <Fig label="Income" value={rupees(r.income)} tone="income" />
+            <Fig label="Spent" value={rupees(r.spent)} tone="expense" sub={r.spentChange != null ? `${r.spentChange > 0 ? '+' : ''}${r.spentChange}% vs before` : null} />
+            <Fig label="Saved" value={rupees(r.saved)} tone="savings" sub={r.savingsRate != null ? `${r.savingsRate}% of income` : null} />
+            <Fig label="Left" value={rupees(r.left)} tone={r.left < 0 ? 'expense' : 'text'} />
+          </div>
+
+          <Group Icon={TrendingUp} tone="expense" title="Went up" empty="Nothing went up." rows={r.up}
+            render={(c) => <>{c.label}<Amt>{c.change === 'new' ? `new · ${rupees(c.now)}` : `+${rupees(c.diff)} · ${rupees(c.now)}`}</Amt></>} />
+          <Group Icon={TrendingDown} tone="income" title="Went down" empty="Nothing went down." rows={r.down}
+            render={(c) => <>{c.label}<Amt>{c.change === 'stopped' ? `none this time (was ${rupees(c.before)})` : `−${rupees(-c.diff)} · ${rupees(c.now)}`}</Amt></>} />
+          {r.steady.length > 0 && (
+            <Group Icon={Minus} tone="text-muted" title="About the same" rows={r.steady} render={(c) => <>{c.label}<Amt>{rupees(c.now)}</Amt></>} />
+          )}
+          {r.missed.length > 0 && (
+            <Group Icon={AlertCircle} tone="lent" title="Missed or skipped" rows={r.missed}
+              render={(m) => <>{m.name} · {fromKey(m.dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}<Amt>{m.skipped ? 'skipped' : 'not paid'} · {rupees(m.amount)}</Amt></>} />
+          )}
+          {(r.over.length > 0 || r.overTotal) && (
+            <Group Icon={Target} tone="expense" title="Over budget" rows={[...(r.overTotal ? [{ key: '_total', label: 'Whole budget', spent: r.overTotal.spent, limit: r.overTotal.limit }] : []), ...r.over]}
+              render={(c) => <>{c.label}<Amt>{rupees(c.spent)} of {rupees(c.limit)}</Amt></>} />
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--surface2)' }}>
+            <Fig label="Per day" value={rupees(r.avgPerDay)} />
+            <Fig label="No-spend days" value={r.noSpendDays} />
+            <Fig label="Biggest" value={r.biggest ? rupees(r.biggest.amount) : '—'} sub={r.biggest?.name} />
+          </div>
+        </>
+      )}
+
+      <div style={{ padding: '10px 16px 12px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-secondary)' }}>
+        <span>A new report on the</span>
+        <select id="report-day" value={day} aria-label="Report day" onChange={(e) => onPatchSettings?.({ report: { ...(settings?.report ?? {}), day: Number(e.target.value) } })}
+          style={{ padding: '5px 8px', fontSize: 12, fontWeight: 700, border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit' }}>
+          {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{ordinal(d)}</option>)}
+        </select>
+        <span>of every month · next on {nextOn}</span>
+        <span style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+          It starts on the day your main income arrived the month before, so each report runs salary to salary.
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function Fig({ label, value, tone, sub }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 800, color: tone && tone !== 'text' ? `var(--${tone})` : 'var(--text)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      {sub && <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
+    </div>
+  );
+}
+
+function Amt({ children }) {
+  return <span style={{ marginLeft: 'auto', paddingLeft: 10, fontWeight: 650, color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{children}</span>;
+}
+
+function Group({ Icon, tone, title, rows, render, empty }) {
+  if (!rows.length && !empty) return null;
+  return (
+    <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 750, letterSpacing: '0.04em', textTransform: 'uppercase', color: `var(--${tone})`, marginBottom: 4 }}>
+        <Icon size={13} /> {title}
+      </div>
+      {rows.length === 0
+        ? <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{empty}</div>
+        : rows.slice(0, 6).map((row, i) => (
+          <div key={row.key ?? `${row.name}-${row.dateKey ?? i}`} style={{ display: 'flex', alignItems: 'baseline', fontSize: 13, color: 'var(--text)', padding: '3px 0', minWidth: 0 }}>{render(row)}</div>
+        ))}
+    </div>
+  );
+}

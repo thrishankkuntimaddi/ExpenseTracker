@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeBudgetStatus, hasAnyBudget } from '../budget';
+import { computeBudgetStatus, hasAnyBudget, monthPlan } from '../budget';
 
 const now = new Date(2026, 9, 10, 12); // 10 Oct 2026 (31-day month)
 const d = (day) => new Date(2026, 9, day, 12).toISOString();
@@ -42,5 +42,24 @@ describe('computeBudgetStatus', () => {
     expect(past.total.safeToday).toBeNull();
     expect(hasAnyBudget({ total: null, categories: {} })).toBe(false);
     expect(computeBudgetStatus({ budgets: null, transactions: txns, monthKey: '2026-10', now }).hasBudget).toBe(false);
+  });
+});
+
+describe('monthPlan', () => {
+  const at = (d) => new Date(2026, 9, d, 12).toISOString();
+  const rules = [
+    { id: 'rent', name: 'Rent', amount: 13000, kind: 'expense', frequency: 'monthly', dayOfMonth: 5, startDate: '2026-01-01', active: true },
+    { id: 'sip', name: 'SIP', amount: 5000, kind: 'savings', frequency: 'monthly', dayOfMonth: 10, startDate: '2026-01-01', active: true },
+    { id: 'sal', name: 'Salary', amount: 60000, kind: 'income', frequency: 'monthly', dayOfMonth: 1, startDate: '2026-01-01', active: true },
+  ];
+  const budgets = { total: 20000, deductions: [{ id: 'd1', name: 'PF', amount: 1800 }, { id: 'd2', name: 'TDS', amount: 3200 }] };
+  it('income − fixed payments − spending budget = what is left; deductions only shown', () => {
+    const p = monthPlan({ budgets, rules, transactions: [], income: [{ id: 'i', type: 'income', name: 'Salary', amount: 55000, date: at(1) }], monthKey: '2026-10', todayKey: '2026-10-13' });
+    expect(p).toMatchObject({ incomeBase: 55000, useExpected: false, fixed: 18000, fixedSavings: 5000, spendBudget: 20000, free: 17000, deductionTotal: 5000, gross: 60000 });
+    expect(p.fixedItems.map((i) => i.rule.name)).toEqual(['Rent', 'SIP']);
+  });
+  it('falls back to the expected salary before it arrives; borrowed money is not income', () => {
+    const p = monthPlan({ budgets: null, rules, income: [{ id: 'b', type: 'income', name: 'Amma', amount: 9000, isBorrowed: true, date: at(2) }], monthKey: '2026-10', todayKey: '2026-10-13' });
+    expect(p).toMatchObject({ incomeBase: 60000, useExpected: true, spendBudget: null, free: 42000 });
   });
 });

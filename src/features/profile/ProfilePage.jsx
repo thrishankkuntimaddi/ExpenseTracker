@@ -1,7 +1,7 @@
 // ─── Profile (phone) ─────────────────────────────────────────────
-// Opened from the avatar at the top of every page: who is signed in, the
-// look of the app, how the phone layout is arranged, then every setting
-// grouped into a few sections (the same SettingsTab the desktop uses).
+// Opened from the avatar (phone) or the sidebar (desktop): who is signed
+// in, the theme in one row, reminders as tiles, how the layout is arranged,
+// then every other setting grouped into a few sections.
 import { useMemo } from 'react';
 import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus } from 'lucide-react';
 import Avatar from '../../components/Avatar';
@@ -10,9 +10,12 @@ import { PAGE_META } from '../../app/pages';
 import { PAGE_KEYS, SLOT_KEYS, HOME_SECTIONS, normaliseUi, serialiseUi, move, setTabAt } from '../../utils/uiPrefs';
 import { Section, Group } from '../settings/SettingsGroup';
 import SettingsTab from '../settings/SettingsTab';
+import RemindersCard from '../settings/RemindersCard';
+import { useShell } from '../../app/shellContext';
 
 export default function ProfilePage(props) {
-  const { user, transactions = [], income = [], devices, settings, themePref = 'system', theme, onThemePrefChange, onPatchSettings, onBack } = props;
+  const { user, transactions = [], income = [], devices, settings, themePref = 'system', theme, onThemePrefChange, onPatchSettings, onBack, recurring } = props;
+  const desktop = useShell()?.desktop;
   const ui = useMemo(() => normaliseUi(settings?.ui), [settings?.ui]);
   const save = (patch) => onPatchSettings?.({ ui: serialiseUi({ ...ui, ...patch }) });
 
@@ -63,39 +66,41 @@ export default function ProfilePage(props) {
           )}
         </div>
 
-        {/* ── Appearance ── */}
-        <section style={{ marginBottom: 18 }}>
-          <p className="section-label" style={{ padding: '0 6px' }}>Appearance</p>
-          <div role="radiogroup" aria-label="Theme" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {[
-              { key: 'light', label: 'Light', Icon: Sun, swatch: ['#F2F3F7', '#FFFFFF', '#1D1D1F'] },
-              { key: 'dark', label: 'Dark', Icon: Moon, swatch: ['#0B0E14', '#161A23', '#ECEEF3'] },
-              { key: 'system', label: 'Auto', Icon: Monitor, swatch: null },
-            ].map(({ key, label, Icon, swatch }) => {
+        {/* ── Theme: one row ── */}
+        <div className="card theme-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px 10px 16px', marginBottom: 18 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Theme</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{themePref === 'system' ? `Follows this device · ${theme === 'monoflow' ? 'dark' : 'light'} now` : 'This device only'}</div>
+          </div>
+          <div role="radiogroup" aria-label="Theme" className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
+            {[{ key: 'light', label: 'Light', Icon: Sun }, { key: 'dark', label: 'Dark', Icon: Moon }, { key: 'system', label: 'Auto', Icon: Monitor }].map(({ key, label, Icon }) => {
               const on = themePref === key;
               return (
                 <button key={key} id={`theme-${key}`} role="radio" aria-checked={on} onClick={() => onThemePrefChange?.(key)}
-                  className="theme-tile"
-                  style={{ padding: 8, borderRadius: 16, border: `2px solid ${on ? 'var(--accent)' : 'var(--border)'}`, background: 'var(--surface2)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch' }}>
-                  <ThemeSwatch swatch={swatch} />
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: on ? 'var(--accent)' : 'var(--text-secondary)' }}>
-                    <Icon size={13} /> {label}
-                  </span>
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 11px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: on ? 'var(--shadow-sm)' : 'none' }}>
+                  <Icon size={13} /> {label}
                 </button>
               );
             })}
           </div>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '7px 6px 0' }}>
-            {themePref === 'system' ? `Follows your phone — ${theme === 'monoflow' ? 'dark' : 'light'} right now.` : 'Saved on this device.'}
-          </p>
+        </div>
+
+        {/* ── Reminders: tiles ── */}
+        <section id="group-reminders" style={{ marginBottom: 18, scrollMarginTop: 12 }}>
+          <p className="section-label" style={{ padding: '0 6px' }}>Reminders</p>
+          <div className="card settings-section">
+            <RemindersCard settings={settings} onPatchSettings={onPatchSettings} transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} />
+          </div>
         </section>
 
         {/* ── Customize ── */}
         <Section title="Customize">
-          <Group id="custom-bar" title="Bottom bar" Icon={LayoutGrid} color="var(--savings)"
-            summary={['Home', ...ui.tabs.map((k) => PAGE_META[k].label)].join(' · ')}>
-            <BarEditor tabs={ui.tabs} onChange={(tabs) => save({ tabs })} />
-          </Group>
+          {!desktop && (
+            <Group id="custom-bar" title="Bottom bar" Icon={LayoutGrid} color="var(--savings)"
+              summary={['Home', ...ui.tabs.map((k) => PAGE_META[k].label)].join(' · ')}>
+              <BarEditor tabs={ui.tabs} onChange={(tabs) => save({ tabs })} />
+            </Group>
+          )}
           <Group id="custom-home" title="Home screen" Icon={HomeIcon} color="var(--expense)"
             summary={ui.home.filter((s) => s.visible).map((s) => HOME_SECTIONS.find((h) => h.key === s.key).label).join(' · ')}>
             <HomeEditor home={ui.home} onChange={(home) => save({ home })} />
@@ -229,21 +234,3 @@ function Stat({ value, label }) {
   );
 }
 
-/* A tiny picture of the theme: a page with a card and two lines of text. */
-function ThemeSwatch({ swatch }) {
-  const one = ([bg, card, ink], style) => (
-    <div style={{ background: bg, padding: 6, display: 'flex', flexDirection: 'column', gap: 4, ...style }}>
-      <div style={{ background: card, borderRadius: 5, padding: 5, display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <div style={{ height: 3, width: '70%', borderRadius: 2, background: ink, opacity: 0.85 }} />
-        <div style={{ height: 3, width: '45%', borderRadius: 2, background: ink, opacity: 0.35 }} />
-      </div>
-    </div>
-  );
-  const light = ['#F2F3F7', '#FFFFFF', '#1D1D1F'];
-  const dark = ['#0B0E14', '#161A23', '#ECEEF3'];
-  return (
-    <div style={{ display: 'flex', height: 46, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
-      {swatch ? one(swatch, { flex: 1 }) : (<>{one(light, { flex: 1 })}{one(dark, { flex: 1 })}</>)}
-    </div>
-  );
-}

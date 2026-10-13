@@ -45,17 +45,21 @@ describe('daily nudge', () => {
   });
 });
 
-describe('recurring due tomorrow', () => {
+describe('bills due today', () => {
   const cfg = on({ recurring: { enabled: true, time: '20:00' } });
   const rent = { id: 'r1', name: 'Rent', amount: 15000, kind: 'expense', frequency: 'monthly', dayOfMonth: 15, startDate: '2026-01-01', active: true };
   const sip = { id: 'r2', name: 'SIP', amount: 5000, kind: 'savings', frequency: 'monthly', dayOfMonth: 15, startDate: '2026-01-01', active: true };
-  it('the evening before, combined into one line', () => {
+  it('on the due day: “Have you paid …?”, combined into one line', () => {
     const items = buildSchedule(NOW, cfg, { recurring: [rent, sip] });
     expect(items).toHaveLength(1);
-    expect(day(items[0].at)).toBe(new Date(2026, 9, 14).toDateString());
-    expect(items[0].title).toBe('2 entries due tomorrow');
-    expect(items[0].body).toMatch(/Rent ₹15,000 and SIP ₹5,000/);
+    expect(day(items[0].at)).toBe(new Date(2026, 9, 15).toDateString());
+    expect(items[0].title).toBe('Have you paid Rent and SIP?');
+    expect(items[0].body).toMatch(/Rent ₹15,000 · SIP ₹5,000 — due today/);
     expect(items[0].route).toBe('bills');
+  });
+  it('never asks about auto-paid bills or income', () => {
+    expect(buildSchedule(NOW, cfg, { recurring: [{ ...rent, autoPost: true }] })).toEqual([]);
+    expect(buildSchedule(NOW, cfg, { recurring: [{ ...rent, kind: 'income', name: 'Salary' }] })).toEqual([]);
   });
   it('ignores paused rules and occurrences already handled', () => {
     expect(buildSchedule(NOW, cfg, { recurring: [{ ...rent, active: false }] })).toEqual([]);
@@ -122,7 +126,7 @@ describe('tone + preview', () => {
   it('preview falls back to an example when the data has nothing to say', () => {
     const p = previewReminder('recurring', {}, { recurring: [] }, NOW);
     expect(p.example).toBe(true);
-    expect(p.body).toMatch(/Rent/);
+    expect(p.title).toMatch(/Have you paid Rent\?/);
     expect(p.route).toBe('bills');           // a tapped test opens the right screen
     expect(previewReminder('daily', {}, {}, NOW).title).toBeTruthy();
   });
@@ -132,4 +136,32 @@ it('two types the same day stay separate, sorted by time', () => {
   const items = buildSchedule(NOW, on({ daily: { enabled: true, time: '21:00' }, budget: { enabled: true, time: '19:00' } }),
     { budgets: { total: 1000 }, transactions: [{ type: 'expense', amount: 900, date: iso(2026, 10, 2) }] });
   expect(types(items).slice(0, 2)).toEqual(['budget', 'daily']);
+});
+
+describe('monthly report and goals', () => {
+  it('report: on the chosen day, opens Stats', () => {
+    const items = buildSchedule(NOW, on({ report: { enabled: true, time: '09:00' } }), { report: { day: 20 } });
+    expect(items).toHaveLength(1);
+    expect(day(items[0].at)).toBe(new Date(2026, 9, 20).toDateString());
+    expect(items[0].title).toBe('Your September report is ready');
+    expect(items[0].route).toBe('stats');
+  });
+  it('goals: this month’s share on the goal’s day, skipped once it’s in', () => {
+    const goal = { id: 'g1', name: 'Bike', target: 100000, monthly: 20000, heldWith: 'Pritam', remindDay: 20, linked: true, startDate: '2026-09-01' };
+    const cfg = on({ goals: { enabled: true, time: '11:00' } });
+    const [item] = buildSchedule(NOW, cfg, { goals: [goal], transactions: [] });
+    expect(item.title).toBe('Put ₹20,000 towards Bike');
+    expect(item.body).toMatch(/kept with Pritam/);
+    expect(item.route).toBe('savings');
+    const paid = { id: 's1', type: 'savings', goalId: 'g1', amount: 20000, date: iso(2026, 10, 2) };
+    expect(buildSchedule(NOW, cfg, { goals: [goal], transactions: [paid] })).toEqual([]);
+    expect(buildSchedule(NOW, cfg, { goals: [{ ...goal, status: 'used' }] })).toEqual([]);
+  });
+  it('goals: once reached, a reminder to collect it', () => {
+    const goal = { id: 'g1', name: 'Bike', target: 1000, heldWith: 'Muzammil', remindDay: 20, linked: true };
+    const full = { id: 's1', type: 'savings', goalId: 'g1', amount: 1000, date: iso(2026, 10, 2) };
+    const [item] = buildSchedule(NOW, on({ goals: { enabled: true, time: '11:00' } }), { goals: [goal], transactions: [full] });
+    expect(item.title).toBe('Bike: goal reached');
+    expect(item.body).toMatch(/collect it from Muzammil/);
+  });
 });

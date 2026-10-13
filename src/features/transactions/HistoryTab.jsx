@@ -1,25 +1,28 @@
 import { useState, useMemo, useCallback } from 'react';
-import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Upload, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
+import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 import { formatAmount, formatDate, getWeekStart } from '../../utils/dateHelpers';
-import PeriodSelector from '../../components/PeriodSelector';
+import MonthSwitcher from '../../components/MonthSwitcher';
+import { useViewMonth } from '../../app/month';
 import { useWastage } from '../../hooks/useWastage';
 import { useTransactions } from '../../hooks/useTransactions';
 import { TYPE_META, getDirectionMeta } from '../../utils/typeConfig';
 import { categoryOf, categoryTotals, categoryColor, EMPTY_RULES } from '../../utils/categories';
 import { CategoryBadge, CategoryIcon } from '../../components/CategoryPicker';
 import { currentTheme } from '../../utils/theme';
-import LoadMonthlyData from '../../components/LoadMonthlyData';
 import EditTransactionModal from '../../components/EditTransactionModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import ProfileButton from '../../components/ProfileButton';
 import BackButton from '../../components/BackButton';
 
+const ALL_TIME = { type: 'all' };
+
 export default function HistoryTab({
-  transactions, income = [], selectedPeriod, onPeriodChange,
+  transactions, selectedPeriod,
   onUpdateTransaction, onDeleteTransaction,
-  onAddTransaction, onAddIncome,
   settings, onLearnCategory,
 }) {
+  const { period: monthPeriod } = useViewMonth(selectedPeriod);
+  const [allMonths, setAllMonths] = useState(false);   // search every month, not just the one on screen
   const [expandAll, setExpandAll]         = useState(null);   // null = default: open when grouped by day
   const [search, setSearch]               = useState('');
   const [catFilter, setCatFilter]         = useState(null);
@@ -27,7 +30,6 @@ export default function HistoryTab({
   const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
   const theme = currentTheme();
   const [customToggles, setCustomToggles] = useState({});
-  const [showImport, setShowImport]       = useState(false);
   const [editingTxn, setEditingTxn]     = useState(null);
   const [deletingId, setDeletingId]     = useState(null);
 
@@ -42,7 +44,8 @@ export default function HistoryTab({
     return true;
   }, [typeFilter, catFilter, q, categoryRules]);
   const hasFilter = !!(q || catFilter || typeFilter);
-  const { filtTxns, periodTxns, grouped, grouping } = useTransactions(transactions, selectedPeriod, hasFilter ? predicate : null);
+  const searchAll = allMonths && hasFilter;
+  const { filtTxns, periodTxns, grouped, grouping } = useTransactions(transactions, searchAll ? ALL_TIME : monthPeriod, hasFilter ? predicate : null);
 
   // Category chips for this period (from every expense in the period, not the filtered subset)
   const periodCats = useMemo(() => categoryTotals(periodTxns, categoryRules), [periodTxns, categoryRules]);
@@ -139,15 +142,6 @@ export default function HistoryTab({
         />
       )}
 
-      {/* Load Past Data modal */}
-      {showImport && onAddTransaction && onAddIncome && (
-        <LoadMonthlyData
-          onClose={() => setShowImport(false)}
-          transactions={transactions}
-          income={income}
-        />
-      )}
-
       {/* Header */}
       <div className="tab-header">
         {/* Title row: count + two compact actions */}
@@ -162,19 +156,14 @@ export default function HistoryTab({
           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
             <IconAction id="history-expand-all" label={effectiveExpandAll ? 'Collapse all' : 'Expand all'}
               Icon={effectiveExpandAll ? ChevronsDownUp : ChevronsUpDown} onClick={() => handleToggleExpandAll(!effectiveExpandAll)} />
-            {onAddTransaction && onAddIncome && (
-              <IconAction id="mobile-btn-load-past-data" label="Load past data" Icon={Upload} onClick={() => setShowImport(true)} />
-            )}
             <ProfileButton />
           </div>
         </div>
 
-        {/* Period + search on one row */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ flexShrink: 0 }}>
-            <PeriodSelector period={selectedPeriod} onChange={onPeriodChange} transactions={transactions} income={income} />
-          </div>
-          <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+        {/* Month + search */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {!searchAll && <MonthSwitcher compact />}
+          <div style={{ position: 'relative', flex: 1, minWidth: 160 }}>
             <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
             <input
               id="history-search"
@@ -196,6 +185,12 @@ export default function HistoryTab({
               </button>
             )}
           </div>
+          {hasFilter && (
+            <button id="history-all-months" onClick={() => setAllMonths((v) => !v)} aria-pressed={allMonths}
+              style={{ flexShrink: 0, padding: '8px 11px', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1.5px solid ${allMonths ? 'var(--accent)' : 'var(--border)'}`, background: allMonths ? 'var(--accent-bg)' : 'var(--surface2)', color: allMonths ? 'var(--accent)' : 'var(--text-secondary)' }}>
+              All months
+            </button>
+          )}
         </div>
 
         {/* Period Totals Summary — tap to filter by type */}
