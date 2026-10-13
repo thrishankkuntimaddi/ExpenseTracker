@@ -176,9 +176,9 @@
           var dark = pref === 'dark' || (pref === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
           var t = dark ? 'monoflow' : 'light';
           document.documentElement.setAttribute('data-theme', t);
-          document.body.style.backgroundColor = dark ? '#040405' : '#E4E5EA';
+          document.body.style.backgroundColor = dark ? '#0A0C11' : '#E4E5EA';
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', dark ? '#040405' : '#E4E5EA');
+          if (meta) meta.setAttribute('content', dark ? '#0A0C11' : '#E4E5EA');
         } catch(e) {}
       })();
     </script>

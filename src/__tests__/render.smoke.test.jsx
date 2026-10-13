@@ -20,6 +20,7 @@ const { default: IncomeTab } = await import('../features/income/IncomeTab');
 const { default: StatsTab } = await import('../features/stats/StatsTab');
 const { default: PlanTab } = await import('../features/plan/PlanTab');
 const { default: SettingsTab } = await import('../features/settings/SettingsTab');
+const { default: ProfilePage } = await import('../features/profile/ProfilePage');
 const { default: DesktopDashboard } = await import('../components/DesktopDashboard');
 const { default: EditTransactionModal } = await import('../components/EditTransactionModal');
 const { default: RecurringRuleModal } = await import('../features/plan/RecurringRuleModal');
@@ -31,6 +32,10 @@ const { default: TripCloseModal } = await import('../features/trips/TripCloseMod
 const { default: TripsPanel } = await import('../features/trips/TripsPanel');
 const { computeTripSummary } = await import('../utils/split');
 
+// Fixtures are relative to "now"; pin it to the 8th so the
+// carry-forward expectations (days 10–35 back are last month) hold whatever today is.
+vi.useFakeTimers({ toFake: ['Date'] });
+vi.setSystemTime(new Date(2026, 9, 8, 12));
 const now = new Date();
 const iso = (daysAgo, hour = 12) => { const d = new Date(now); d.setDate(d.getDate() - daysAgo); d.setHours(hour, 0, 0, 0); return d.toISOString(); };
 const month = (isoStr) => isoStr.slice(0, 7);
@@ -118,6 +123,25 @@ describe('screens render with planning features', () => {
     expect(html).toContain('No budget set');
     expect(html).toContain('Nothing repeats yet');
     expect(html).toContain('No savings goals yet');
+  });
+
+  it('Profile shows the account, appearance, customize and every settings section', () => {
+    const user = { uid: 'u', email: 'asha@example.com', displayName: 'Asha Rao', emailVerified: true, providerData: [{ providerId: 'google.com' }], metadata: { creationTime: '2025-02-01T00:00:00Z' } };
+    const html = render(<ProfilePage {...common} user={user} onThemePrefChange={noop} onSignOut={noop} onBack={noop}
+      settings={{ ...settings, ui: { tabs: ['plan', 'today', 'stats', 'income'], start: 'stats' } }} devices={{ devices: [{ id: 'd' }], thisId: 'd' }} />);
+    expect(html).toContain('Asha Rao');
+    expect(html).toContain('AR');                            // initials avatar
+    expect(html).toContain('Member since February 2025');
+    for (const t of ['Appearance', 'Customize', 'Bottom bar', 'Home screen', 'Open the app on', 'Preferences', 'Sync &amp; devices', 'Your data', 'Account', 'Reset']) expect(html).toContain(t);
+    expect(html).toContain('Plan · Home · Stats · Income');  // bar summary follows settings.ui
+    expect(html.match(/id="theme-(light|dark|system)"/g)).toHaveLength(3);   // one theme picker, not two
+  });
+
+  it('Home renders sections in the customised order and hides switched-off ones', () => {
+    const html = render(<TodayTab {...common} onAdd={noop} settings={{ ...settings, ui: { homeOrder: ['recent', 'add', 'overview', 'due'], homeHidden: ['overview'] } }} />);
+    expect(html).not.toContain('id="home-summary"');
+    expect(html.indexOf('home-recent')).toBeLessThan(html.indexOf('home-add'));
+    expect(html).toContain('recurring entries due');
   });
 
   it('Settings tab groups everything into collapsible sections with summaries', () => {

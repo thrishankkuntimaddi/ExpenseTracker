@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState, useMemo, Fragment } from 'react';
 import { PenLine, IndianRupee, Zap, TrendingDown, Coins, Briefcase, ShoppingCart, PiggyBank, Users, Calendar, ClipboardList } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount, todayInputValue, dateInputToISO, isoToMonth } from '../../utils/dateHelpers';
@@ -10,8 +10,11 @@ import { parseQuickEntry } from '../../utils/smartInput';
 import { computeBudgetStatus } from '../../utils/budget';
 import CategoryPicker, { CategoryBadge } from '../../components/CategoryPicker';
 import DueRecurringCard from '../plan/components/DueRecurringCard';
+import ProfileButton from '../../components/ProfileButton';
+import { normaliseUi } from '../../utils/uiPrefs';
 
 export default function TodayTab({ transactions = [], income = [], onAdd, theme, settings, recurring, onLearnCategory }) {
+  const homeSections = useMemo(() => normaliseUi(settings?.ui).home, [settings?.ui]);
   const { stats } = useStats(transactions, income, { type: 'current_month', value: getCurrentMonthValue() }, theme, settings);
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
@@ -58,7 +61,9 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
   });
 
   const todayExpense = todayTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  const monthName = now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  const monthShort = now.toLocaleDateString('en-IN', { month: 'long' });
+  const hour = now.getHours();
+  const greeting = hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
   // Recent entries: the last 7 days, newest first (not only today — an empty
   // "nothing logged" screen hid everything you'd just entered yesterday)
@@ -133,43 +138,43 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
   const canSave = !!name.trim() && !!amount && parseFloat(amount) > 0 &&
     (type !== 'external' || (settlement !== '' && parseFloat(settlement) >= 0));
 
-  return (
-    <div className="tab-root">
-
-      {/* ── Header ── */}
-      <div className="tab-header">
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>
-            {now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>{monthName}</div>
-        </div>
-
-        {/* Month at a glance: what you'd open the app to check */}
-        <div id="home-summary" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 10 }}>
-          <SummaryTile label="Spent this month" value={formatAmount(stats?.totalExpense ?? 0)} color="var(--expense)" />
-          <SummaryTile label="Today" value={formatAmount(todayExpense)} color="var(--text)" />
-          {safeToday
-            ? <SummaryTile label={safeToday.status === 'over' ? 'Over budget' : 'Budget left'} value={formatAmount(Math.abs(safeToday.remaining))} color={safeToday.status === 'over' ? 'var(--expense)' : 'var(--income)'} />
-            : <SummaryTile label="Balance" value={formatAmount(stats?.balance ?? 0)} color={(stats?.balance ?? 0) < 0 ? 'var(--expense)' : 'var(--income)'} />}
-        </div>
-        {safeToday && safeToday.status !== 'over' && (
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-            Safe to spend today: <strong style={{ color: 'var(--income)' }}>{formatAmount(safeToday.safeToday)}</strong>
-          </div>
+  const overviewSection = (
+    <div className="card home-overview" id="home-summary" style={{ marginBottom: 14, padding: '14px 16px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Spent in {monthShort}</span>
+        {safeToday && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: safeToday.status === 'over' ? 'var(--expense)' : 'var(--text-muted)' }}>
+            {safeToday.status === 'over' ? 'Over budget' : `${Math.round(Math.min(100, (safeToday.spent / safeToday.limit) * 100))}% of budget`}
+          </span>
         )}
       </div>
+      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+        {formatAmount(stats?.totalExpense ?? 0)}
+      </div>
+      {safeToday && (
+        <>
+          <div style={{ height: 6, borderRadius: 99, background: 'var(--surface2)', marginTop: 10, overflow: 'hidden' }}>
+            <div style={{ width: `${Math.min(100, (safeToday.spent / safeToday.limit) * 100)}%`, height: '100%', borderRadius: 99, background: safeToday.status === 'over' ? 'var(--expense)' : safeToday.status === 'warn' || safeToday.status === 'pace' ? 'var(--lent)' : 'var(--income)' }} />
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+            {safeToday.status === 'over'
+              ? <><strong style={{ color: 'var(--expense)' }}>{formatAmount(Math.abs(safeToday.remaining))}</strong> over the {formatAmount(safeToday.limit)} budget</>
+              : <><strong style={{ color: 'var(--text-secondary)' }}>{formatAmount(safeToday.remaining)}</strong> left of {formatAmount(safeToday.limit)}</>}
+          </div>
+        </>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+        <Metric label="Today" value={formatAmount(todayExpense)} />
+        {safeToday && safeToday.status !== 'over'
+          ? <Metric label="Safe to spend today" value={formatAmount(safeToday.safeToday)} color="var(--income)" />
+          : <Metric label="Saved" value={formatAmount(stats?.totalSavings ?? 0)} color="var(--savings)" />}
+        <Metric label="Balance" value={formatAmount(stats?.balance ?? 0)} color={(stats?.balance ?? 0) < 0 ? 'var(--expense)' : 'var(--text)'} />
+      </div>
+    </div>
+  );
 
-      {/* ── Body ── */}
-      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-
-        {/* Entry Form Column */}
-        <div className="today-form-col" style={{ flex: '0 0 100%', padding: '16px 20px 0' }}>
-
-          {recurring && (
-            <DueRecurringCard due={recurring.manualDue} onPost={recurring.post} onSkip={recurring.skip} onSkipAll={recurring.skipAllFor} compact />
-          )}
-
+  const addSection = (
+    <div className="home-add">
           {/* Type Selector */}
           <div style={{
             display: 'flex', gap: 0,
@@ -492,9 +497,10 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
         </button>
       </div>
     </div>
+  );
 
-        {/* Entries List Column */ }
-  <div className="today-entries-col" style={{ flex: '0 0 100%', padding: '0 20px 20px' }}>
+  const recentSection = (
+    <div className="home-recent" style={{ marginBottom: 6 }}>
     {recent.length > 0 ? (
       <>
         <p className="section-label" style={{ marginBottom: 10 }}>
@@ -584,28 +590,51 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
         </div>
       </div>
     )}
-  </div>
-      </div >
+    </div>
+  );
 
-    <style>{`
-        @media (min-width: 1024px) {
-          .today-form-col    { flex: 0 0 400px !important; padding: 24px !important; }
-          .today-entries-col { flex: 1 1 0% !important; padding: 24px 24px 24px 0 !important; overflow-y: auto; }
-        }
-        @media (max-width: 1023px) {
-          .today-form-col    { flex: 0 0 100% !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
-          .today-entries-col { flex: 0 0 100% !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
-        }
-      `}</style>
+  function section(key) {
+    if (key === 'overview') return overviewSection;
+    if (key === 'add') return addSection;
+    if (key === 'recent') return recentSection;
+    if (key === 'due' && recurring) {
+      return <DueRecurringCard due={recurring.manualDue} onPost={recurring.post} onSkip={recurring.skip} onSkipAll={recurring.skipAllFor} compact collapsible />;
+    }
+    return null;
+  }
+
+  return (
+    <div className="tab-root">
+
+      {/* ── Header: greeting + profile ── */}
+      <div className="tab-header">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>
+              {now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', marginTop: 1 }}>
+              {greeting}
+            </div>
+          </div>
+          <ProfileButton />
+        </div>
+      </div>
+
+      {/* ── Body: sections in the order chosen in Profile → Customize ── */}
+      <div className="home-body" style={{ flex: 1, overflow: 'auto', padding: '14px 16px 20px' }}>
+        {homeSections.filter((s) => s.visible).map(({ key }) => <Fragment key={key}>{section(key)}</Fragment>)}
+      </div>
+
     </div >
   );
 }
 
-function SummaryTile({ label, value, color }) {
+function Metric({ label, value, color = 'var(--text)' }) {
   return (
-    <div style={{ padding: '8px 10px', borderRadius: 12, background: 'var(--surface2)', border: '1px solid var(--border)', minWidth: 0 }}>
+    <div style={{ minWidth: 0 }}>
       <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 800, color, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
     </div>
   );
 }

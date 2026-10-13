@@ -19,7 +19,7 @@ export const isNative = platform !== 'web';
 const SystemTheme = registerPlugin('SystemTheme');
 
 /* Matches glass.css --backdrop-base, so the system bars blend with the app. */
-const BAR = { light: '#E4E5EA', monoflow: '#040405' };
+const BAR = { light: '#E4E5EA', monoflow: '#0A0C11' };
 
 /** Android: colour behind the status/navigation bars + icon contrast for the theme. Returns true if applied. */
 export async function setStatusBarTheme(theme) {

@@ -9,6 +9,7 @@ import PeriodSelector from '../../components/PeriodSelector';
 import EditIncomeModal from '../../components/EditIncomeModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { useStats } from '../../hooks/useStats';
+import ProfileButton from '../../components/ProfileButton';
 
 export default function IncomeTab({
   income: rawIncome = [], onAddIncome, onUpdateIncome, onDeleteIncome,
@@ -124,12 +125,17 @@ export default function IncomeTab({
 
       {/* Header */}
       <div className="tab-header">
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
-          Income
-        </h1>
-        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-          Track all your income sources
-        </p>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+          <div>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
+              Income
+            </h1>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+              Track all your income sources
+            </p>
+          </div>
+          <ProfileButton />
+        </div>
         <div style={{ marginTop: 10 }}>
           <PeriodSelector
             period={selectedPeriod}
@@ -150,7 +156,7 @@ export default function IncomeTab({
             {/* Hero cards row */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
               {/* Period Income */}
-              <div style={{
+              <div className="hero-card hero-income" style={{
                 flex: 1, borderRadius: 16, padding: '16px 18px',
                 background: 'var(--income)', boxShadow: 'var(--shadow-md)',
                 display: 'flex', flexDirection: 'column', gap: 4,

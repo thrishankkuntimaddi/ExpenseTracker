@@ -11,8 +11,11 @@ import ConfirmDeleteModal from '../../../components/ConfirmDeleteModal';
 
 const KIND_COLOR = { expense: 'var(--expense)', savings: 'var(--savings)', income: 'var(--income)' };
 
-export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, compact = false }) {
+export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, compact = false, collapsible = false }) {
   const [busy, setBusy] = useState({});
+  // On Home the list folds to one line until opened, so a backlog of due
+  // entries doesn't push everything else off the screen.
+  const [folded, setFolded] = useState(collapsible);
   const [showAll, setShowAll] = useState(false);
   const [confirmSkipAll, setConfirmSkipAll] = useState(false);
   if (!due.length) return null;
@@ -46,10 +49,19 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
               {due.length} recurring entr{due.length === 1 ? 'y' : 'ies'} due
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              {total > 0 ? `${formatAmount(total)} outgoing · ` : ''}log them with one tap
+              {collapsible
+                ? (total > 0 ? `${formatAmount(total)} outgoing` : 'Log them with one tap')
+                : `${total > 0 ? `${formatAmount(total)} outgoing · ` : ''}log them with one tap`}
             </div>
           </div>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        {collapsible && (
+          <button id="due-toggle" onClick={() => setFolded((f) => !f)} aria-expanded={!folded}
+            style={{ padding: '6px 10px', borderRadius: 9, fontSize: 11, fontWeight: 700, background: 'var(--surface2)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 3 }}>
+            {folded ? 'Review' : 'Hide'}{folded ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+          </button>
+        )}
         {due.length > 1 && (
           <button
             onClick={() => run('all', () => Promise.all(due.map((d) => onPost(d))))}
@@ -59,8 +71,10 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
             {busy.all ? 'Logging…' : 'Log all'}
           </button>
         )}
+        </div>
       </div>
 
+      {!folded && (<>
       {hidden > 0 && (
         <button onClick={() => setShowAll(true)} style={{ width: '100%', padding: '6px 16px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', background: 'var(--surface2)', border: 'none', borderTop: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
           <ChevronDown size={11} /> {hidden} older occurrence{hidden === 1 ? '' : 's'} hidden — show
@@ -123,6 +137,7 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
           </button>
         </div>
       )}
+      </>)}
     </div>
   );
 }

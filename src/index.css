@@ -95,6 +95,9 @@
   /* Chart tooltip */
   --tooltip-bg:     #FFFFFF;
   --tooltip-border: #E2E8F0;
+
+  /* Spending calendar heat colour (r, g, b) */
+  --heat-rgb: 225, 29, 72;
 }
 
 /* ══ MONOFLOW THEME (dark obsidian) ════════════════════════════ */
@@ -116,28 +119,28 @@
   --text-muted:     #64748B;
 
   /* Accent — gold / indigo */
-  --accent:       #6366F1;
-  --accent-hover: #818CF8;
-  --accent-bg:    rgba(99, 102, 241, 0.12);
-  --accent-border:rgba(99, 102, 241, 0.25);
+  --accent:       #8B93FF;
+  --accent-hover: #A5ABFF;
+  --accent-bg:    rgba(139, 147, 255, 0.14);
+  --accent-border:rgba(139, 147, 255, 0.32);
 
   /* Category colors — INCOME family */
-  --income:         #10B981;
-  --income-bg:      rgba(16, 185, 129, 0.12);
-  --income-border:  rgba(16, 185, 129, 0.25);
+  --income:         #34D399;
+  --income-bg:      rgba(52, 211, 153, 0.12);
+  --income-border:  rgba(52, 211, 153, 0.28);
 
   /* Category colors — EXPENSE family */
-  --expense:        #F43F5E;
-  --expense-bg:     rgba(244, 63, 94, 0.12);
-  --expense-border: rgba(244, 63, 94, 0.25);
+  --expense:        #FB7185;
+  --expense-bg:     rgba(251, 113, 133, 0.12);
+  --expense-border: rgba(251, 113, 133, 0.28);
 
   /* Category colors — SAVINGS family */
-  --savings:        #3B82F6;
-  --savings-bg:     rgba(59, 130, 246, 0.12);
-  --savings-border: rgba(59, 130, 246, 0.25);
+  --savings:        #60A5FA;
+  --savings-bg:     rgba(96, 165, 250, 0.12);
+  --savings-border: rgba(96, 165, 250, 0.28);
 
   /* Category colors — PERSON: LENT */
-  --lent:           #F59E0B;
+  --lent:           #FBBF24;
   --lent-bg:        rgba(245, 158, 11, 0.12);
   --lent-border:    rgba(245, 158, 11, 0.25);
 
@@ -157,18 +160,18 @@
   --given-border: rgba(167, 139, 250, 0.25);
 
   /* Legacy person (neutral) */
-  --person:         #F59E0B;
+  --person:         #FBBF24;
   --person-bg:      rgba(245, 158, 11, 0.12);
   --person-border:  rgba(245, 158, 11, 0.25);
 
   /* Waste */
-  --waste:    #FF5722;
+  --waste:    #FB923C;
   --waste-bg: rgba(255, 87, 34, 0.12);
 
   /* External / Proxy */
-  --external:        #8B5CF6;
-  --external-bg:     rgba(139, 92, 246, 0.12);
-  --external-border: rgba(139, 92, 246, 0.25);
+  --external:        #A78BFA;
+  --external-bg:     rgba(167, 139, 250, 0.12);
+  --external-border: rgba(167, 139, 250, 0.28);
 
   /* Navbar */
   --nav-bg:     rgba(18, 23, 35, 0.9);
@@ -186,6 +189,9 @@
   /* Chart tooltip */
   --tooltip-bg:     #182030;
   --tooltip-border: rgba(255, 255, 255, 0.12);
+
+  /* Spending calendar heat colour (r, g, b) */
+  --heat-rgb: 251, 113, 133;
 }
 
 /* ══ RESET & BASE ═══════════════════════════════════════════════ */

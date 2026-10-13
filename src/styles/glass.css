@@ -59,38 +59,39 @@
 }
 
 [data-theme="monoflow"] {
-  /* Smoked glass: near-black tint over a deep black scene — never a grey wash */
-  --glass-fill:   rgba(20, 20, 24, 0.66);
-  --glass-bar:    rgba(16, 16, 20, 0.84);
-  --glass-blur:   blur(30px) saturate(150%);
-  --glass-rim:    linear-gradient(135deg,
-                    rgba(255,255,255,.42) 0%, rgba(255,255,255,.14) 16%,
-                    rgba(255,255,255,.04) 40%, rgba(255,255,255,.03) 60%,
-                    rgba(255,255,255,.12) 84%, rgba(255,255,255,.36) 100%);
-  --glass-inner:  inset 0 1px 0 rgba(255,255,255,.07);
-  --glass-float:  0 18px 44px -18px rgba(0,0,0,.9), 0 2px 6px rgba(0,0,0,.5);
+  /* Midnight: deep ink-blue surfaces that are almost opaque, so text stays
+     crisp; a faint top light instead of bright specular rims; softer,
+     slightly lighter category colours that read well on dark. */
+  --glass-fill:   rgba(22, 25, 33, 0.94);
+  --glass-bar:    rgba(19, 22, 30, 0.88);
+  --glass-blur:   blur(24px) saturate(140%);
+  --glass-rim:    linear-gradient(180deg,
+                    rgba(255,255,255,.10) 0%, rgba(255,255,255,.045) 35%,
+                    rgba(255,255,255,.03) 100%);
+  --glass-inner:  inset 0 1px 0 rgba(255,255,255,.035);
+  --glass-float:  0 12px 32px -16px rgba(0,0,0,.75), 0 1px 2px rgba(0,0,0,.35);
 
   --bg:        transparent;
-  --surface:   rgba(20, 20, 24, 0.66);
-  --surface2:  rgba(255, 255, 255, 0.05);
-  --surface3:  rgba(255, 255, 255, 0.04);
-  --glass-bg:  rgba(20, 20, 24, 0.66);
-  --nav-bg:    rgba(16, 16, 20, 0.84);
-  --tooltip-bg: rgba(20, 20, 24, 0.95);
-  --input-bg:  rgba(0, 0, 0, 0.4);
+  --surface:   rgba(22, 25, 33, 0.94);
+  --surface2:  rgba(255, 255, 255, 0.055);
+  --surface3:  rgba(255, 255, 255, 0.035);
+  --glass-bg:  rgba(22, 25, 33, 0.94);
+  --nav-bg:    rgba(19, 22, 30, 0.88);
+  --tooltip-bg: rgba(26, 30, 40, 0.98);
+  --input-bg:  rgba(255, 255, 255, 0.045);
 
-  --text:           #FFFFFF;
-  --text-secondary: rgba(235, 235, 245, 0.64);
-  --text-muted:     rgba(235, 235, 245, 0.42);
+  --text:           #ECEEF3;
+  --text-secondary: #A4AABA;
+  --text-muted:     #6F7688;
 
-  --border:       rgba(255, 255, 255, 0.08);
-  --border-dark:  rgba(255, 255, 255, 0.14);
-  --input-border: rgba(255, 255, 255, 0.07);
+  --border:       rgba(255, 255, 255, 0.07);
+  --border-dark:  rgba(255, 255, 255, 0.13);
+  --input-border: rgba(255, 255, 255, 0.09);
   --nav-border:   transparent;
 
-  --backdrop-base: #040405;
-  --backdrop-a: rgba(46, 52, 74, 0.32);   /* faint cool light, just enough depth */
-  --backdrop-b: rgba(0, 0, 0, 0.85);
+  --backdrop-base: #0A0C11;
+  --backdrop-a: rgba(72, 84, 150, 0.20);   /* a soft indigo light from above */
+  --backdrop-b: rgba(0, 0, 0, 0.55);
 }
 
 /* ── Typography: San Francisco on Apple devices, Inter elsewhere ── */
@@ -185,13 +186,18 @@ button:is([style*="background: var(--accent)"], [style*="background: var(--incom
   box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 4px 12px -4px rgba(0,0,0,.28) !important;
 }
 
-/* Dark: the primary/selected state is solid white with a dark glyph */
-[data-theme="monoflow"] button[style*="background: var(--accent)"] {
-  background: #FFFFFF !important;
-  color: #1C1C1E !important;
-  box-shadow: 0 4px 14px -4px rgba(0,0,0,.6) !important;
+/* Dark: filled buttons keep their colour but lose the glossy top light,
+   which looked cheap on dark surfaces */
+[data-theme="monoflow"] button:is([style*="background: var(--accent)"], [style*="background: var(--income)"],
+          [style*="background: var(--expense)"], [style*="background: var(--savings)"],
+          [style*="background: var(--person)"], [style*="background: var(--lent)"],
+          [style*="background: var(--borrowed)"], [style*="background: var(--external)"],
+          [style*="background: var(--repayment-rec)"], [style*="background: var(--given)"]) {
+  background-image: none !important;
+  box-shadow: 0 4px 14px -6px rgba(0,0,0,.6) !important;
+  color: #0B0D12 !important;
 }
-[data-theme="monoflow"] button[style*="background: var(--accent)"] svg { color: #1C1C1E !important; stroke: currentColor; }
+[data-theme="monoflow"] button[style*="background: var(--accent)"] svg { stroke: currentColor; }
 
 /* Press feedback: controls give slightly, like Liquid Glass */
 button { transition: transform .2s cubic-bezier(.3,1.5,.5,1), filter .15s, background-color .2s, box-shadow .2s !important; }
@@ -260,9 +266,9 @@ nav button:has(svg[stroke-width="2.3"]) { background: var(--surface2) !important
   --input-bg:   rgba(255, 255, 255, 0.8);
 }
 [data-theme="monoflow"] [style*="position: fixed"][style*="inset: 0"] {
-  --glass-fill: rgba(22, 22, 26, 0.92);
-  --surface:    rgba(22, 22, 26, 0.92);
-  --input-bg:   rgba(0, 0, 0, 0.4);
+  --glass-fill: rgba(24, 27, 36, 0.98);
+  --surface:    rgba(24, 27, 36, 0.98);
+  --input-bg:   rgba(255, 255, 255, 0.05);
 }
 
 ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.18); border-radius: 99px; }
@@ -271,9 +277,9 @@ nav button:has(svg[stroke-width="2.3"]) { background: var(--surface2) !important
 /* ── Accessibility / fallbacks ──────────────────────────────────── */
 @media (prefers-reduced-transparency: reduce) {
   :root, [data-theme="light"] { --glass-fill: rgba(255,255,255,.94); --glass-bar: rgba(255,255,255,.96); }
-  [data-theme="monoflow"]     { --glass-fill: rgba(22,22,26,.97);    --glass-bar: rgba(18,18,22,.98); }
+  [data-theme="monoflow"]     { --glass-fill: rgba(22,25,33,.99);    --glass-bar: rgba(19,22,30,.99); }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root, [data-theme="light"] { --glass-fill: rgba(255,255,255,.92); --glass-bar: rgba(255,255,255,.94); }
-  [data-theme="monoflow"]     { --glass-fill: rgba(22,22,26,.95);    --glass-bar: rgba(18,18,22,.96); }
+  [data-theme="monoflow"]     { --glass-fill: rgba(22,25,33,.98);    --glass-bar: rgba(19,22,30,.98); }
 }

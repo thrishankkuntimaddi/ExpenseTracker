@@ -22,6 +22,7 @@ import SpendingCalendar from './components/SpendingCalendar';
 import BudgetStatusCard from '../plan/components/BudgetStatusCard';
 import GoalsCard from '../plan/components/GoalsCard';
 import BudgetEditorModal from '../plan/BudgetEditorModal';
+import ProfileButton from '../../components/ProfileButton';
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
@@ -188,6 +189,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
               Financial overview
             </p>
           </div>
+          <ProfileButton />
         </div>
         <PeriodSelector
           period={selectedPeriod}
@@ -219,7 +221,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
             <div className="stats-left">
 
               {/* Balance Hero */}
-              <div style={{
+              <div className={`hero-card ${positive ? 'hero-income' : 'hero-expense'}`} style={{
                 borderRadius: 16, padding: '20px 22px', marginBottom: 14,
                 background: positive ? 'var(--income)' : 'var(--expense)',
                 boxShadow: 'var(--shadow-md)',

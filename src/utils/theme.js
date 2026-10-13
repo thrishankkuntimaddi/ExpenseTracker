@@ -8,7 +8,7 @@ export const THEME_PREF_KEY = 'et_theme_pref';   // 'light' | 'dark' | 'system'
 const RESOLVED_KEY = 'et_theme';                  // last applied data-theme (read by index.html)
 
 /* Browser-bar colour per theme — matches glass.css --backdrop-base. */
-const BAR_COLOR = { light: '#E4E5EA', monoflow: '#040405' };
+const BAR_COLOR = { light: '#E4E5EA', monoflow: '#0A0C11' };
 
 /** The active theme as set on <html data-theme>. */
 export function currentTheme() {

@@ -16,6 +16,7 @@ import BudgetEditorModal from './BudgetEditorModal';
 import RecurringRuleModal from './RecurringRuleModal';
 import GoalModal from './GoalModal';
 import { CategoryBadge } from '../../components/CategoryPicker';
+import ProfileButton from '../../components/ProfileButton';
 
 const KIND_COLOR = { expense: 'var(--expense)', savings: 'var(--savings)', income: 'var(--income)' };
 
@@ -126,8 +127,13 @@ export default function PlanTab({ transactions = [], settings, onPatchSettings, 
   return (
     <div className="tab-root">
       <div className="tab-header">
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>Plan</h1>
-        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Budget · recurring entries · savings goals</p>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+          <div>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>Plan</h1>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Budget · recurring entries · savings goals</p>
+          </div>
+          <ProfileButton />
+        </div>
       </div>
       <div className="tab-body">{body}</div>
     </div>

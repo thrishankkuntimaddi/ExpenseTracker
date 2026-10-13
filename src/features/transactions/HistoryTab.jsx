@@ -11,6 +11,7 @@ import { currentTheme } from '../../utils/theme';
 import LoadMonthlyData from '../../components/LoadMonthlyData';
 import EditTransactionModal from '../../components/EditTransactionModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
+import ProfileButton from '../../components/ProfileButton';
 
 export default function HistoryTab({
   transactions, income = [], selectedPeriod, onPeriodChange,
@@ -162,6 +163,7 @@ export default function HistoryTab({
             {onAddTransaction && onAddIncome && (
               <IconAction id="mobile-btn-load-past-data" label="Load past data" Icon={Upload} onClick={() => setShowImport(true)} />
             )}
+            <ProfileButton />
           </div>
         </div>
 

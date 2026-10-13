@@ -144,6 +144,11 @@ All data is private and scoped strictly to your account — `firestore.rules` on
 - **Area chart**: 6-month Income vs. Expense trend
 - Key metrics: total income, total expense, total savings, total given, net balance, average daily/weekly/monthly spend, and wastage percentage
 
+### 👤 Profile & Customize (phone)
+- Tap your **avatar** at the top-right of any page: your account (photo or initials, sign-in method, entries, months, devices, member since), then **Appearance** (Light / Dark / Auto) and every setting grouped into Preferences · Sync & devices · Your data · App · Account
+- **Customize**, synced to all your devices: pick and order the **four pages in the bottom bar** (the rest sit in *More*), the page the app **opens on**, and the **order and visibility of the Home sections** (month overview, recurring due, quick add, recent entries). Bad or old values are repaired automatically — the bar always has four distinct pages and quick add can't be hidden
+- Home leads with one **month overview** card (spent, budget bar, today, safe to spend, balance); a backlog of due recurring entries folds into one line until you tap *Review*
+
 ### ⚙️ Settings & Data Management
 - **Export JSON**: download a full backup of all transactions, income, and settings (budgets, goals, category rules included)
 - **Export CSV**: a spreadsheet with categories that the app's own CSV importer accepts — round-trips cleanly

@@ -24,6 +24,7 @@ import { normaliseReminders, anyReminderOn, REMINDER_TYPES } from '../../utils/r
 import { useUpdateState, checkForUpdates, restartToUpdate, THIS_BUILD, APK_URL } from '../../native/updates';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import PWAInstallModal from '../../components/PWAInstallModal';
+import { Section, Group } from './SettingsGroup';
 
 export default function SettingsTab({
   themePref = 'system', onThemePrefChange, onSignOut,
@@ -38,6 +39,7 @@ export default function SettingsTab({
   onPatchSettings,
   onResetPassword, onResendVerification, onDeleteAccount,
   devices, recurring,
+  embedded = false,   // inside the phone Profile page: no page header, Appearance lives up there
 }) {
   const [feedback, setFeedback]       = useState(null);
   const carry = getCarrySettings(settings);
@@ -189,13 +191,15 @@ export default function SettingsTab({
   }
 
   return (
-    <div className="tab-root">
-      <div className="tab-header">
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>Settings</h1>
-        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Preferences, data & account</p>
-      </div>
+    <div className={embedded ? 'settings-embedded' : 'tab-root'}>
+      {!embedded && (
+        <div className="tab-header">
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>Settings</h1>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Preferences, data & account</p>
+        </div>
+      )}
 
-      <div className="tab-body">
+      <div className={embedded ? undefined : 'tab-body'}>
         <div className="settings-layout">
 
           {/* ── Column 1 ── */}
@@ -207,8 +211,80 @@ export default function SettingsTab({
               </div>
             )}
 
+            {/* ── Reminders ── */}
+            <Section title="Preferences">
+            <Group id="reminders" color="var(--expense)" title="Reminders" Icon={Bell} summary={remindersSummary}>
+              <RemindersCard settings={settings} onPatchSettings={onPatchSettings}
+                transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} />
+            </Group>
+
+            {/* ── Theme (per device) ── */}
+            {!embedded && <Group id="appearance" color="var(--accent)" title="Appearance" Icon={Palette} summary={themePref === 'system' ? `System (${isMonoflow ? 'dark' : 'light'} now)` : isMonoflow ? 'Dark' : 'Light'}>
+              <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: isMonoflow ? 'var(--accent-bg)' : 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {isMonoflow ? <Moon size={16} style={{ color: 'var(--accent)' }} /> : <Sun size={16} style={{ color: 'var(--person)' }} />}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Theme</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                    {themePref === 'system' ? `Following your device (${isMonoflow ? 'dark' : 'light'} now)` : isMonoflow ? 'Dark (MonoFlow)' : 'Light'} · this device only
+                  </div>
+                </div>
+              </div>
+              <div role="radiogroup" aria-label="Theme" style={{ padding: '8px 16px 14px', display: 'flex', gap: 6, flexWrap: 'wrap', borderTop: '1px solid var(--border)' }}>
+                <ThemeChip id="theme-light"  Icon={Sun}     label="Light"  active={themePref === 'light'}  onClick={() => onThemePrefChange('light')} />
+                <ThemeChip id="theme-dark"   Icon={Moon}    label="Dark"   active={themePref === 'dark'}   onClick={() => onThemePrefChange('dark')} />
+                <ThemeChip id="theme-system" Icon={Monitor} label="System" active={themePref === 'system'} onClick={() => onThemePrefChange('system')} />
+              </div>
+            </Group>}
+
+            {/* ── Carry forward ── */}
+            <Group id="month-carry-forward" color="var(--repayment-rec)" title="Month Carry Forward" Icon={ArrowRightLeft} summary={carry.enabled ? 'On' : 'Off'}>
+              <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <ArrowRightLeft size={16} style={{ color: 'var(--accent)' }} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Roll leftover into next month</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                      {carry.enabled
+                        ? `From ${formatMonthLabel(carry.startMonth)}: each month's remaining balance appears as income in the next`
+                        : 'Off — every month starts from zero'}
+                    </div>
+                  </div>
+                </div>
+                <button className={`toggle-track ${carry.enabled ? 'on' : ''}`} onClick={() => setCarry({ enabled: !carry.enabled })} aria-label="Toggle carry forward">
+                  <span className="toggle-thumb" />
+                </button>
+              </div>
+              {carry.enabled && (
+                <div style={{ padding: '10px 16px 14px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    <span>First month that receives a carry</span>
+                    <input
+                      id="settings-carry-start"
+                      type="month"
+                      value={carry.startMonth}
+                      onChange={e => { if (/^\d{4}-\d{2}$/.test(e.target.value)) setCarry({ startMonth: e.target.value }); }}
+                      style={{ padding: '6px 10px', borderRadius: 9, fontSize: 12, fontWeight: 600, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }}
+                    />
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer' }}>
+                    <span>Also carry a deficit (negative leftover)</span>
+                    <input type="checkbox" checked={!!carry.includeNegative} onChange={e => setCarry({ includeNegative: e.target.checked })} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                  </label>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.55 }}>
+                    The carried amount is computed live from the previous month, so a late edit to {formatMonthLabel(carry.startMonth === '2026-11' ? '2026-10' : carry.startMonth)} updates it automatically. It is shown as an <strong>auto</strong> line on the Income tab and counted in that month's income and balance.
+                  </div>
+                </div>
+              )}
+            </Group>
+            </Section>
+
             {/* ── Sync & devices ── */}
-            <Group id="sync" title="Sync" Icon={Cloud} summary={`${syncLine.label} · ${devices?.devices?.length ?? 0} device${(devices?.devices?.length ?? 0) === 1 ? '' : 's'}`}>
+            <Section title="Sync & devices">
+            <Group id="sync" color="var(--savings)" title="Sync" Icon={Cloud} summary={`${syncLine.label} · ${devices?.devices?.length ?? 0} device${(devices?.devices?.length ?? 0) === 1 ? '' : 's'}`}>
               <div id="sync-status" data-tone={syncLine.tone} style={{ padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, borderBottom: '1px solid var(--border)' }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `var(--${SYNC_TONE[syncLine.tone]}-bg)` }}>
                   {syncLine.tone === 'offline' ? <CloudOff size={16} style={{ color: 'var(--text-muted)' }} />
@@ -252,78 +328,11 @@ export default function SettingsTab({
                 <div style={{ padding: '6px 16px 14px', fontSize: 11, color: 'var(--text-muted)' }}>This device appears here once it has synced.</div>
               )}
             </Group>
-
-            {/* ── Reminders ── */}
-            <Group id="reminders" title="Reminders" Icon={Bell} summary={remindersSummary}>
-              <RemindersCard settings={settings} onPatchSettings={onPatchSettings}
-                transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} />
-            </Group>
-
-            {/* ── Theme (per device) ── */}
-            <Group id="appearance" title="Appearance" Icon={Palette} summary={themePref === 'system' ? `System (${isMonoflow ? 'dark' : 'light'} now)` : isMonoflow ? 'Dark' : 'Light'}>
-              <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: isMonoflow ? 'var(--accent-bg)' : 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {isMonoflow ? <Moon size={16} style={{ color: 'var(--accent)' }} /> : <Sun size={16} style={{ color: 'var(--person)' }} />}
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Theme</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                    {themePref === 'system' ? `Following your device (${isMonoflow ? 'dark' : 'light'} now)` : isMonoflow ? 'Dark (MonoFlow)' : 'Light'} · this device only
-                  </div>
-                </div>
-              </div>
-              <div role="radiogroup" aria-label="Theme" style={{ padding: '8px 16px 14px', display: 'flex', gap: 6, flexWrap: 'wrap', borderTop: '1px solid var(--border)' }}>
-                <ThemeChip id="theme-light"  Icon={Sun}     label="Light"  active={themePref === 'light'}  onClick={() => onThemePrefChange('light')} />
-                <ThemeChip id="theme-dark"   Icon={Moon}    label="Dark"   active={themePref === 'dark'}   onClick={() => onThemePrefChange('dark')} />
-                <ThemeChip id="theme-system" Icon={Monitor} label="System" active={themePref === 'system'} onClick={() => onThemePrefChange('system')} />
-              </div>
-            </Group>
-
-            {/* ── Carry forward ── */}
-            <Group id="month-carry-forward" title="Month Carry Forward" Icon={ArrowRightLeft} summary={carry.enabled ? 'On' : 'Off'}>
-              <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <ArrowRightLeft size={16} style={{ color: 'var(--accent)' }} />
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Roll leftover into next month</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                      {carry.enabled
-                        ? `From ${formatMonthLabel(carry.startMonth)}: each month's remaining balance appears as income in the next`
-                        : 'Off — every month starts from zero'}
-                    </div>
-                  </div>
-                </div>
-                <button className={`toggle-track ${carry.enabled ? 'on' : ''}`} onClick={() => setCarry({ enabled: !carry.enabled })} aria-label="Toggle carry forward">
-                  <span className="toggle-thumb" />
-                </button>
-              </div>
-              {carry.enabled && (
-                <div style={{ padding: '10px 16px 14px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>
-                    <span>First month that receives a carry</span>
-                    <input
-                      id="settings-carry-start"
-                      type="month"
-                      value={carry.startMonth}
-                      onChange={e => { if (/^\d{4}-\d{2}$/.test(e.target.value)) setCarry({ startMonth: e.target.value }); }}
-                      style={{ padding: '6px 10px', borderRadius: 9, fontSize: 12, fontWeight: 600, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }}
-                    />
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer' }}>
-                    <span>Also carry a deficit (negative leftover)</span>
-                    <input type="checkbox" checked={!!carry.includeNegative} onChange={e => setCarry({ includeNegative: e.target.checked })} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-                  </label>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.55 }}>
-                    The carried amount is computed live from the previous month, so a late edit to {formatMonthLabel(carry.startMonth === '2026-11' ? '2026-10' : carry.startMonth)} updates it automatically. It is shown as an <strong>auto</strong> line on the Income tab and counted in that month's income and balance.
-                  </div>
-                </div>
-              )}
-            </Group>
+            </Section>
 
             {/* ── Data Management ── */}
-            <Group id="data-management" title="Data Management" Icon={Database} summary={'Backup, import, export, trash'}>
+            <Section title="Your data">
+            <Group id="data-management" color="var(--income)" title="Data Management" Icon={Database} summary={'Backup, import, export, trash'}>
               <ActionRow id="btn-recently-deleted" Icon={RotateCcw} label="Recently Deleted" sub={`${recentlyDeleted.length} ${recentlyDeleted.length === 1 ? 'item' : 'items'} in trash — view or revert`} iconColor="var(--expense)" onClick={() => setShowTrashModal(true)} />
               <ActionRow id="btn-export" Icon={Download} label={exporting ? 'Preparing backup…' : 'Export Backup (JSON)'} sub="Everything: transactions, income, billings, trips, recurring, trash, settings" iconColor="var(--savings)" onClick={() => !exporting && handleExport()} />
               <ActionRow id="btn-export-csv" Icon={FileSpreadsheet} label="Export Spreadsheet (CSV)" sub="With categories — opens in Excel / Google Sheets; re-importable" iconColor="var(--income)" onClick={handleExportCSV} />
@@ -336,6 +345,7 @@ export default function SettingsTab({
               Types: <code>expense</code> / <code>income</code> / <code>savings</code> / <code>person</code>
             </div>
             </Group>
+            </Section>
 
           </div>
 
@@ -343,9 +353,10 @@ export default function SettingsTab({
           <div style={{ flex: 1, minWidth: 0 }}>
 
             {/* ── Get the app (website only) ── */}
+            <Section title="App">
             {!isNative && (
               <>
-                <Group id="get-the-app" title="Get the app" Icon={Smartphone} summary={download ? `Download the ${download.label}` : 'Downloads and install'}>
+                <Group id="get-the-app" color="var(--accent)" title="Get the app" Icon={Smartphone} summary={download ? `Download the ${download.label}` : 'Downloads and install'}>
                   {download && (
                     <a id="btn-download-app" href={downloadUrl(download.file)} className="settings-row"
                       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', borderBottom: '1px solid var(--border)', textDecoration: 'none' }}>
@@ -381,51 +392,8 @@ export default function SettingsTab({
               </>
             )}
 
-            {/* ── Account ── */}
-            <Group id="account" title="Account" Icon={LogOut} summary={user?.email ?? 'Signed in'}>
-              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{user?.email || 'Signed in'}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                  {signInMethods(user)} · {hasPassword && !user?.emailVerified ? 'Email not verified yet' : 'Data synced to cloud'}
-                </div>
-              </div>
-              {hasPassword && !user?.emailVerified && onResendVerification && (
-                <ActionRow id="btn-resend-verification" Icon={MailCheck} label="Verify your email" sub="Resend the verification link"
-                  iconColor="var(--savings)" onClick={() => onResendVerification()
-                    .then(() => showFeedback(`Verification link sent to ${user.email}.`))
-                    .catch((err) => showFeedback(`Couldn't send it: ${err.message}`, true))} />
-              )}
-              {hasPassword && onResetPassword && (
-                <ActionRow id="btn-change-password" Icon={KeyRound} label="Change password" sub="We'll email you a secure link"
-                  iconColor="var(--accent)" onClick={() => onResetPassword(user.email)
-                    .then(() => showFeedback(`Password link sent to ${user.email}. Check spam too.`))
-                    .catch(() => showFeedback("Couldn't send the link. Check your connection and try again.", true))} />
-              )}
-              <ActionRow
-                id="btn-sign-out"
-                Icon={LogOut}
-                label="Sign Out"
-                sub="You will need to sign in again"
-                iconColor="var(--expense)"
-                onClick={() => setConfirming('signout')}
-                danger lastRow
-              />
-            </Group>
-
-            {/* ── Reset ── */}
-            <Group id="reset" title="Reset" Icon={Trash2} summary={'Clear this device · delete data · delete account'}>
-              <ActionRow id="btn-clear-device" Icon={Eraser} label="Clear this device" sub="Sign out and remove all ExpenseTracker data and preferences from this device. Your account keeps everything."
-                iconColor="var(--lent)" onClick={() => setConfirming('clear')} />
-              <ActionRow id="btn-delete-all" Icon={Trash2} label={busyReset ? 'Deleting…' : 'Delete all my data'} sub="Every transaction, income entry, billing, trip and setting — on all devices. Keeps your sign-in."
-                iconColor="var(--expense)" onClick={() => !busyReset && setConfirming('delete')} danger />
-              {onDeleteAccount && (
-                <ActionRow id="btn-delete-account" Icon={UserX} label="Delete my account" sub="All your data, then the sign-in itself. You'd need to create a new account to come back."
-                  iconColor="var(--expense)" onClick={() => !busyReset && setConfirming('account')} danger lastRow />
-              )}
-            </Group>
-
             {/* About */}
-            <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+            <div id="about-app" className="settings-group" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
               <img
                 src={import.meta.env.BASE_URL + 'icon-192.png'}
                 alt="Expense Tracker Logo"
@@ -457,6 +425,53 @@ export default function SettingsTab({
                 )}
               </div>
             </div>
+            </Section>
+
+            {/* ── Account ── */}
+            <Section title="Account">
+            <Group id="account" color="var(--given)" title="Account" Icon={LogOut} summary={user?.email ?? 'Signed in'}>
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{user?.email || 'Signed in'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  {signInMethods(user)} · {hasPassword && !user?.emailVerified ? 'Email not verified yet' : 'Data synced to cloud'}
+                </div>
+              </div>
+              {hasPassword && !user?.emailVerified && onResendVerification && (
+                <ActionRow id="btn-resend-verification" Icon={MailCheck} label="Verify your email" sub="Resend the verification link"
+                  iconColor="var(--savings)" onClick={() => onResendVerification()
+                    .then(() => showFeedback(`Verification link sent to ${user.email}.`))
+                    .catch((err) => showFeedback(`Couldn't send it: ${err.message}`, true))} />
+              )}
+              {hasPassword && onResetPassword && (
+                <ActionRow id="btn-change-password" Icon={KeyRound} label="Change password" sub="We'll email you a secure link"
+                  iconColor="var(--accent)" onClick={() => onResetPassword(user.email)
+                    .then(() => showFeedback(`Password link sent to ${user.email}. Check spam too.`))
+                    .catch(() => showFeedback("Couldn't send the link. Check your connection and try again.", true))} />
+              )}
+              <ActionRow
+                id="btn-sign-out"
+                Icon={LogOut}
+                label="Sign Out"
+                sub="You will need to sign in again"
+                iconColor="var(--expense)"
+                onClick={() => setConfirming('signout')}
+                danger lastRow
+              />
+            </Group>
+
+            {/* ── Reset ── */}
+            <Group id="reset" color="var(--lent)" title="Reset" Icon={Trash2} summary={'Clear this device · delete data · delete account'}>
+              <ActionRow id="btn-clear-device" Icon={Eraser} label="Clear this device" sub="Sign out and remove all ExpenseTracker data and preferences from this device. Your account keeps everything."
+                iconColor="var(--lent)" onClick={() => setConfirming('clear')} />
+              <ActionRow id="btn-delete-all" Icon={Trash2} label={busyReset ? 'Deleting…' : 'Delete all my data'} sub="Every transaction, income entry, billing, trip and setting — on all devices. Keeps your sign-in."
+                iconColor="var(--expense)" onClick={() => !busyReset && setConfirming('delete')} danger />
+              {onDeleteAccount && (
+                <ActionRow id="btn-delete-account" Icon={UserX} label="Delete my account" sub="All your data, then the sign-in itself. You'd need to create a new account to come back."
+                  iconColor="var(--expense)" onClick={() => !busyReset && setConfirming('account')} danger lastRow />
+              )}
+            </Group>
+
+            </Section>
           </div>
 
         </div>
@@ -509,10 +524,12 @@ export default function SettingsTab({
         @media (min-width: 1024px) { .settings-layout { display: flex; align-items: flex-start; gap: 24px; } }
         @media (max-width: 1023px) { .settings-layout { display: block; } }
         .settings-row:hover { background: var(--surface2) !important; }
+        .settings-section > .settings-group + .settings-group { border-top: 1px solid var(--border); }
       `}</style>
     </div>
   );
 }
+
 
 function SectionLabel({ children, Icon }) {
   return (
@@ -523,29 +540,6 @@ function SectionLabel({ children, Icon }) {
   );
 }
 
-/* A settings group that collapses to one summary line; open/closed is
-   remembered on this device. */
-function Group({ id, title, Icon, summary, children }) {
-  const key = `et_settings_open_${id}`;
-  const [open, setOpen] = useState(() => { try { return localStorage.getItem(key) === '1'; } catch { return false; } });
-  const toggle = () => setOpen((o) => { try { localStorage.setItem(key, o ? '0' : '1'); } catch { /* storage unavailable */ } return !o; });
-  return (
-    <div className="card settings-group" id={`group-${id}`} style={{ marginBottom: 10 }}>
-      <button onClick={toggle} aria-expanded={open}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-        <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Icon size={15} style={{ color: 'var(--accent)' }} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{title}</div>
-          {!open && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{summary}</div>}
-        </div>
-        <ChevronRight size={15} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
-      </button>
-      {open && <div style={{ borderTop: '1px solid var(--border)' }}>{children}</div>}
-    </div>
-  );
-}
 
 function Card({ children }) {
   return <div className="card" style={{ marginBottom: 16 }}>{children}</div>;

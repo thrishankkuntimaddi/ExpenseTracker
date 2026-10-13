@@ -1,4 +1,5 @@
 import { Plus, Loader2, ArrowLeft, Share2 } from 'lucide-react';
+import ProfileButton from '../../../components/ProfileButton';
 
 export default function BillingsHeader({ currentSession, saving, onBack, onShare, onNew, extra }) {
   return (
@@ -70,6 +71,7 @@ export default function BillingsHeader({ currentSession, saving, onBack, onShare
               <Plus size={13} /> New
             </button>
           )}
+          {!currentSession && <ProfileButton />}
         </div>
       </div>
       {extra}

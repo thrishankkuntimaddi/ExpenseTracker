@@ -85,7 +85,7 @@ export default function SpendingCalendar({ transactions = [], initialMonth, rule
               style={{
                 aspectRatio: '1', borderRadius: 8, position: 'relative', fontFamily: 'inherit', cursor: isFuture ? 'default' : 'pointer',
                 border: `1.5px solid ${isSel ? 'var(--accent)' : isToday ? 'var(--text-muted)' : 'transparent'}`,
-                background: v > 0 ? `rgba(225, 29, 72, ${alpha})` : isFuture ? 'transparent' : 'var(--surface2)',
+                background: v > 0 ? `rgba(var(--heat-rgb, 225, 29, 72), ${alpha})` : isFuture ? 'transparent' : 'var(--surface2)',
                 color: intensity > 0.55 ? '#fff' : isFuture ? 'var(--text-muted)' : 'var(--text-secondary)',
                 opacity: isFuture ? 0.4 : 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, padding: 0,
               }}>
