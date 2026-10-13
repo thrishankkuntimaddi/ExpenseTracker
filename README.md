@@ -190,7 +190,7 @@ You install once; after that every platform updates itself.
 | Platform | How it works |
 |---|---|
 | **Web** | Every push to `main` deploys the site. The service worker checks on open, when the tab comes back and every 30 minutes, then reloads once onto the new version. |
-| **Android** | Over-the-air: each deploy also publishes the app's web bundle (`/app/update.json` + a zip with a SHA-256 checksum) next to the website. The app checks on launch, on return and every 30 minutes, downloads in the background and switches on the next open. If the new bundle doesn't start, the app rolls back by itself. Only when a version needs new *native* code (`expensetracker.minNativeVersion` in `package.json`) does it say *"install the new app"* — once — with a link to the APK. |
+| **Android** | Over-the-air: each deploy also publishes the app's web bundle (`/app/update.json` + a zip with a SHA-256 checksum) next to the website. The app checks on launch, on return and every 30 minutes and downloads in the background. It switches when you tap **Restart**, when the app goes to the background, or — if it was swiped away first — during the splash of the next open. If the new bundle doesn't start, the app rolls back by itself. Only when a version needs new *native* code (`expensetracker.minNativeVersion` in `package.json`) does it say *"install the new app"* — once — with a link to the APK. |
 | **Desktop** | Tauri's signed updater reads `latest.json` from the newest GitHub release, downloads in the background and offers **Restart to update**. Updates are signed with a minisign key; an update without a valid signature is refused. |
 
 After any update the app says *"Updated to vX"* once. Settings shows the version, build date and commit.

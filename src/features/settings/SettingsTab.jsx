@@ -414,7 +414,7 @@ export default function SettingsTab({
                 </div>
               </div>
               <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
-                {update.kind === 'ready' && platform === 'desktop' ? (
+                {update.kind === 'ready' && (platform === 'desktop' || platform === 'android') ? (
                   <button id="btn-restart-update" onClick={restartToUpdate} style={smallAccentBtn}>Restart</button>
                 ) : update.kind === 'native-needed' ? (
                   <button onClick={() => window.open(APK_URL, '_blank')} style={smallAccentBtn}>Install</button>
@@ -558,7 +558,7 @@ const UPDATE_LABEL = {
   checking: () => 'Checking for updates…',
   current: () => 'You’re on the latest version.',
   downloading: (u) => `Downloading ${u.version ?? 'the update'}…`,
-  ready: (u) => (platform === 'desktop' ? `Version ${u.version} is ready — restart to finish.` : `Version ${u.version} downloaded — applies the next time you open the app.`),
+  ready: (u) => `Version ${u.version} is ready — tap Restart, or it switches the next time you open the app.`,
   'native-needed': (u) => `Version ${u.version} needs the new app installed once.`,
   updated: (u) => `Updated to ${u.version}.`,
   error: (u) => u.message,

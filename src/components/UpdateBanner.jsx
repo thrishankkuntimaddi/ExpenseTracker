@@ -1,5 +1,5 @@
 // A small, dismissible note about updates: "Updated to vX", "Update ready —
-// Restart" (desktop), "Downloaded — applies next launch" (Android), or
+// Restart" (desktop and Android), or
 // "Install the new app" when a bundle needs newer native code.
 import { useEffect } from 'react';
 import { Sparkles, Download, RotateCcw, X } from 'lucide-react';
@@ -15,7 +15,7 @@ export default function UpdateBanner() {
     return () => clearTimeout(t);
   }, [u.kind]);
   if (!show) return null;
-  const action = u.kind === 'ready' && platform === 'desktop'
+  const action = u.kind === 'ready' && (platform === 'desktop' || platform === 'android')
     ? { label: 'Restart', Icon: RotateCcw, onClick: restartToUpdate }
     : u.kind === 'native-needed'
       ? { label: 'Install', Icon: Download, onClick: () => window.open(APK_URL, '_blank') }

@@ -4,9 +4,11 @@
 //            the tab comes back, and every 30 min) and reloads once.
 //   android  over-the-air: every push to main publishes the app's web bundle
 //            next to the website (/app/update.json + bundle zip). The app
-//            downloads it in the background and switches on the next launch —
-//            no reinstall. Only when a bundle needs newer NATIVE code
-//            (minNativeBuild) does the user get "install the new app".
+//            downloads it in the background; it switches when the app is next
+//            opened (during the splash), when it goes to the background, or
+//            right away with "Restart now" — no reinstall. Only when a bundle
+//            needs newer NATIVE code (minNativeBuild) does the user get
+//            "install the new app".
 //   desktop  Tauri's signed updater (GitHub release latest.json): downloads in
 //            the background, then "Restart to update".
 // After any update the app says once: "Updated to vX".
@@ -36,6 +38,18 @@ export function otaDecision(manifest, { build, nativeBuild }) {
   if (Number(manifest.build) <= build) return 'current';
   if (Number(manifest.minNativeBuild || 0) > Number(nativeBuild || 0)) return 'native-needed';
   return 'download';
+}
+
+/**
+ * Pure: the downloaded bundle to switch to — the newest one that is newer
+ * than the running build and not marked failed. Bundle versions are
+ * "<semver>-<build>" (see checkAndroid).
+ */
+export function pickPendingBundle(bundles = [], { build, currentId } = {}) {
+  const buildOf = (b) => Number(String(b?.version ?? '').split('-').pop()) || 0;
+  return bundles
+    .filter((b) => b && b.status !== 'error' && b.id !== currentId && buildOf(b) > build)
+    .sort((a, b) => buildOf(b) - buildOf(a))[0] ?? null;
 }
 
 /** Semver "3.2.0" → Android versionCode 30200 (matches android/app/build.gradle). */
@@ -78,8 +92,29 @@ async function checkAndroid() {
     set({ kind: 'downloading', version: manifest.version });
     bundle = await u.download({ url: manifest.url, version: id, checksum: manifest.sha256 });
   }
-  await u.next({ id: bundle.id });   // switches the next time the app is opened / backgrounded
-  set({ kind: 'ready', version: manifest.version, message: `Update ${manifest.version} downloaded — it applies the next time you open the app.` });
+  // Switch when the app goes to the background (the plugin's own trigger).
+  // That never fires when the app is swiped away or killed, so the next
+  // launch also switches (applyDownloadedUpdate), and "Restart now" does it
+  // immediately.
+  await u.next({ id: bundle.id });
+  pendingAndroid = bundle.id;
+  set({ kind: 'ready', version: manifest.version, message: `Update ${manifest.version} is ready — restart now, or it switches the next time you open the app.` });
+}
+
+let pendingAndroid = null;
+/**
+ * Android, at launch: if a newer bundle was downloaded earlier but never
+ * switched to (the app was closed by swiping it away), switch now — the
+ * splash is still up. A bundle that fails to start is rolled back and
+ * marked failed by the plugin, so this can't loop.
+ */
+async function applyDownloadedUpdate() {
+  const { u } = await updater();
+  const [{ bundles }, cur] = await Promise.all([u.list(), u.current()]);
+  const pending = pickPendingBundle(bundles, { build: THIS_BUILD, currentId: cur?.bundle?.id });
+  if (!pending) return false;
+  await u.set({ id: pending.id });   // reloads the app into the new bundle
+  return true;
 }
 
 /* ── Desktop: Tauri updater ────────────────────────────────────── */
@@ -95,8 +130,12 @@ async function checkDesktop() {
   set({ kind: 'ready', version: update.version, message: `Expense Tracker ${update.version} is ready.` });
 }
 
-/** Desktop: install the downloaded update and restart. */
+/** Install the downloaded update and restart (desktop and Android). */
 export async function restartToUpdate() {
+  if (platform === 'android') {
+    if (pendingAndroid) { const { u } = await updater(); await u.set({ id: pendingAndroid }); }
+    return;
+  }
   if (!pendingDesktop) return;
   await pendingDesktop.install();
   const { relaunch } = await import('@tauri-apps/plugin-process');
@@ -132,6 +171,9 @@ export function startAutoUpdates() {
   if (started) return; started = true;
   announceIfUpdated();
   if (import.meta.env.DEV) return;           // never during development
+  if (platform === 'android') {
+    applyDownloadedUpdate().catch((err) => console.warn('[updates] could not switch to the downloaded update:', err));
+  }
   let last = 0;
   const auto = () => {
     if (state.kind === 'ready' || state.kind === 'native-needed' || Date.now() - last < 10 * 60 * 1000) return;
