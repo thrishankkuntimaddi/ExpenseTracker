@@ -144,10 +144,12 @@ All data is private and scoped strictly to your account — `firestore.rules` on
 - **Area chart**: 6-month Income vs. Expense trend
 - Key metrics: total income, total expense, total savings, total given, net balance, average daily/weekly/monthly spend, and wastage percentage
 
-### 👤 Profile & Customize (phone)
-- Tap your **avatar** at the top-right of any page: your account (photo or initials, sign-in method, entries, months, devices, member since), then **Appearance** (Light / Dark / Auto) and every setting grouped into Preferences · Sync & devices · Your data · App · Account
-- **Customize**, synced to all your devices: pick and order the **four pages in the bottom bar** (the rest sit in *More*), the page the app **opens on**, and the **order and visibility of the Home sections** (month overview, recurring due, quick add, recent entries). Bad or old values are repaired automatically — the bar always has four distinct pages and quick add can't be hidden
-- Home leads with one **month overview** card (spent, budget bar, today, safe to spend, balance); a backlog of due recurring entries folds into one line until you tap *Review*
+### 📱 Phone layout
+- **Home is the menu** (PhonePe / GPay style): a month-overview card (spent, budget bar, today, safe to spend, balance — tap for Stats), a **quick entry** bar (`chai 20` ⏎ logs a categorised expense), **Quick add** tiles (Expense · Income · People · Savings) and **Manage money** tiles for every feature — History, Income, Insights, Calendar, Budget, Recurring (with a due badge), Goals, People, Billings, Trips, Reminders, Backup. Tiles open the exact section, and pages opened from a tile get a back arrow
+- **Bottom bar**: Home · two pages · **＋** · one page. ＋ opens one sheet to add an expense, income (income / borrowed / repaid to me), money with a person or savings from anywhere, and confirms with a short toast
+- **People** (who owes you, whom you owe) is now on the phone too, not only on desktop
+- Tap your **avatar** (top-right of every page) for **Profile**: account (photo or initials, sign-in method, entries, months, devices, member since), **Appearance** (Light / Dark / Auto), **Customize**, then every setting grouped into Preferences · Sync & devices · Your data · App · Account
+- **Customize**, synced to all your devices: the three bar pages beside Home and ＋, the page the app **opens on**, and the order and visibility of the Home sections. Bad or old values are repaired automatically — Home is always in the bar and the shortcut tiles can't be hidden
 
 ### ⚙️ Settings & Data Management
 - **Export JSON**: download a full backup of all transactions, income, and settings (budgets, goals, category rules included)

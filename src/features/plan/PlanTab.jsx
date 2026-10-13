@@ -17,6 +17,7 @@ import RecurringRuleModal from './RecurringRuleModal';
 import GoalModal from './GoalModal';
 import { CategoryBadge } from '../../components/CategoryPicker';
 import ProfileButton from '../../components/ProfileButton';
+import BackButton from '../../components/BackButton';
 
 const KIND_COLOR = { expense: 'var(--expense)', savings: 'var(--savings)', income: 'var(--income)' };
 
@@ -55,11 +56,12 @@ export default function PlanTab({ transactions = [], settings, onPatchSettings, 
       <DueRecurringCard due={recurring.manualDue} onPost={recurring.post} onSkip={recurring.skip} onSkipAll={recurring.skipAllFor} />
 
       {/* ── Budget ── */}
-      <SectionTitle Icon={Target} title="Monthly Budget" sub={budgetStatus.hasBudget ? `${budgetStatus.daysLeft} day${budgetStatus.daysLeft === 1 ? '' : 's'} left this month` : undefined} />
+      <SectionTitle id="plan-budget" Icon={Target} title="Monthly Budget" sub={budgetStatus.hasBudget ? `${budgetStatus.daysLeft} day${budgetStatus.daysLeft === 1 ? '' : 's'} left this month` : undefined} />
       <BudgetStatusCard status={budgetStatus} onEdit={() => setBudgetOpen(true)} />
 
       {/* ── Recurring ── */}
       <SectionTitle
+        id="plan-recurring"
         Icon={Repeat} title="Recurring Entries"
         sub={recurring.rules.length ? `${formatAmount(committed.out)}/mo out${committed.in ? ` · ${formatAmount(committed.in)}/mo in` : ''}` : undefined}
         action={<SmallButton onClick={() => setRuleModal('new')} color="var(--accent)"><Plus size={11} /> New</SmallButton>}
@@ -104,7 +106,7 @@ export default function PlanTab({ transactions = [], settings, onPatchSettings, 
       )}
 
       {/* ── Goals ── */}
-      <SectionTitle Icon={Flag} title="Savings Goals" style={{ marginTop: 18 }}
+      <SectionTitle id="plan-goals" Icon={Flag} title="Savings Goals" style={{ marginTop: 18 }}
         action={goals.length ? <SmallButton onClick={() => setGoalModal('new')} color="var(--savings)"><Plus size={11} /> New</SmallButton> : null} />
       <GoalsCard goals={goals} transactions={transactions} onAdd={() => setGoalModal('new')} onEdit={(g) => setGoalModal(g)} />
 
@@ -127,8 +129,9 @@ export default function PlanTab({ transactions = [], settings, onPatchSettings, 
   return (
     <div className="tab-root">
       <div className="tab-header">
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-          <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <BackButton />
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>Plan</h1>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Budget · recurring entries · savings goals</p>
           </div>
@@ -140,9 +143,9 @@ export default function PlanTab({ transactions = [], settings, onPatchSettings, 
   );
 }
 
-function SectionTitle({ Icon, title, sub, action, style }) {
+function SectionTitle({ id, Icon, title, sub, action, style }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, ...style }}>
+    <div id={id} style={{ scrollMarginTop: 12,  display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, ...style }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
         <Icon size={12} style={{ color: 'var(--text-muted)' }} />
         <span className="section-label" style={{ margin: 0 }}>{title}</span>

@@ -21,6 +21,7 @@ const { default: StatsTab } = await import('../features/stats/StatsTab');
 const { default: PlanTab } = await import('../features/plan/PlanTab');
 const { default: SettingsTab } = await import('../features/settings/SettingsTab');
 const { default: ProfilePage } = await import('../features/profile/ProfilePage');
+const { default: AddSheet } = await import('../components/AddSheet');
 const { default: DesktopDashboard } = await import('../components/DesktopDashboard');
 const { default: EditTransactionModal } = await import('../components/EditTransactionModal');
 const { default: RecurringRuleModal } = await import('../features/plan/RecurringRuleModal');
@@ -88,7 +89,7 @@ describe('screens render with planning features', () => {
   it('Expenses tab shows safe-to-spend, due recurring and category chips', () => {
     const html = render(<TodayTab {...common} onAdd={noop} />);
     expect(html).toContain('Safe to spend today');
-    expect(html).toContain('recurring entries due');
+    expect(html).toContain('recurring due');
     expect(html).toContain('Food &amp; Dining');
   });
 
@@ -133,15 +134,25 @@ describe('screens render with planning features', () => {
     expect(html).toContain('AR');                            // initials avatar
     expect(html).toContain('Member since February 2025');
     for (const t of ['Appearance', 'Customize', 'Bottom bar', 'Home screen', 'Open the app on', 'Preferences', 'Sync &amp; devices', 'Your data', 'Account', 'Reset']) expect(html).toContain(t);
-    expect(html).toContain('Plan · Home · Stats · Income');  // bar summary follows settings.ui
+    expect(html).toContain('Home · Plan · Stats · Income');  // bar summary follows settings.ui (Home fixed first)
     expect(html.match(/id="theme-(light|dark|system)"/g)).toHaveLength(3);   // one theme picker, not two
+  });
+
+  it('the + sheet offers all four kinds and shows the right form', () => {
+    const html = render(<AddSheet {...common} onAdd={noop} onAddIncome={noop} onClose={noop} />);
+    for (const k of ['expense', 'income', 'person', 'savings']) expect(html).toContain(`id="add-kind-${k}"`);
+    expect(html).toContain('btn-save-entry');
+    expect(html).not.toContain('id="type-expense"');   // the sheet's tabs replace the form's own switcher
+    const inc = render(<AddSheet {...common} initialKind="income" onAdd={noop} onAddIncome={noop} onClose={noop} />);
+    expect(inc).toContain('btn-save-income');
+    expect(inc).toContain('Repaid to me');
   });
 
   it('Home renders sections in the customised order and hides switched-off ones', () => {
     const html = render(<TodayTab {...common} onAdd={noop} settings={{ ...settings, ui: { homeOrder: ['recent', 'add', 'overview', 'due'], homeHidden: ['overview'] } }} />);
     expect(html).not.toContain('id="home-summary"');
     expect(html.indexOf('home-recent')).toBeLessThan(html.indexOf('home-add'));
-    expect(html).toContain('recurring entries due');
+    expect(html).toContain('recurring due');
   });
 
   it('Settings tab groups everything into collapsible sections with summaries', () => {

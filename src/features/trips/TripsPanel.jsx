@@ -14,6 +14,7 @@ import TripDetail from './TripDetail';
 import TripCloseModal from './TripCloseModal';
 import TripShareModal from './TripShareModal';
 import TripsList from './components/TripsList';
+import BackButton from '../../components/BackButton';
 
 export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction, reportError, headerExtra }) {
   const { trips, saveTrip, removeTrip } = useTrips(user?.uid, reportError);
@@ -83,6 +84,7 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
       <div className="tab-header">
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: headerExtra ? 10 : 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            {!active && <BackButton />}
             {active && (
               <button onClick={() => setActiveId(null)} aria-label="Back" style={{ width: 32, height: 32, borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexShrink: 0 }}>
                 <ArrowLeft size={16} />

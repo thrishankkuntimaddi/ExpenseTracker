@@ -23,6 +23,7 @@ import BudgetStatusCard from '../plan/components/BudgetStatusCard';
 import GoalsCard from '../plan/components/GoalsCard';
 import BudgetEditorModal from '../plan/BudgetEditorModal';
 import ProfileButton from '../../components/ProfileButton';
+import BackButton from '../../components/BackButton';
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
@@ -55,10 +56,10 @@ function ChartTip({ active, payload, label }) {
 }
 
 /* ── Collapsible Section ── */
-function Section({ title, defaultOpen = true, children }) {
+function Section({ id, title, defaultOpen = true, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div id={id} style={{ marginBottom: 16, scrollMarginTop: 12 }}>
       <button
         onClick={() => setOpen(o => !o)}
         style={{
@@ -180,8 +181,9 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
 
       {/* Header */}
       <div className="tab-header">
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
+          <BackButton />
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
               Stats
             </h1>
@@ -247,7 +249,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, onPerio
               </Section>
 
               {/* Calendar heat-map */}
-              <Section title="Spending Calendar">
+              <Section id="stats-calendar" title="Spending Calendar">
                 <div style={{ marginTop: 8 }}>
                   <SpendingCalendar key={budgetMonth} transactions={transactions} initialMonth={budgetMonth} rules={categoryRules} theme={theme} />
                 </div>

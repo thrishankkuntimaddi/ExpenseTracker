@@ -1,50 +1,47 @@
-import { useRef, useState, useMemo, Fragment } from 'react';
-import { PenLine, IndianRupee, Zap, TrendingDown, Coins, Briefcase, ShoppingCart, PiggyBank, Users, Calendar, ClipboardList } from 'lucide-react';
+import { useMemo, useState, Fragment } from 'react';
+import {
+  Coins, Users, Search, Zap, ArrowUpRight, List, Wallet, Sparkles, CalendarDays, Target, Repeat, Flag,
+  ReceiptText, Plane, Bell, Database,
+} from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount, todayInputValue, dateInputToISO, isoToMonth } from '../../utils/dateHelpers';
 import { getCurrentMonthValue } from '../../utils/periodHelpers';
-import { TRANSACTION_TYPES as TYPES, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType, getDirectionMeta } from '../../utils/typeConfig';
+import { TRANSACTION_TYPES as TYPES, getDirectionMeta } from '../../utils/typeConfig';
 import { useStats } from '../../hooks/useStats';
-import { inferCategory, categoryOf, EMPTY_RULES } from '../../utils/categories';
+import { inferCategory, categoryOf, categoryMeta, EMPTY_RULES } from '../../utils/categories';
 import { parseQuickEntry } from '../../utils/smartInput';
 import { computeBudgetStatus } from '../../utils/budget';
-import CategoryPicker, { CategoryBadge } from '../../components/CategoryPicker';
+import { CategoryBadge } from '../../components/CategoryPicker';
 import DueRecurringCard from '../plan/components/DueRecurringCard';
 import ProfileButton from '../../components/ProfileButton';
+import { useShell } from '../../app/shellContext';
+import { ADD_KINDS } from '../../app/pages';
 import { normaliseUi } from '../../utils/uiPrefs';
 
-export default function TodayTab({ transactions = [], income = [], onAdd, theme, settings, recurring, onLearnCategory }) {
+/* Home tiles: every feature one tap away (PhonePe-style service grid). */
+const SHORTCUTS = [
+  { key: 'history',   label: 'History',   Icon: List,         color: '#D97706', go: ['history'] },
+  { key: 'income',    label: 'Income',    Icon: Wallet,       color: '#059669', go: ['income'] },
+  { key: 'insights',  label: 'Insights',  Icon: Sparkles,     color: '#2563EB', go: ['stats'] },
+  { key: 'calendar',  label: 'Calendar',  Icon: CalendarDays, color: '#E11D48', go: ['stats', { anchor: 'stats-calendar' }] },
+  { key: 'budget',    label: 'Budget',    Icon: Target,       color: '#0891B2', go: ['plan', { anchor: 'plan-budget' }] },
+  { key: 'recurring', label: 'Recurring', Icon: Repeat,       color: '#7C3AED', go: ['plan', { anchor: 'plan-recurring' }] },
+  { key: 'goals',     label: 'Goals',     Icon: Flag,         color: '#16A34A', go: ['plan', { anchor: 'plan-goals' }] },
+  { key: 'people',    label: 'People',    Icon: Users,        color: '#C2410C', go: ['people'] },
+  { key: 'billings',  label: 'Billings',  Icon: ReceiptText,  color: '#4F46E5', go: ['external', { mode: 'billings' }] },
+  { key: 'trips',     label: 'Trips',     Icon: Plane,        color: '#0EA5E9', go: ['external', { mode: 'trips' }] },
+  { key: 'reminders', label: 'Reminders', Icon: Bell,         color: '#DB2777', go: ['profile', { openGroup: 'reminders' }] },
+  { key: 'backup',    label: 'Backup',    Icon: Database,     color: '#475569', go: ['profile', { openGroup: 'data-management' }] },
+];
+
+const linkBtn = { padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
+
+export default function TodayTab({ transactions = [], income = [], onAdd, theme, settings, recurring }) {
+  const shell = useShell();
   const homeSections = useMemo(() => normaliseUi(settings?.ui).home, [settings?.ui]);
   const { stats } = useStats(transactions, income, { type: 'current_month', value: getCurrentMonthValue() }, theme, settings);
-  const [name, setName] = useState('');
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState(null);
-  const [categoryTouched, setCategoryTouched] = useState(false);
-  const [dateInput, setDateInput] = useState(todayInputValue());
-  const [settlement, setSettlement] = useState('');
-  const [type, setType] = useState('expense');
-  const [direction, setDirection] = useState('lent');
-  const [savingsType, setSavingsType] = useState('cash');
-  const [platform, setPlatform] = useState('');
-  const [isFullPayment, setIsFullPayment] = useState(false);
-  const [isCustomName, setIsCustomName] = useState(false);
-
-  const nameRef = useRef(null);
-  const amountRef = useRef(null);
-  const settlementRef = useRef(null);
-
-  const debtPersons = useMemo(() => {
-    const all = Object.keys(stats?.personDebts || {});
-    if (direction === 'repaid') return all.filter(p => (stats.personDebts[p]?.netOwed ?? 0) > 0);
-    return [];
-  }, [stats?.personDebts, direction]);
-
-  const hasDebtPersons = debtPersons.length > 0;
-  const isRepayDirection = type === 'person' && direction === 'repaid';
-
   const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
-  const suggestedCategory = type === 'expense' ? inferCategory(name, categoryRules) : null;
-  const effectiveCategory = type === 'expense' ? (categoryTouched && category ? category : suggestedCategory) : null;
+  const [quick, setQuick] = useState('');
 
   const budgetStatus = useMemo(
     () => computeBudgetStatus({ budgets: settings?.budgets, transactions, monthKey: getCurrentMonthValue(), rules: categoryRules }),
@@ -53,20 +50,15 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
   const safeToday = budgetStatus.hasBudget && budgetStatus.total.limit ? budgetStatus.total : null;
 
   const now = new Date();
-  const todayTxns = transactions.filter(t => {
-    const d = new Date(t.date);
-    return d.getFullYear() === now.getFullYear()
-      && d.getMonth() === now.getMonth()
-      && d.getDate() === now.getDate();
-  });
-
-  const todayExpense = todayTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const todayExpense = transactions
+    .filter((t) => t.type === 'expense' && new Date(t.date).toDateString() === now.toDateString())
+    .reduce((s, t) => s + t.amount, 0);
   const monthShort = now.toLocaleDateString('en-IN', { month: 'long' });
   const hour = now.getHours();
   const greeting = hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const dueCount = recurring?.manualDue?.length ?? 0;
 
-  // Recent entries: the last 7 days, newest first (not only today — an empty
-  // "nothing logged" screen hid everything you'd just entered yesterday)
+  // Recent entries: the last 7 days, newest first
   const recent = useMemo(() => {
     const since = new Date(); since.setHours(0, 0, 0, 0); since.setDate(since.getDate() - 6);
     return transactions.filter(t => new Date(t.date) >= since)
@@ -78,423 +70,87 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
     return d.toDateString() === today.toDateString() ? 'Today' : d.toDateString() === y.toDateString() ? 'Yesterday' : d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
   };
 
-  function handleNameKey(e) {
-    if (e.key !== 'Enter') return;
+  /* "chai 20" ⏎ → an expense, categorised, dated now. Anything that doesn't
+     parse opens the full form instead. */
+  function submitQuick(e) {
     e.preventDefault();
-    // "chai 20" ⏎ → name "chai", amount 20, saved in one go
-    if (!amount) {
-      const parsed = parseQuickEntry(name);
-      if (parsed) { save({ name: parsed.name, amount: String(parsed.amount) }); return; }
-    }
-    amountRef.current?.focus();
-  }
-  function handleAmountKey(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      type === 'external' ? settlementRef.current?.focus() : save();
-    }
-  }
-  function handleAmountInput(e) {
-    const v = e.target.value;
-    if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v);
+    const parsed = parseQuickEntry(quick);
+    if (!parsed) { shell?.openAdd('expense'); return; }
+    const isoDate = dateInputToISO(todayInputValue());
+    const category = inferCategory(parsed.name, categoryRules);
+    onAdd({ id: generateId(), type: 'expense', name: parsed.name, amount: parsed.amount, category, date: isoDate, month: isoToMonth(isoDate) });
+    shell?.toast(`Added ${parsed.name} · ${formatAmount(parsed.amount)} · ${categoryMeta(category).label}`);
+    setQuick('');
   }
 
-  function save(override = {}) {
-    const rawName = override.name ?? name, rawAmount = override.amount ?? amount;
-    const n = rawName.trim(), a = parseFloat(rawAmount);
-    if (!n || !rawAmount || isNaN(a) || a <= 0) return;
-
-    const isoDate = dateInputToISO(dateInput);
-    const entry = {
-      id: generateId(), name: n, amount: a, type,
-      date: isoDate,
-      month: isoToMonth(isoDate),
-    };
-
-    if (type === 'person') {
-      entry.direction = direction;
-    }
-    if (type === 'expense') {
-      const cat = categoryTouched && category ? category : inferCategory(n, categoryRules);
-      entry.category = cat;
-      if (categoryTouched) onLearnCategory?.(n, cat);
-    }
-    if (type === 'savings') {
-      entry.savingsType = savingsType;
-      const st = getSavingsType(savingsType);
-      if (st.hasPlatform && platform.trim()) {
-        entry.platform = platform.trim();
-      }
-    }
-
-    onAdd(entry);
-    setName(''); setAmount(''); setSettlement(''); setPlatform('');
-    setCategory(null); setCategoryTouched(false);
-    setDateInput(todayInputValue());
-    nameRef.current?.focus();
-  }
-
-  const sel = TYPES.find(t => t.key === type);
-  const canSave = !!name.trim() && !!amount && parseFloat(amount) > 0 &&
-    (type !== 'external' || (settlement !== '' && parseFloat(settlement) >= 0));
-
+  const pct = safeToday ? Math.min(100, (safeToday.spent / safeToday.limit) * 100) : 0;
   const overviewSection = (
-    <div className="card home-overview" id="home-summary" style={{ marginBottom: 14, padding: '14px 16px' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Spent in {monthShort}</span>
-        {safeToday && (
-          <span style={{ fontSize: 11, fontWeight: 700, color: safeToday.status === 'over' ? 'var(--expense)' : 'var(--text-muted)' }}>
-            {safeToday.status === 'over' ? 'Over budget' : `${Math.round(Math.min(100, (safeToday.spent / safeToday.limit) * 100))}% of budget`}
-          </span>
-        )}
+    <div className="home-hero" id="home-summary" role={shell ? 'button' : undefined} tabIndex={shell ? 0 : undefined}
+      onClick={() => shell?.goTo('stats')} style={{ marginBottom: 14, padding: '16px 18px 14px', borderRadius: 26, color: '#fff', cursor: shell ? 'pointer' : 'default', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8 }}>Spent in {monthShort}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, opacity: 0.85 }}>
+          {safeToday ? (safeToday.status === 'over' ? 'Over budget' : `${Math.round(pct)}% of budget`) : 'Insights'} <ArrowUpRight size={13} />
+        </span>
       </div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+      <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
         {formatAmount(stats?.totalExpense ?? 0)}
       </div>
       {safeToday && (
         <>
-          <div style={{ height: 6, borderRadius: 99, background: 'var(--surface2)', marginTop: 10, overflow: 'hidden' }}>
-            <div style={{ width: `${Math.min(100, (safeToday.spent / safeToday.limit) * 100)}%`, height: '100%', borderRadius: 99, background: safeToday.status === 'over' ? 'var(--expense)' : safeToday.status === 'warn' || safeToday.status === 'pace' ? 'var(--lent)' : 'var(--income)' }} />
+          <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.22)', marginTop: 10, overflow: 'hidden' }}>
+            <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: safeToday.status === 'over' ? '#FDA4AF' : safeToday.status === 'warn' || safeToday.status === 'pace' ? '#FDE68A' : '#FFFFFF' }} />
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+          <div style={{ fontSize: 11, marginTop: 6, opacity: 0.85 }}>
             {safeToday.status === 'over'
-              ? <><strong style={{ color: 'var(--expense)' }}>{formatAmount(Math.abs(safeToday.remaining))}</strong> over the {formatAmount(safeToday.limit)} budget</>
-              : <><strong style={{ color: 'var(--text-secondary)' }}>{formatAmount(safeToday.remaining)}</strong> left of {formatAmount(safeToday.limit)}</>}
+              ? <><strong>{formatAmount(Math.abs(safeToday.remaining))}</strong> over the {formatAmount(safeToday.limit)} budget</>
+              : <><strong>{formatAmount(safeToday.remaining)}</strong> left of {formatAmount(safeToday.limit)}</>}
           </div>
         </>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.18)' }}>
         <Metric label="Today" value={formatAmount(todayExpense)} />
         {safeToday && safeToday.status !== 'over'
-          ? <Metric label="Safe to spend today" value={formatAmount(safeToday.safeToday)} color="var(--income)" />
-          : <Metric label="Saved" value={formatAmount(stats?.totalSavings ?? 0)} color="var(--savings)" />}
-        <Metric label="Balance" value={formatAmount(stats?.balance ?? 0)} color={(stats?.balance ?? 0) < 0 ? 'var(--expense)' : 'var(--text)'} />
+          ? <Metric label="Safe to spend today" value={formatAmount(safeToday.safeToday)} />
+          : <Metric label="Saved" value={formatAmount(stats?.totalSavings ?? 0)} />}
+        <Metric label="Balance" value={formatAmount(stats?.balance ?? 0)} />
       </div>
     </div>
   );
 
   const addSection = (
-    <div className="home-add">
-          {/* Type Selector */}
-          <div style={{
-            display: 'flex', gap: 0,
-            background: 'var(--surface2)',
-            borderRadius: 14, padding: 4, marginBottom: 14,
-            border: '1px solid var(--border)',
-          }}>
-            {TYPES.map(t => (
-              <button
-                key={t.key}
-                id={`type-${t.key}`}
-                onClick={() => setType(t.key)}
-                style={{
-                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '9px 4px', borderRadius: 10,
-                  fontSize: 12, fontWeight: 700,
-                  border: 'none', cursor: 'pointer',
-                  background: type === t.key ? t.color : 'transparent',
-                  color: type === t.key ? '#fff' : 'var(--text-secondary)',
-                  boxShadow: type === t.key ? 'var(--shadow-sm)' : 'none',
-                  transition: 'all 0.15s ease',
-                  fontFamily: 'inherit',
-                }}
-              >
-                <t.Icon size={13} />
-                {t.label}
-              </button>
-            ))}
-          </div>
+    <form className="home-add card" onSubmit={submitQuick} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 6px 6px 14px', marginBottom: 14 }}>
+      <Zap size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+      <input id="home-quick-entry" value={quick} onChange={(e) => setQuick(e.target.value)} autoComplete="off" enterKeyHint="done"
+        placeholder='Quick entry — try "chai 20"' aria-label="Quick entry: name and amount"
+        style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', boxShadow: 'none', outline: 'none', color: 'var(--text)', fontSize: 15, padding: '8px 0', fontFamily: 'inherit' }} />
+      <button type="submit" disabled={!quick.trim()} style={{ padding: '8px 14px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', background: quick.trim() ? 'var(--accent)' : 'var(--surface2)', color: quick.trim() ? '#fff' : 'var(--text-muted)', cursor: quick.trim() ? 'pointer' : 'default' }}>
+        Add
+      </button>
+    </form>
+  );
 
-          {/* Entry Card */}
-          <div style={{
-            background: 'var(--surface)',
-            borderRadius: 16,
-            border: `1.5px solid ${type === 'person' ? getDirectionMeta(direction).border : sel.border}`,
-            boxShadow: 'var(--shadow)',
-            padding: 16,
-            marginBottom: 16,
-          }}>
-            {/* Type indicator band — direction-aware for person */}
-            <div style={{
-              height: 3, borderRadius: 99,
-              background: type === 'person' ? getDirectionMeta(direction).color : sel.color,
-              marginBottom: 14, opacity: 0.7,
-            }} />
-
-            {/* Person Direction Toggle */}
-            {type === 'person' && (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 10 }}>
-                  {PERSON_DIRECTIONS.map(d => (
-                    <button
-                      key={d.key}
-                      type="button"
-                      onClick={() => setDirection(d.key)}
-                      style={{
-                        padding: '9px 4px', borderRadius: 10, fontSize: 11, fontWeight: 700,
-                        border: `1.5px solid ${direction === d.key ? d.color : 'var(--border)'}`,
-                        background: direction === d.key ? d.color + '22' : 'transparent',
-                        color: direction === d.key ? d.color : 'var(--text-secondary)',
-                        cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                        textAlign: 'center',
-                      }}
-                    >
-                      <d.Icon size={12} flexShrink={0} />
-                      <span style={{ lineHeight: 1.2 }}>{d.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Dropdown for Debt Repayment (only active/uncleared debts) */}
-                {isRepayDirection && !isCustomName ? (
-                  <div style={{ marginBottom: 10 }}>
-                    <select
-                      value={name}
-                      onChange={e => {
-                        const val = e.target.value;
-                        if (val === '__custom__') {
-                          setIsCustomName(true);
-                          setName('');
-                          setAmount('');
-                          setIsFullPayment(false);
-                          return;
-                        }
-                        setName(val);
-                        setIsFullPayment(false);
-                        const debt = stats.personDebts?.[val]?.netOwed ?? 0;
-                        if (debt > 0) {
-                          setAmount(debt.toString());
-                          setIsFullPayment(true);
-                        } else {
-                          setAmount('');
-                        }
-                      }}
-                      style={{
-                        width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 13,
-                        border: '1.5px solid var(--person)',
-                        background: 'var(--input-bg)', color: 'var(--text)',
-                        outline: 'none', fontFamily: 'inherit', fontWeight: 600,
-                      }}
-                    >
-                      <option value="">
-                        {hasDebtPersons ? '-- Select Person to Repay (Debt Left) --' : '-- No Active Debts (Type Custom Name) --'}
-                      </option>
-                      {debtPersons.map(p => (
-                        <option key={p} value={p}>
-                          {p} (Debt Left: {formatAmount(stats.personDebts[p].netOwed)})
-                        </option>
-                      ))}
-                      <option value="__custom__">Type a custom name…</option>
-                    </select>
-
-                    {name && name !== '__custom__' && (
-                      <div style={{
-                        fontSize: 12,
-                        color: 'var(--person)',
-                        fontWeight: 700, marginTop: 6, padding: '8px 10px', borderRadius: 8,
-                        background: 'var(--person-bg)',
-                        border: '1px solid var(--person-border)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      }}>
-                        <span>Pending Debt: {formatAmount(stats.personDebts?.[name]?.netOwed ?? 0)}</span>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            checked={isFullPayment}
-                            onChange={e => {
-                              const checked = e.target.checked;
-                              setIsFullPayment(checked);
-                              if (checked) {
-                                const fullAmt = stats.personDebts?.[name]?.netOwed ?? 0;
-                                setAmount(fullAmt.toString());
-                              }
-                            }}
-                          />
-                          Full Payment
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                ) : null}
-              </div>
-            )}
-
-        {/* Savings Sub-Category Selector */}
-        {type === 'savings' && (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
-              Investment Type
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {SAVINGS_TYPES.map(st => (
-                <button
-                  key={st.key}
-                  type="button"
-                  onClick={() => setSavingsType(st.key)}
-                  style={{
-                    padding: '5px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-                    border: `1.5px solid ${savingsType === st.key ? st.color : 'var(--border)'}`,
-                    background: savingsType === st.key ? st.color + '22' : 'transparent',
-                    color: savingsType === st.key ? st.color : 'var(--text-secondary)',
-                    cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
-                  }}
-                >
-                  {st.label}
-                </button>
-              ))}
-            </div>
-            {getSavingsType(savingsType).hasPlatform && (
-              <input
-                type="text"
-                placeholder="Platform (e.g. Angel One, Zerodha)"
-                value={platform}
-                onChange={e => setPlatform(e.target.value)}
-                style={{
-                  width: '100%', marginTop: 8, padding: '9px 12px',
-                  borderRadius: 10, fontSize: 13,
-                  border: '1.5px solid var(--input-border)',
-                  background: 'var(--input-bg)', color: 'var(--text)',
-                  outline: 'none', fontFamily: 'inherit',
-                }}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Standard Name Input field (for non-repayment or custom name mode) */}
-        {(!isRepayDirection || isCustomName) && (
-          <div style={{ position: 'relative', marginBottom: 10 }}>
-            <PenLine size={14} style={{
-              position: 'absolute', left: 12, top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--text-muted)', pointerEvents: 'none',
-            }} />
-            <input
-              id="input-name"
-              ref={nameRef}
-              type="text"
-              placeholder={type === 'person' ? 'Person Name' : type === 'expense' ? 'Description… (tip: “chai 20” ⏎)' : 'Description…'}
-              value={name}
-              onChange={e => setName(e.target.value)}
-              onKeyDown={handleNameKey}
-              autoComplete="off"
-              style={{
-                width: '100%', paddingLeft: 38, paddingRight: isRepayDirection ? 80 : 14, paddingTop: 11, paddingBottom: 11,
-                borderRadius: 10, fontSize: 14,
-                border: '1.5px solid var(--input-border)',
-                background: 'var(--input-bg)', color: 'var(--text)',
-                outline: 'none', fontFamily: 'inherit',
-                transition: 'border-color 0.15s',
-              }}
-              onFocus={e => (e.target.style.borderColor = type === 'person' ? getDirectionMeta(direction).color : sel.color)}
-              onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
-            />
-            {isRepayDirection && (
-              <button
-                type="button"
-                onClick={() => { setIsCustomName(false); setName(''); setAmount(''); }}
-                style={{
-                  position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                  background: 'var(--surface2)', border: '1px solid var(--border)',
-                  borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 600,
-                  color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><ClipboardList size={12} />List</span>
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Category (expenses only) — auto-suggested from the name */}
-        {type === 'expense' && (
-          <div style={{ marginBottom: 12 }}>
-            <CategoryPicker
-              size="sm"
-              value={effectiveCategory}
-              suggested={suggestedCategory}
-              onChange={(c) => { setCategory(c); setCategoryTouched(true); }}
-              theme={theme}
-            />
-          </div>
-        )}
-
-        {/* Amount */}
-        <div style={{ position: 'relative', marginBottom: 10 }}>
-          <IndianRupee size={14} style={{
-            position: 'absolute', left: 12, top: '50%',
-            transform: 'translateY(-50%)',
-            color: 'var(--text-muted)', pointerEvents: 'none',
-          }} />
-          <input
-            id="input-amount"
-            ref={amountRef}
-            type="text"
-            placeholder="0.00"
-            value={amount}
-            onChange={handleAmountInput}
-            onKeyDown={handleAmountKey}
-            inputMode="decimal"
-            autoComplete="off"
-            style={{
-              width: '100%', paddingLeft: 38, paddingRight: 14,
-              paddingTop: 12, paddingBottom: 12,
-              borderRadius: 10, fontSize: 22, fontWeight: 700,
-              border: '1.5px solid var(--input-border)',
-              background: 'var(--input-bg)',
-              color: 'var(--text)', outline: 'none',
-              fontFamily: 'inherit', transition: 'border-color 0.15s',
-            }}
-            onFocus={e => (e.target.style.borderColor = sel.color)}
-            onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
-          />
+  const actionsSection = shell && (
+    <div className="home-actions" style={{ marginBottom: 14 }}>
+      <div className="card" style={{ padding: '14px 8px 6px', marginBottom: 12 }}>
+        <p className="section-label" style={{ margin: '0 8px 10px' }}>Quick add</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
+          {ADD_KINDS.map(({ key, label, Icon, color, bg }) => (
+            <Tile key={key} id={`quick-${key}`} label={label} onClick={() => shell.openAdd(key)}>
+              <span className="tile-icon" style={{ background: bg }}><Icon size={20} style={{ color }} /></span>
+            </Tile>
+          ))}
         </div>
-
-        {/* Date Selection */}
-        <div style={{ position: 'relative', marginBottom: 14 }}>
-          <Calendar size={14} style={{
-            position: 'absolute', left: 12, top: '50%',
-            transform: 'translateY(-50%)',
-            color: 'var(--text-muted)', pointerEvents: 'none',
-          }} />
-          <input
-            type="date"
-            value={dateInput}
-            max={todayInputValue()}
-            onChange={e => setDateInput(e.target.value)}
-            style={{
-              width: '100%', paddingLeft: 38, paddingRight: 14,
-              paddingTop: 10, paddingBottom: 10,
-              borderRadius: 10, fontSize: 13,
-              border: '1.5px solid var(--input-border)',
-              background: 'var(--input-bg)',
-              color: 'var(--text)', outline: 'none',
-              fontFamily: 'inherit', transition: 'border-color 0.15s',
-            }}
-            onFocus={e => (e.target.style.borderColor = sel.color)}
-            onBlur={e => (e.target.style.borderColor = 'var(--input-border)')}
-          />
+      </div>
+      <div className="card" style={{ padding: '14px 8px 6px' }}>
+        <p className="section-label" style={{ margin: '0 8px 10px' }}>Manage money</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', rowGap: 4 }}>
+          {SHORTCUTS.map(({ key, label, Icon, color, go }) => (
+            <Tile key={key} id={`shortcut-${key}`} label={label} onClick={() => shell.goTo(...go)} badge={key === 'recurring' ? dueCount : 0}>
+              <span className="tile-icon tile-icon-solid" style={{ background: color }}><Icon size={19} style={{ color: '#fff' }} /></span>
+            </Tile>
+          ))}
         </div>
-
-        {/* Save Button */}
-        <button
-          id="btn-save-entry"
-          onClick={() => save()}
-          disabled={!canSave}
-          style={{
-            width: '100%', padding: '13px',
-            borderRadius: 12, fontSize: 14, fontWeight: 700,
-            background: canSave ? (type === 'person' ? getDirectionMeta(direction).color : sel.color) : 'var(--surface2)',
-            color: canSave ? '#fff' : 'var(--text-muted)',
-            border: 'none', cursor: canSave ? 'pointer' : 'not-allowed',
-            fontFamily: 'inherit',
-            transition: 'all 0.15s ease',
-            letterSpacing: '0.01em',
-          }}
-        >
-          Add {type === 'person' ? (getDirectionMeta(direction)?.label ?? 'Lent Money') : sel.label}
-        </button>
       </div>
     </div>
   );
@@ -503,9 +159,10 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
     <div className="home-recent" style={{ marginBottom: 6 }}>
     {recent.length > 0 ? (
       <>
-        <p className="section-label" style={{ marginBottom: 10 }}>
-          Recent entries
-        </p>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '4px 4px 8px' }}>
+          <p className="section-label" style={{ margin: 0 }}>Recent activity</p>
+          {shell && <button id="home-see-all" onClick={() => shell.goTo('history')} style={linkBtn}>See all</button>}
+        </div>
         <div className="card" id="recent-entries">
           {recent.map((txn, i) => {
             // Pick the right color meta: direction-aware for person, type-based otherwise
@@ -596,6 +253,7 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
   function section(key) {
     if (key === 'overview') return overviewSection;
     if (key === 'add') return addSection;
+    if (key === 'actions') return actionsSection;
     if (key === 'recent') return recentSection;
     if (key === 'due' && recurring) {
       return <DueRecurringCard due={recurring.manualDue} onPost={recurring.post} onSkip={recurring.skip} onSkipAll={recurring.skipAllFor} compact collapsible />;
@@ -605,8 +263,6 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
 
   return (
     <div className="tab-root">
-
-      {/* ── Header: greeting + profile ── */}
       <div className="tab-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ minWidth: 0 }}>
@@ -617,24 +273,41 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
               {greeting}
             </div>
           </div>
-          <ProfileButton />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {shell && (
+              <button id="home-search" onClick={() => shell.goTo('history', { focus: 'history-search' })} aria-label="Search transactions"
+                style={{ width: 34, height: 34, border: 'none', background: 'var(--surface2)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <Search size={16} />
+              </button>
+            )}
+            <ProfileButton />
+          </div>
         </div>
       </div>
 
-      {/* ── Body: sections in the order chosen in Profile → Customize ── */}
       <div className="home-body" style={{ flex: 1, overflow: 'auto', padding: '14px 16px 20px' }}>
         {homeSections.filter((s) => s.visible).map(({ key }) => <Fragment key={key}>{section(key)}</Fragment>)}
       </div>
-
-    </div >
+    </div>
   );
 }
 
-function Metric({ label, value, color = 'var(--text)' }) {
+function Tile({ id, label, onClick, badge = 0, children }) {
+  return (
+    <button id={id} className="home-tile" onClick={onClick}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '4px 2px 10px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', position: 'relative' }}>
+      {children}
+      {badge > 0 && <span className="tile-badge">{badge > 9 ? '9+' : badge}</span>}
+      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{label}</span>
+    </button>
+  );
+}
+
+function Metric({ label, value }) {
   return (
     <div style={{ minWidth: 0 }}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, color, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      <div style={{ fontSize: 10, fontWeight: 600, opacity: 0.75, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
     </div>
   );
 }

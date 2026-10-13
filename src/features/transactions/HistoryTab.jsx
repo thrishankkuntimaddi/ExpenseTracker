@@ -12,6 +12,7 @@ import LoadMonthlyData from '../../components/LoadMonthlyData';
 import EditTransactionModal from '../../components/EditTransactionModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import ProfileButton from '../../components/ProfileButton';
+import BackButton from '../../components/BackButton';
 
 export default function HistoryTab({
   transactions, income = [], selectedPeriod, onPeriodChange,
@@ -151,7 +152,8 @@ export default function HistoryTab({
       <div className="tab-header">
         {/* Title row: count + two compact actions */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
-          <div style={{ minWidth: 0 }}>
+          <BackButton />
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>History</h1>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '2px 0 0' }}>
               {filtTxns.length}{hasFilter ? ` of ${periodTxns.length}` : ''} transactions · {groupLabel.replace('Grouped by ', 'by ')}

@@ -6,6 +6,8 @@ import { useState, useMemo } from 'react';
 import { Users, Search, TrendingDown, TrendingUp, ChevronRight, UserPlus } from 'lucide-react';
 import { formatAmount } from '../../utils/dateHelpers';
 import PersonLedger from './PersonLedger';
+import BackButton from '../../components/BackButton';
+import ProfileButton from '../../components/ProfileButton';
 
 /* ─── Person Card ─── */
 function PersonCard({ person, onClick }) {
@@ -135,8 +137,9 @@ export default function PersonsPanel({ transactions, onAddTransaction, onUpdateT
     <div className="tab-root">
       {/* Header */}
       <div className="tab-header">
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
+          <BackButton />
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
               People
             </h1>
@@ -144,8 +147,9 @@ export default function PersonsPanel({ transactions, onAddTransaction, onUpdateT
               Debt & lending ledger — track who owes you & who you owe
             </p>
           </div>
+          <ProfileButton />
           {totalCount > 0 && (
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="people-chips" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {totalOwedToMe > 0 && (
                 <div style={{
                   padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,

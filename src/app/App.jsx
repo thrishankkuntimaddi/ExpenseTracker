@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
-import { LayoutGrid, UserRound } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useFirestoreData } from '../hooks/useFirestoreData';
 import { useRecurring } from '../hooks/useRecurring';
 import { useDevices } from '../hooks/useDevices';
@@ -10,6 +10,7 @@ import { initReminders, onReminderTap, updateReminderInput } from '../native/rem
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { getDefaultPeriod } from '../utils/periodHelpers';
+import { formatAmount } from '../utils/dateHelpers';
 import { clearLegacyDataCache } from '../utils/storage';
 import { learnCategoryRule } from '../utils/categories';
 import { useTheme, HAD_LOCAL_THEME_CHOICE } from '../utils/theme';
@@ -35,17 +36,19 @@ const StatsTab         = lazyPage(() => import('../features/stats/StatsTab'));
 const PlanTab          = lazyPage(() => import('../features/plan/PlanTab'));
 const ExternalTab      = lazyPage(() => import('../features/external/ExternalTab'));
 const ProfilePage      = lazyPage(() => import('../features/profile/ProfilePage'));
+const PersonsPanel     = lazyPage(() => import('../features/persons/PersonsPanel'));
 const DesktopDashboard = lazyPage(() => import('../components/DesktopDashboard'));
-import MoreSheet from '../components/MoreSheet';
+const AddSheet         = lazyPage(() => import('../components/AddSheet'));
 import UpdateBanner from '../components/UpdateBanner';
 import { ShellContext } from './shellContext';
 import { PAGE_META, PAGE_COLOR } from './pages';
-import { PAGE_KEYS, normaliseUi } from '../utils/uiPrefs';
+import { normaliseUi } from '../utils/uiPrefs';
 
-/* Mobile: the four pages chosen in Profile → Customize sit in the bar; the
-   rest, and Profile, live behind "More". Swiping moves through bar pages,
-   then the rest, so every page is one gesture away. */
-const PROFILE_PAGE = { key: 'profile', label: 'Profile & settings', Icon: UserRound, description: 'Account, appearance, layout, reminders, backups' };
+/* Mobile navigation, PhonePe / GPay style:
+   • bottom bar: Home · two pages · "+" (add anything) · one page — the three
+     pages are chosen in Profile → Customize; swiping moves between them
+   • every other page is a tile on Home (and opens with a back arrow)
+   • Profile & settings: the avatar at the top of every page */
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
@@ -63,9 +66,11 @@ clearLegacyDataCache();
 /* ── Inner app rendered when user is authenticated ── */
 function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendVerification }) {
   const [chosenTab, setActiveTab]           = useState(null);     // null until the user moves: show the start page
-  const [returnTab, setReturnTab]           = useState('today');  // where Profile's back arrow goes
+  const [backStack, setBackStack]           = useState([]);       // pages opened from tiles / the avatar return here
   const [slideDir, setSlideDir]             = useState(null);   // 'left' | 'right' | null — page transition
-  const [moreOpen, setMoreOpen]             = useState(false);
+  const [addKind, setAddKind]               = useState(null);   // the "+" sheet: null | 'expense' | 'income' | 'person' | 'savings'
+  const [pageOpts, setPageOpts]             = useState({});     // deep link into a page: { anchor, focus, mode, openGroup }
+  const [toastMsg, setToastMsg]             = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState(() => getDefaultPeriod());
   const isDesktop = useIsDesktop();
   const { isStandalone, canInstallNative, triggerInstall } = usePWAInstall();
@@ -82,8 +87,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   // Phone layout chosen in Profile → Customize (repaired if malformed)
   const ui = useMemo(() => normaliseUi(settings?.ui), [settings?.ui]);
   const barTabs = ui.tabs;
-  const morePages = useMemo(() => [...PAGE_KEYS.filter((k) => !barTabs.includes(k)), 'profile'], [barTabs]);
-  const pageOrder = useMemo(() => [...barTabs, ...morePages], [barTabs, morePages]);
+  const pageOrder = useMemo(() => ['today', ...barTabs], [barTabs]);
 
   // Until the user moves, the app shows the start page chosen in Customize
   const activeTab = chosenTab ?? ui.start;
@@ -151,24 +155,64 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     }
   }, [addTransaction, addIncome]);
 
-  /** Switch page with a directional slide; used by taps, the More sheet and swipes. */
-  const goTo = useCallback((key, dir) => {
+  /**
+   * Switch page with a directional slide. `arg` is a slide direction
+   * ('left' | 'right', from swipes) or deep-link options
+   * { anchor, focus, mode, openGroup } from Home tiles.
+   */
+  const goTo = useCallback((key, arg) => {
     if (key === 'settings') key = 'profile';   // older links / reminder routes
-    if (key === activeTab) return;
-    if (key === 'profile') setReturnTab(activeTab);
-    setSlideDir(dir ?? (pageOrder.indexOf(key) > pageOrder.indexOf(activeTab) ? 'left' : 'right'));
+    const opts = typeof arg === 'object' && arg ? { ...arg } : {};
+    if (opts.openGroup && !opts.anchor) opts.anchor = `group-${opts.openGroup}`;
+    const dir = typeof arg === 'string' ? arg : null;
+    if (opts.openGroup) { try { localStorage.setItem(`et_settings_open_${opts.openGroup}`, '1'); } catch { /* storage unavailable */ } }
+    setPageOpts({ ...opts, at: Date.now() });
+    if (key === activeTab && !opts.mode) return;
+    const inBar = pageOrder.includes(key);
+    setBackStack((st) => (inBar ? [] : [...st, activeTab]));
+    setSlideDir(dir ?? (inBar && pageOrder.includes(activeTab) && pageOrder.indexOf(key) < pageOrder.indexOf(activeTab) ? 'right' : 'left'));
     setActiveTab(key);
   }, [activeTab, pageOrder]);
+  const goBack = useCallback(() => {
+    const prev = backStack[backStack.length - 1] ?? ui.start;
+    setBackStack((st) => st.slice(0, -1));
+    setSlideDir('right');
+    setPageOpts({});
+    setActiveTab(prev);
+  }, [backStack, ui.start]);
+
+  // Deep links: once the page has rendered, scroll to / focus its target.
+  // Pages load lazily, so look for the element for up to ~2 s.
+  useEffect(() => {
+    const target = pageOpts.anchor || pageOpts.focus;
+    if (!target) return undefined;
+    let tries = 0;
+    const timer = setInterval(() => {
+      const el = document.getElementById(target);
+      if (el || ++tries > 20) {
+        clearInterval(timer);
+        if (pageOpts.anchor) el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (pageOpts.focus) el?.focus();
+      }
+    }, 100);
+    return () => clearInterval(timer);
+  }, [pageOpts, activeTab]);
+
+  // Short confirmation pill above the bar ("Added Chai · ₹20")
+  useEffect(() => {
+    if (!toastMsg) return undefined;
+    const t = setTimeout(() => setToastMsg(null), 2600);
+    return () => clearTimeout(t);
+  }, [toastMsg]);
   // Android: status bar follows the theme; hardware back closes the top
   // dialog, then returns to Expenses, then backgrounds the app.
   useEffect(() => { setStatusBarTheme(theme); }, [theme]);
   useEffect(() => onBackButton(() => {
     if (overlayOpen()) { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); return true; }
-    if (moreOpen) { setMoreOpen(false); return true; }
-    if (activeTab === 'profile') { goTo(returnTab, 'right'); return true; }
+    if (backStack.length || !pageOrder.includes(activeTab)) { goBack(); return true; }
     if (activeTab !== ui.start) { goTo(ui.start, 'right'); return true; }
     return false;
-  }), [activeTab, moreOpen, goTo, returnTab, ui.start]);
+  }), [activeTab, goTo, goBack, backStack, pageOrder, ui.start]);
 
   // Reminders: re-plan whenever their settings or the data they read change
   // (debounced — a burst of edits re-plans once).
@@ -185,7 +229,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     return () => clearTimeout(t);
   }, [loaded, settings?.reminders, settings?.budgets, settings?.categoryRules, transactions, income, recurring.rules]);
 
-  const swipe = useSwipeNavigation({ order: pageOrder, active: activeTab, onChange: goTo, enabled: !isDesktop && !moreOpen });
+  const swipe = useSwipeNavigation({ order: pageOrder, active: activeTab, onChange: goTo, enabled: !isDesktop && !addKind && pageOrder.includes(activeTab) });
 
   const commonProps = {
     transactions, income, settings, recentlyDeleted,
@@ -224,10 +268,22 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   /* ── MOBILE ── */
   const tabColors = PAGE_COLOR[theme === 'monoflow' ? 'dark' : 'light'];
   const dueCount = recurring.manualDue.length;
-  const pageInfo = (key) => (key === 'profile' ? PROFILE_PAGE : { key, ...PAGE_META[key] });
-  const inMore = morePages.includes(activeTab);
-  const morePage = inMore ? pageInfo(activeTab) : null;
-  const shell = { user, openProfile: () => goTo('profile'), attention: sync.error != null };
+  const shell = {
+    user, goTo, back: goBack,
+    showBack: !pageOrder.includes(activeTab) && activeTab !== 'profile',
+    openProfile: () => goTo('profile'),
+    openAdd: (kind = 'expense') => setAddKind(kind),
+    toast: setToastMsg,
+    attention: sync.error != null,
+  };
+  // Bar: Home · slot 1 · "+" · slot 2 · slot 3
+  const barItems = [
+    { key: 'today', ...PAGE_META.today },
+    { key: barTabs[0], ...PAGE_META[barTabs[0]] },
+    { key: 'add' },
+    { key: barTabs[1], ...PAGE_META[barTabs[1]] },
+    { key: barTabs[2], ...PAGE_META[barTabs[2]] },
+  ];
 
   return (
     <ShellContext.Provider value={shell}>
@@ -266,6 +322,8 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
         )}
         {activeTab === 'external' && (
           <ExternalTab
+            key={pageOpts.mode ?? 'billings'}
+            initialMode={pageOpts.mode}
             user={user}
             transactions={transactions}
             income={income}
@@ -280,6 +338,16 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
             reportError={reportError}
           />
         )}
+        {activeTab === 'people' && (
+          <div className="mobile-people-host" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <PersonsPanel
+              transactions={transactions}
+              onAddTransaction={addTransaction}
+              onUpdateTransaction={updateTransaction}
+              onDeleteTransaction={deleteTransaction}
+            />
+          </div>
+        )}
         {activeTab === 'plan' && (
           <PlanTab
             {...commonProps}
@@ -293,7 +361,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
         {activeTab === 'profile' && (
           <ProfilePage
             {...commonProps}
-            onBack={() => goTo(returnTab, 'right')}
+            onBack={goBack}
             onSignOut={signOut}
             onDeleteAccount={deleteAccount}
             onResetPassword={resetPassword}
@@ -305,27 +373,46 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
 
       {errorBanner}
 
-      {moreOpen && (
-        <MoreSheet
-          pages={morePages.map((k) => ({ ...pageInfo(k), color: tabColors[k], badge: k === 'plan' ? dueCount : 0 }))}
-          active={activeTab}
-          onSelect={(key) => { goTo(key); setMoreOpen(false); }}
-          onClose={() => setMoreOpen(false)}
-        />
+      {addKind && (
+        <Suspense fallback={null}>
+          <AddSheet
+            {...commonProps}
+            initialKind={addKind}
+            onAdd={smartAddEntry}
+            onAddIncome={addIncome}
+            onClose={() => setAddKind(null)}
+            onSaved={(e) => setToastMsg(`Added ${e.name} · ${formatAmount(e.amount)}`)}
+          />
+        </Suspense>
       )}
 
-      {/* ── Mobile Navbar: 4 pages + More ── */}
-      <nav style={{ flexShrink: 0, display: 'flex', background: 'var(--nav-bg)', borderTop: '1px solid var(--nav-border)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        {[...barTabs.map(pageInfo), { key: 'more', label: inMore && activeTab !== 'profile' ? morePage.label : 'More', Icon: inMore && activeTab !== 'profile' ? morePage.Icon : LayoutGrid }].map(({ key, label, Icon }) => {
-          const isMore   = key === 'more';
-          const isActive = isMore ? inMore : activeTab === key;
-          const color    = isMore ? (inMore ? tabColors[activeTab] : 'var(--accent)') : tabColors[key];
+      {toastMsg && (
+        <div role="status" className="app-toast" key={toastMsg} style={{
+          position: 'fixed', left: 16, right: 16, bottom: 'calc(92px + env(safe-area-inset-bottom, 0px))', zIndex: 950,
+          maxWidth: 420, margin: '0 auto', padding: '11px 16px', borderRadius: 16, textAlign: 'center',
+          fontSize: 13, fontWeight: 600, color: 'var(--toast-text, #fff)', background: 'var(--toast-bg, rgba(28,28,32,.92))',
+          boxShadow: '0 10px 30px -10px rgba(0,0,0,.45)', animation: 'toastIn .22s cubic-bezier(0.16,1,0.3,1)',
+        }}>{toastMsg}</div>
+      )}
+
+      {/* ── Bottom bar: Home · 2 pages · + · 1 page ── */}
+      <nav style={{ flexShrink: 0, display: 'flex', alignItems: 'center', background: 'var(--nav-bg)', borderTop: '1px solid var(--nav-border)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        {barItems.map(({ key, label, Icon }) => {
+          if (key === 'add') {
+            return (
+              <button key="add" id="tab-add" className="nav-add" aria-label="Add an entry" onClick={() => setAddKind('expense')}
+                style={{ flex: '0 0 auto', width: 50, height: 50, margin: '0 6px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'var(--accent)' }}>
+                <Plus size={24} strokeWidth={2.4} />
+              </button>
+            );
+          }
+          const isActive = activeTab === key;
+          const color    = tabColors[key];
           return (
             <button
               key={key}
               id={`tab-${key}`}
-              aria-haspopup={isMore ? 'dialog' : undefined}
-              onClick={() => (isMore ? setMoreOpen(true) : goTo(key))}
+              onClick={() => goTo(key)}
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center',
@@ -334,23 +421,16 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
                 color: isActive ? color : 'var(--text-muted)', position: 'relative',
               }}
             >
-              {isActive && (
-                <span style={{
-                  position: 'absolute', top: 0, left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: 24, height: 2, borderRadius: 99, background: color,
-                }} />
-              )}
-              <Icon size={18} strokeWidth={isActive ? 2.3 : 1.8} />
-              {(isMore ? dueCount > 0 && !barTabs.includes('plan') : key === 'plan' && dueCount > 0) && (
+              <Icon size={19} strokeWidth={isActive ? 2.3 : 1.8} />
+              {key === 'plan' && dueCount > 0 && (
                 <span aria-label={`${dueCount} recurring entries due`} style={{
-                  position: 'absolute', top: 6, left: 'calc(50% + 6px)',
+                  position: 'absolute', top: 4, left: 'calc(50% + 6px)',
                   minWidth: 14, height: 14, padding: '0 3px', borderRadius: 99,
                   background: 'var(--expense)', color: '#fff', fontSize: 9, fontWeight: 800,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
                 }}>{dueCount > 9 ? '9+' : dueCount}</span>
               )}
-              <span style={{ fontSize: 9, fontWeight: isActive ? 700 : 500, letterSpacing: '0.01em' }}>
+              <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 500, letterSpacing: '0.01em' }}>
                 {label}
               </span>
             </button>

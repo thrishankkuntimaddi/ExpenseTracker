@@ -24,8 +24,9 @@ export default function ExternalTab({
   onAddIncome, onUpdateIncome, onDeleteIncome,
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
   selectedPeriod, reportError,
+  initialMode = 'billings',   // a Home tile can open Trips directly
 }) {
-  const [mode, setMode] = useState('billings');   // 'billings' | 'trips'
+  const [mode, setMode] = useState(initialMode === 'trips' ? 'trips' : 'billings');   // 'billings' | 'trips'
   const {
     sessions, saving,
     createSession, updateSession, saveDraftSession,

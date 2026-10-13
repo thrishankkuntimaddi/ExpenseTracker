@@ -1,33 +1,38 @@
 // ─── UI preferences (phone layout) ───────────────────────────────
-// What the user customised in Profile → Customize: the four pages in the
-// bottom bar, the page the app opens on, and the order / visibility of the
-// Home sections. Stored in settings.ui so every device follows it.
+// What the user customised in Profile → Customize: the three pages beside
+// Home and "+" in the bottom bar, the page the app opens on, and the order /
+// visibility of the Home sections. Stored in settings.ui so every device
+// follows it.
 // Anything unknown, duplicated or missing is repaired here, so an old or
 // hand-edited value can never leave the app without a way to a page.
 
-export const PAGE_KEYS = ['today', 'history', 'income', 'stats', 'plan', 'external'];
-export const BAR_SLOTS = 4;
-export const DEFAULT_TABS = ['today', 'history', 'income', 'stats'];
+/* Every phone page. Home ('today') is always the first bar item; the bar's
+   other slots take any of SLOT_KEYS. */
+export const PAGE_KEYS = ['today', 'history', 'income', 'stats', 'plan', 'people', 'external'];
+export const SLOT_KEYS = PAGE_KEYS.filter((k) => k !== 'today');
+export const BAR_SLOTS = 3;
+export const DEFAULT_TABS = ['history', 'stats', 'plan'];
 
 export const HOME_SECTIONS = [
-  { key: 'overview', label: 'Month overview', hint: 'Spent, today, budget left and safe to spend' },
+  { key: 'overview', label: 'Month overview', hint: 'Spent, budget, today, safe to spend, balance' },
+  { key: 'add',      label: 'Quick entry',    hint: 'Type “chai 20” and press enter' },
+  { key: 'actions',  label: 'Shortcuts',      hint: 'One-tap tiles for every feature', locked: true },
   { key: 'due',      label: 'Recurring due',  hint: 'Rent, SIPs and bills waiting to be logged' },
-  { key: 'add',      label: 'Quick add',      hint: 'The entry form — always shown', locked: true },
-  { key: 'recent',   label: 'Recent entries', hint: 'Your last seven days' },
+  { key: 'recent',   label: 'Recent activity', hint: 'Your last seven days' },
 ];
 const HOME_KEYS = HOME_SECTIONS.map((s) => s.key);
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 
-/** settings.ui (any shape) → { tabs[4], start, home: [{ key, visible }] } */
+/** settings.ui (any shape) → { tabs[3], start, home: [{ key, visible }] } */
 export function normaliseUi(raw) {
   const r = isObj(raw) ? raw : {};
 
   const tabs = [];
   for (const k of Array.isArray(r.tabs) ? r.tabs : []) {
-    if (PAGE_KEYS.includes(k) && !tabs.includes(k) && tabs.length < BAR_SLOTS) tabs.push(k);
+    if (SLOT_KEYS.includes(k) && !tabs.includes(k) && tabs.length < BAR_SLOTS) tabs.push(k);
   }
-  for (const k of [...DEFAULT_TABS, ...PAGE_KEYS]) {
+  for (const k of [...DEFAULT_TABS, ...SLOT_KEYS]) {
     if (tabs.length >= BAR_SLOTS) break;
     if (!tabs.includes(k)) tabs.push(k);
   }
@@ -39,7 +44,13 @@ export function normaliseUi(raw) {
   for (const k of Array.isArray(r.homeOrder) ? r.homeOrder : []) {
     if (HOME_KEYS.includes(k) && !order.includes(k)) order.push(k);
   }
-  for (const k of HOME_KEYS) if (!order.includes(k)) order.push(k);
+  // Sections the saved order doesn't know yet (added in a later version)
+  // go in after their default neighbour, not at the very end.
+  HOME_KEYS.forEach((k, i) => {
+    if (order.includes(k)) return;
+    const prev = HOME_KEYS.slice(0, i).reverse().find((p) => order.includes(p));
+    order.splice(prev ? order.indexOf(prev) + 1 : 0, 0, k);
+  });
   const home = order.map((key) => ({
     key,
     visible: HOME_SECTIONS.find((s) => s.key === key).locked ? true : !hidden.has(key),
@@ -70,7 +81,7 @@ export function move(list, i, delta) {
 
 /** Replace the page in bar slot `i` with `key` (swapping if it's already elsewhere in the bar). */
 export function setTabAt(tabs, i, key) {
-  if (!PAGE_KEYS.includes(key) || i < 0 || i >= tabs.length) return tabs;
+  if (!SLOT_KEYS.includes(key) || i < 0 || i >= tabs.length) return tabs;
   const next = [...tabs];
   const at = next.indexOf(key);
   if (at === i) return tabs;

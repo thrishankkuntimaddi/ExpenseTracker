@@ -46,7 +46,7 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
           </div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-              {due.length} recurring entr{due.length === 1 ? 'y' : 'ies'} due
+              {collapsible ? `${due.length} recurring due` : `${due.length} recurring entr${due.length === 1 ? 'y' : 'ies'} due`}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
               {collapsible

@@ -19,9 +19,71 @@
 [data-theme="monoflow"] .hero-card.hero-income  { background: linear-gradient(135deg, #0F6B52 0%, #0B4B3B 100%) !important; }
 [data-theme="monoflow"] .hero-card.hero-expense { background: linear-gradient(135deg, #8E2440 0%, #5E172B 100%) !important; }
 
-/* Home: the overview's progress track and the type switcher read as one family */
-.home-overview { position: relative; }
-
-/* Phone bar: slightly larger labels, clearer active state */
-.mobile-shell nav button span:last-child { font-size: 10px !important; }
+/* Phone bar: clearer active state in dark */
 [data-theme="monoflow"] nav button:has(svg[stroke-width="2.3"]) { background: rgba(139, 147, 255, 0.14) !important; }
+
+/* ── Home hero: a tinted Liquid Glass card (indigo → violet) with a soft
+   specular light in the corner ───────────────────────────────────── */
+.home-hero {
+  background: linear-gradient(135deg, #4F46E5 0%, #6D28D9 60%, #9333EA 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 0 0 1px rgba(255,255,255,.12), 0 18px 36px -18px rgba(79,70,229,.65);
+  transform: translateZ(0);
+}
+.home-hero::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,.28), rgba(255,255,255,0) 55%);
+}
+.home-hero > * { position: relative; }
+[data-theme="monoflow"] .home-hero {
+  background: linear-gradient(135deg, #2E3192 0%, #3B1F7A 60%, #4A1D6E 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 1px rgba(255,255,255,.06), 0 18px 36px -20px rgba(0,0,0,.9);
+}
+[data-theme="monoflow"] .home-hero::before { background: radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,.12), rgba(255,255,255,0) 55%); }
+
+/* ── Home tiles: iOS-style glass icons ───────────────────────────── */
+.tile-icon {
+  width: 48px; height: 48px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.35);
+}
+.tile-icon-solid {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.30), rgba(255,255,255,0) 58%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 6px 14px -8px rgba(0,0,0,.45);
+}
+[data-theme="monoflow"] .tile-icon { box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+[data-theme="monoflow"] .tile-icon-solid {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.16), rgba(0,0,0,.12)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 6px 14px -8px rgba(0,0,0,.8);
+}
+.home-tile:active .tile-icon { transform: scale(.94); }
+.home-tile:hover { filter: none !important; }
+.tile-badge {
+  position: absolute; top: 0; left: calc(50% + 12px);
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px;
+  background: var(--expense); color: #fff; font-size: 10px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+[data-theme="monoflow"] .tile-badge { color: #0B0D12; }
+
+/* ── Centre "+" in the bar: a raised glass orb ──────────────────────
+   (selectors outrank glass.css's filled-button rules) */
+nav button.nav-add {
+  border-radius: 50% !important;
+  background: linear-gradient(145deg, #6366F1, #8B5CF6) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 18px -6px rgba(99,102,241,.7) !important;
+}
+[data-theme="monoflow"] nav button.nav-add {
+  background: linear-gradient(145deg, #7C83FF, #A78BFA) !important;
+  color: #0B0D12 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 8px 18px -6px rgba(124,131,255,.55) !important;
+}
+
+/* ── "+" sheet ──────────────────────────────────────────────────── */
+.add-kind { border-radius: 16px !important; }
+.mobile-people-host .people-chips { flex-basis: 100%; }
+.add-sheet .quick-add-form > div:first-child { margin-top: 0; }
+
+/* ── Toast ──────────────────────────────────────────────────────── */
+[data-theme="monoflow"] { --toast-bg: rgba(236,238,243,.95); --toast-text: #0B0D12; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }

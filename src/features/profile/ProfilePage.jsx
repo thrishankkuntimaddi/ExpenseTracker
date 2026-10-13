@@ -3,11 +3,11 @@
 // look of the app, how the phone layout is arranged, then every setting
 // grouped into a few sections (the same SettingsTab the desktop uses).
 import { useMemo } from 'react';
-import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus } from 'lucide-react';
 import Avatar from '../../components/Avatar';
 import { displayNameOf } from '../../app/shellContext';
 import { PAGE_META } from '../../app/pages';
-import { PAGE_KEYS, HOME_SECTIONS, normaliseUi, serialiseUi, move, setTabAt } from '../../utils/uiPrefs';
+import { PAGE_KEYS, SLOT_KEYS, HOME_SECTIONS, normaliseUi, serialiseUi, move, setTabAt } from '../../utils/uiPrefs';
 import { Section, Group } from '../settings/SettingsGroup';
 import SettingsTab from '../settings/SettingsTab';
 
@@ -93,7 +93,7 @@ export default function ProfilePage(props) {
         {/* ── Customize ── */}
         <Section title="Customize">
           <Group id="custom-bar" title="Bottom bar" Icon={LayoutGrid} color="var(--savings)"
-            summary={ui.tabs.map((k) => PAGE_META[k].label).join(' · ')}>
+            summary={['Home', ...ui.tabs.map((k) => PAGE_META[k].label)].join(' · ')}>
             <BarEditor tabs={ui.tabs} onChange={(tabs) => save({ tabs })} />
           </Group>
           <Group id="custom-home" title="Home screen" Icon={HomeIcon} color="var(--expense)"
@@ -115,16 +115,20 @@ export default function ProfilePage(props) {
   );
 }
 
-/* ── Bottom bar: four slots, each can hold any page; picking a page that's
-   already in another slot swaps the two, so there are never duplicates. ── */
+/* ── Bottom bar: Home, then three slots around "+"; each slot can hold any
+   other page. Picking a page that's already in another slot swaps the two,
+   so there are never duplicates. ── */
 function BarEditor({ tabs, onChange }) {
-  const rest = PAGE_KEYS.filter((k) => !tabs.includes(k));
+  const preview = ['today', tabs[0], 'add', tabs[1], tabs[2]];
   return (
     <div style={{ padding: '12px 16px 14px' }}>
       {/* live preview */}
-      <div aria-hidden style={{ display: 'flex', borderRadius: 18, background: 'var(--surface2)', padding: '8px 4px', marginBottom: 12 }}>
-        {[...tabs, 'more'].map((k) => {
-          const meta = PAGE_META[k] ?? { label: 'More', Icon: LayoutGrid };
+      <div aria-hidden style={{ display: 'flex', alignItems: 'center', borderRadius: 18, background: 'var(--surface2)', padding: '8px 4px', marginBottom: 12 }}>
+        {preview.map((k) => {
+          if (k === 'add') {
+            return <span key="add" style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 4px' }}><Plus size={16} /></span>;
+          }
+          const meta = PAGE_META[k];
           return (
             <div key={k} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: 'var(--text-secondary)' }}>
               <meta.Icon size={16} />
@@ -141,14 +145,14 @@ function BarEditor({ tabs, onChange }) {
             <Icon size={15} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
             <select id={`bar-slot-${i}`} value={k} onChange={(e) => onChange(setTabAt(tabs, i, e.target.value))} aria-label={`Bar slot ${i + 1}`}
               style={{ flex: 1, minWidth: 0, padding: '7px 10px', fontSize: 13, fontWeight: 600, border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit' }}>
-              {PAGE_KEYS.map((p) => <option key={p} value={p}>{PAGE_META[p].label}</option>)}
+              {SLOT_KEYS.map((p) => <option key={p} value={p}>{PAGE_META[p].label}</option>)}
             </select>
             <MoveButtons i={i} n={tabs.length} onMove={(d) => onChange(move(tabs, i, d))} label={PAGE_META[k].label} />
           </div>
         );
       })}
       <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '8px 0 0', lineHeight: 1.5 }}>
-        {rest.length ? <>In <strong>More</strong>: {rest.map((k) => PAGE_META[k].label).join(', ')}, and Profile.</> : 'Profile is in More.'}
+        Home is always first and <strong>+</strong> adds anything. Every other page is a tile on Home.
       </p>
       <ResetLink onClick={() => onChange(normaliseUi({}).tabs)} />
     </div>

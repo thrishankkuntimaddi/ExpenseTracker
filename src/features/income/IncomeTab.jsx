@@ -10,6 +10,7 @@ import EditIncomeModal from '../../components/EditIncomeModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { useStats } from '../../hooks/useStats';
 import ProfileButton from '../../components/ProfileButton';
+import BackButton from '../../components/BackButton';
 
 export default function IncomeTab({
   income: rawIncome = [], onAddIncome, onUpdateIncome, onDeleteIncome,
@@ -125,8 +126,9 @@ export default function IncomeTab({
 
       {/* Header */}
       <div className="tab-header">
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-          <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <BackButton />
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
               Income
             </h1>

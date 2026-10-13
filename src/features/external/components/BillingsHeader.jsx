@@ -1,11 +1,13 @@
 import { Plus, Loader2, ArrowLeft, Share2 } from 'lucide-react';
 import ProfileButton from '../../../components/ProfileButton';
+import BackButton from '../../../components/BackButton';
 
 export default function BillingsHeader({ currentSession, saving, onBack, onShare, onNew, extra }) {
   return (
     <div className="tab-header">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: extra ? 10 : 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          {!currentSession && <BackButton />}
           {currentSession && (
             <button
               onClick={onBack}
