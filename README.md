@@ -1,24 +1,51 @@
 # ⚡ Expense Tracker — Personal Finance, Reimagined
 
-> **Smart, cloud-synced personal finance tracking with auto-categorised spending, monthly budgets with a daily "safe to spend", recurring entries, savings goals, a monthly report, debts, wastage analytics and billing sessions — on the web, Android, Mac, Windows and Linux, all on one account, with reminders and automatic updates.**
+> **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
+
+**Current version: 3.11.0** · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+
+---
+
+## 📑 Contents
+
+- [Description](#-description)
+- [Get the app](#-get-the-app)
+- [Signing in](#-signing-in)
+- [Features](#-features)
+- [Automatic updates](#-automatic-updates)
+- [Tech stack](#️-tech-stack)
+- [Project structure](#-project-structure)
+- [Installation & setup](#️-installation--setup)
+- [Releasing](#-releasing)
+- [Environment variables & secrets](#-environment-variables--secrets)
+- [How it works](#-how-it-works)
+- [Firestore data model](#️-firestore-data-model)
+- [Privacy & security](#-privacy--security)
+- [Troubleshooting](#-troubleshooting)
+- [Challenges & solutions](#-challenges--solutions)
+- [Roadmap](#-roadmap)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 
 ## 📌 Description
 
-**Expense Tracker** is a production-grade personal finance app built with React + Firebase, shipped as a website, an Android app (Capacitor) and a desktop app for Mac, Windows and Linux (Tauri). It solves the frustrating problem of losing track of where your money goes each month — including money lent to, borrowed from, or spent on behalf of other people.
+**Expense Tracker** is a personal finance app built with React and Firebase, shipped as a website (installable PWA), an Android app (Capacitor) and a desktop app for Mac, Windows and Linux (Tauri). One codebase, one account, the same pages everywhere.
 
-Unlike basic spreadsheet trackers, this app:
+It solves the problem of losing track of where money goes — including money lent to, borrowed from, or spent on behalf of other people, and money earned or spent abroad.
 
-- **Categorises spending automatically** — "Swiggy", "petrol", "Netflix" are tagged Food / Fuel / Subscriptions as you type, using an India-aware keyword engine. Override once and it remembers.
-- **Budgets with pace, not just a cap** — a monthly limit (optionally per category) gives you a *safe-to-spend-today* number, a projected month end, and warnings when the run-rate will overshoot.
-- **Logs recurring entries for you** — rent, EMIs, SIPs, salary and subscriptions post on schedule, either silently or with a one-tap confirm.
-- **A monthly report on the day you choose** — salary to salary: what went up, what went down, bills you missed, categories over budget.
-- **Tracks money with people** — lent, borrowed, repaid and gifted amounts roll up into all-time per-person balances.
-- **Tracks wastage** at the transaction level — mark any expense as wasted (single-tap) or set a partial waste amount (double-tap), giving you an instant "wastage percentage" of your spending.
-- **Manages external/proxy transactions** — record money you spend on behalf of someone else, log the settlement, and track net profit/loss per session.
-- **Syncs across every device** on one account and keeps working offline (Firestore's on-device cache); changes made offline upload when the connection is back.
-- **Updates itself everywhere** — no reinstalling (see [Automatic updates](#-automatic-updates)).
+What makes it different from a spreadsheet or a basic tracker:
+
+- **Categorises spending as you type** — "Swiggy", "petrol", "Netflix" become Food / Fuel / Subscriptions with an India-aware keyword engine. Override once and it learns.
+- **Any currency, counted correctly** — what happened is valued at the rate of its day; what you still hold is valued at today's rate.
+- **Budgets with pace** — a *safe to spend today* number, a projected month end and per-category envelopes.
+- **Bills that ask** — "Have you paid rent?" on the 5th; rent, EMIs, SIPs and salary post on schedule.
+- **A monthly report** on the day you choose, salary to salary.
+- **Money with people** — lent, borrowed, paid back; trip splits with a minimal who-pays-whom plan that posts your share into your own ledger.
+- **Your data, your copy** — scheduled backups to your own Google Drive, export to JSON/CSV any time.
+- **Locked when it should be** — one PIN for every device, fingerprint/face where available, and remote lock or sign-out from your phone.
+- **Works offline and syncs** across every device; **updates itself** everywhere.
 
 ---
 
@@ -27,15 +54,15 @@ Unlike basic spreadsheet trackers, this app:
 | Platform | How | Updates |
 |---|---|---|
 | **Web** (any browser, iPhone/iPad too) | **[thrishankkuntimaddi.github.io/ExpenseTracker](https://thrishankkuntimaddi.github.io/ExpenseTracker/)** — on iPhone: Share → *Add to Home Screen* | Each deploy, on the next open |
-| **Android** 7+ | [ExpenseTracker-Android.apk](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Android.apk) — allow "install unknown apps" for your browser once | Over the air, in the background — applies on the next open |
+| **Android** 7+ | [ExpenseTracker-Android.apk](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Android.apk) — allow "install unknown apps" for your browser once | Over the air, in the background |
 | **Mac** (Apple Silicon) | [ExpenseTracker-Mac-AppleSilicon.dmg](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Mac-AppleSilicon.dmg) | Downloads in the background → *Restart to update* |
 | **Mac** (Intel) | [ExpenseTracker-Mac-Intel.dmg](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Mac-Intel.dmg) | same |
 | **Windows** 10/11 | [ExpenseTracker-Windows-Setup.exe](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Windows-Setup.exe) | same |
 | **Linux** | [ExpenseTracker-Linux.AppImage](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Linux.AppImage) — `chmod +x`, then run | same |
 
-All links always point at the newest [release](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest). You only download once — after that every platform updates itself.
+These links always point at the newest [release](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest). You download once; after that every platform updates itself — except when a release adds new *native* Android code (as **3.11.0** did: fingerprint unlock, Drive backup and push). Then the Android app asks you, once, to install the new APK over the old one. Your data and sign-in stay.
 
-**First launch on a Mac:** the app isn't notarised by Apple (that needs a paid developer account), so macOS says it "could not verify" it. Right-click the app → **Open** → **Open**, once. Or run `xattr -dr com.apple.quarantine /Applications/ExpenseTracker.app`.
+**First launch on a Mac:** the app isn't notarised by Apple (that needs a paid developer account), so macOS says it "could not verify" it. Right-click the app → **Open** → **Open**, once — or run `xattr -dr com.apple.quarantine /Applications/ExpenseTracker.app`.
 **Windows:** SmartScreen may say "Windows protected your PC" → *More info* → *Run anyway*, once.
 
 ### What each platform can do
@@ -44,170 +71,141 @@ All links always point at the newest [release](https://github.com/thrishankkunti
 |---|---|---|---|
 | Same data, live sync | ✅ | ✅ | ✅ |
 | Works offline | ✅ (after first load) | ✅ | ✅ |
-| Google sign-in | ✅ | ✅ (native account picker; falls back to Google's classic picker on phones where it fails) | ✅ (opens your browser) |
-| Reminders when the app is closed | ✅ by cloud push (Chrome, Edge, Firefox; iPhone once added to the Home Screen) | ✅ pop up with sound (or quiet), optionally on the minute | ✅ while it runs in the menu bar / tray |
+| Google sign-in | ✅ | ✅ native picker, falls back to Google's classic picker on phones where it fails | ✅ opens your browser |
+| Reminders when the app is closed | ✅ cloud push (Chrome, Edge, Firefox; iPhone once added to the Home Screen) | ✅ pop up with sound (or quiet), optionally on the minute | ✅ while it runs in the menu bar / tray |
 | App lock | ✅ PIN · passkey (Touch ID / Windows Hello) | ✅ PIN · fingerprint / face / screen lock | ✅ PIN · passkey where the system offers one |
 | Google Drive backup | ✅ when you tap *Back up now* (browsers need a tap) | ✅ automatic | ✅ automatic |
 | Open at login, menu bar / tray | — | — | ✅ |
 | Updates without reinstalling | ✅ | ✅ | ✅ |
 | System back button, status bar follows theme | — | ✅ | — |
 
-These limits are the operating systems', not choices: a browser can't wake a closed tab, and a desktop app can only notify while it's running (closing the window keeps it in the menu bar / tray; *Quit* stops reminders).
+These limits are the operating systems', not choices: a browser can't wake a closed tab without push, and a desktop app can only notify while it's running (closing the window keeps it in the menu bar / tray; *Quit* stops reminders).
 
 ---
 
-## 🔐 Login / Demo Credentials
+## 🔐 Signing in
 
-Sign in with **Google** or with **email + password** (create an account, verify the email, *Forgot password?* sends a reset link). The same account works on every platform.
+Sign in with **Google** or with **email + password** (create an account, verify the email; *Forgot password?* sends a reset link). The same account works on every platform. There are no shared demo credentials — every user has their own isolated data.
 
-All data is private and scoped strictly to your account — `firestore.rules` only lets a signed-in user read/write `users/{their uid}/**`, and validates transaction/income shapes.
-
-> There are no shared demo credentials — every user gets their own isolated data space.
+All data is private to your account: `firestore.rules` only lets a signed-in user read and write `users/{their uid}/**`, and validates the shape of transactions, income, recurring rules and trips.
 
 ---
 
 ## 🧩 Features
 
-### 💸 Transaction Management
-- Add **Expense**, **Savings** (personal savings deposits), and **Person** (money given to someone) entries
-- **Quick entry**: type `chai 20` (or `250 swiggy`) in the description and press `Enter` — name and amount are split and saved in one go
-- Full transaction history with **search, type and category filters**, and a period selector (This Month / Select Month / Year / Last 3 Months / Custom)
-- Edit and delete any past transaction with optimistic UI updates
-- Keyboard-first form: press `Enter` to jump between fields and save
-
-### 🏷️ Smart Categories
-- 16 spending categories (Food & Dining, Groceries, Transport, Fuel, Shopping, Bills & Utilities, Rent & Home, Health, Entertainment, Subscriptions, Education, Travel, Personal Care, Gifts & Donations, Family, Other)
-- The category is **inferred from the description** with an India-aware keyword list (Swiggy, Zomato, Blinkit, Rapido, IRCTC, BESCOM, Jio, D-Mart, PVR …) — the suggestion is marked ✦ and can be overridden with one tap
-- Overrides are **learned** (`settings.categoryRules`), so the next identical name is tagged your way; picking the inferred category again forgets the rule
-- Older, untagged entries are categorised on the fly, so analytics cover your whole history without a migration
-- Category breakdown bars on Stats and the desktop dashboard; category chips filter History
-
-### 🎯 Monthly Budget
-- **The month's plan** on top: income (received, or your recurring salary before it arrives) − **fixed payments** (rent, EMIs, insurance, SIPs — from Bills) − the spending budget = **left to save or spare**
-- **Taken from salary**: list deductions (Income tax/TDS, PF, professional tax …) to see your gross pay; they're shown, never subtracted twice
-- A **total monthly cap** and/or **per-category caps**; with none set, a ready-made budget from your last three months, one tap to use
-- Every budget bar carries a **pace marker**; **safe to spend today**, projected month end, an envelope per category, six months against the budget
-
-### 🔁 Recurring Entries
-- Rules for **expenses, savings or income** that repeat daily / weekly / monthly / yearly (day-of-month clamps to short months: the 31st becomes the 28th in February)
-- **Auto-post** rules are logged silently on their due date when you open the app; **ask-me** rules show a *Log / Skip* card on Home and in Bills — handy when the amount varies
-- Posted occurrences use a **deterministic id** (`rec_<rule>_<date>`), so two devices or a retry can never double-log
-- Pause / resume, end dates, "next on …", and a monthly committed total ("₹18,649/mo goes to recurring expenses")
-
-### 🏁 Savings Goals
-- A goal has an amount, *needed by* month, a **monthly share** (suggested from the two), **where the money is kept** (cash, a person you trust, a bank) and a reminder day
-- **Add money** logs a savings entry for that goal; **Moved it** hands the money to someone / somewhere else and keeps the history ("was with Pritam until 3 Mar"); **Used it** ends a goal used before it was reached; once reached, **Collected**
-- Finished goals stay listed (reached & collected · used early · closed) and can be reopened. Goals made before 3.7 still count savings by type / keyword
-
-### 🧾 Monthly report
-- One report a month on the day you choose (Stats → Monthly report), instead of insights that change every time you look
-- Covers **salary to salary**: from the day last month's main income arrived to the report day (or this month's salary, if that came first)
-- Income, spent (vs the report before), saved (savings rate), left; categories that **went up**, **went down**, stayed about the same, started or stopped; bills **missed or skipped**; categories **over budget**; per-day spend, no-spend days, biggest expense. Browse earlier reports with ‹ ›
-
-### 📅 One month for the whole app
-- Every page shows **the same month**: switch it on Home's overview card, any page header, or the Stats calendar, and Home, History, Income, Stats, Bills, Budget and Savings all follow. **Now** jumps back to the current month
-- Adding an entry while looking at an earlier month dates it in that month
-- What carries over: debts (until settled), open billings, unpaid bills, and — with carry forward on — the month's leftover as next month's income
-
-### 📥 Income Management
-- Everything that came in, for the month on screen: income (salary, parents, freelance …), money **borrowed**, and money **paid back to you** — by source, with a running list
-
-### ↪ Month Carry Forward
-- From a start month (default **November 2026**), whatever was left at the end of a month appears as an **auto** income line in the next: "Carried forward from October 2026"
-- The chain is cumulative — November's remainder (which already includes October's carry) rolls into December
-- Nothing is stored: the line is recomputed from the ledger on every render, so a late edit to October corrects November automatically. It cannot be edited or deleted, only switched off
-- Settings → *Month Carry Forward*: toggle on/off, pick the first month that receives a carry, and choose whether a **deficit** (negative leftover) is carried too (off by default — an overspent month simply carries nothing)
-- Counted in that month's total income, remaining balance and the 6-month trend; **not** counted by budgets or the savings-rate insight, which look at real spending and earned income
-
-### ↔ Debts
-- Per person: **lent**, **got back**, **borrowed**, **paid back** — from transactions *and* income, so money returned to you closes the debt. Owe you · You owe · Settled
-- **Given (no return expected)** is spending, logged from Expense → *Given to someone*; it never appears in Debts
-- A person's page: the balance, one-tap *Got money back* / *Pay back* (pre-filled), and every entry to edit or delete
-
-### 🔗 External / Proxy Transactions
-- Record transactions where you pay on behalf of a client/person (e.g., buying materials for a freelance job)
-- Log the **settlement amount** received back and a source label (client/project name)
-- Net profit/loss is calculated and displayed in real-time as you type
-- Full session management: open, track, close, and view closed sessions in separate tabs
-- External sessions are stored in a dedicated `external_transactions` Firestore sub-collection
-
-### 🧳 Trips & Splits (group expenses)
-- Inside **Billings**, switch to *Trips & Splits*. Step 1 is the paper table you'd draw after a trip — **Person | What paid | Amount** — with the people as chips above it. Step 2 is the settlement
-- **Pay as one wallet**: mark two people as "pays with" each other (a couple, a family) and their spending and dues are combined
-- Live **who-pays-whom plan** with the minimum number of transfers ("Dev pays Arjun ₹2,400"), per-person paid vs share, and what is still outstanding; tap **Paid** to record a settlement and the plan shrinks
-- **Share** a WhatsApp-ready text summary; **Close** the trip to lock it and, in one step, log *your* share as a Travel expense and record what others still owe you as Lent (or what you owe as Borrowed) in your own ledger. Reopening removes those entries again
-- Trips live in `users/{uid}/trips`, bounded by the Firestore rules
-
-### 🗑️ Wastage Tracking
-- **Single-tap** any expense in History to toggle it as 100% wasted
-- **Double-tap** to enter a custom partial waste amount
-- The Stats tab shows **total waste** and **waste as % of total spending**
-
-### 📊 Stats & Analytics
-- For the month on screen: remaining balance and breakdown (income, spent, saved, wasted, you owe, owed to you, averages), the **spending calendar**, **spending by category**, where the money went (donut), then the **monthly report**
-
-### 📱 Phone layout
-Every way in leads somewhere different — nothing is offered twice.
-- **Home**: greeting, search and your avatar; the month card (‹ month › switcher, spent, budget bar, today, safe to spend, balance); a **quick entry** bar with a live preview; **bills due** — only when something is due or late, each with **Pay**; **Explore** — Income, Trips, Billings, Bills, Budget, Debts, Savings (minus what's in your bar), each with a live line; recent activity
-- **Bottom bar**: Home · two pages · **＋** · one page. ＋ adds anything — **Expense** (spent, or given to someone), **Income**, **Debt** (lent · borrowed · got back · paid back) and **Savings** (optionally for a goal, and where it's kept). Every kind opens on the amount with the keypad up
-- **Bills & payments**: the month's timeline with one-tap **Pay**, skip, totals and every regular payment; common payments (Rent on the 5th, Electricity, Mobile, Internet, Send home, Loan EMI, SIP, FD/RD, Term & Health insurance, LIC, Subscription) while you set up
-- **Budget**, **Savings & goals**, **Income**, **Stats**, **Debts**, **Trips & splits**, **Billings** — pages of their own, one header style everywhere
-- Tap your **avatar** for **Profile**: account, **Theme** in one row, **Reminders** as tiles, **Customize** (bar pages, start page, Home sections), then Money · Sync & devices · Your data (incl. *Load past data*) · App · Account
+### 💸 Entries
+- Add **Expense** (spent, or *given to someone*), **Income**, **Debt** (lent · borrowed · got back · paid back) and **Savings** (optionally for a goal, and where it's kept) from the **＋** button — every form opens with what it's for first, then the amount
+- **Quick entry**: type `chai 20` or `250 swiggy` and press Enter — the name and amount are split and saved. A currency written with the amount is picked up too: `coffee $4.50`, `taxi 30 AED`, `€12 museum`, `lunch 400rs`
+- **History** for the month on screen with search (this month or all months), type and category filters, wastage and edit
+- **Load past data**: paste a month of old entries, one per line (`5 groceries 450`)
+- Every write is optimistic and rolls back with a clear message if the server refuses it
 
 ### 💱 Currencies
-Show money in any of 48 currencies (Profile → Currency): rupee, dollar, euro, pound, dirham, riyal, dinar, yuan, Taiwan dollar, dong, yen and more. Every entry keeps the currency it was entered in — tap the sign next to the amount, or just type it: “coffee $4.50”, “taxi 30 AED”, “€12 museum”. Abroad, switch once and the device keeps entering in that currency until you switch back.
+- Show money in any of **48 currencies** (Profile → Currency): rupee, dollar, euro, pound, dirham, riyal, Kuwaiti dinar, yuan, Taiwan dollar, dong, yen, Singapore dollar and more
+- Every entry **keeps the currency it was entered in**. Tap the sign next to the amount to pick another; abroad, switch once and the device keeps entering in that currency until you switch back
+- **The rule the whole app follows**
+  - **What happened** — spending, income, history, reports, budgets — uses the rate of **the day it happened**. $10 of fuel in March stays what it cost in March, whatever the dollar does later. Lists show what you paid with the converted figure underneath: "$10.00 / ≈ ₹952"
+  - **What you still hold** — the balance — is kept **per currency** and valued at **today's rate**. Paid $200 in the USA, spent $50 there and ₹10,000 back in India: the balance is $150 at today's rate minus ₹10,000, and Home spells it out
+- Carry-forward carries each currency separately; **trips** and **recurring bills** (rent in AED, a USD subscription) have their own currency
+- Changing the display currency never rewrites history; budgets and goal targets can be re-stated at today's rate in the same step
+- Rates come from two free, key-less sources — [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api) (every currency) and the European Central Bank via [Frankfurter](https://frankfurter.dev) (long ranges in one request). Each day's rates are cached on the device and never fetched twice; pegged Gulf currencies are exact; a new foreign entry also stores the rate it was entered at
 
-How amounts in other currencies count — the rule the whole app follows:
-- **What happened** (spending, income, history, reports, budgets) uses the rate of **the day it happened**. $10 of fuel in March stays what it cost in March, whatever the dollar does later; a list shows “$10.00 ≈ ₹952”.
-- **What you still hold** — the balance — is kept **per currency** and valued at **today’s rate**. Paid $200 in the USA, spent $50 there and ₹10,000 back in India: the balance is $150 at today’s rate minus ₹10,000, and Home spells it out.
-- Carry-forward carries each currency separately. Trips and recurring bills (rent in AED, a USD subscription) have their own currency too.
-- Changing the display currency never rewrites history; budgets and goal targets can be re-stated at today’s rate in the same step.
+### 🏷️ Smart categories
+- 16 categories (Food & Dining, Groceries, Transport, Fuel, Shopping, Bills & Utilities, Rent & Home, Health, Entertainment, Subscriptions, Education, Travel, Personal Care, Gifts & Donations, Family, Other)
+- Inferred from the description with an India-aware keyword list (Swiggy, Zomato, Blinkit, Rapido, IRCTC, BESCOM, Jio, D-Mart, PVR …); the suggestion is marked ✦ and can be changed with one tap
+- Overrides are **learned** (`settings.categoryRules`); older untagged entries are categorised on the fly
 
-Rates come from two free sources (fawazahmed0’s exchange-api for every currency, the European Central Bank via Frankfurter for long ranges), are cached on the device per day and never fetched twice; pegged Gulf currencies are exact. A new foreign entry also stores the rate it was entered at.
+### 🎯 Budget
+- **The month's plan**: income (received, or your recurring salary before it arrives) − fixed payments (rent, EMIs, insurance, SIPs from Bills) − the spending budget = **left to save or spare**
+- **Taken from salary**: deductions (TDS, PF, professional tax …) to see gross pay; shown, never subtracted twice
+- A total cap and/or per-category caps; with none set, a ready-made budget from your last three months
+- Pace markers, **safe to spend today**, projected month end, an envelope per category, six months against the budget
+
+### 🧾 Bills & recurring entries
+- Rules for **expenses, savings or income** repeating daily / weekly / monthly / yearly (the 31st becomes the 28th in February), each in its own currency
+- **Auto-post** rules log silently on their due date; **ask-me** rules show *Log / Skip* — handy when the amount varies
+- Posted occurrences use a deterministic id (`rec_<rule>_<date>`), so two devices or a retry can never double-log
+- The **Bills & payments** page: the month's timeline with one-tap **Pay**, skip, totals, every regular payment, and common presets (Rent on the 5th, Electricity, Mobile, Internet, Send home, Loan EMI, SIP, FD/RD, insurance, LIC, Subscription)
+
+### 🏁 Savings goals
+- Amount, *needed by* month, a monthly share, **where the money is kept** (cash, a person, a bank) and a reminder day
+- **Add money**, **Moved it** (keeps the history: "was with Pritam until 3 Mar"), **Used it**, **Collected**; finished goals stay listed and can be reopened
+
+### 🧾 Monthly report
+- One report a month on the day you choose, **salary to salary**
+- Income, spent (vs last report), saved (savings rate), left; categories that went up, down, started or stopped; bills missed or skipped; categories over budget; per-day spend, no-spend days, biggest expense; earlier reports with ‹ ›
+
+### 📅 One month for the whole app
+- Every page shows **the same month**; switch it anywhere and every page follows. **Now** jumps back
+- Adding an entry while looking at an earlier month dates it in that month
+- What carries over: debts until settled, open billings, unpaid bills, and — with carry forward on — the month's leftover
+
+### ↪ Month carry forward
+- From a start month (default November 2026), what was left at the end of a month becomes an **auto** income line next month: "Carried forward from October 2026"; cumulative, recomputed from the ledger on every render, kept per currency
+- Profile → Money → *Month Carry Forward*: on/off, first month, and whether a deficit carries too (off by default)
+
+### ↔ Debts
+- Per person: **lent**, **got back**, **borrowed**, **paid back** — across transactions and income. Owe you · You owe · Settled
+- *Given (no return expected)* is spending and never appears in Debts
+- A page per person with one-tap *Got money back* / *Pay back* (pre-filled) and spreadsheet-style quick entry
+
+### 🧳 Trips & splits
+- The table you'd draw after a trip — **Person | What | Amount** — with Excel-like entry (type, Enter to move, paste from Excel)
+- **Pay as one wallet**: a couple or a family settles as one
+- A live **who-pays-whom plan** with the fewest transfers; tap **Paid** to record a settlement
+- **Share** a WhatsApp-ready summary; **Close** to log *your* share as a Travel expense and what others owe as Lent (or Borrowed) — in the trip's currency
+
+### 🔗 Billings (money spent for others)
+- Buying for a client or a person: goods purchased vs money received, net profit/loss live, a shareable receipt image, close to post the result to your ledger
+
+### 🗑️ Wastage
+- Tap an expense in History to mark it 100% wasted; double-tap for a partial amount; Stats shows total waste and its share of spending
+
+### 📊 Stats
+- Balance and breakdown for the month, the **spending calendar**, spending by category, where the money went (donut), and the monthly report
 
 ### 🔒 App lock & your devices
-- **One PIN for every device** (only a salted, slow hash is stored), plus **fingerprint / face** on Android and a **passkey** (Touch ID, Windows Hello) on the web and desktop — per device
-- Locks when the app opens, after the time away you choose (immediately … 1 hour), when a computer sits untouched, or from another of your devices
-- **Wrong PINs**: from the 5th the app waits longer each time (30 s → 1 h), your other devices get an alert (“Lock it / Sign it out / It was me”) and you get an email; the 10th means only signing in again opens it. Nothing is erased
-- **Forgot PIN?** Sign in again with Google or your password, choose a new one — your data stays exactly as it is
+- **One PIN for every device** — only a salted PBKDF2 hash is stored, never the PIN
+- **Fingerprint / face / screen lock** on Android; a **passkey** (Touch ID, Windows Hello) on the web and desktop — set up per device
+- Locks when the app opens, after the time away you choose (immediately … 1 hour), when a computer sits untouched for 5 minutes, or **from another of your devices**
+- **Wrong PINs**: from the 5th the app waits longer each time (30 s → 1 h), your other devices show an alert (*Lock it · Sign it out · It was me*) and you get an **email**; after the 10th only signing in again opens it. Nothing is erased
+- **Forgot PIN?** Sign in again with Google or your password and choose a new PIN — your data stays exactly as it is
 - **Unlock from another device**: a locked laptop asks; your phone shows *Approve / Deny*
-- **Profile → Security → Your devices**: every device signed in, a pulsing **Live** tag on the ones on screen right now, **Locked** on locked ones; lock or sign out any of them, or all others at once
-- Honest limits: the lock keeps people holding your unlocked phone or laptop out of the app; your data itself is protected by your account sign-in. A remote sign-out happens the moment that device is online
+- **Profile → Security → Your devices**: every device signed in, a pulsing **Live** tag on those on screen right now, **Locked** on locked ones; lock or sign out any of them, or all others at once
+- While locked, the app doesn't render or load your data at all
+- Honest limits: the lock keeps people holding your unlocked phone or laptop out of the app; your data itself is protected by your account sign-in. A remote sign-out takes effect the moment that device is online
 
 ### ☁️ Google Drive backup
-Like WhatsApp: a full copy of everything goes to a folder **“Expense Tracker backups” in your own Google Drive** — every day, week or month, keeping the newest 3–30 copies. The app asks only for the `drive.file` permission (it can see the files it creates, nothing else). Restore any copy from Profile, on this device or a new one; restoring writes entries back and deletes nothing. There is no copy on any server of ours.
-
-### ⚙️ Settings & Data Management
-- **Export JSON**: download a full backup of all transactions, income, and settings (budgets, goals, category rules included)
-- **Export CSV**: a spreadsheet with categories that the app's own CSV importer accepts — round-trips cleanly
-- **Import JSON**: restore from a backup — batched writes; records keep their ids, so re-importing never duplicates
-- **Import CSV**: RFC-4180 CSV importer (`date, name, amount, type`; quoted fields, `1,200`-style amounts, `DD/MM/YYYY` dates) with stable ids — importing the same file twice is safe
-- **Recently Deleted**: deletes move items to a trash (atomically) from which they can be restored
-- **Reset All Data**: permanently deletes all transactions, income, billings and trash
-- **Sync status** ("Synced", "Saving…", "Offline — changes are saved on this device"); your devices are under Security (devices unused for 30 days drop off)
-- **Updates**: current version and build, *Check for updates*, and *Restart to update* / *Install* when one is waiting
+- Like WhatsApp: a full copy of everything goes to **"Expense Tracker backups" in your own Google Drive** — every day, week or month, keeping the newest 3–30 copies
+- Only the `drive.file` permission: the app sees the files it creates and nothing else in your Drive
+- The Android and desktop apps back up by themselves; the website asks for a tap when a backup is due (browsers need one to reach Google)
+- **Restore** any copy from Profile, on this device or a new one — entries are written back and nothing else is deleted
+- No copy of your backups, and none of your Google tokens, is kept on any server of ours
 
 ### 🔔 Reminders
 Six optional reminders, all off until you tap their tile (Profile → Reminders), each with its own time:
 - **Bills due** — "Have you paid rent?" on the day a bill is due (never for auto-paid bills or income)
-- **Log the day** — on the days you choose; skipped if you already logged something that day
-- **Budget check** — once when the month passes 80 %, once at 100 %
+- **Log the day** — skipped if you already logged something that day
+- **Budget check** — once at 80% of the month's budget, once at 100%
 - **Monthly report** — on your report day
-- **Goals** — on each goal's day: this month's share to put aside, or, once reached, a nudge to collect it
+- **Goals** — each goal's day: this month's share to put aside, or a nudge to collect it
 - **Weekly summary** — your week in one line on the evening you pick
 
-At most one per type per day. On Android they pop up with a sound (or arrive quietly — your choice per device) and can be set to arrive *on the minute*; the Reminders card also explains the battery setting that some phones (vivo, iQOO, Oppo, Xiaomi, Samsung) need. On the website they arrive by **cloud push** even with the page closed. Tapping one opens the right page. The settings sync across devices; *Reminders on this device* is per device. *Send a test* shows one right away. See [What each platform can do](#what-each-platform-can-do) for when they can arrive.
+At most one per type per day. On Android they **pop up with a sound** (or arrive quietly — per device) and can be set to arrive **on the minute**; the card also explains the battery setting some phones (vivo, iQOO, Oppo, Xiaomi, Samsung) need. On the website they arrive by **cloud push** even with the page closed. Tapping one opens the right page. *Send a test* shows one right away.
 
-### 🌙 Theming
-- **Light**, **dark** or **follow the device** — chosen per device, applied before the first paint (no flash)
-- Liquid-glass surfaces; deep, smoked dark mode
-- In the Android app the status and navigation bars follow the theme
+### ⚙️ Your data
+- **Export JSON** (everything: entries, billings, trips, recurring, trash, settings) and **Export CSV** (opens in Excel / Google Sheets, re-importable)
+- **Import JSON / CSV** — record ids are kept or derived deterministically, so importing twice never duplicates
+- **Recently Deleted** — deletes go to a trash you can restore from
+- **Delete all data** or **delete the account**
+- **Sync status** ("Synced", "Syncing…", "Offline — saved on this device") and **Updates** (version, build, *Check for updates*, *Restart to update*)
 
-### 📱 Responsive layout
-- **Phone**: the bottom bar above; swipe between bar pages (ignored inside chip rows, charts, dialogs and near the screen edges)
-- **Desktop & web** (≥1024px): the **same pages** with a sidebar — Overview (Home, History, Stats) · Money (Income, Bills, Budget, Savings) · With others (Trips, Billings, Debts) — **+ Add** at the top and your profile at the bottom; Home and Stats use two columns, the rest a comfortable reading width; Add opens as a centred dialog
-- The website is installable (Add to Home Screen) and works offline; the Android and desktop apps carry the whole app inside, so they open instantly with no connection
-- Firestore's persistent on-device cache paints the UI instantly and queues writes while offline. Sign-out waits until unsent changes are uploaded (or asks before discarding them)
+### 🎨 Look & layout
+- **Liquid-glass** surfaces; a deep ink-blue **Midnight** dark mode; light, dark or follow the device — per device, applied before the first paint
+- Motion you can switch off: a coin that flies into the month card, rolling numbers, a liquid budget gauge, self-drawing signs (respects *reduce motion*)
+- **Phone**: bottom bar *Home · two pages · ＋ · one page* (choose them in Profile → Customize), Explore tiles on Home for every other page, swipe between bar pages
+- **Desktop, web and tablets** (≥768 px wide and ≥600 px tall): the same pages with a sidebar — Overview (Home, History, Stats) · Money (Income, Bills, Budget, Savings) · With others (Trips, Billings, Debts) — and the full Add form open on Home; Home fits the window without page scrolling
+- Tap your **avatar** for **Profile**: account, theme, animations, Security, Google Drive backup, Currency, Reminders, Customize, then Money · Sync · Your data · App · Account
 
 ---
 
@@ -218,132 +216,105 @@ You install once; after that every platform updates itself.
 | Platform | How it works |
 |---|---|
 | **Web** | Every push to `main` deploys the site. The service worker checks on open, when the tab comes back and every 30 minutes, then reloads once onto the new version. |
-| **Android** | Over-the-air: each deploy also publishes the app's web bundle (`/app/update.json` + a zip with a SHA-256 checksum) next to the website. The app checks on launch, on return and every 30 minutes and downloads in the background. It switches when you tap **Restart**, when the app goes to the background, or — if it was swiped away first — during the splash of the next open. If the new bundle doesn't start, the app rolls back by itself. Only when a version needs new *native* code (`expensetracker.minNativeVersion` in `package.json`) does it say *"install the new app"* — once — with a link to the APK. |
-| **Desktop** | Tauri's signed updater reads `latest.json` from the newest GitHub release, downloads in the background and offers **Restart to update**. Updates are signed with a minisign key; an update without a valid signature is refused. |
+| **Android** | Over the air: each deploy also publishes the app's web bundle (`/app/update.json` + a zip with a SHA-256 checksum) next to the website. The app checks on launch, on return and every 30 minutes, downloads in the background and switches on **Restart**, when it goes to the background, or during the next splash. A bundle that doesn't start is rolled back automatically. When a version needs new *native* code (`expensetracker.minNativeVersion` in `package.json`, now **3.11.0**), older apps stop receiving bundles and say *"install the new app"* once, with a link to the APK. |
+| **Desktop** | Tauri's signed updater reads `latest.json` from the newest GitHub release, downloads in the background and offers **Restart to update**. Updates without a valid minisign signature are refused. |
 
-After any update the app says *"Updated to vX"* once. Settings shows the version, build date and commit.
+After an update the app says *"Updated to vX"* once.
 
 ---
 
-## 🏗️ Tech Stack
+## 🏗️ Tech stack
 
 | Layer | Technology |
 |---|---|
-| **Frontend Framework** | React 19 + Vite 8 |
-| **Backend / Database** | Firebase Firestore (NoSQL, real-time) |
-| **Authentication** | Firebase Auth — Google + email/password (native Google picker on Android, browser sign-in with PKCE on desktop) |
-| **Android app** | Capacitor 8 (local notifications, OTA updates via `@capgo/capacitor-updater`, a small native plugin for the system bars) |
-| **Desktop app** | Tauri 2 (Rust): menu bar / tray, single instance, open at login, notifications, signed updater |
-| **Charts** | Recharts 3 |
-| **Icons** | Lucide React |
-| **Fonts** | Inter (Google Fonts) |
-| **CSS** | Vanilla CSS with CSS Custom Properties (design tokens) |
-| **PWA** | Web App Manifest + custom Service Worker (website only) |
-| **Build Tool** | Vite — `vite build` for the website (base `/ExpenseTracker/`), `vite build --mode native` for the apps (`dist-native/`, no service worker) |
-| **Deployment** | GitHub Actions → GitHub Pages (website + Android OTA bundle) and GitHub Releases (APK, DMG, EXE, AppImage, `latest.json`) |
-| **Linting** | ESLint 9 (flat config) |
-| **Testing** | Vitest (unit tests for finance, categories, budget, recurring, report, debts, goals, dates and import/export; server-render smoke tests for every screen) |
+| **Frontend** | React 19 + Vite 8, vanilla CSS with custom properties (design tokens), Lucide icons, Recharts 3 |
+| **Database** | Firebase Firestore with the persistent on-device cache (offline reads and queued writes) |
+| **Auth** | Firebase Auth — Google + email/password. Native Google picker on Android (Credential Manager, with the classic picker as fallback); browser sign-in with PKCE on desktop |
+| **Android** | Capacitor 8: local notifications, Firebase Cloud Messaging, OTA updates (`@capgo/capacitor-updater`), and three small native plugins of our own — system bars, **BiometricPrompt**, Google **AuthorizationClient** for Drive |
+| **Desktop** | Tauri 2 (Rust): menu bar / tray, single instance, open at login, notifications, loopback OAuth, signed updater |
+| **Push & alerts** | Firebase Cloud Messaging (Android + web push) sent by a scheduled GitHub Action; email over SMTP (nodemailer) |
+| **Backups** | Google Drive REST API (`drive.file`), Google Identity Services on the web |
+| **Exchange rates** | fawazahmed0/exchange-api (jsDelivr / Cloudflare Pages) + Frankfurter (ECB) |
+| **App lock** | Web Crypto PBKDF2-SHA256, WebAuthn platform authenticators, Android BiometricPrompt |
+| **PWA** | Web App Manifest + a custom service worker (offline cache, push, notification taps) |
+| **Build & deploy** | Vite (`/ExpenseTracker/` for the site, `--mode native` for the apps); GitHub Actions → GitHub Pages (site + Android OTA) and GitHub Releases (APK, DMG, EXE, AppImage, `latest.json`) |
+| **Quality** | ESLint 9 (flat config); Vitest — unit tests for money maths, currencies, PIN rules, categories, budget, recurring, report, debts, goals, dates, import/export, backups, and server-render smoke tests of every screen |
 
 ---
 
-## 📂 Project Structure
+## 📂 Project structure
 
 ```
 ExpenseTracker/
-├── index.html                  # Entry point — preloader, PWA tags, SW registration
-├── vite.config.js              # Vite config (base: /ExpenseTracker/) + SW build-ID stamping
-├── firebase.json               # Firebase Firestore rules + indexes config
-├── firestore.rules             # Security rules for the WHOLE shared project (see below)
-├── firestore.indexes.json      # Composite index definitions
-├── capacitor.config.json       # Android app config (app id, OTA updater, Google sign-in)
-├── android/                    # Android project (Gradle); SystemThemePlugin.java, notification icon
-├── src-tauri/                  # Desktop app (Rust): lib.rs (tray, commands), oauth.rs, reminders.rs
+├── index.html                  # Entry: splash, theme before first paint, PWA tags, service-worker registration
+├── vite.config.js              # Website vs native builds; build-ID stamping for the service worker
+├── firebase.json, .firebaserc  # Firestore rules + indexes for project expensetracker-385b0
+├── firestore.rules             # Owner-only access, shape validation
+├── firestore.indexes.json      # Collection-group indexes used by the notifier
+├── capacitor.config.json       # Android app: id, OTA updater, Google sign-in
+├── android/                    # Gradle project; MainActivity + SystemThemePlugin, BiometricPlugin, GoogleDrivePlugin
+├── src-tauri/                  # Desktop (Rust): lib.rs (tray, commands), oauth.rs (loopback sign-in), reminders.rs
 ├── scripts/
 │   ├── check-config.mjs        # Refuses to build without a Firebase config
 │   ├── make-ota.mjs            # Android OTA bundle + update.json
 │   ├── make-latest-json.mjs    # Desktop updater manifest
 │   ├── render-icons.mjs        # App icons for every platform
-│   └── clear-db.mjs            # Maintenance: wipe one user's data (prompts for password)
-├── .github/workflows/          # deploy-web.yml (site + OTA), build-apps.yml (all apps → release)
-│
-├── src/
-│   ├── main.jsx                # React 19 createRoot entry
-│   ├── index.css               # Global styles, CSS tokens (light + MonoFlow themes)
-│   ├── app/App.jsx             # Root: AuthGate → AuthenticatedApp — one shell: phone bar or desktop sidebar, the same pages
-│   ├── app/month.js            # The app-wide month every page follows
-│   │
-│   ├── features/
-│   │   ├── auth/               # AuthGate, login and sign-up pages
-│   │   ├── transactions/       # TodayTab (Home), HistoryTab (search, filters, wastage, edit)
-│   │   ├── income/             # IncomeTab
-│   │   ├── external/           # Billing sessions (ExternalTab) + share receipt, Billings ⇄ Trips switch
-│   │   ├── trips/              # Trips & Splits: members, expenses, settle-up plan, close → ledger
-│   │   ├── debts/              # Debts: lent · borrowed · got back · paid back, per person
-│   │   ├── bills/              # Bills & payments timeline
-│   │   ├── budget/             # Budget: month plan, envelopes, six months
-│   │   ├── savings/            # Savings & goals
-│   │   ├── plan/               # Shared modals and cards: recurring rule, budget editor, goals
-│   │   ├── stats/              # Stats, CategoryBreakdown, SpendingCalendar, ReportCard
-│   │   ├── profile/            # Profile: theme, reminders, customize
-│   │   └── settings/           # Settings sections, reminders card, import/export (JSON + CSV), account
-│   │
-│   ├── components/             # AddSheet, MonthSwitcher, Page (header/sections), modals, UpdateBanner, …
-│   ├── native/                 # Platform layer: index.js (detection, back button, status bar), updates.js,
-│   │                           #   reminders.js (delivery), googleSignIn.js (Android + desktop)
-│   │
-│   ├── hooks/
-│   │   ├── useAuth.js               # Auth state (grace period) + sign-out cache wipe
-│   │   ├── useFirestoreData.js      # Real-time data + optimistic writes with rollback (+ patchSettings)
-│   │   ├── useRecurring.js          # Recurring rules, due occurrences, auto-post, post/skip
-│   │   ├── useExternalTransactions.js # Billing sessions (per-session debounced autosave)
-│   │   ├── useStats.js              # Memoized wrapper around utils/finance.js
-│   │   ├── useTransactions.js       # Period filtering + grouping (+ optional predicate)
-│   │   └── useWastage.js            # Tap/double-tap wastage interaction
-│   │
-│   ├── services/
-│   │   ├── firebaseConfig.js   # Public Firebase web config (shared with scripts/)
-│   │   ├── firebase.js         # App, Auth, Firestore (persistent cache), optional App Check
-│   │   ├── firestore.js        # Firestore CRUD, batched import/reset, atomic trash/restore, devices
-│   │   ├── sync.js             # Sync status store, background writes, readable errors
-│   │
-│   └── utils/
-│       ├── finance.js          # ALL money maths: balances, person debts, settlement matching
-│       ├── categories.js       # Category list, keyword inference, learned rules, per-category totals
-│       ├── split.js            # Trip splitting: shares, pay-groups as one wallet, minimal who-pays-whom transfers
-│       ├── carryForward.js     # Month-to-month leftover chain → synthetic "carried forward" income lines
-│       ├── budget.js           # Budget status, suggested budget, the month's plan
-│       ├── recurring.js        # Occurrence generation, due/next, deterministic ids, entry builder
-│       ├── goals.js            # Goals: progress, monthly share, held with, move / used / collected
-│       ├── debts.js            # Debts ledger across transactions and income
-│       ├── report.js           # Monthly report: salary-to-salary window, what changed, missed bills
-│       ├── bills.js            # Bill occurrences and status, presets
-│       ├── smartInput.js       # "chai 20" quick-entry parsing
-│       ├── exportHelpers.js    # CSV export (round-trips through importHelpers)
-│       ├── importHelpers.js    # CSV parser, stable import ids
-│       ├── dateHelpers.js      # Formatting + local-time date keys
-│       ├── periodHelpers.js    # Period filtering (local calendar)
-│       ├── typeConfig.js       # Transaction type metadata
-│       ├── storage.js          # Id generation
-│       ├── theme.js            # Light / dark / follow device
-│       ├── reminders.js        # Reminder plan (pure): what fires when, and the wording
-│       ├── backup.js           # Backup format v2: parse + validate before restoring
-│       └── __tests__/          # Vitest unit tests
-│
+│   ├── clear-db.mjs            # Maintenance: wipe one user's data
+│   └── notifier/               # Scheduled job: website reminders + security alerts (push + email)
+├── .github/workflows/          # deploy-web.yml · build-apps.yml · notifier.yml
 ├── public/
-│   ├── manifest.json           # PWA Web App Manifest
-│   └── sw.js                   # Service Worker (cache name stamped per build)
+│   ├── manifest.json, icons    # PWA manifest
+│   ├── sw.js                   # Service worker: offline cache, push, notification taps
+│   └── privacy.html            # Privacy policy (Google consent screen, Play listing)
+│
+└── src/
+    ├── main.jsx                # React entry
+    ├── index.css, styles/      # Tokens and global styles; glass.css (Liquid Glass), layout.css
+    ├── app/                    # App.jsx (AuthGate → LockGate → one shell: phone bar or sidebar),
+    │                           #   month.js (the app-wide month), pages.js, shellContext.js, ready.js
+    ├── features/
+    │   ├── auth/               # Sign-in and sign-up
+    │   ├── transactions/       # Home (TodayTab), History
+    │   ├── income/ debts/ bills/ budget/ savings/ stats/
+    │   ├── trips/              # Trips & splits
+    │   ├── external/           # Billings
+    │   ├── plan/               # Shared modals and cards: recurring rule, budget editor, goals
+    │   ├── profile/            # Profile page
+    │   └── settings/           # Settings sections, Reminders, Currency, Google Drive backup
+    ├── security/               # App lock: pin.js (hash + lockout rules), useAppLock.js (state machine),
+    │                           #   LockScreen, SecurityCard (lock, devices, alerts), SecurityBanners,
+    │                           #   biometric.js, reauth.js, events.js
+    ├── components/             # AddSheet, Sheet (spreadsheet entry), CurrencySelect, EntryAmount, modals, …
+    ├── motion/                 # Coin drop, rolling numbers, liquid gauge, signs, tilt
+    ├── native/                 # Platform layer: index.js, updates.js, reminders.js (delivery),
+    │                           #   push.js (FCM), googleSignIn.js (Android + desktop)
+    ├── hooks/                  # useAuth, useFirestoreData (data + currency views), useRecurring, useDevices,
+    │                           #   useDriveBackup, useStats, useExternalTransactions, …
+    ├── services/
+    │   ├── firebase.js         # App, Auth, Firestore (persistent cache), optional App Check
+    │   ├── firestore.js        # All Firestore reads/writes: entries, trash, devices, lock, security events
+    │   ├── sync.js             # Sync status, background writes, readable errors
+    │   ├── rates.js            # Exchange rates: fetch, per-day cache, lookups
+    │   └── drive.js            # Google Drive: tokens per platform, backup, list, restore, prune
+    └── utils/
+        ├── finance.js          # Every balance rule
+        ├── money.js            # Currencies, formatting, display / entry currency
+        ├── fx.js               # Currency views: day-rate history, live-rate balance, per-currency carry
+        ├── categories.js, budget.js, recurring.js, bills.js, goals.js, debts.js, report.js, split.js,
+        │   carryForward.js, reminders.js, smartInput.js, backup.js, import/exportHelpers.js, dateHelpers.js, …
+        └── __tests__/          # Vitest
 ```
 
 ---
 
-## ⚙️ Installation & Setup
+## ⚙️ Installation & setup
 
 ### Prerequisites
 
-- **Node.js** ≥ 20.19 (required by Vite 8 / Vitest)
-- A **Firebase project** with Firestore and Authentication (Email/Password + Google) enabled — this app uses `expensetracker-385b0`
-- For the Android app: JDK 21 and the Android SDK (Android Studio installs both)
-- For the desktop app: Rust (`rustup`) and, on Linux, the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)
+- **Node.js** ≥ 20.19
+- A **Firebase project** with Firestore and Authentication (Email/Password + Google). This app uses `expensetracker-385b0`
+- Android app: JDK 21 and the Android SDK (Android Studio installs both)
+- Desktop app: Rust (`rustup`) and, on Linux, the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)
 
 ### 1. Clone and install
 
@@ -356,35 +327,30 @@ npm install
 ### 2. Configure Firebase
 
 ```bash
-cp .env.example .env     # then fill in VITE_FIREBASE_* from Firebase Console → Project settings → Your apps
+cp .env.example .env     # fill in VITE_FIREBASE_* from Firebase Console → Project settings → Your apps
 ```
 
-The config is read from `VITE_FIREBASE_*` (see `src/services/firebaseConfig.js`). For the GitHub Pages deploy, give it to the build **one** of two ways:
+For the GitHub Pages deploy, put the same values in the repository's **Settings → Secrets and variables → Actions** (Variables or Secrets). The API key must be **restricted by HTTP referrer** and the project should use **App Check** — see [SECURITY.md](SECURITY.md). The build refuses to publish without a config (`scripts/check-config.mjs`).
 
-1. **Repository variables** (keeps the key out of git): repo *Settings → Secrets and variables → Actions*, add the seven `VITE_FIREBASE_*` entries (Variables or Secrets tab both work).
-2. **Commit `.env`** (simplest): `git add -f .env && git commit -m "firebase config" && git push`. Firebase web config values are public identifiers that ship in every browser bundle anyway; GitHub's secret scanner will flag the key once — close the alert as a false positive, or add a `.github/secret_scanning.yml` with `paths-ignore: [".env"]`.
-
-Either way the API key must be **restricted by HTTP referrer** and the project should use **App Check** — see [SECURITY.md](SECURITY.md). The deploy refuses to publish if the config is missing (`scripts/check-config.mjs`), so a bundle without a backend can never reach the live site.
-
-### 3. Deploy Firestore rules
+### 3. Deploy Firestore rules and indexes
 
 ```bash
 npm install -g firebase-tools
 firebase login
-firebase deploy --only firestore:rules --project <your-project-id>
+firebase deploy --only firestore:rules,firestore:indexes --project expensetracker-385b0
 ```
 
-> The app has its own Firebase project (`expensetracker-385b0`, set in `.firebaserc`), so these rules cover only Expense Tracker. It used to live in the shared `nistha-passi-core` project — never deploy this file there: that would replace the rules of every other app in it (`scripts/check-config.mjs` refuses builds pointed at it).
+> The app has its own Firebase project. It used to live in the shared `nistha-passi-core` project — never deploy this file there; `scripts/check-config.mjs` refuses builds pointed at it.
 
 ### 4. Run locally
 
 ```bash
 npm run dev      # http://localhost:5173/ExpenseTracker/
 npm run lint
-npm test         # runs in Asia/Kolkata timezone to exercise local-date edge cases
+npm test         # runs in Asia/Kolkata to exercise local-date edge cases
 ```
 
-### 5. Apps on your machine
+### 5. Build the apps on your machine
 
 ```bash
 # Android — debug APK (or open in Android Studio)
@@ -392,31 +358,38 @@ npm run android:apk            # → android/app/build/outputs/apk/debug/app-deb
 npm run android:open
 
 # Desktop
-npm run desktop:dev            # live-reloading desktop window
+npm run desktop:dev            # live-reloading window
 npm run desktop:build          # installers for this OS in src-tauri/target/release/bundle/
 ```
 
-A local `desktop:build` also builds signed update files, so it needs the updater key in the environment (or turn them off with `--config '{"bundle":{"createUpdaterArtifacts":false}}'`):
+A local `desktop:build` also signs update files, so it needs the updater key (or turn them off with `--config '{"bundle":{"createUpdaterArtifacts":false}}'`):
 
 ```bash
 export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.local/expensetracker-signing/tauri-updater.key)"
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="…"   # in ~/.local/expensetracker-signing/secrets.txt on the release machine
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="…"
 ```
 
-### 6. Cloud push and alert emails (optional, free)
+### 6. Google Cloud setup for sign-in and Drive backup
 
-Website reminders while the page is closed, and security alerts, are sent by a small scheduled job — [`scripts/notifier/`](scripts/notifier/notifier.mjs), run every ~10 minutes by [`.github/workflows/notifier.yml`](.github/workflows/notifier.yml). No Cloud Functions, so it works on the free Spark plan. The apps upload their own reminder plan; the job only delivers what is due.
+The app uses two Google Cloud projects:
 
-1. Firebase Console → Project settings → **Service accounts** → *Generate new private key*. Save the JSON as the repository secret `FIREBASE_SERVICE_ACCOUNT`.
-2. Firebase Console → Project settings → **Cloud Messaging** → *Web Push certificates* → *Generate key pair*. Save the public key as the repository variable `VITE_FIREBASE_VAPID_KEY`.
-3. Emails (optional): a Gmail **app password** (Google Account → Security → App passwords) as the secret `SMTP_URL` = `smtps://you%40gmail.com:APP-PASSWORD@smtp.gmail.com:465`, and the variable `MAIL_FROM` = `Expense Tracker <you@gmail.com>`.
-4. Deploy the two collection-group indexes the job queries: `firebase deploy --only firestore:indexes`.
+| Project | Used by | Needs |
+|---|---|---|
+| **ExpenseTracker** (`expensetracker-385b0`, the Firebase project) | Website and Android sign-in and Drive backup | **Google Drive API** enabled · the *Web client (auto created by Google Service)* with `https://<you>.github.io` in **Authorized JavaScript origins** (its ID is `VITE_GOOGLE_WEB_CLIENT_ID`) · the Android client registered with the release key's SHA-1 (in `android/app/google-services.json`) |
+| **expense-tracker** (`trim-mile-511210-h3`) | Desktop sign-in and Drive backup (`VITE_GOOGLE_DESKTOP_CLIENT_ID` / `_SECRET`, a "Desktop app" client) | **Google Drive API** enabled · **Google Auth Platform → Branding** filled in (app name, support email, home page, [privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html), authorised domain `thrishankkuntimaddi.github.io`) · **Audience → Publish app** (In production) |
 
-GitHub may start scheduled runs a few minutes late, and pauses schedules in a repository with no commits for 60 days (re-enable it in the Actions tab).
+Until Google verifies the app, people see an *"unverified app"* screen once — **Advanced → Go to Expense Tracker**. The only Drive scope is `drive.file`, which Google treats as non-sensitive.
 
-### 7. Google Drive backup on the website (optional)
+### 7. Cloud push and alert emails (free)
 
-The Android and desktop apps need nothing extra. For the website, create an OAuth client of type **Web application** in Google Cloud Console → APIs & Services → Credentials, add your site (e.g. `https://<you>.github.io`) to *Authorized JavaScript origins*, enable the **Google Drive API**, and set the repository variable `VITE_GOOGLE_WEB_CLIENT_ID`. Without it, people signed in with Google can still back up through a sign-in popup.
+Website reminders while the page is closed, and security alerts, are delivered by [`scripts/notifier/`](scripts/notifier/notifier.mjs), run every ~10 minutes by [`.github/workflows/notifier.yml`](.github/workflows/notifier.yml). No Cloud Functions, so it works on the free Spark plan. The apps upload their own reminder plan (`users/{uid}/push_plan/current`); the job only delivers what's due.
+
+1. Firebase Console → Project settings → **Service accounts** → *Generate new private key* → repository secret `FIREBASE_SERVICE_ACCOUNT` (the whole JSON)
+2. Firebase Console → Project settings → **Cloud Messaging** → *Web Push certificates* → *Generate key pair* → repository variable `VITE_FIREBASE_VAPID_KEY`
+3. Emails: a Gmail **app password** (Google Account → Security → App passwords) as the secret `SMTP_URL` = `smtps://you%40gmail.com:APP-PASSWORD@smtp.gmail.com:465`, and optionally the variable `MAIL_FROM` = `Expense Tracker <you@gmail.com>`
+4. Deploy the indexes (step 3). Run it once by hand from the **Actions** tab (*Notifier → Run workflow*) to check the setup
+
+GitHub may start scheduled runs a few minutes late, and pauses schedules in repositories with no commits for 60 days — re-enable it in the Actions tab.
 
 ---
 
@@ -424,166 +397,168 @@ The Android and desktop apps need nothing extra. For the website, create an OAut
 
 | What | How |
 |---|---|
-| **Website + Android OTA** | Push to `main`. `deploy-web.yml` lints, tests, builds the site and the app bundle, and publishes both to GitHub Pages. Phones pick up the bundle on their own. |
-| **New app version** (all platforms) | Bump `version` in `package.json` and `src-tauri/Cargo.toml` (the desktop app reads the rest from `package.json`), commit, then `git tag vX.Y.Z && git push origin vX.Y.Z`. `build-apps.yml` builds the signed APK, the Mac (Apple Silicon + Intel), Windows and Linux installers, writes `latest.json`, publishes the release and removes older releases. |
-| **Needs a new APK?** | Only when native code or Capacitor plugins change. Then raise `expensetracker.minNativeVersion` in `package.json` to the new version, so older APKs are told to install it instead of receiving a bundle they can't run. |
-
-**Repository secrets** (Settings → Secrets and variables → Actions):
-
-| Secret | Used for |
-|---|---|
-| `VITE_FIREBASE_*` (7), `VITE_GOOGLE_DESKTOP_CLIENT_ID`, `VITE_GOOGLE_DESKTOP_CLIENT_SECRET` | App config (variables work too) |
-| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | Signing the APK. **Keep the keystore safe** (the release machine has a copy in `~/.local/expensetracker-signing/` — back it up somewhere else too); phones only accept updates signed with the same key. |
-| `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Signing desktop updates (the public key is in `tauri.conf.json`) |
+| **Website + Android OTA** | Push to `main`. `deploy-web.yml` lints, tests, builds the site and the app bundle, and publishes both to GitHub Pages. |
+| **New version** (all platforms) | Bump `version` in `package.json`, `package-lock.json`, `src-tauri/Cargo.toml` and `src-tauri/Cargo.lock`, commit as `release: X.Y.Z — …`, then `git tag vX.Y.Z && git push origin main vX.Y.Z`. `build-apps.yml` builds the signed APK and the Mac (Apple Silicon + Intel), Windows and Linux installers, writes `latest.json`, publishes the release and removes older ones. |
+| **Native code changed?** | When Android native code or Capacitor plugins change, raise `expensetracker.minNativeVersion` in `package.json` to the new version, so older APKs are asked to install the new one instead of receiving a bundle they can't run. |
 
 ---
 
-## 🔑 Environment Variables
+## 🔑 Environment variables & secrets
 
-### Frontend (build time, all optional)
+### Build time (`.env` locally; repository variables or secrets in CI)
 
 | Variable | Description |
 |---|---|
-| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID` | **Required.** Firebase web config (see `.env.example`). In CI these are GitHub repository *variables*. |
-| `VITE_APPCHECK_SITE_KEY` | reCAPTCHA v3 site key. When set, Firebase **App Check** is enabled so only this app can call your backend. Register the key in Firebase Console → App Check, then turn on enforcement for Firestore. |
+| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID` | **Required.** Firebase web config |
+| `VITE_APPCHECK_SITE_KEY` | reCAPTCHA v3 site key — turns on Firebase App Check |
+| `VITE_GOOGLE_DESKTOP_CLIENT_ID`, `VITE_GOOGLE_DESKTOP_CLIENT_SECRET` | "Desktop app" OAuth client: Google sign-in and Drive backup in the desktop app (empty = Google sign-in hidden there) |
+| `VITE_GOOGLE_WEB_CLIENT_ID` | "Web application" OAuth client for Drive backup on the website |
+| `VITE_FIREBASE_VAPID_KEY` | Web push key (empty = the website shows reminders only while it's open) |
 
-| `VITE_GOOGLE_DESKTOP_CLIENT_ID`, `VITE_GOOGLE_DESKTOP_CLIENT_SECRET` | Google sign-in in the desktop app (a "Desktop app" OAuth client). Empty = Google sign-in hidden on desktop. Also used for Drive backups on desktop. |
-| `VITE_FIREBASE_VAPID_KEY` | Web push key pair (Cloud Messaging). Empty = the website shows reminders only while it's open. |
-| `VITE_GOOGLE_WEB_CLIENT_ID` | "Web application" OAuth client for Drive backups on the website. |
+### CI secrets
 
-The notifier job uses the secrets `FIREBASE_SERVICE_ACCOUNT` (required) and `SMTP_URL` (optional), and the variables `MAIL_FROM` and `APP_URL` (optional).
-
-In CI these come from GitHub repository **variables** (or secrets) of the same name.
+| Secret | Used for |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | Signing the APK. **Keep the keystore safe** (backed up outside the release machine) — phones only accept updates signed with the same key |
+| `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Signing desktop updates (the public key is in `tauri.conf.json`) |
+| `FIREBASE_SERVICE_ACCOUNT` | The notifier job (push + alert emails) |
+| `SMTP_URL` | Alert emails (optional); `MAIL_FROM` and `APP_URL` are optional variables |
 
 ---
 
-## 🧠 How It Works
+## 🧠 How it works
 
-### Data Flow
+### Data flow
 
 ```
 User action → component → useFirestoreData
-    ├─ optimistic setState
-    └─ Firestore write ──(rejected)──▶ roll back state + show error banner
+    ├─ optimistic setState (stored form; the UI sees currency views)
+    └─ Firestore write ──(rejected)──▶ roll back + error banner
                      ──(offline)───▶ queued in IndexedDB, synced on reconnect
-Firestore listeners (subscribeToUserData) ─▶ React state
+Firestore listeners ─▶ stored entries ─▶ views in the display currency (day rates) ─▶ pages
 ```
 
-### Key Design Decisions
+### Key design decisions
 
-1. **Client ID as document ID** — ids are generated client-side and used as Firestore document ids, so `d.id === txn.id`. Imports derive *deterministic* ids from the row content, so re-imports overwrite instead of duplicating.
-2. **Atomic trash** — deleting writes the item to `recently_deleted` and removes the original in one `writeBatch`; restoring is the reverse batch.
-3. **Local calendar everywhere** — dates are stored as UTC ISO strings but always bucketed with `localDateKey` / `localMonthKey`, so an entry made at 00:30 IST lands on the right day and month.
-4. **Money in paise** — totals are summed as integer paise (`sumAmounts`) and stored amounts are rounded to 2 decimals.
-5. **One home for the maths** — `utils/finance.js` holds every balance rule and is unit-tested; the hooks only memoize it.
-6. **Full history is loaded on purpose** — person ledgers and the month/year selectors need all-time data, so the app subscribes to every document. The persistent cache keeps this cheap: the first paint comes from disk and reconnects only download changed documents.
-7. **Grace period in auth** — `useAuth` waits 800 ms before treating a `null` user as signed out, avoiding false sign-outs during token refresh.
-8. **FOUC prevention** — an inline script applies the cached theme before React boots.
+1. **Client ids as document ids** — imports derive deterministic ids, so re-imports overwrite instead of duplicating.
+2. **Atomic trash** — delete = write to `recently_deleted` + remove the original in one batch; restore is the reverse.
+3. **Local calendar everywhere** — dates are UTC ISO strings, bucketed with `localDateKey` / `localMonthKey`, so 00:30 IST lands on the right day.
+4. **Money in paise** — totals are summed as integers and stored amounts rounded to 2 decimals.
+5. **One home for the maths** — `utils/finance.js` holds every balance rule; `utils/fx.js` every currency rule. Both are unit-tested.
+6. **Stored entries never change currency** — the app works on *views*: copies whose money is in the display currency, with the originals in `orig`. Entries already in the display currency pass through untouched, so a one-currency account behaves exactly as before. Edits are mapped back: a rename keeps the original dollars; a typed amount is stored in the currency it was typed in.
+7. **History at the day's rate, balance at today's** — balances are computed per currency (`liveBalance`) and only the remainder is valued live.
+8. **The lock gates rendering** — while locked, the app component tree (and its Firestore listeners) isn't mounted.
+9. **No server decides anything** — reminders are planned on the device (`buildSchedule`); the notifier only delivers what the apps uploaded.
+10. **Grace period in auth** — 800 ms before a `null` user counts as signed out, avoiding false sign-outs during token refresh.
 
 ---
 
-## 🗃️ Firestore Data Model
+## 🗃️ Firestore data model
 
 ```
 users/{uid}                         ← { email, settings, createdAt }
-  │                                    settings = { theme, currency: 'INR' | 'USD' | …,
-  │                                                 driveBackup: { enabled, frequency, keep },
-  │                                                 carryForward: { enabled, startMonth: 'YYYY-MM', includeNegative },
-  │                                                 budgets: { total, categories: { food: 6000, … } },
-  │                                                 categoryRules: { "swiggy": "food", … },
-  │                                                 goals: [{ id, name, target, deadline?, startDate, savingsType?, keyword? }] }
-  ├── transactions/{id}             ← { name, amount, currency?, fx?, type, date, month, category?, direction?, wasteAmount?, recurringId?, … }
-  ├── income/{id}                   ← { name, amount, currency?, fx?, type, date, month, isBorrowed?, isRepaymentRec?, recurringId?, … }
-  │                                    currency missing = INR (entries from before multi-currency);
+  │                                    settings = { currency: 'INR' | 'USD' | …,
+  │                                                 budgets: { total, categories, deductions[] },
+  │                                                 goals: [{ id, name, target, monthly?, heldWith?, status?, … }],
+  │                                                 categoryRules, carryForward, reminders, report, ui,
+  │                                                 driveBackup: { enabled, frequency, keep } }
+  ├── transactions/{id}             ← { name, amount, currency?, fx?, type, date, month, category?, direction?, wasteAmount?, recurringId?, tripId?, … }
+  ├── income/{id}                   ← { name, amount, currency?, fx?, date, month, isBorrowed?, isRepaymentRec?, recurringId?, … }
+  │                                    currency missing = INR (entries from before 3.11);
   │                                    fx = { USD: 1, INR: 95.2 } — the rates when a foreign entry was made
-  ├── recurring/{id}                ← { name, amount, kind, frequency, dayOfMonth?/weekday?, startDate, endDate?, autoPost, active, lastHandledKey?, category?, … }
-  ├── trips/{id}                    ← { name, startDate, endDate?, status, meMemberId?, members[{id,name,groupId?}], expenses[{id,title,amount,paidBy,splitAmong[],date}], settlements[{id,fromUnit,toUnit,amount,date}], postedEntryIds[] }
-  ├── external_transactions/{id}    ← billing session { name, items[], received[], status, net_balance, settlementId?, … }
+  ├── recurring/{id}                ← { name, amount, currency?, kind, frequency, dayOfMonth?/weekday?, startDate, endDate?, autoPost, active, lastHandledKey?, … }
+  ├── trips/{id}                    ← { name, currency?, startDate, endDate?, status, meMemberId?, members[], expenses[], settlements[], postedEntryIds[] }
+  ├── external_transactions/{id}    ← billing session { name, items[], received[], status, net_balance, … }
   ├── recently_deleted/{id}         ← { itemType, originalData, deletedAt, … }
   ├── devices/{deviceId}            ← { name, kind, platform, lastSeen, visible, locked?, command?, unlockRequest?, unlockApproval? }
   ├── security/lock                 ← { enabled, pinHash, salt, iterations, length, lockAfter, fails, lastFailAt }
-  ├── security_events/{id}          ← { type, at, device, deviceId, count?, notified }
-  ├── push_tokens/{deviceId}        ← { token, platform, reminders, security }
-  ├── push_plan/current             ← { items[{ at, title, body, route }], nextAt, sentUpTo? }
+  ├── security_events/{id}          ← { type, at, device, deviceId, count?, notified, seenBy? }
+  ├── push_tokens/{deviceId}        ← { token, platform, reminders, security, tz }
+  ├── push_plan/current             ← { items[{ id, at, title, body, route, type }], nextAt, sentUpTo? }
   └── drive_backup/state            ← { lastAt, lastFile, lastDevice, error? }
 ```
 
-Posted recurring occurrences are ordinary transaction / income documents whose id is `rec_<ruleId>_<YYYY-MM-DD>`, which is what makes posting idempotent.
-
-**Transaction types**: `expense`, `savings`, `person` (with `direction`: lent / borrowed / repaid / repayment / given_gift), `external`
-**Income kinds** (see `incomeKind()`): `income`, `borrowed` (`isBorrowed`), `repayment` (`isRepaymentRec`)
-
-`firestore.rules` restricts every path under `users/{uid}` to that user and validates that transaction / income documents have a numeric `amount`, a string `date` and a non-empty `name`.
+- Posted recurring occurrences are ordinary entries with id `rec_<ruleId>_<YYYY-MM-DD>` — that is what makes posting idempotent
+- **Transaction types**: `expense`, `savings`, `person` (`direction`: lent / borrowed / repaid / repayment / given_gift), `external`
+- **Income kinds** (`incomeKind()`): `income`, `borrowed`, `repayment`
 
 ---
 
-## 🚧 Challenges & Solutions
+## 🛡️ Privacy & security
+
+- No ads, no trackers, no selling or sharing of data — see the [privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html)
+- Firestore rules: a user can reach only `users/{their uid}/**`; entries, recurring rules and trips are shape-validated
+- Signing out (or a remote sign-out) wipes the device's offline copy of your data
+- App lock stores only a salted PBKDF2-SHA256 hash (150,000 iterations); biometrics never leave the device
+- Drive access is limited to files the app creates (`drive.file`); backups live only in your Drive
+- Report a vulnerability: see [SECURITY.md](SECURITY.md)
+
+---
+
+## 🩺 Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| **Android: "No credentials available" on Google sign-in** | Update to 3.11.0 or later — it falls back to Google's classic account picker. Still failing: add a Google account in Android Settings → Accounts and update *Google Play services*, or sign in with email |
+| **Android reminders arrive late or not at all** | Profile → Reminders → turn on *On the minute*; in Android Settings → Apps → Expense Tracker → Battery choose **Unrestricted** (vivo/iQOO/Oppo/Xiaomi: also allow *Auto-start*) |
+| **Android app says "install the new app"** | A release added native code — download the latest APK and install it over the current one. Data and sign-in stay |
+| **Drive backup: "Access blocked … not completed the Google verification process"** | The OAuth consent screen of that client's project is still in *Testing* — fill in Branding and *Publish app* (see [step 6](#6-google-cloud-setup-for-sign-in-and-drive-backup)) |
+| **Drive backup: "Google Drive isn't switched on for this app yet"** | Enable the Google Drive API in the project that owns the client (see step 6), wait a few minutes, retry |
+| **Website reminders don't arrive while closed** | Allow notifications for the site; on iPhone add it to the Home Screen first; check the Notifier workflow is enabled in the Actions tab |
+| **Mac: "could not verify"** / **Windows SmartScreen** | See [Get the app](#-get-the-app) |
+| **Forgot the app lock PIN** | On the lock screen: *Forgot PIN?* → sign in again → choose a new PIN. Nothing is deleted |
+
+---
+
+## 🚧 Challenges & solutions
 
 | Challenge | Solution |
 |---|---|
-| Shared Firebase project with other apps | Moved to its own project (`expensetracker-385b0`); data migrated from a full backup |
+| Shared Firebase project with other apps | Moved to its own project (`expensetracker-385b0`), data migrated from a full backup |
 | Reinstalling for every fix | OTA bundles on Android, signed updater on desktop, service worker on the web |
-| Old Android WebViews drawing ghost copies of cards | Settings shows the web engine version and links to the WebView update in the Play Store when it's older than Chrome 130 |
-| Duplicate records from repeated imports | Deterministic import ids + batched `set()` writes |
+| Google sign-in failing on some Android phones | Credential Manager first, Google's classic picker as fallback, readable guidance when both fail |
+| Converting money without rewriting history | Per-entry currency + rate snapshot; day-rate views for history, per-currency balances at the live rate |
+| Thousands of historical rates | One ECB range request per year; per-day cache on the device; pegged currencies computed |
+| Push and alert emails on the free plan | A scheduled GitHub Action delivers plans the apps uploaded — no Cloud Functions |
+| One PIN, many devices, no server | Salted hash in Firestore, account-wide failure counter, device commands through each device's own document |
+| Old Android WebViews drawing ghost copies of cards | Settings shows the web engine version and links to the WebView update when it's older than Chrome 130 |
 | Dates landing on the wrong day near midnight | Local-calendar date keys instead of slicing UTC ISO strings |
-| Lost edits in billing autosave | Pending edits are merged per session and flushed on unmount / before close |
-| Flash of wrong theme on load | Inline script applies the cached theme before React mounts |
-| Service Worker serving stale assets | Cache name stamped with the build ID; `SKIP_WAITING` + `controllerchange` reload |
+| Service worker serving stale assets | Cache name stamped with the build ID; `SKIP_WAITING` + `controllerchange` reload |
 
 ---
 
-## 🔮 Future Improvements
+## 🔮 Roadmap
 
-- [x] **Budget Goals**: monthly caps (total + per category) with pace markers and safe-to-spend-today
-- [x] **Recurring Transactions**: auto-post or one-tap confirm for rent, SIPs, salary, subscriptions
-- [x] **Spending Categories**: auto-inferred, learnable, with breakdowns and filters
-- [x] **Savings Goals**: progress derived from savings entries
-- [x] **Monthly report**: salary to salary, on the day you choose
-- [x] **CSV Export**
-- [ ] **Multi-currency Support**: record transactions in foreign currencies with exchange rate conversion
-- [ ] **Receipt OCR**: upload a photo of a receipt and auto-extract the amount and merchant name
-- [ ] **Shared Budgets**: collaborative mode where two users (e.g., partners) share a budget workspace
-- [x] **Native apps**: Android (Capacitor) and Mac / Windows / Linux (Tauri) with reminders and automatic updates
-- [ ] **Play Store / signed Mac build**: removes the "unknown apps" and "could not verify" steps (needs paid developer accounts)
-- [ ] **LLM-powered insights**: a natural-language layer over the rule-based engine (e.g. ask "why was October expensive?")
-
----
-
-## 📸 UI Overview
-
-| Screen | Description |
-|---|---|
-| **Home** | Month card with the month switcher, quick entry, bills due (only when something is), Explore, recent activity |
-| **History** | Every entry for the month on screen — search (this month or all months), type and category filters, wastage, edit |
-| **Income** | What came in that month: total, by source, the list |
-| **Stats** | Balance and breakdown, spending calendar, categories, distribution, monthly report |
-| **Bills & payments** | The month's timeline with one-tap Pay, every regular payment |
-| **Budget** | The month's plan (income − fixed − budget), salary deductions, envelopes, six months |
-| **Savings & goals** | Savings rate, where it goes, goals with holder / move / used / collect |
-| **Debts** | Owe you · You owe · Settled; a page per person |
-| **Trips & Billings** | Group trips settled fairly; money spent for others |
-| **Profile** | Account, theme, reminder tiles, customize, settings, data, updates |
-| **Desktop & web** | The same pages with a sidebar and a centred Add dialog |
+- [x] Budgets with pace and safe-to-spend
+- [x] Recurring entries and bills
+- [x] Smart, learnable categories
+- [x] Savings goals with holders
+- [x] Monthly report, salary to salary
+- [x] Native apps (Android, Mac, Windows, Linux) with automatic updates
+- [x] **Multi-currency** with day-rate history and live-rate balances (3.11)
+- [x] **App lock** across devices, live devices, remote lock / sign-out, intrusion alerts (3.11)
+- [x] **Google Drive backup** and restore (3.11)
+- [x] **Cloud push** for website reminders, pop-up reminders on Android (3.11)
+- [ ] Load only recent months live and sync changes since the last visit (fewer Firestore reads)
+- [ ] Automatic capture from UPI and bank notifications on Android (on-device)
+- [ ] Play Store listing and a notarised Mac build
+- [ ] Shared budgets for couples and families
+- [ ] Receipt photos and OCR
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Here's how to get started:
+1. **Fork** the repository and create a branch: `git checkout -b feature/my-feature`
+2. Make your changes; check `npm run lint && npm test && npm run build`
+3. Commit with a descriptive message (`feat: …`, `fix: …`) and open a Pull Request against `main`
 
-1. **Fork** the repository
-2. **Create a feature branch**: `git checkout -b feature/my-feature`
-3. **Make your changes** and ensure the app builds: `npm run build`
-4. **Lint and test your code**: `npm run lint && npm test`
-5. **Commit with a descriptive message**: `git commit -m "feat: add recurring transactions"`
-6. **Push** to your fork: `git push origin feature/my-feature`
-7. **Open a Pull Request** against `main`
-
-### Guidelines
-- Keep components focused and extract shared logic into hooks
-- Add new transaction types to `src/utils/typeConfig.js` — do not define them locally in components
-- All Firestore mutations should go through `useFirestoreData` to maintain optimistic UI consistency
-- Do not commit `.env` files
+Guidelines:
+- Money maths goes in `utils/finance.js`, currency rules in `utils/fx.js` — with tests
+- All Firestore writes go through `useFirestoreData` / `services/firestore.js` so optimistic updates and rollback stay consistent
+- New transaction types belong in `src/utils/typeConfig.js`
+- Format money with `formatAmount` / `formatMoney` (never a hard-coded `₹`)
+- Never commit `.env` files or signing keys
 
 ---
 
@@ -618,6 +593,6 @@ SOFTWARE.
 ---
 
 <div align="center">
-  <strong>Built with ⚡ React · Firebase · Recharts · Vite</strong><br/>
-  <em>Personal finance that actually follows you month to month.</em>
+  <strong>Built with ⚡ React · Firebase · Capacitor · Tauri · Vite</strong><br/>
+  <em>Personal finance that follows you — across months, devices and currencies.</em>
 </div>
