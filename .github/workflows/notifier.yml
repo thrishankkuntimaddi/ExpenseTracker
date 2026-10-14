@@ -1,0 +1,42 @@
+name: Notifier
+
+# Website reminders by push, and security alerts (push + email).
+# Free on the Firebase Spark plan: no Cloud Functions, just this job.
+# Needs the FIREBASE_SERVICE_ACCOUNT secret; SMTP_URL / MAIL_FROM are optional
+# (without them, alerts are pushed but not emailed). See README → Notifier.
+on:
+  schedule:
+    - cron: '*/10 * * * *'      # GitHub may start it a few minutes late
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notifier
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/notifier
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: scripts/notifier/package-lock.json
+      - name: Install
+        working-directory: scripts/notifier
+        run: npm ci --omit=dev
+      - name: Send what is due
+        working-directory: scripts/notifier
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          SMTP_URL: ${{ secrets.SMTP_URL }}
+          MAIL_FROM: ${{ vars.MAIL_FROM || secrets.MAIL_FROM }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: node notifier.mjs

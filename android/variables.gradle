@@ -1,6 +1,8 @@
 ext {
     // @capacitor-firebase/authentication: native Google sign-in (Credential Manager)
     rgcfaIncludeGoogle = true
+    // Google sign-in + Drive backup authorization (AuthorizationClient)
+    playServicesAuthVersion = '21.3.0'
     minSdkVersion = 24
     compileSdkVersion = 36
     targetSdkVersion = 36

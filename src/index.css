@@ -432,3 +432,15 @@ button:disabled { cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) {
   .page-slide-left, .page-slide-right { animation: none; }
 }
+
+/* App lock: a wrong PIN shakes the dots */
+@keyframes lockShake { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.lock-shake { animation: lockShake .36s ease; }
+@media (prefers-reduced-motion: reduce) { .lock-shake { animation: none; } }
+
+/* Devices: "Live" = on screen right now */
+.live-tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px 1px 6px; border-radius: 99px; font-size: 9.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--income); background: var(--income-bg); }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--income); box-shadow: 0 0 0 0 var(--income); animation: livePulse 1.8s ease-out infinite; }
+@keyframes livePulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--income) 60%, transparent); } 100% { box-shadow: 0 0 0 6px transparent; } }
+.locked-tag { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 99px; font-size: 9.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface2); }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }

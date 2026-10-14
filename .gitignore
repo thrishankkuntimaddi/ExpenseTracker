@@ -32,3 +32,6 @@ dist-ssr
 # Desktop (Tauri) build output
 src-tauri/target
 src-tauri/gen/schemas
+
+# Notifier job dependencies (installed in CI)
+scripts/notifier/node_modules

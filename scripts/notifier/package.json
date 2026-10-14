@@ -1,0 +1,10 @@
+{
+  "name": "expensetracker-notifier",
+  "private": true,
+  "type": "module",
+  "description": "Scheduled job: website reminders by push, security alerts by push and email. Run by .github/workflows/notifier.yml.",
+  "dependencies": {
+    "firebase-admin": "^14.5.0",
+    "nodemailer": "^10.1.1"
+  }
+}

@@ -3,6 +3,7 @@ import {
   doc, collection, updateDoc, deleteDoc,
   onSnapshot, query, orderBy, serverTimestamp, setDoc, getDoc,
   deleteField, getDocs, writeBatch, getDocsFromServer, getDocFromServer,
+  increment, limit, addDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { BACKUP_COLLECTIONS, buildBackup } from "../utils/backup";
@@ -237,7 +238,7 @@ export async function restoreBackup(uid, backup) {
 export async function deleteAllUserData(uid) {
   let snaps;
   try {
-    snaps = await Promise.all([...BACKUP_COLLECTIONS, "devices"].map((name) =>
+    snaps = await Promise.all([...BACKUP_COLLECTIONS, ...DEVICE_COLLECTIONS].map((name) =>
       getDocsFromServer(collection(db, "users", uid, name))));
   } catch (err) {
     if (err?.code === "unavailable") throw new Error("You're offline. Connect to delete your data from the cloud.");
@@ -272,6 +273,53 @@ export function touchDevice(uid, id, info) {
 
 export function removeDevice(uid, id) {
   return deleteDoc(deviceDocRef(uid, id));
+}
+
+/** Watch one device's doc (commands and unlock approvals addressed to it). */
+export function subscribeToDevice(uid, id, onData) {
+  return listen(deviceDocRef(uid, id), "this device", (snap) => onData(snap.exists() ? snap.data() : null));
+}
+
+/** Patch a device doc: { command }, { unlockRequest }, { unlockApproval } … (null deletes a field). */
+export function patchDevice(uid, id, patch) {
+  const data = Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, v === null ? deleteField() : v]));
+  return setDoc(deviceDocRef(uid, id), data, { merge: true });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SECURITY — users/{uid}/security/lock + users/{uid}/security_events
+   lock:   { enabled, pinHash, salt, iterations, length, lockAfter,
+             fails, lastFailAt, lastFailDevice, updatedAt }
+   events: { type, at, device, deviceId, count?, notified }  — the
+           notifier (scripts/notifier.mjs) emails and pushes unnotified ones
+═══════════════════════════════════════════════════════════════════ */
+export const DEVICE_COLLECTIONS = ["devices", "security", "security_events", "push_tokens", "drive_backup"];
+const lockDocRef = (uid) => doc(db, "users", uid, "security", "lock");
+const eventsRef  = (uid) => collection(db, "users", uid, "security_events");
+
+export function subscribeToLock(uid, onData) {
+  return listen(lockDocRef(uid), "app lock", (snap) => onData(snap.exists() ? snap.data() : {}));
+}
+export function saveLock(uid, patch) {
+  const data = Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, v === null ? deleteField() : v]));
+  return setDoc(lockDocRef(uid), { ...data, updatedAt: Date.now() }, { merge: true });
+}
+/** One more wrong PIN, counted for the whole account. */
+export function addLockFailure(uid, deviceName) {
+  return setDoc(lockDocRef(uid), { fails: increment(1), lastFailAt: Date.now(), lastFailDevice: deviceName ?? null }, { merge: true });
+}
+export function resetLockFailures(uid) {
+  return setDoc(lockDocRef(uid), { fails: 0 }, { merge: true });
+}
+export function addSecurityEvent(uid, event) {
+  return addDoc(eventsRef(uid), { ...clean(event), at: Date.now(), notified: false });
+}
+export function subscribeToSecurityEvents(uid, onData) {
+  return listen(query(eventsRef(uid), orderBy("at", "desc"), limit(15)), "security alerts",
+    (snap) => onData(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+}
+export function markSecurityEventSeen(uid, id, deviceId) {
+  return setDoc(doc(db, "users", uid, "security_events", id), { seenBy: { [deviceId]: Date.now() } }, { merge: true });
 }
 
 /* ═══════════════════════════════════════════════════════════════════

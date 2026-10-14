@@ -8,8 +8,10 @@ import {
   normaliseReminders, buildSchedule, previewReminder, anyReminderOn, TONES, ALL_DAYS,
 } from '../../utils/reminders';
 import {
-  deviceDelivery, notificationPermission, requestNotificationPermission, sendTest, DELIVERY_NOTE,
+  deviceDelivery, notificationPermission, requestNotificationPermission, sendTest, DELIVERY_NOTE, reminderStyle, exactTiming,
 } from '../../native/reminders';
+import { pushSupported, registerPush } from '../../native/push';
+import { getDeviceId } from '../../hooks/useDevices';
 import { autostart, platform } from '../../native';
 import { ordinal, getReportSettings } from '../../utils/report';
 
@@ -31,12 +33,14 @@ const whenLabel = (ms) => {
   return `${day} at ${d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}`;
 };
 
-export default function RemindersCard({ settings, onPatchSettings, transactions = [], income = [], recurringRules = [] }) {
+export default function RemindersCard({ settings, onPatchSettings, transactions = [], income = [], recurringRules = [], uid }) {
   const cfg = useMemo(() => normaliseReminders(settings?.reminders), [settings?.reminders]);
   const data = useMemo(() => ({ transactions, income, recurring: recurringRules, budgets: settings?.budgets, categoryRules: settings?.categoryRules, goals: settings?.goals, report: settings?.report }),
     [transactions, income, recurringRules, settings?.budgets, settings?.categoryRules, settings?.goals, settings?.report]);
 
   const [deviceOn, setDeviceOn] = useState(deviceDelivery.get);
+  const [style, setStyle] = useState(reminderStyle.get);
+  const [exact, setExact] = useState(exactTiming.get);
   const [perm, setPerm] = useState('prompt');
   const [loginOn, setLoginOn] = useState(false);
   const [previewType, setPreviewType] = useState('recurring');
@@ -61,6 +65,8 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
       }
     }
     deviceDelivery.set(on); setDeviceOn(on);
+    // The website gets its reminders through the cloud while the page is closed
+    if (uid) registerPush(uid, getDeviceId(), { reminders: on });
     return true;
   }
 
@@ -108,6 +114,29 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
           <span className="toggle-thumb" />
         </button>
       </div>
+
+      {deviceOn && (platform === 'android' || platform === 'web') && (
+        <div style={{ borderBottom: '1px solid var(--border)' }}>
+          {platform === 'android' && (
+            <>
+              <OptionRow id="reminders-style" title="Pop up with a sound" sub={style === 'alert' ? 'Shows on top of other apps, like a message' : 'Arrives quietly in the notification shade'}
+                on={style === 'alert'} onToggle={() => { const v = style === 'alert' ? 'quiet' : 'alert'; reminderStyle.set(v); setStyle(v); }} />
+              <OptionRow id="reminders-exact" title="On the minute" sub={exact ? 'Arrives exactly at the time you set' : 'Android may hold it a few minutes to save battery'}
+                on={exact} onToggle={async () => { const ok = await exactTiming.set(!exact); if (ok) setExact(!exact); else setNote('Allow “Alarms & reminders” for Expense Tracker in Android settings, then try again.'); }} />
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, margin: 0, padding: '8px 16px 12px' }}>
+                Not arriving on a vivo, iQOO, Oppo, Xiaomi or Samsung phone? In Android settings → Apps → Expense Tracker → Battery, choose <strong>Unrestricted</strong> (or allow “Auto-start”).
+              </p>
+            </>
+          )}
+          {platform === 'web' && (
+            <p id="reminders-push-note" style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, margin: 0, padding: '10px 16px 12px' }}>
+              {pushSupported
+                ? 'Reminders reach this browser through the cloud even when the page is closed (Chrome, Edge, Firefox; on iPhone, add the app to your Home Screen first).'
+                : 'This browser only shows reminders while the page is open.'}
+            </p>
+          )}
+        </div>
+      )}
 
       {(note || blocked) && (
         <div role="status" style={{ margin: '10px 16px 0', padding: '9px 12px', borderRadius: 10, fontSize: 12, lineHeight: 1.5, background: 'var(--surface2)', border: '1px solid var(--border)', color: blocked && !note ? 'var(--expense)' : 'var(--text-secondary)' }}>
@@ -227,6 +256,20 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function OptionRow({ id, title, sub, on, onToggle }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 650, color: 'var(--text)' }}>{title}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{sub}</div>
+      </div>
+      <button id={id} className={`toggle-track ${on ? 'on' : ''}`} aria-pressed={on} aria-label={title} onClick={onToggle}>
+        <span className="toggle-thumb" />
+      </button>
     </div>
   );
 }

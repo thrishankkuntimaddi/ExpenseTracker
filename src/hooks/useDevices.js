@@ -1,16 +1,21 @@
 // ─── useDevices ──────────────────────────────────────────────────
 // "Your devices" in Settings. Each install has a random id (localStorage);
-// while the app is visible it writes lastSeen every few minutes, so other
-// devices can show it as "open now".
+// while the app is on screen it writes lastSeen every 90 seconds and says
+// when it goes to the background, so other devices can show it as "Live".
+// Other devices can send it commands (lock, sign out) through the same doc —
+// see security/useAppLock.js.
 import { useEffect, useState, useCallback } from 'react';
-import { subscribeToDevices, touchDevice, removeDevice } from '../services/firestore';
+import { subscribeToDevices, touchDevice, removeDevice, patchDevice } from '../services/firestore';
 import { background } from '../services/sync';
 import { generateId } from '../utils/storage';
 import { platform } from '../native';
 
 export const DEVICE_ID_KEY = 'et_device_id';
-const HEARTBEAT_MS = 4 * 60 * 1000;
-export const OPEN_NOW_MS = 6 * 60 * 1000;   // a heartbeat plus slack
+const HEARTBEAT_MS = 90 * 1000;
+export const OPEN_NOW_MS = 3 * 60 * 1000;   // two heartbeats plus slack
+
+/** On screen right now: visible and heard from in the last few minutes. */
+export const isLive = (d, now = Date.now()) => d?.visible !== false && !!d?.lastSeen && now - d.lastSeen < OPEN_NOW_MS;
 export const FORGET_AFTER_MS = 30 * 24 * 3600 * 1000;  // reinstalls / cleared app data leave old ids behind
 
 export function getDeviceId() {
@@ -52,18 +57,36 @@ export function useDevices(uid) {
   useEffect(() => {
     if (!uid) return undefined;
     const standalone = typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches;
+    const kind = platform === 'web' ? (standalone ? 'installed web app' : 'browser') : 'app';
     const beat = () => {
-      if (document.visibilityState !== 'visible') return;
-      const kind = platform === 'web' ? (standalone ? 'installed web app' : 'browser') : 'app';
-      background(touchDevice(uid, thisId, { name: describeDevice(), kind }));
+      const visible = document.visibilityState === 'visible';
+      if (!visible && !navigator.onLine) return;
+      background(touchDevice(uid, thisId, { name: describeDevice(), kind, platform, visible }));
     };
+    const tick = () => { if (document.visibilityState === 'visible') beat(); };
     beat();
-    const timer = setInterval(beat, HEARTBEAT_MS);
+    const timer = setInterval(tick, HEARTBEAT_MS);
     document.addEventListener('visibilitychange', beat);
-    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', beat); };
+    // Leaving for good (tab closed, app quit): say so, so it stops showing as Live
+    const bye = () => background(touchDevice(uid, thisId, { visible: false }));
+    window.addEventListener('pagehide', bye);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', beat);
+      window.removeEventListener('pagehide', bye);
+      bye();      // locking or signing out unmounts the app: no longer live here
+    };
   }, [uid, thisId]);
 
   const remove = useCallback((id) => { if (uid) background(removeDevice(uid, id)); }, [uid]);
+  /** Send a command to another device: 'lock' | 'signout'. */
+  const command = useCallback((id, type) => {
+    if (uid) background(patchDevice(uid, id, { command: { type, at: Date.now(), from: describeDevice(), fromId: thisId } }));
+  }, [uid, thisId]);
+  /** Answer another device's "unlock me" request. */
+  const answerUnlock = useCallback((id, nonce, approved) => {
+    if (uid) background(patchDevice(uid, id, { unlockApproval: { nonce, approved, at: Date.now(), by: describeDevice() } }));
+  }, [uid]);
 
-  return { devices, thisId, remove };
+  return { devices, thisId, remove, command, answerUnlock };
 }

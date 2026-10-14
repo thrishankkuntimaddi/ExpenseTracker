@@ -56,6 +56,9 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    // App lock (fingerprint / face / screen lock) and Google Drive backups
+    implementation "androidx.biometric:biometric:1.1.0"
+    implementation "com.google.android.gms:play-services-auth:$playServicesAuthVersion"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

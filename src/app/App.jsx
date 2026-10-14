@@ -6,7 +6,8 @@ import { useDevices } from '../hooks/useDevices';
 import { useSyncStatus, clearSyncError } from '../services/sync';
 import { setStatusBarTheme, onBackButton } from '../native';
 import { overlayOpen } from '../hooks/useEscape';
-import { initReminders, onReminderTap, updateReminderInput } from '../native/reminders';
+import { initReminders, onReminderTap, updateReminderInput, setPushUser, deviceDelivery } from '../native/reminders';
+import { registerPush } from '../native/push';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { getDefaultPeriod, getCurrentMonthValue } from '../utils/periodHelpers';
@@ -49,6 +50,10 @@ import { displayNameOf } from './shellContext';
 import { normaliseUi } from '../utils/uiPrefs';
 import { flyCoin } from '../motion/motion';
 import Sign from '../motion/Sign';
+import { useAppLock, AppLockContext } from '../security/useAppLock';
+import LockScreen from '../security/LockScreen';
+import SecurityBanners from '../security/SecurityBanners';
+import { useSecurityEvents } from '../security/events';
 
 /* One app on every screen — the same pages, the same headers:
    • phone: bottom bar Home · page · "+" · page · page (chosen in Profile →
@@ -111,8 +116,9 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   // Until the user moves, the app shows the start page chosen in Customize
   const activeTab = chosenTab ?? ui.start;
 
-  // "Your devices" (presence heartbeat while the app is open)
+  // "Your devices" (presence heartbeat while the app is open) and security alerts
   const devices = useDevices(user.uid);
+  const securityEvents = useSecurityEvents(user.uid);
 
   // Recurring rules (rent, SIP, salary …) + what is due right now
   const recurring = useRecurring({ uid: user.uid, transactions, income, loaded, addTransaction, addIncome, reportError });
@@ -236,6 +242,10 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   // Reminders: re-plan whenever their settings or the data they read change
   // (debounced — a burst of edits re-plans once).
   useEffect(() => { initReminders(); }, []);
+  // Cloud push: the reminder plan is uploaded for the website's reminders;
+  // this device gets security alerts (and, on the website, reminders) by push
+  useEffect(() => { setPushUser(user.uid); return () => setPushUser(null); }, [user.uid]);
+  useEffect(() => { registerPush(user.uid, devices.thisId, { reminders: deviceDelivery.get() }); }, [user.uid, devices.thisId]);
   useEffect(() => {
     onReminderTap((route) => { if (['today', 'plan', 'bills', 'budget', 'stats', 'history', 'savings'].includes(route)) goTo(route === 'plan' ? 'bills' : route); });
   }, [goTo]);
@@ -255,7 +265,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
     isStandalone, canInstallNative, onTriggerInstall: triggerInstall,
     selectedPeriod, onPeriodChange: setSelectedPeriod,
-    theme, themePref, onThemePrefChange: setThemePref, user, devices,
+    theme, themePref, onThemePrefChange: setThemePref, user, devices, securityEvents,
     recurring, onPatchSettings: patchSettings, onLearnCategory: learnCategory, reportError,
   };
 
@@ -364,6 +374,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   const overlays = (
     <>
       {errorBanner}
+      <SecurityBanners uid={user.uid} devices={devices} events={securityEvents} />
 
       {addKind && (
         <Suspense fallback={null}>
@@ -501,13 +512,37 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   );
 }
 
+/* ── App lock: while locked, the app (and its data) isn't rendered at all ── */
+function LockGate(props) {
+  const { signOut } = props;
+  const [signOutNote, setSignOutNote] = useState(null);
+  const remoteSignOut = useCallback(() => { signOut({ force: true }); }, [signOut]);
+  const lock = useAppLock(props.user, { onRemoteSignOut: remoteSignOut });
+  if (lock.locked) {
+    return (
+      <>
+        <LockScreen lock={lock} user={props.user} onSignOut={async () => {
+          const r = await signOut();
+          if (r?.pending) setSignOutNote(`${r.pending} change${r.pending === 1 ? ' is' : 's are'} still waiting to upload — connect to the internet, then sign out.`);
+        }} />
+        {signOutNote && <div role="alert" style={{ position: 'fixed', left: 16, right: 16, bottom: 24, maxWidth: 420, margin: '0 auto', padding: '10px 14px', borderRadius: 12, background: '#B91C1C', color: '#fff', fontSize: 12, fontWeight: 600 }}>{signOutNote}</div>}
+      </>
+    );
+  }
+  return (
+    <AppLockContext.Provider value={lock}>
+      <AuthenticatedApp {...props} />
+    </AppLockContext.Provider>
+  );
+}
+
 /* ── Root App — wraps everything in AuthGate ── */
 export default function App() {
   return (
     <>
     <UpdateBanner />
     <AuthGate>
-      {(auth) => <AuthenticatedApp {...auth} />}
+      {(auth) => <LockGate {...auth} />}
     </AuthGate>
     </>
   );

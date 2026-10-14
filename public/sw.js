@@ -128,6 +128,20 @@ self.addEventListener('fetch', (e) => {
   }
 });
 
+// ── Cloud push (Firebase Cloud Messaging, data messages) ──
+// Reminders while the page is closed, and security alerts. The payload is
+// { data: { title, body, route, tag } } (FCM may also wrap it as notification).
+self.addEventListener('push', (e) => {
+  let p = {};
+  try { p = e.data ? e.data.json() : {}; } catch { p = { data: { title: 'Expense Tracker', body: e.data?.text() } }; }
+  const d = { ...(p.notification || {}), ...(p.data || {}) };
+  if (!d.title) return;
+  e.waitUntil(self.registration.showNotification(d.title, {
+    body: d.body || '', icon: BASE + 'icon-192.png', badge: BASE + 'icon-192.png',
+    tag: d.tag || 'et-push', renotify: d.type === 'security', data: { route: d.route || 'today' },
+  }));
+});
+
 // ── Reminder taps: focus (or open) the app and tell it which screen to show ──
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();

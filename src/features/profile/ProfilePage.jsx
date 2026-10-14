@@ -13,10 +13,11 @@ import { Section, Group } from '../settings/SettingsGroup';
 import SettingsTab from '../settings/SettingsTab';
 import RemindersCard from '../settings/RemindersCard';
 import CurrencyCard from '../settings/CurrencyCard';
+import SecurityCard from '../../security/SecurityCard';
 import { useShell } from '../../app/shellContext';
 
 export default function ProfilePage(props) {
-  const { user, transactions = [], income = [], devices, settings, themePref = 'system', theme, onThemePrefChange, onPatchSettings, onBack, recurring } = props;
+  const { user, transactions = [], income = [], devices, securityEvents, settings, themePref = 'system', theme, onThemePrefChange, onPatchSettings, onBack, recurring } = props;
   const desktop = useShell()?.desktop;
   const ui = useMemo(() => normaliseUi(settings?.ui), [settings?.ui]);
   const save = (patch) => onPatchSettings?.({ ui: serialiseUi({ ...ui, ...patch }) });
@@ -90,6 +91,9 @@ export default function ProfilePage(props) {
         {/* ── Animations: one row ── */}
         <MotionRow />
 
+        {/* ── Security: app lock, devices, alerts ── */}
+        <SecurityCard user={user} devices={devices} events={securityEvents} />
+
         {/* ── Currency ── */}
         <CurrencyCard settings={settings} transactions={transactions} income={income} onPatchSettings={onPatchSettings} />
 
@@ -97,7 +101,7 @@ export default function ProfilePage(props) {
         <section id="group-reminders" style={{ marginBottom: 18, scrollMarginTop: 12 }}>
           <p className="section-label" style={{ padding: '0 6px' }}>Reminders</p>
           <div className="card settings-section">
-            <RemindersCard settings={settings} onPatchSettings={onPatchSettings} transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} />
+            <RemindersCard uid={user?.uid} settings={settings} onPatchSettings={onPatchSettings} transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} />
           </div>
         </section>
 

@@ -69,7 +69,7 @@ export default function AuthScreen({
           <h1 style={{ fontSize: 40, lineHeight: 1.12, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text)', margin: '36px 0 28px' }}>
             Know where your money goes.<br />
             <span style={{ background: 'linear-gradient(90deg, var(--accent), var(--savings), var(--income))', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-              Every rupee, accounted for.
+              Every rupee — or dollar — accounted for.
             </span>
           </h1>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>

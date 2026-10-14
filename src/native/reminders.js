@@ -1,6 +1,7 @@
 // ─── Reminders: delivery ─────────────────────────────────────────
 //   android  OS-scheduled local notifications — fire even when the app is
-//            closed. LOW-importance channel: no sound, no pop-up.
+//            closed. They pop up with a sound (or arrive quietly, a choice
+//            per device), and can be set to arrive on the minute.
 //   desktop  handed to the app's own scheduler (src-tauri/src/reminders.rs),
 //            which keeps running from the menu bar / system tray.
 //   web      only while the page is open — browsers can't schedule offline.
@@ -10,17 +11,26 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { invoke } from '@tauri-apps/api/core';
 import { platform } from './index';
 import { buildSchedule, previewReminder } from '../utils/reminders';
+import { uploadPlan } from './push';
 
-const DEVICE_KEY = 'et_reminders_device';      // 'on' | 'off'
+/* Signed-in account: the reminder plan is also uploaded for cloud push
+   (website reminders while the page is closed — see native/push.js). */
+let pushUid = null;
+export function setPushUser(uid) { pushUid = uid; syncReminders(); }
+
+const DEVICE_KEY = 'et_reminders_device';      // 'on' | 'off' (unset: on for the Android app)
+const STYLE_KEY = 'et_reminders_style';        // 'alert' | 'quiet'
+const EXACT_KEY = 'et_reminders_exact';        // 'on' | 'off'
 const BUDGET_KEY = 'et_budget_alerts';         // { 'YYYY-MM:80': epochMs }
-const CHANNEL = 'reminders';
+const QUIET_CHANNEL = 'reminders';             // LOW: no sound, no pop-up (Android can't change a channel later,
+const ALERT_CHANNEL = 'reminders_alert';       // HIGH: pops up with a sound   so each style has its own)
 const HOLD_MS = 15 * 60 * 1000;                // nothing this soon while the app is on screen
 
 const isAndroid = platform === 'android';
 
 /** What this platform can honestly do — shown in Settings. */
 export const DELIVERY_NOTE = {
-  android: 'Quiet notifications (no sound), even when the app is closed.',
+  android: 'Arrive even when the app is closed.',
   desktop: 'Shown by the app from the menu bar / system tray — keep it running (turn on “Open at login”).',
   web: 'Only while this page is open — browsers can’t notify you later. Install the Android or desktop app for reminders that always arrive.',
   ios: 'Only while the web app is open.',
@@ -30,8 +40,32 @@ const read = (k, fallback) => { try { const v = localStorage.getItem(k); return 
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage unavailable */ } };
 
 export const deviceDelivery = {
-  get: () => read(DEVICE_KEY, 'off') === 'on',
+  get: () => read(DEVICE_KEY, isAndroid ? 'on' : 'off') === 'on',
   set: (on) => { write(DEVICE_KEY, on ? 'on' : 'off'); syncReminders(); },
+};
+
+/** Pop up with a sound (default) or arrive quietly — per device. */
+export const reminderStyle = {
+  get: () => read(STYLE_KEY, 'alert'),
+  set: (v) => { write(STYLE_KEY, v === 'quiet' ? 'quiet' : 'alert'); syncReminders(); },
+};
+
+/** Android: arrive on the minute (needs "Alarms & reminders" permission on Android 12+). */
+export const exactTiming = {
+  available: isAndroid,
+  get: () => read(EXACT_KEY, 'off') === 'on',
+  async set(on) {
+    if (on && isAndroid) {
+      const s = await LocalNotifications.checkExactNotificationSetting().catch(() => null);
+      if (s && s.exact_alarm !== 'granted') {
+        const after = await LocalNotifications.changeExactNotificationSetting().catch(() => null);
+        if (after && after.exact_alarm !== 'granted') return false;
+      }
+    }
+    write(EXACT_KEY, on ? 'on' : 'off');
+    syncReminders();
+    return true;
+  },
 };
 
 /* ── Permission ─────────────────────────────────────────────── */
@@ -61,21 +95,30 @@ let channelReady = false;
 async function ensureChannel() {
   if (!isAndroid || channelReady) return;
   await LocalNotifications.createChannel({
-    id: CHANNEL, name: 'Reminders', importance: 2, // LOW: no sound, no pop-up
-    description: 'Gentle spending reminders', vibration: false, visibility: 1,
+    id: QUIET_CHANNEL, name: 'Quiet reminders', importance: 2, // LOW: no sound, no pop-up
+    description: 'Spending reminders, without sound', vibration: false, visibility: 1,
+  }).catch(() => {});
+  await LocalNotifications.createChannel({
+    id: ALERT_CHANNEL, name: 'Reminders', importance: 4,     // HIGH: heads-up with sound
+    description: 'Bills due, daily log, budget and report reminders', vibration: true, visibility: 1, lights: true, lightColor: '#12995A',
+  }).catch(() => {});
+  await LocalNotifications.createChannel({
+    id: 'security', name: 'Security alerts', importance: 5,
+    description: 'Wrong PINs and lock changes on your other devices', vibration: true, visibility: 0,
   }).catch(() => {});
   channelReady = true;
 }
+const channel = () => (reminderStyle.get() === 'quiet' ? QUIET_CHANNEL : ALERT_CHANNEL);
 
 const toAndroid = (item) => ({
   id: item.id,
   title: item.title,
   body: item.body,
   schedule: { at: new Date(item.at), allowWhileIdle: true },
-  // Inexact is fine for a reminder and, unlike an exact alarm, never sends
-  // the user to the "Alarms & reminders" settings screen.
-  isExactNotification: false,
-  channelId: CHANNEL,
+  // Inexact unless "On time" is on (it needs the "Alarms & reminders"
+  // permission; phones that deny it fall back to inexact automatically)
+  isExactNotification: exactTiming.get(),
+  channelId: channel(),
   smallIcon: 'ic_stat_expensetracker',
   iconColor: '#12995A',
   autoCancel: true,
@@ -120,6 +163,21 @@ export async function sendTest(type, cfg, data) {
   return showWeb(item, { force: true });
 }
 
+/** Show something right away (security alerts). */
+export async function notifyNow({ id, title, body, route = 'profile' }) {
+  const numeric = typeof id === 'number' ? id : Math.abs([...String(id)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)) % 1e9;
+  try {
+    if (isAndroid) {
+      if ((await notificationPermission()) !== 'granted') return false;
+      await ensureChannel();
+      await LocalNotifications.schedule({ notifications: [{ id: numeric, title, body, channelId: 'security', smallIcon: 'ic_stat_expensetracker', iconColor: '#12995A', autoCancel: true, extra: { route } }] });
+      return true;
+    }
+    if (platform === 'desktop') return await invoke('show_notification', { title, body }).then(() => true, () => false);
+    return showWeb({ id: numeric, title, body, route, type: 'security' }, { force: true });
+  } catch { return false; }
+}
+
 /* ── Planning + handing over ─────────────────────────────────── */
 let input = null;           // { cfg, data } from the app
 let webTimers = [];
@@ -137,7 +195,9 @@ export function syncReminders() {
       const enabled = deviceDelivery.get() && input;
       const now = Date.now();
       const budgetAt = read(BUDGET_KEY, {});
-      let items = enabled ? buildSchedule(now, input.cfg, { ...input.data, budgetAt }) : [];
+      const plan = input ? buildSchedule(now, input.cfg, { ...input.data, budgetAt }) : [];
+      if (pushUid && input) uploadPlan(pushUid, plan).catch(() => {});
+      let items = enabled ? plan : [];
       // Remember when each budget alert was planned so it fires exactly once
       const nextBudget = { ...budgetAt };
       items.filter((i) => i.type === 'budget' && nextBudget[i.key] == null).forEach((i) => { nextBudget[i.key] = i.at; });
