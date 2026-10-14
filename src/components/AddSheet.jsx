@@ -1,13 +1,13 @@
 // ─── AddSheet ────────────────────────────────────────────────────
-// "+" on the phone bar / "Add" in the desktop sidebar: one sheet to log
-// anything. Every kind starts the same way — the amount, with the keypad
+// "+" on the phone bar: one sheet to log anything. On wide screens the
+// same panel (AddPanel) sits inline on Home instead of in a window. Every kind starts the same way — the amount, with the keypad
 // already open — then the details:
 //   Expense  spent on something, or given to someone (no return expected)
 //   Income   salary, family, anything that came in
 //   Debt     lent · borrowed · got back · paid back (see utils/debts.js)
 //   Savings  where it went, and optionally which goal it's for
 // When you're looking at an earlier month, the date starts on that month.
-import { useMemo, useState } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
 import { X, IndianRupee, PenLine, Calendar, User, StickyNote, Flag } from 'lucide-react';
 import { ADD_KINDS } from '../app/pages';
 import Portal from './Portal';
@@ -31,13 +31,10 @@ function defaultDate(month) {
   return `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
 }
 
-export default function AddSheet({ initialKind = 'expense', options = {}, onClose, onSaved, onAdd, onAddIncome, ...data }) {
+export default function AddSheet({ initialKind = 'expense', options = {}, onClose, onSaved, ...rest }) {
   const shell = useShell();
-  const [kind, setKind] = useState(initialKind === 'person' ? 'debt' : initialKind);
   useEscape(onClose);
   const saved = (entry) => { onSaved?.(entry); onClose(); };
-  const startDate = defaultDate(shell?.month);
-  const common = { onSaved: saved, startDate };
 
   return (
     <Portal>
@@ -56,24 +53,7 @@ export default function AddSheet({ initialKind = 'expense', options = {}, onClos
               <X size={15} />
             </button>
           </div>
-
-          <div role="tablist" aria-label="What are you adding?" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
-            {ADD_KINDS.map(({ key, label, Icon, color, bg }) => {
-              const on = kind === key;
-              return (
-                <button key={key} id={`add-kind-${key}`} role="tab" aria-selected={on} onClick={() => setKind(key)} className="add-kind"
-                  style={{ padding: '10px 4px 8px', border: `1.5px solid ${on ? color : 'var(--border)'}`, background: on ? bg : 'var(--surface2)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                  <Icon size={18} style={{ color: on ? color : 'var(--text-secondary)' }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: on ? color : 'var(--text-secondary)' }}>{label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {kind === 'expense' && <ExpenseForm key="expense" {...common} {...data} onAdd={onAdd} />}
-          {kind === 'income' && <IncomeForm key="income" {...common} income={data.income} onAddIncome={onAddIncome} />}
-          {kind === 'debt' && <DebtForm key="debt" {...common} {...data} onAdd={onAdd} onAddIncome={onAddIncome} initialMove={options.move} initialName={options.name} />}
-          {kind === 'savings' && <SavingsForm key="savings" {...common} {...data} onAdd={onAdd} initialGoal={options.goalId} />}
+          <AddPanel initialKind={initialKind} options={options} onSaved={saved} {...rest} />
         </div>
       </div>
       <style>{`
@@ -84,16 +64,55 @@ export default function AddSheet({ initialKind = 'expense', options = {}, onClos
   );
 }
 
+// The amount field takes focus when a form opens — except inline on Home,
+// where it waits until you pick a kind or save one (no focus stolen on load).
+const AutoFocus = createContext(true);
+
+/** The kind tabs + the form. `inline`: lives on a page — stays open and clears after each save. */
+export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd, onAddIncome, inline = false, ...data }) {
+  const shell = useShell();
+  const [kind, setKindState] = useState(initialKind === 'person' ? 'debt' : initialKind);
+  const [round, setRound] = useState(0);              // inline: a fresh form after each save
+  const [engaged, setEngaged] = useState(!inline);
+  const setKind = (k) => { setEngaged(true); setKindState(k); };
+  const saved = (entry) => { onSaved?.(entry); if (inline) { setEngaged(true); setRound((r) => r + 1); } };
+  const common = { onSaved: saved, startDate: defaultDate(shell?.month) };
+  const key = `${kind}-${round}`;
+
+  return (
+    <AutoFocus.Provider value={engaged}>
+      <div role="tablist" aria-label="What are you adding?" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
+        {ADD_KINDS.map(({ key: k, label, Icon, color, bg }) => {
+          const on = kind === k;
+          return (
+            <button key={k} id={`add-kind-${k}`} role="tab" aria-selected={on} onClick={() => setKind(k)} className="add-kind"
+              style={{ padding: '10px 4px 8px', border: `1.5px solid ${on ? color : 'var(--border)'}`, background: on ? bg : 'var(--surface2)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+              <Icon size={18} style={{ color: on ? color : 'var(--text-secondary)' }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: on ? color : 'var(--text-secondary)' }}>{label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {kind === 'expense' && <ExpenseForm key={key} {...common} {...data} onAdd={onAdd} />}
+      {kind === 'income' && <IncomeForm key={key} {...common} income={data.income} onAddIncome={onAddIncome} />}
+      {kind === 'debt' && <DebtForm key={key} {...common} {...data} onAdd={onAdd} onAddIncome={onAddIncome} initialMove={options.move} initialName={options.name} />}
+      {kind === 'savings' && <SavingsForm key={key} {...common} {...data} onAdd={onAdd} initialGoal={options.goalId} />}
+    </AutoFocus.Provider>
+  );
+}
+
 /* ── Shared pieces ───────────────────────────────────────────── */
 const field = { width: '100%', padding: '12px 14px 12px 40px', fontSize: 15, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' };
 const iconAt = { position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' };
 
 /** The big amount field every form starts with — focused on open, so the keypad is up. */
 function AmountField({ value, onChange, tone, onEnter, id = 'add-amount' }) {
+  const autoFocus = useContext(AutoFocus);
   return (
     <div className="add-amount" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 16px', marginBottom: 12, border: `1.5px solid var(--${tone}-border, var(--border))`, background: `var(--${tone}-bg)` }}>
       <IndianRupee size={22} style={{ color: `var(--${tone})`, flexShrink: 0 }} />
-      <input id={id} value={value} autoFocus inputMode="decimal" autoComplete="off" enterKeyHint="next" placeholder="0" aria-label="Amount"
+      <input id={id} value={value} autoFocus={autoFocus} inputMode="decimal" autoComplete="off" enterKeyHint="next" placeholder="0" aria-label="Amount"
         onChange={(e) => { const v = e.target.value.replace(/,/g, ''); if (v === '' || /^\d*\.?\d{0,2}$/.test(v)) onChange(v); }}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onEnter?.(); } }}
         style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', boxShadow: 'none', outline: 'none', fontSize: 32, fontWeight: 800, color: `var(--${tone})`, fontFamily: 'inherit', padding: '6px 0', letterSpacing: '-0.02em' }} />

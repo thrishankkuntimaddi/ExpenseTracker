@@ -1,3 +1,4 @@
+import { AddPanel } from '../../components/AddSheet';
 import { useMemo, useState, Fragment } from 'react';
 import { Coins, Users, Search, Zap, ArrowUpRight } from 'lucide-react';
 import { generateId } from '../../utils/storage';
@@ -22,7 +23,8 @@ const linkBtn = { padding: 0, border: 'none', background: 'transparent', color: 
 const rupees = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;   // compact: no paise
 const capitalise = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
-export default function TodayTab({ transactions = [], income = [], onAdd, theme, settings, recurring, selectedPeriod }) {
+export default function TodayTab(props) {
+  const { transactions = [], income = [], onAdd, onAddIncome, theme, settings, recurring, selectedPeriod } = props;
   const shell = useShell();
   const ui = useMemo(() => normaliseUi(settings?.ui), [settings?.ui]);
   const homeSections = ui.home;
@@ -136,7 +138,15 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
     </div>
   );
 
-  const addSection = (
+  // Wide screens: the full Add form sits right here, open — no window to open
+  const addPanel = shell?.desktop && (
+    <div className="card home-add-panel" id="home-add-panel" style={{ padding: 16, marginBottom: 14 }}>
+      <AddPanel inline {...props} onAdd={onAdd} onAddIncome={onAddIncome}
+        onSaved={(e) => shell.toast?.(`Added ${e.name} · ${formatAmount(e.amount)}`)} />
+    </div>
+  );
+
+  const addSection = (<>
     <form className="home-add card" onSubmit={submitQuick} style={{ padding: '6px 6px 6px 14px', marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Zap size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
@@ -155,7 +165,8 @@ export default function TodayTab({ transactions = [], income = [], onAdd, theme,
         </div>
       )}
     </form>
-  );
+    {addPanel}
+  </>);
 
   // Only when something needs paying — setting bills up lives on the Bills page
   const billsSection = soon.length > 0 && (

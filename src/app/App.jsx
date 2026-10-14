@@ -278,7 +278,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   const page = (
     <Suspense fallback={null}>
     {activeTab === 'today' && (
-      <TodayTab {...commonProps} onAdd={smartAddEntry} />
+      <TodayTab {...commonProps} onAdd={smartAddEntry} onAddIncome={addIncome} />
     )}
     {activeTab === 'history' && (
       <HistoryTab
@@ -387,9 +387,6 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
             <img src={import.meta.env.BASE_URL + 'icon-192.png'} alt="" width={30} height={30} />
             <span>Expense Tracker</span>
           </div>
-          <button id="desktop-add" className="desktop-add" onClick={() => setAddKind({ kind: 'expense' })}>
-            <Plus size={17} strokeWidth={2.4} /> Add
-          </button>
           <nav className="desktop-nav">
             {DESKTOP_NAV.map((group) => (
               <div key={group.title} className="desktop-nav-group">

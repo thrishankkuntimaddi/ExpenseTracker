@@ -107,6 +107,17 @@ describe('screens render with planning features', () => {
     expect(html).not.toContain('id="explore-bills"');      // it's in the bar
     expect(html).toContain('₹600 owed to you');            // Ravi: lent 1,000, paid back 400 (as income)
     expect(html).toContain('id="month-prev"');              // the month switcher sits on the overview card
+    expect(html).not.toContain('id="home-add-panel"');      // phone: the "+" sheet, not an inline form
+  });
+
+  it('Home on wide screens: the full Add form sits under quick entry', () => {
+    const shell = { goTo: noop, barTabs: ['history', 'bills', 'stats'], month: month(iso(0)), setMonth: noop, user: common.user, openProfile: noop, openAdd: noop, toast: noop, desktop: true };
+    const html = render(<ShellContext.Provider value={shell}><TodayTab {...common} onAdd={noop} onAddIncome={noop} /></ShellContext.Provider>);
+    const quick = html.indexOf('id="home-quick-entry"'), panel = html.indexOf('id="home-add-panel"');
+    expect(quick).toBeGreaterThan(0);
+    expect(panel).toBeGreaterThan(quick);
+    for (const k of ['expense', 'income', 'debt', 'savings']) expect(html).toContain(`id="add-kind-${k}"`);
+    expect(html).not.toMatch(/id="add-amount"[^>]*autofocus/i);   // opening Home doesn't grab the keyboard
   });
 
   it('History tab shows search, category filter chips and badges', () => {
