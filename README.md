@@ -44,8 +44,10 @@ All links always point at the newest [release](https://github.com/thrishankkunti
 |---|---|---|---|
 | Same data, live sync | ✅ | ✅ | ✅ |
 | Works offline | ✅ (after first load) | ✅ | ✅ |
-| Google sign-in | ✅ | ✅ (native account picker) | ✅ (opens your browser) |
-| Reminders when the app is closed | ❌ only while the page is open | ✅ quiet notifications | ✅ while it runs in the menu bar / tray |
+| Google sign-in | ✅ | ✅ (native account picker; falls back to Google's classic picker on phones where it fails) | ✅ (opens your browser) |
+| Reminders when the app is closed | ✅ by cloud push (Chrome, Edge, Firefox; iPhone once added to the Home Screen) | ✅ pop up with sound (or quiet), optionally on the minute | ✅ while it runs in the menu bar / tray |
+| App lock | ✅ PIN · passkey (Touch ID / Windows Hello) | ✅ PIN · fingerprint / face / screen lock | ✅ PIN · passkey where the system offers one |
+| Google Drive backup | ✅ when you tap *Back up now* (browsers need a tap) | ✅ automatic | ✅ automatic |
 | Open at login, menu bar / tray | — | — | ✅ |
 | Updates without reinstalling | ✅ | ✅ | ✅ |
 | System back button, status bar follows theme | — | ✅ | — |
@@ -152,6 +154,29 @@ Every way in leads somewhere different — nothing is offered twice.
 - **Budget**, **Savings & goals**, **Income**, **Stats**, **Debts**, **Trips & splits**, **Billings** — pages of their own, one header style everywhere
 - Tap your **avatar** for **Profile**: account, **Theme** in one row, **Reminders** as tiles, **Customize** (bar pages, start page, Home sections), then Money · Sync & devices · Your data (incl. *Load past data*) · App · Account
 
+### 💱 Currencies
+Show money in any of 48 currencies (Profile → Currency): rupee, dollar, euro, pound, dirham, riyal, dinar, yuan, Taiwan dollar, dong, yen and more. Every entry keeps the currency it was entered in — tap the sign next to the amount, or just type it: “coffee $4.50”, “taxi 30 AED”, “€12 museum”. Abroad, switch once and the device keeps entering in that currency until you switch back.
+
+How amounts in other currencies count — the rule the whole app follows:
+- **What happened** (spending, income, history, reports, budgets) uses the rate of **the day it happened**. $10 of fuel in March stays what it cost in March, whatever the dollar does later; a list shows “$10.00 ≈ ₹952”.
+- **What you still hold** — the balance — is kept **per currency** and valued at **today’s rate**. Paid $200 in the USA, spent $50 there and ₹10,000 back in India: the balance is $150 at today’s rate minus ₹10,000, and Home spells it out.
+- Carry-forward carries each currency separately. Trips and recurring bills (rent in AED, a USD subscription) have their own currency too.
+- Changing the display currency never rewrites history; budgets and goal targets can be re-stated at today’s rate in the same step.
+
+Rates come from two free sources (fawazahmed0’s exchange-api for every currency, the European Central Bank via Frankfurter for long ranges), are cached on the device per day and never fetched twice; pegged Gulf currencies are exact. A new foreign entry also stores the rate it was entered at.
+
+### 🔒 App lock & your devices
+- **One PIN for every device** (only a salted, slow hash is stored), plus **fingerprint / face** on Android and a **passkey** (Touch ID, Windows Hello) on the web and desktop — per device
+- Locks when the app opens, after the time away you choose (immediately … 1 hour), when a computer sits untouched, or from another of your devices
+- **Wrong PINs**: from the 5th the app waits longer each time (30 s → 1 h), your other devices get an alert (“Lock it / Sign it out / It was me”) and you get an email; the 10th means only signing in again opens it. Nothing is erased
+- **Forgot PIN?** Sign in again with Google or your password, choose a new one — your data stays exactly as it is
+- **Unlock from another device**: a locked laptop asks; your phone shows *Approve / Deny*
+- **Profile → Security → Your devices**: every device signed in, a pulsing **Live** tag on the ones on screen right now, **Locked** on locked ones; lock or sign out any of them, or all others at once
+- Honest limits: the lock keeps people holding your unlocked phone or laptop out of the app; your data itself is protected by your account sign-in. A remote sign-out happens the moment that device is online
+
+### ☁️ Google Drive backup
+Like WhatsApp: a full copy of everything goes to a folder **“Expense Tracker backups” in your own Google Drive** — every day, week or month, keeping the newest 3–30 copies. The app asks only for the `drive.file` permission (it can see the files it creates, nothing else). Restore any copy from Profile, on this device or a new one; restoring writes entries back and deletes nothing. There is no copy on any server of ours.
+
 ### ⚙️ Settings & Data Management
 - **Export JSON**: download a full backup of all transactions, income, and settings (budgets, goals, category rules included)
 - **Export CSV**: a spreadsheet with categories that the app's own CSV importer accepts — round-trips cleanly
@@ -159,7 +184,7 @@ Every way in leads somewhere different — nothing is offered twice.
 - **Import CSV**: RFC-4180 CSV importer (`date, name, amount, type`; quoted fields, `1,200`-style amounts, `DD/MM/YYYY` dates) with stable ids — importing the same file twice is safe
 - **Recently Deleted**: deletes move items to a trash (atomically) from which they can be restored
 - **Reset All Data**: permanently deletes all transactions, income, billings and trash
-- **Sync status** ("Synced", "Saving…", "Offline — changes are saved on this device") and the list of your **signed-in devices** (Android app, Mac app, Chrome on Windows …); devices unused for 30 days drop off
+- **Sync status** ("Synced", "Saving…", "Offline — changes are saved on this device"); your devices are under Security (devices unused for 30 days drop off)
 - **Updates**: current version and build, *Check for updates*, and *Restart to update* / *Install* when one is waiting
 
 ### 🔔 Reminders
@@ -171,7 +196,7 @@ Six optional reminders, all off until you tap their tile (Profile → Reminders)
 - **Goals** — on each goal's day: this month's share to put aside, or, once reached, a nudge to collect it
 - **Weekly summary** — your week in one line on the evening you pick
 
-At most one per type per day, quiet (no sound). Tapping one opens the right page. The settings sync across devices; *Reminders on this device* is per device. *Send a test* shows one right away. See [What each platform can do](#what-each-platform-can-do) for when they can arrive.
+At most one per type per day. On Android they pop up with a sound (or arrive quietly — your choice per device) and can be set to arrive *on the minute*; the Reminders card also explains the battery setting that some phones (vivo, iQOO, Oppo, Xiaomi, Samsung) need. On the website they arrive by **cloud push** even with the page closed. Tapping one opens the right page. The settings sync across devices; *Reminders on this device* is per device. *Send a test* shows one right away. See [What each platform can do](#what-each-platform-can-do) for when they can arrive.
 
 ### 🌙 Theming
 - **Light**, **dark** or **follow the device** — chosen per device, applied before the first paint (no flash)
@@ -378,6 +403,21 @@ export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.local/expensetracker-signing/tauri-up
 export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="…"   # in ~/.local/expensetracker-signing/secrets.txt on the release machine
 ```
 
+### 6. Cloud push and alert emails (optional, free)
+
+Website reminders while the page is closed, and security alerts, are sent by a small scheduled job — [`scripts/notifier/`](scripts/notifier/notifier.mjs), run every ~10 minutes by [`.github/workflows/notifier.yml`](.github/workflows/notifier.yml). No Cloud Functions, so it works on the free Spark plan. The apps upload their own reminder plan; the job only delivers what is due.
+
+1. Firebase Console → Project settings → **Service accounts** → *Generate new private key*. Save the JSON as the repository secret `FIREBASE_SERVICE_ACCOUNT`.
+2. Firebase Console → Project settings → **Cloud Messaging** → *Web Push certificates* → *Generate key pair*. Save the public key as the repository variable `VITE_FIREBASE_VAPID_KEY`.
+3. Emails (optional): a Gmail **app password** (Google Account → Security → App passwords) as the secret `SMTP_URL` = `smtps://you%40gmail.com:APP-PASSWORD@smtp.gmail.com:465`, and the variable `MAIL_FROM` = `Expense Tracker <you@gmail.com>`.
+4. Deploy the two collection-group indexes the job queries: `firebase deploy --only firestore:indexes`.
+
+GitHub may start scheduled runs a few minutes late, and pauses schedules in a repository with no commits for 60 days (re-enable it in the Actions tab).
+
+### 7. Google Drive backup on the website (optional)
+
+The Android and desktop apps need nothing extra. For the website, create an OAuth client of type **Web application** in Google Cloud Console → APIs & Services → Credentials, add your site (e.g. `https://<you>.github.io`) to *Authorized JavaScript origins*, enable the **Google Drive API**, and set the repository variable `VITE_GOOGLE_WEB_CLIENT_ID`. Without it, people signed in with Google can still back up through a sign-in popup.
+
 ---
 
 ## 🚢 Releasing
@@ -407,7 +447,11 @@ export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="…"   # in ~/.local/expensetracker-s
 | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID` | **Required.** Firebase web config (see `.env.example`). In CI these are GitHub repository *variables*. |
 | `VITE_APPCHECK_SITE_KEY` | reCAPTCHA v3 site key. When set, Firebase **App Check** is enabled so only this app can call your backend. Register the key in Firebase Console → App Check, then turn on enforcement for Firestore. |
 
-| `VITE_GOOGLE_DESKTOP_CLIENT_ID`, `VITE_GOOGLE_DESKTOP_CLIENT_SECRET` | Google sign-in in the desktop app (a "Desktop app" OAuth client). Empty = Google sign-in hidden on desktop. |
+| `VITE_GOOGLE_DESKTOP_CLIENT_ID`, `VITE_GOOGLE_DESKTOP_CLIENT_SECRET` | Google sign-in in the desktop app (a "Desktop app" OAuth client). Empty = Google sign-in hidden on desktop. Also used for Drive backups on desktop. |
+| `VITE_FIREBASE_VAPID_KEY` | Web push key pair (Cloud Messaging). Empty = the website shows reminders only while it's open. |
+| `VITE_GOOGLE_WEB_CLIENT_ID` | "Web application" OAuth client for Drive backups on the website. |
+
+The notifier job uses the secrets `FIREBASE_SERVICE_ACCOUNT` (required) and `SMTP_URL` (optional), and the variables `MAIL_FROM` and `APP_URL` (optional).
 
 In CI these come from GitHub repository **variables** (or secrets) of the same name.
 
@@ -442,17 +486,26 @@ Firestore listeners (subscribeToUserData) ─▶ React state
 
 ```
 users/{uid}                         ← { email, settings, createdAt }
-  │                                    settings = { theme,
+  │                                    settings = { theme, currency: 'INR' | 'USD' | …,
+  │                                                 driveBackup: { enabled, frequency, keep },
   │                                                 carryForward: { enabled, startMonth: 'YYYY-MM', includeNegative },
   │                                                 budgets: { total, categories: { food: 6000, … } },
   │                                                 categoryRules: { "swiggy": "food", … },
   │                                                 goals: [{ id, name, target, deadline?, startDate, savingsType?, keyword? }] }
-  ├── transactions/{id}             ← { name, amount, type, date, month, category?, direction?, wasteAmount?, recurringId?, … }
-  ├── income/{id}                   ← { name, amount, type, date, month, isBorrowed?, isRepaymentRec?, recurringId?, … }
+  ├── transactions/{id}             ← { name, amount, currency?, fx?, type, date, month, category?, direction?, wasteAmount?, recurringId?, … }
+  ├── income/{id}                   ← { name, amount, currency?, fx?, type, date, month, isBorrowed?, isRepaymentRec?, recurringId?, … }
+  │                                    currency missing = INR (entries from before multi-currency);
+  │                                    fx = { USD: 1, INR: 95.2 } — the rates when a foreign entry was made
   ├── recurring/{id}                ← { name, amount, kind, frequency, dayOfMonth?/weekday?, startDate, endDate?, autoPost, active, lastHandledKey?, category?, … }
   ├── trips/{id}                    ← { name, startDate, endDate?, status, meMemberId?, members[{id,name,groupId?}], expenses[{id,title,amount,paidBy,splitAmong[],date}], settlements[{id,fromUnit,toUnit,amount,date}], postedEntryIds[] }
   ├── external_transactions/{id}    ← billing session { name, items[], received[], status, net_balance, settlementId?, … }
-  └── recently_deleted/{id}         ← { itemType, originalData, deletedAt, … }
+  ├── recently_deleted/{id}         ← { itemType, originalData, deletedAt, … }
+  ├── devices/{deviceId}            ← { name, kind, platform, lastSeen, visible, locked?, command?, unlockRequest?, unlockApproval? }
+  ├── security/lock                 ← { enabled, pinHash, salt, iterations, length, lockAfter, fails, lastFailAt }
+  ├── security_events/{id}          ← { type, at, device, deviceId, count?, notified }
+  ├── push_tokens/{deviceId}        ← { token, platform, reminders, security }
+  ├── push_plan/current             ← { items[{ at, title, body, route }], nextAt, sentUpTo? }
+  └── drive_backup/state            ← { lastAt, lastFile, lastDevice, error? }
 ```
 
 Posted recurring occurrences are ordinary transaction / income documents whose id is `rec_<ruleId>_<YYYY-MM-DD>`, which is what makes posting idempotent.
