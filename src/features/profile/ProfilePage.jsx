@@ -14,10 +14,11 @@ import SettingsTab from '../settings/SettingsTab';
 import RemindersCard from '../settings/RemindersCard';
 import CurrencyCard from '../settings/CurrencyCard';
 import SecurityCard from '../../security/SecurityCard';
+import DriveBackupCard from '../settings/DriveBackupCard';
 import { useShell } from '../../app/shellContext';
 
 export default function ProfilePage(props) {
-  const { user, transactions = [], income = [], devices, securityEvents, settings, themePref = 'system', theme, onThemePrefChange, onPatchSettings, onBack, recurring } = props;
+  const { user, transactions = [], income = [], devices, securityEvents, drive, settings, themePref = 'system', theme, onThemePrefChange, onPatchSettings, onBack, recurring } = props;
   const desktop = useShell()?.desktop;
   const ui = useMemo(() => normaliseUi(settings?.ui), [settings?.ui]);
   const save = (patch) => onPatchSettings?.({ ui: serialiseUi({ ...ui, ...patch }) });
@@ -93,6 +94,9 @@ export default function ProfilePage(props) {
 
         {/* ── Security: app lock, devices, alerts ── */}
         <SecurityCard user={user} devices={devices} events={securityEvents} />
+
+        {/* ── Google Drive backup ── */}
+        {drive && <DriveBackupCard user={user} onPatchSettings={onPatchSettings} drive={drive} />}
 
         {/* ── Currency ── */}
         <CurrencyCard settings={settings} transactions={transactions} income={income} onPatchSettings={onPatchSettings} />

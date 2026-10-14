@@ -122,3 +122,24 @@ describe('goals: held with someone, moved, used, collected', () => {
     expect(p.saved).toBe(400);
   });
 });
+
+describe('Google Drive backup schedule', () => {
+  it('is due after the chosen period (with a little slack), never when off', async () => {
+    const { backupDue } = await import('../../services/drive');
+    const now = Date.parse('2026-10-14T21:00:00Z');
+    const h = 3600e3;
+    expect(backupDue({ enabled: false, frequency: 'daily' }, null, now)).toBe(false);
+    expect(backupDue({ enabled: true, frequency: 'daily' }, null, now)).toBe(true);
+    expect(backupDue({ enabled: true, frequency: 'daily' }, now - 20 * h, now)).toBe(false);
+    expect(backupDue({ enabled: true, frequency: 'daily' }, now - 23 * h, now)).toBe(true);
+    expect(backupDue({ enabled: true, frequency: 'weekly' }, now - 3 * 24 * h, now)).toBe(false);
+    expect(backupDue({ enabled: true, frequency: 'monthly' }, now - 31 * 24 * h, now)).toBe(true);
+  });
+  it('keeps the newest backups and names files by date', async () => {
+    const { backupsToPrune, backupFileName } = await import('../../services/drive');
+    const files = [1, 2, 3, 4].map((d) => ({ id: `f${d}`, createdTime: `2026-10-0${d}T10:00:00Z` }));
+    expect(backupsToPrune(files, 2).map((f) => f.id)).toEqual(['f2', 'f1']);
+    expect(backupsToPrune(files, 0).map((f) => f.id)).toEqual(['f3', 'f2', 'f1']);   // always keeps one
+    expect(backupFileName(new Date(2026, 9, 14, 9, 5))).toBe('expense-tracker-backup-2026-10-14-0905.json');
+  });
+});

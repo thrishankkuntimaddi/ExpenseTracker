@@ -3,6 +3,7 @@ import { Plus, Settings2 } from 'lucide-react';
 import { useFirestoreData } from '../hooks/useFirestoreData';
 import { useRecurring } from '../hooks/useRecurring';
 import { useDevices } from '../hooks/useDevices';
+import { useDriveBackup } from '../hooks/useDriveBackup';
 import { useSyncStatus, clearSyncError } from '../services/sync';
 import { setStatusBarTheme, onBackButton } from '../native';
 import { overlayOpen } from '../hooks/useEscape';
@@ -119,6 +120,8 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   // "Your devices" (presence heartbeat while the app is open) and security alerts
   const devices = useDevices(user.uid);
   const securityEvents = useSecurityEvents(user.uid);
+  // Google Drive backups on the schedule picked in Profile
+  const drive = useDriveBackup({ uid: user.uid, email: user.email, settings, loaded });
 
   // Recurring rules (rent, SIP, salary …) + what is due right now
   const recurring = useRecurring({ uid: user.uid, transactions, income, loaded, addTransaction, addIncome, reportError });
@@ -265,7 +268,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
     isStandalone, canInstallNative, onTriggerInstall: triggerInstall,
     selectedPeriod, onPeriodChange: setSelectedPeriod,
-    theme, themePref, onThemePrefChange: setThemePref, user, devices, securityEvents,
+    theme, themePref, onThemePrefChange: setThemePref, user, devices, securityEvents, drive,
     recurring, onPatchSettings: patchSettings, onLearnCategory: learnCategory, reportError,
   };
 

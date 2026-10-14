@@ -23,11 +23,12 @@ export async function pkceChallenge(verifier) {
   return b64url(new Uint8Array(digest));
 }
 
-/** Google authorization URL; `__REDIRECT_URI__` is filled in by the desktop shell. */
-export function buildDesktopAuthUrl({ clientId, challenge, state }) {
+/** Google authorization URL; `__REDIRECT_URI__` is filled in by the desktop shell.
+    `extra` adds scopes / offline access (Drive backups). */
+export function buildDesktopAuthUrl({ clientId, challenge, state, scope = 'openid email profile', extra = {} }) {
   const p = new URLSearchParams({
-    client_id: clientId, response_type: 'code', scope: 'openid email profile',
-    code_challenge: challenge, code_challenge_method: 'S256', state, prompt: 'select_account',
+    client_id: clientId, response_type: 'code', scope,
+    code_challenge: challenge, code_challenge_method: 'S256', state, prompt: 'select_account', ...extra,
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?redirect_uri=__REDIRECT_URI__&${p}`;
 }
@@ -44,9 +45,10 @@ export function parseLoopbackQuery(query, expectedState) {
   return { code: q.get('code') };
 }
 
-async function desktopIdToken() {
+/** Desktop: the browser + loopback dance. Returns Google's token response (or null if cancelled). */
+export async function desktopOAuth({ scope, extra } = {}) {
   const verifier = randomString(48), state = randomString(16);
-  const authUrl = buildDesktopAuthUrl({ clientId: DESKTOP_CLIENT_ID, challenge: await pkceChallenge(verifier), state });
+  const authUrl = buildDesktopAuthUrl({ clientId: DESKTOP_CLIENT_ID, challenge: await pkceChallenge(verifier), state, scope, extra });
   const { redirectUri, query } = await invoke('google_oauth_loopback', { authUrl });
   const result = parseLoopbackQuery(query, state);
   if (result.cancelled) return null;
@@ -59,7 +61,26 @@ async function desktopIdToken() {
     }),
   });
   const json = await res.json();
-  if (!res.ok || !json.id_token) throw new Error(`Google sign-in failed: ${json.error_description || json.error || res.status}`);
+  if (!res.ok) throw new Error(`Google sign-in failed: ${json.error_description || json.error || res.status}`);
+  return json;
+}
+
+/** Desktop: a fresh access token from a stored refresh token. */
+export async function desktopRefresh(refreshToken) {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ client_id: DESKTOP_CLIENT_ID, client_secret: DESKTOP_CLIENT_SECRET, refresh_token: refreshToken, grant_type: 'refresh_token' }),
+  });
+  const json = await res.json();
+  if (!res.ok) { const e = new Error(json.error_description || json.error || 'refresh failed'); e.code = json.error; throw e; }
+  return json;
+}
+
+async function desktopIdToken() {
+  const json = await desktopOAuth();
+  if (!json) return null;
+  if (!json.id_token) throw new Error('Google sign-in returned no ID token. Try again.');
   return json.id_token;
 }
 
