@@ -63,15 +63,40 @@ async function desktopIdToken() {
   return json.id_token;
 }
 
+/** The user backed out of the account picker (Credential Manager or the classic one: status 12501). */
+export const isCancelledSignIn = (err) => /cancel|12501/i.test(`${err?.message ?? ''} ${err?.code ?? ''}`);
+
+/* Android's newer Credential Manager fails on some phones ("No credentials
+   available" — older Play services, some vivo/iQOO, Oppo, Xiaomi builds, or no
+   Google account added yet), so on any failure other than a cancel, try
+   Google's classic account picker, which can also add an account. */
 async function androidIdToken() {
   const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
   try {
     const r = await FirebaseAuthentication.signInWithGoogle();
     return r.credential?.idToken ?? null;
   } catch (err) {
-    if (/cancel/i.test(err?.message ?? '')) return null;   // user backed out of the account picker
-    throw err;
+    if (isCancelledSignIn(err)) return null;
+    console.warn('[google] Credential Manager failed, trying the classic picker:', err?.message);
   }
+  try {
+    const r = await FirebaseAuthentication.signInWithGoogle({ useCredentialManager: false });
+    return r.credential?.idToken ?? null;
+  } catch (err) {
+    if (isCancelledSignIn(err)) return null;
+    throw new Error(androidSignInHelp(err));
+  }
+}
+
+/** What to tell someone whose phone refused Google sign-in both ways. */
+export function androidSignInHelp(err) {
+  const msg = err?.message ?? '';
+  const base = 'Google sign-in isn’t working on this phone';
+  if (/no credential|no account/i.test(msg)) {
+    return `${base}: no Google account was offered. Add one in Settings → Accounts (or Passwords & accounts), update “Google Play services” from the Play Store, then try again — or sign in with email and password.`;
+  }
+  if (/network|7:/i.test(msg)) return `${base}: it couldn’t reach Google. Check the connection and try again.`;
+  return `${base} (${msg || 'unknown error'}). Update “Google Play services” from the Play Store and try again, or sign in with email and password.`;
 }
 
 /** A Google ID token for this user, or null if they cancelled. Apps only. */

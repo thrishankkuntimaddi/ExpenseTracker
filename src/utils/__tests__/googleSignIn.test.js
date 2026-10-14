@@ -20,3 +20,18 @@ describe('desktop Google sign-in (PKCE + loopback)', () => {
     expect(() => parseLoopbackQuery('code=x&state=OTHER', 'ST')).toThrow(/state mismatch/);
   });
 });
+
+describe('Android sign-in fallbacks', () => {
+  it('treats both pickers’ cancels as a cancel', async () => {
+    const { isCancelledSignIn } = await import('../../native/googleSignIn');
+    expect(isCancelledSignIn({ message: 'activity is cancelled by the user.' })).toBe(true);
+    expect(isCancelledSignIn({ message: '12501: ' })).toBe(true);
+    expect(isCancelledSignIn({ message: 'No credentials available' })).toBe(false);
+  });
+  it('explains “no credentials” in words a person can act on', async () => {
+    const { androidSignInHelp } = await import('../../native/googleSignIn');
+    expect(androidSignInHelp({ message: 'No credentials available' })).toMatch(/Add one in Settings/);
+    expect(androidSignInHelp({ message: '7: ' })).toMatch(/connection/);
+    expect(androidSignInHelp({ message: '10: ' })).toMatch(/Google Play services/);
+  });
+});
