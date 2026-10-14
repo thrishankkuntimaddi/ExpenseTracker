@@ -2,6 +2,7 @@
 // Opened from the avatar (phone) or the sidebar (desktop): who is signed
 // in, the theme in one row, reminders as tiles, how the layout is arranged,
 // then every other setting grouped into a few sections.
+import { useMotionPref, setMotionPref } from '../../motion/motion';
 import { useMemo } from 'react';
 import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus } from 'lucide-react';
 import Avatar from '../../components/Avatar';
@@ -84,6 +85,9 @@ export default function ProfilePage(props) {
             })}
           </div>
         </div>
+
+        {/* ── Animations: one row ── */}
+        <MotionRow />
 
         {/* ── Reminders: tiles ── */}
         <section id="group-reminders" style={{ marginBottom: 18, scrollMarginTop: 12 }}>
@@ -234,3 +238,28 @@ function Stat({ value, label }) {
   );
 }
 
+/* Coins, rolling numbers, liquid budget, signs, the living card — per device.
+   The device's own "reduce motion" setting always wins. */
+function MotionRow() {
+  const pref = useMotionPref();
+  const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  return (
+    <div className="card theme-row" id="motion-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px 10px 16px', marginTop: -8, marginBottom: 18 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Animations</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{reduced ? 'Off — your device asks for reduced motion' : 'Coins, rolling numbers, liquid budget · this device only'}</div>
+      </div>
+      <div role="radiogroup" aria-label="Animations" className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
+        {[{ key: 'on', label: 'On' }, { key: 'off', label: 'Off' }].map(({ key, label }) => {
+          const on = pref === key;
+          return (
+            <button key={key} id={`motion-${key}`} role="radio" aria-checked={on} disabled={reduced} onClick={() => setMotionPref(key === 'on')}
+              style={{ padding: '7px 13px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: reduced ? 'default' : 'pointer', background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: on ? 'var(--shadow-sm)' : 'none', opacity: reduced ? 0.5 : 1 }}>
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

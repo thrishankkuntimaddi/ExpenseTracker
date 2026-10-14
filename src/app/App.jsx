@@ -47,6 +47,8 @@ import { PAGE_META, PAGE_COLOR, DESKTOP_NAV } from './pages';
 import Avatar from '../components/Avatar';
 import { displayNameOf } from './shellContext';
 import { normaliseUi } from '../utils/uiPrefs';
+import { flyCoin } from '../motion/motion';
+import Sign from '../motion/Sign';
 
 /* One app on every screen — the same pages, the same headers:
    • phone: bottom bar Home · page · "+" · page · page (chosen in Profile →
@@ -259,8 +261,17 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
 
   const tabColors = PAGE_COLOR[theme === 'monoflow' ? 'dark' : 'light'];
   const dueCount = recurring.manualDue.length;
+  // A new entry: a coin flies into the month card (gold spent, green in,
+  // blue saved, violet debts) and the confirmation draws its sign
+  const celebrate = (entry) => {
+    const debt = (entry.type === 'person' && entry.direction !== 'given_gift') || (entry.type === 'income' && (entry.isBorrowed || entry.isRepaymentRec));
+    const tone = debt ? 'violet' : entry.type === 'income' ? 'green' : entry.type === 'savings' ? 'blue' : 'gold';
+    const from = document.activeElement && document.activeElement !== document.body ? document.activeElement : document.querySelector('[id^="btn-save-"]');
+    flyCoin({ from, to: ['#home-summary', '#tab-today', '#side-today'], tone });
+    setToastMsg({ text: `Added ${entry.name} · ${formatAmount(entry.amount)}`, sign: tone === 'green' ? 'wallet' : tone === 'blue' ? 'piggy' : 'check' });
+  };
   const shell = {
-    user, goTo, back: goBack, barTabs, desktop: isDesktop, active: activeTab,
+    user, goTo, back: goBack, barTabs, desktop: isDesktop, active: activeTab, celebrate,
     showBack: !isDesktop && !pageOrder.includes(activeTab) && activeTab !== 'profile',
     openProfile: () => goTo('profile'),
     openAdd: (kind = 'expense', opts = {}) => setAddKind({ kind, ...opts }),
@@ -363,18 +374,19 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
             onAdd={smartAddEntry}
             onAddIncome={addIncome}
             onClose={() => setAddKind(null)}
-            onSaved={(e) => setToastMsg(`Added ${e.name} · ${formatAmount(e.amount)}`)}
+            onSaved={celebrate}
           />
         </Suspense>
       )}
 
       {toastMsg && (
-        <div role="status" className="app-toast" key={toastMsg} style={{
+        <div role="status" className="app-toast" key={toastMsg.text ?? toastMsg} style={{
           position: 'fixed', left: 16, right: 16, bottom: isDesktop ? 28 : 'calc(92px + env(safe-area-inset-bottom, 0px))', zIndex: 950,
           maxWidth: 420, margin: '0 auto', padding: '11px 16px', borderRadius: 16, textAlign: 'center',
           fontSize: 13, fontWeight: 600, color: 'var(--toast-text, #fff)', background: 'var(--toast-bg, rgba(28,28,32,.92))',
           boxShadow: '0 10px 30px -10px rgba(0,0,0,.45)', animation: 'toastIn .22s cubic-bezier(0.16,1,0.3,1)',
-        }}>{toastMsg}</div>
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        }}>{toastMsg.sign && <Sign kind={toastMsg.sign} size={18} />}{toastMsg.text ?? toastMsg}</div>
       )}
     </>
   );

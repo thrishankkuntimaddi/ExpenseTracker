@@ -15,6 +15,9 @@ import { computeBudgetStatus, suggestBudget, monthPlan, DEDUCTION_PRESETS } from
 import { categoryTotals, categoryColor, EMPTY_RULES } from '../../utils/categories';
 import { formatAmount, localMonthKey } from '../../utils/dateHelpers';
 import { useShell } from '../../app/shellContext';
+import LiquidGauge from '../../motion/LiquidGauge';
+import RollingNumber from '../../motion/RollingNumber';
+import Sign from '../../motion/Sign';
 import { useViewMonth, monthName } from '../../app/month';
 import { generateId } from '../../utils/storage';
 import { toKey } from '../../utils/recurring';
@@ -104,13 +107,23 @@ export default function BudgetPage({ transactions = [], income = [], settings, o
           <div className="card" style={{ padding: '16px' }}>
             {t.limit ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{t.remaining >= 0 ? 'Left to spend' : 'Over by'}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: STATUS_COLOR[t.status] }}>{STATUS_TEXT[t.status]}</span>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'stretch' }}>
+                  {/* the month's budget as liquid in a glass capsule */}
+                  <LiquidGauge id="budget-liquid" variant="capsule" fraction={t.limit ? t.spent / t.limit : 0} style={{ width: 62, height: 132, flexShrink: 0 }}
+                    label={`${Math.round(t.pct)}% of the budget used`} />
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{t.remaining >= 0 ? 'Left to spend' : 'Over by'}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: STATUS_COLOR[t.status] }}>
+                        {t.status === 'over' && <Sign kind="warn" size={16} />}{STATUS_TEXT[t.status]}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', color: t.remaining >= 0 ? 'var(--text)' : 'var(--expense)', margin: '2px 0 4px' }}><RollingNumber value={Math.abs(t.remaining)} /></div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10 }}><strong style={{ color: 'var(--text)' }}>{Math.round(t.pct)}%</strong> used · {formatAmount(t.spent)} of {formatAmount(t.limit)}</div>
+                    <BudgetBar pct={t.pct} pacePct={status.pacePct} color={STATUS_COLOR[t.status]} height={6} />
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>The line marks where the month is today</div>
+                  </div>
                 </div>
-                <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', color: t.remaining >= 0 ? 'var(--text)' : 'var(--expense)', margin: '2px 0 10px' }}>{formatAmount(Math.abs(t.remaining))}</div>
-                <BudgetBar pct={t.pct} pacePct={status.pacePct} color={STATUS_COLOR[t.status]} />
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>{formatAmount(t.spent)} of {formatAmount(t.limit)} · the line marks where the month is today</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
                   <Figure label="Safe today" value={t.safeToday != null ? round(t.safeToday) : '—'} color="var(--income)" />
                   <Figure label="Month ends at" value={round(t.projected)} color={t.projected > t.limit ? 'var(--expense)' : 'var(--text)'} />

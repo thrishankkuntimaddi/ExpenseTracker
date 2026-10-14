@@ -11,6 +11,7 @@ import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { useShell } from '../../app/shellContext';
 import { debtLedger, debtTotals, DEBT_MOVES, DEBT_MOVE_KEYS, debtEntryFields } from '../../utils/debts';
 import Sheet from '../../components/Sheet';
+import Sign from '../../motion/Sign';
 import { generateId } from '../../utils/storage';
 import { formatAmount, isoToDateInput, dateInputToISO, isoToMonth, todayInputValue } from '../../utils/dateHelpers';
 
@@ -74,7 +75,7 @@ export default function DebtsPage({
             {youOwe.length > 0 && <List id="debts-you-owe" title="You owe" hint="you’ll pay them back" people={youOwe} onOpen={setOpenKey} />}
             {!owesYou.length && !youOwe.length && !q && (
               <div className="card" style={{ marginTop: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--income-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Check size={15} style={{ color: 'var(--income)' }} /></span>
+                <span style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--income-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Sign kind="check" size={18} /></span>
                 <span style={{ fontSize: 13, fontWeight: 650, color: 'var(--text-secondary)' }}>All settled — nobody owes anything.</span>
               </div>
             )}

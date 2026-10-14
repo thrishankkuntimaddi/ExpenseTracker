@@ -1,5 +1,9 @@
 import { AddPanel } from '../../components/AddSheet';
-import { useMemo, useState, Fragment } from 'react';
+import RollingNumber from '../../motion/RollingNumber';
+import LiquidGauge from '../../motion/LiquidGauge';
+import Sign from '../../motion/Sign';
+import { useTilt } from '../../motion/useTilt';
+import { useMemo, useRef, useState, Fragment } from 'react';
 import { Coins, Users, Zap, ArrowUpRight } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount, todayInputValue, dateInputToISO, isoToMonth, localMonthKey } from '../../utils/dateHelpers';
@@ -79,8 +83,9 @@ export default function TodayTab(props) {
     e.preventDefault();
     if (!preview) return;
     const isoDate = dateInputToISO(todayInputValue());
-    onAdd({ id: generateId(), type: 'expense', name: preview.name, amount: preview.amount, category: preview.category, date: isoDate, month: isoToMonth(isoDate) });
-    shell?.toast(`Added ${preview.name} · ${formatAmount(preview.amount)}`);
+    const entry = { id: generateId(), type: 'expense', name: preview.name, amount: preview.amount, category: preview.category, date: isoDate, month: isoToMonth(isoDate) };
+    onAdd(entry);
+    if (shell?.celebrate) shell.celebrate(entry); else shell?.toast(`Added ${preview.name} · ${formatAmount(preview.amount)}`);
     setQuick('');
   }
 
@@ -103,24 +108,25 @@ export default function TodayTab(props) {
   const explorePages = EXPLORE_ORDER.filter((k) => !ui.tabs.includes(k));
 
   const pct = safeToday ? Math.min(100, (safeToday.spent / safeToday.limit) * 100) : 0;
+  const heroRef = useRef(null);
+  useTilt(heroRef);
   const overviewSection = (
-    <div className="home-hero" id="home-summary" role={shell ? 'button' : undefined} tabIndex={shell ? 0 : undefined}
+    <div ref={heroRef} className="home-hero" id="home-summary" role={shell ? 'button' : undefined} tabIndex={shell ? 0 : undefined}
       onClick={(e) => { if (!e.target.closest('.month-switcher')) shell?.goTo('stats'); }} style={{ marginBottom: 14, padding: '14px 18px 14px', borderRadius: 26, color: '#fff', cursor: shell ? 'pointer' : 'default', position: 'relative', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
         {shell ? <MonthSwitcher tone="hero" compact /> : <span style={{ fontSize: 12, fontWeight: 700 }}>{monthName(monthKey)}</span>}
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, opacity: 0.85 }}>
+          {safeToday?.status === 'over' && <Sign kind="warn" size={15} style={{ color: '#FFD0D7' }} />}
           {safeToday ? (safeToday.status === 'over' ? 'Over budget' : `${Math.round(pct)}% of budget`) : 'Stats'} <ArrowUpRight size={13} />
         </span>
       </div>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8, marginTop: 10 }}>Spent</div>
       <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 0, fontVariantNumeric: 'tabular-nums' }}>
-        {formatAmount(stats?.totalExpense ?? 0)}
+        <RollingNumber id="home-spent" value={stats?.totalExpense ?? 0} />
       </div>
       {safeToday && (
         <>
-          <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.22)', marginTop: 10, overflow: 'hidden' }}>
-            <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: safeToday.status === 'over' ? '#FDA4AF' : safeToday.status === 'warn' || safeToday.status === 'pace' ? '#FDE68A' : '#FFFFFF' }} />
-          </div>
+          <LiquidGauge variant="bar" fraction={safeToday.limit ? safeToday.spent / safeToday.limit : 0} style={{ marginTop: 10 }} />
           <div style={{ fontSize: 11, marginTop: 6, opacity: 0.85 }}>
             {safeToday.status === 'over'
               ? <><strong>{formatAmount(Math.abs(safeToday.remaining))}</strong> over the {formatAmount(safeToday.limit)} budget</>
@@ -129,11 +135,11 @@ export default function TodayTab(props) {
         </>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.18)' }}>
-        {isNow ? <Metric label="Today" value={formatAmount(todayExpense)} /> : <Metric label="Income" value={formatAmount(stats?.totalIncome ?? 0)} />}
+        {isNow ? <Metric label="Today" value={todayExpense} /> : <Metric label="Income" value={stats?.totalIncome ?? 0} />}
         {isNow && safeToday && safeToday.status !== 'over'
-          ? <Metric label="Safe to spend today" value={formatAmount(safeToday.safeToday)} />
-          : <Metric label="Saved" value={formatAmount(stats?.totalSavings ?? 0)} />}
-        <Metric label="Balance" value={formatAmount(stats?.balance ?? 0)} />
+          ? <Metric label="Safe to spend today" value={safeToday.safeToday} />
+          : <Metric label="Saved" value={stats?.totalSavings ?? 0} />}
+        <Metric label="Balance" value={stats?.balance ?? 0} />
       </div>
     </div>
   );
@@ -142,7 +148,7 @@ export default function TodayTab(props) {
   const addPanel = shell?.desktop && (
     <div className="card home-add-panel" id="home-add-panel" style={{ padding: 16, marginBottom: 14 }}>
       <AddPanel inline compact {...props} onAdd={onAdd} onAddIncome={onAddIncome}
-        onSaved={(e) => shell.toast?.(`Added ${e.name} · ${formatAmount(e.amount)}`)} />
+        onSaved={(e) => (shell.celebrate ? shell.celebrate(e) : shell.toast?.(`Added ${e.name} · ${formatAmount(e.amount)}`))} />
     </div>
   );
 
@@ -377,7 +383,7 @@ function Metric({ label, value }) {
   return (
     <div style={{ minWidth: 0 }}>
       <div style={{ fontSize: 10, fontWeight: 600, opacity: 0.75, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}><RollingNumber value={value} /></div>
     </div>
   );
 }

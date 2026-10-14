@@ -12,6 +12,7 @@ import {
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { formatAmount } from '../../utils/dateHelpers';
 import { categoryTotals, categoryColor, EMPTY_RULES } from '../../utils/categories';
+import RollingNumber from '../../motion/RollingNumber';
 import { latestReportDay, getReportSettings, windowLabel, reportWindow } from '../../utils/report';
 import { toKey, fromKey } from '../../utils/recurring';
 import { useStats } from '../../hooks/useStats';
@@ -172,7 +173,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
               <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.75)', marginBottom: 6 }}>
                 Remaining balance · {monthName(month, { month: 'short', year: 'numeric' })}
               </p>
-              <p style={{ fontSize: 32, fontWeight: 800, color: '#fff', lineHeight: 1.1, marginBottom: 4 }}>{formatAmount(stats.balance)}</p>
+              <p style={{ fontSize: 32, fontWeight: 800, color: '#fff', lineHeight: 1.1, marginBottom: 4 }}><RollingNumber value={stats.balance} /></p>
               <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>Money in − spent − saved − given − lent</p>
             </div>
 

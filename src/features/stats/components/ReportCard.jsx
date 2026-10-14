@@ -2,11 +2,17 @@
 // One report a month, on the day you pick, covering salary to salary (see
 // utils/report.js): totals, what went up / down / stayed steady, bills you
 // missed, categories over budget. Browse earlier reports with ‹ ›.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus, AlertCircle, Target, FileText } from 'lucide-react';
 import { buildReport, latestReportDay, shiftReportDay, windowLabel, getReportSettings, ordinal } from '../../../utils/report';
 import { toKey, fromKey } from '../../../utils/recurring';
 import { EMPTY_RULES } from '../../../utils/categories';
+import { motionOn, useMotion } from '../../../motion/motion';
+
+/* ── F · Report unveil: each report arrives sealed, once per device ── */
+const OPENED_KEY = 'et_reports_opened';
+const openedReports = () => { try { return JSON.parse(localStorage.getItem(OPENED_KEY) ?? '[]'); } catch { return []; } };
+const markOpened = (key) => { try { localStorage.setItem(OPENED_KEY, JSON.stringify([...openedReports().filter((k) => k !== key), key].slice(-24))); } catch { /* storage unavailable */ } };
 
 const rupees = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;
 
@@ -22,10 +28,52 @@ export default function ReportCard({ transactions = [], income = [], settings, r
   });
   const nextOn = fromKey(shiftReportDay(latest, day, 1)).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
 
+  // Sealed until opened (the latest report only, the first time on this device)
+  const [sealed, setSealed] = useState(() => back === 0 && !r.empty && motionOn() && !openedReports().includes(reportKey));
+  const [typed, setTyped] = useState(null);     // the headline, while it types itself
+  const [grow, setGrow] = useState(0);          // bump to re-grow the week bars (after opening)
+  const moving = useMotion();
+  const cover = useRef(null), card = useRef(null);
+  function unseal() {
+    if (!cover.current) return;
+    markOpened(reportKey);
+    const c = cover.current;
+    const ease = 'cubic-bezier(.2,.9,.25,1)';
+    c.querySelector('.env-seal')?.animate([{ transform: 'scale(1) rotate(0)', opacity: 1 }, { transform: 'scale(1.3) rotate(-14deg)', opacity: 1, offset: 0.4 }, { transform: 'scale(.2) rotate(40deg)', opacity: 0 }], { duration: 480, easing: ease, fill: 'forwards' });
+    c.querySelector('.env-flap')?.animate([{ transform: 'rotateX(0deg)' }, { transform: 'rotateX(180deg)', opacity: 0.6 }], { duration: 600, delay: 320, easing: ease, fill: 'forwards' });
+    c.querySelector('.env-paper')?.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-46px)' }], { duration: 600, delay: 700, easing: ease, fill: 'forwards' });
+    const out = c.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(1.06)' }], { duration: 420, delay: 1250, easing: ease, fill: 'forwards' });
+    out.finished.then(() => { setSealed(false); setTyped(''); setGrow((g) => g + 1); }, () => setSealed(false));
+  }
+  // Open by itself when it scrolls into view (or on tap)
+  useEffect(() => {
+    if (!sealed || !card.current) return undefined;
+    const io = new IntersectionObserver(([e]) => { if (e.intersectionRatio > 0.6) { io.disconnect(); setTimeout(unseal, 350); } }, { threshold: [0.6] });
+    io.observe(card.current);
+    return () => io.disconnect();
+  }, [sealed]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The headline types itself after opening
+  useEffect(() => {
+    if (typed == null) return undefined;
+    if (typed.length >= r.headline.length) { const t = setTimeout(() => setTyped(null), 400); return () => clearTimeout(t); }
+    const t = setTimeout(() => setTyped(r.headline.slice(0, typed.length + 2)), 18);
+    return () => clearTimeout(t);
+  }, [typed, r.headline]);
+
   const nav = { width: 30, height: 30, border: 'none', background: 'var(--surface2)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 };
 
   return (
-    <div className="card report-card" id="stats-report" style={{ padding: 0, overflow: 'hidden', scrollMarginTop: 12 }}>
+    <div ref={card} className={`card report-card${moving ? ' report-grow' : ''}`} key={`${reportKey}-${grow}`} id="stats-report" style={{ padding: 0, overflow: 'hidden', scrollMarginTop: 12, position: 'relative' }}>
+      {sealed && (
+        <button ref={cover} type="button" className="report-seal-cover" id="report-unseal" onClick={unseal} aria-label="Open your new report">
+          <span className="env">
+            <span className="env-back" /><span className="env-paper"><i style={{ top: 12, width: '60%' }} /><i style={{ top: 26, width: '78%' }} /><i style={{ top: 40, width: '48%' }} /></span>
+            <span className="env-front" /><span className="env-flap" /><span className="env-seal">₹</span>
+          </span>
+          <span className="cover-title">Your new report is here</span>
+          <span className="cover-hint">{windowLabel(r.start, r.last)} · tap to open</span>
+        </button>
+      )}
       <div style={{ padding: '14px 16px 12px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)' }}>
         <span style={{ width: 34, height: 34, borderRadius: 11, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><FileText size={16} style={{ color: 'var(--accent)' }} /></span>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -46,7 +94,7 @@ export default function ReportCard({ transactions = [], income = [], settings, r
             <Fig label="Saved" value={rupees(r.saved)} tone="savings" sub={r.savingsRate != null ? `${r.savingsRate}% of income` : null} />
             <Fig label="Left" value={rupees(r.left)} tone={r.left < 0 ? 'expense' : 'text'} />
           </div>
-          <p id="report-headline" style={{ margin: 0, padding: '0 16px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.45 }}>{r.headline}</p>
+          <p id="report-headline" style={{ margin: 0, padding: '0 16px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.45, minHeight: '1.45em' }}>{typed ?? r.headline}</p>
           {r.spent > 0 && <Analysis a={r.analysis} spent={r.spent} />}
 
           <Group Icon={TrendingUp} tone="expense" title="Went up" empty="Nothing went up." rows={r.up}
@@ -127,7 +175,7 @@ function Analysis({ a, spent }) {
             <div key={w.week} title={`Week ${w.week} · from ${fromKey(w.from).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0 }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{w.amount ? rupees(w.amount) : '—'}</span>
               <div style={{ width: '100%', height: 44, display: 'flex', alignItems: 'flex-end' }}>
-                <div style={{ width: '100%', height: `${Math.max(4, (w.amount / maxWeek) * 100)}%`, borderRadius: 6, background: 'var(--expense)', opacity: w.amount === maxWeek ? 1 : 0.4 }} />
+                <div className="week-bar" style={{ width: '100%', height: `${Math.max(4, (w.amount / maxWeek) * 100)}%`, borderRadius: 6, background: 'var(--expense)', opacity: w.amount === maxWeek ? 1 : 0.4 }} />
               </div>
               <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>W{w.week}</span>
             </div>

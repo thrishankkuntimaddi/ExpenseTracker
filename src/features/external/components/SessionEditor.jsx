@@ -2,6 +2,7 @@
 import { CheckCircle2, ShoppingBag, User, Save, Share2 } from 'lucide-react';
 import { formatAmount } from '../../../utils/dateHelpers';
 import Sheet from '../../../components/Sheet';
+import RollingNumber from '../../../motion/RollingNumber';
 import { newItemRow, newReceivedRow } from './billingHelpers';
 
 export default function SessionEditor({
@@ -84,16 +85,16 @@ export default function SessionEditor({
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 3 }}>Received</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--income)' }}>{formatAmount(totalReceived)}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--income)' }}><RollingNumber value={totalReceived} /></div>
           </div>
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 3 }}>Spent</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--expense)' }}>{formatAmount(totalSpent)}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--expense)' }}><RollingNumber value={totalSpent} /></div>
           </div>
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 3 }}>Net Balance</div>
             <div style={{ fontSize: 22, fontWeight: 900, color: isProfit ? 'var(--income)' : isLoss ? 'var(--expense)' : 'var(--text-muted)' }}>
-              {netBalance >= 0 ? '+' : ''}{formatAmount(netBalance)}
+              {netBalance >= 0 ? '+' : ''}<RollingNumber value={netBalance} />
             </div>
           </div>
         </div>

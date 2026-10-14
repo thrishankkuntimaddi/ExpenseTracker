@@ -17,7 +17,13 @@ import { X } from 'lucide-react';
 import { evalAmount, parseDateText } from '../utils/sheetValues';
 
 const matchOption = (options, text) => { const t = text.trim().toLowerCase(); return t ? options.find((o) => o.label.toLowerCase() === t) : null; };
-const completeOption = (options, text) => { const t = text.toLowerCase(); return t ? options.find((o) => o.label.toLowerCase().startsWith(t)) : null; };
+// Of the names starting with what was typed, the shortest ("Kir" → Kiran, not Kiranr)
+const completeOption = (options, text) => {
+  const t = text.toLowerCase();
+  if (!t) return null;
+  return options.filter((o) => o.label.toLowerCase().startsWith(t))
+    .sort((a, b) => a.label.length - b.label.length || a.label.localeCompare(b.label))[0] ?? null;
+};
 
 export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly = false, tone = 'accent', footer, rowLabel = (r) => r.name ?? r.title ?? r.person ?? 'row' }) {
   const [ghost, setGhost] = useState(() => makeRow(rows));

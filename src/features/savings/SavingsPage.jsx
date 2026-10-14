@@ -6,6 +6,9 @@ import { useMemo, useState } from 'react';
 import { Plus, PiggyBank } from 'lucide-react';
 import { PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill } from '../../components/Page';
 import GoalsCard from '../plan/components/GoalsCard';
+import Sign from '../../motion/Sign';
+
+const PiggySign = (props) => <Sign kind="piggy" {...props} />;
 import GoalModal from '../plan/GoalModal';
 import { SAVINGS_TYPES, getSavingsType } from '../../utils/typeConfig';
 import { formatAmount, localMonthKey } from '../../utils/dateHelpers';
@@ -58,7 +61,7 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
 
       <div className="tab-body">
         {savings.length === 0 ? (
-          <EmptyState Icon={PiggyBank} tone="savings" title="Start tracking your savings"
+          <EmptyState Icon={PiggySign} tone="savings" title="Start tracking your savings"
             text="Log SIPs, mutual funds, trading and cash savings. See your savings rate, where it goes, and how close your goals are."
             action={<PrimaryPill id="savings-empty-add" Icon={Plus} tone="savings" onClick={() => shell?.openAdd('savings')}>Add savings</PrimaryPill>} />
         ) : (

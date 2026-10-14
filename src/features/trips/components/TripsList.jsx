@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Clock, Archive, Share2, Map, Trash2, Pencil 
 import { formatAmount, formatDateShort } from '../../../utils/dateHelpers';
 import { computeTripSummary } from '../../../utils/split';
 import TripHistoryCard from './TripHistoryCard';
+import Sign from '../../../motion/Sign';
 
 const smallBtn = (bg, border, color) => ({
   width: 30, height: 30, borderRadius: 7, background: bg, border: border ? `1px solid ${border}` : 'none',
@@ -18,7 +19,7 @@ export default function TripsList({
   if (nothing) {
     return (
       <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 10 }}>
-        <div style={{ width: 52, height: 52, borderRadius: 16, background: 'var(--external-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Map size={24} style={{ color: 'var(--external)' }} /></div>
+        <div style={{ width: 52, height: 52, borderRadius: 16, background: 'var(--external-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Sign kind="plane" size={30} style={{ color: 'var(--external)' }} /></div>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>No trips yet</div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55, maxWidth: 320 }}>
           Road trip, weekend away, a shared dinner. Fill in who paid for what and get a fair "who pays whom" plan — couples can pay as one wallet.

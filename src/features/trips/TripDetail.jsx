@@ -9,6 +9,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trash2, Check, ArrowRight, Users, Share2, Lock, Unlock, CheckCircle2, UserPlus, X } from 'lucide-react';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import Sheet from '../../components/Sheet';
+import RollingNumber from '../../motion/RollingNumber';
+import { flyCoin, burstCoins, pop } from '../../motion/motion';
 import { formatAmount, formatDateShort } from '../../utils/dateHelpers';
 import { computeTripSummary } from '../../utils/split';
 import { generateId } from '../../utils/storage';
@@ -97,7 +99,17 @@ export default function TripDetail({ trip, onChange, onShare, onClose, onReopen,
   const s = useMemo(() => computeTripSummary(tripForMaths), [tripForMaths]);
   const paidBy = Object.fromEntries(s.members.map((m) => [m.id, m.paid]));
   const unitName = Object.fromEntries(s.units.map((u) => [u.id, u.name]));
-  function markPaid(t) {
+  // E · the moment a trip becomes square: a burst of coins and "All settled ✓" pops
+  const settledRef = useRef(null);
+  const wasSettled = useRef(s.isSettled || !s.count);
+  useEffect(() => {
+    const now = s.isSettled && s.count > 0;
+    if (now && !wasSettled.current) { burstCoins(settledRef.current); pop(settledRef.current); }
+    wasSettled.current = now || !s.count;
+  }, [s.isSettled, s.count]);
+
+  function markPaid(t, e) {
+    flyCoin({ from: e?.currentTarget, to: '#trip-total', tone: 'gold' });
     onChange({ ...latest.current.trip, settlements: [...(trip.settlements ?? []), { id: generateId(), fromUnit: t.from, toUnit: t.to, amount: t.amount, date: toKey(new Date()) }] });
   }
   const removeSettlement = (id) => onChange({ ...latest.current.trip, settlements: trip.settlements.filter((x) => x.id !== id) });
@@ -184,7 +196,9 @@ export default function TripDetail({ trip, onChange, onShare, onClose, onReopen,
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
             <div>
               <div style={label}>Total spent</div>
-              <div id="trip-total" style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', lineHeight: 1.1, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{formatAmount(s.total)}</div>
+              <div id="trip-total" style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', lineHeight: 1.1, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+                <RollingNumber value={s.total} />
+              </div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
                 {members.length} people · {formatAmount(s.perHead)} each
                 {trip.startDate && <> · {formatDateShort(trip.startDate)}{trip.endDate ? ` – ${formatDateShort(trip.endDate)}` : ''}</>}
@@ -212,7 +226,7 @@ export default function TripDetail({ trip, onChange, onShare, onClose, onReopen,
         <div className="card" id="trip-transfers">
           <div style={{ padding: '11px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={label}><ArrowRight size={12} /> Who pays whom</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: s.isSettled ? 'var(--income)' : 'var(--expense)' }}>
+            <span ref={settledRef} className="settle-pop" style={{ fontSize: 11, fontWeight: 700, color: s.isSettled ? 'var(--income)' : 'var(--expense)' }}>
               {!s.count ? '' : s.isSettled ? 'All settled ✓' : `${formatAmount(s.outstanding)} to settle`}
             </span>
           </div>
@@ -232,7 +246,7 @@ export default function TripDetail({ trip, onChange, onShare, onClose, onReopen,
                 </div>
                 <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--expense)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{formatAmount(t.amount)}</span>
                 {!closed && (
-                  <button onClick={() => markPaid(t)} title="Mark as paid" style={{ height: 28, padding: '0 10px', border: 'none', background: 'var(--income)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                  <button onClick={(e) => markPaid(t, e)} title="Mark as paid" style={{ height: 28, padding: '0 10px', border: 'none', background: 'var(--income)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                     <Check size={12} /> Paid
                   </button>
                 )}

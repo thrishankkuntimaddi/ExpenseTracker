@@ -1,0 +1,97 @@
+/* ══════════════════════════════════════════════════════════════════
+   MOTION — styles for src/motion/*. Only transform / opacity animate.
+══════════════════════════════════════════════════════════════════ */
+
+/* ── A · coin drop ── */
+.fx-coin {
+  position: fixed; left: 0; top: 0; z-index: 2000; pointer-events: none; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-weight: 900; line-height: 1;
+  text-shadow: 0 1px 0 rgba(255,255,255,.55); will-change: transform;
+  box-shadow: inset 0 -2px 3px rgba(0,0,0,.35), inset 0 2px 2px rgba(255,255,255,.6), 0 8px 18px -6px rgba(0,0,0,.55);
+}
+.fx-spark { position: fixed; left: 0; top: 0; width: 6px; height: 6px; margin: -3px; border-radius: 50%; z-index: 1999; pointer-events: none; }
+.fx-glint { position: absolute; top: -40%; bottom: -40%; left: 0; width: 28%; pointer-events: none; z-index: 2;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent); }
+/* ── E · coin burst ── */
+.fx-canvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 2000; pointer-events: none; }
+
+/* ── B · rolling numbers ── */
+.roll { display: inline-flex; align-items: flex-end; white-space: nowrap; line-height: 1; vertical-align: -0.12em; }
+.roll-win { display: inline-block; height: 1em; overflow: hidden; }
+.roll-col { display: flex; flex-direction: column; will-change: transform; }
+.roll-col > span, .roll-ch { display: block; height: 1em; line-height: 1em; }
+
+/* ── C · liquid ── */
+.liquid { display: block; width: 100%; }
+.liquid-bar { height: 10px; border-radius: 99px; }
+
+/* ── D · self-drawing signs ── */
+.sign .s-draw { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.sign-play .s-draw { animation: s-draw .6s cubic-bezier(.2,.9,.25,1) both; }
+.sign-play .s-d2 { animation-delay: .42s; }
+@keyframes s-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.sign-play.sign-check { animation: s-pulse .45s cubic-bezier(.34,1.56,.64,1) .8s both; }
+@keyframes s-pulse { 50% { transform: scale(1.14); } }
+.sign-play .s-drop { animation: s-drop .7s cubic-bezier(.5,0,.75,0) .75s both; }
+@keyframes s-drop { 0% { transform: translateY(-26px); opacity: 0; } 25% { opacity: 1; } 80% { transform: translateY(2px); } 100% { transform: none; opacity: 1; } }
+.sign .s-fly { transform: translate(44px, 6px) rotate(-52deg); }
+.sign-play .s-fly { animation: s-fly 1.3s cubic-bezier(.45,.05,.3,1) .15s both; }
+@keyframes s-fly {
+  0%   { transform: translate(4px, 42px) rotate(4deg); opacity: 0; }
+  12%  { opacity: 1; }
+  45%  { transform: translate(24px, 32px) rotate(-40deg); }
+  70%  { transform: translate(32px, 19px) rotate(-55deg); }
+  100% { transform: translate(44px, 6px) rotate(-52deg); opacity: 1; }
+}
+.sign-play .s-route { animation: s-route 1.3s linear .15s both; }
+@keyframes s-route { from { opacity: 0; } to { opacity: .55; } }
+.sign .s-route { opacity: .55; }
+.sign .s-coin { opacity: 0; }
+.sign-play .s-coin { animation: s-coin .9s cubic-bezier(.55,0,.8,.2) .35s both; }
+@keyframes s-coin { 0% { transform: translateY(-8px); opacity: 0; } 25% { transform: none; opacity: 1; } 80% { transform: translateY(14px); opacity: 1; } 100% { transform: translateY(15px) scaleY(.2); opacity: 0; } }
+.sign .s-bounce { transform-box: fill-box; transform-origin: 50% 100%; }
+.sign-play .s-bounce { animation: s-bounce .5s cubic-bezier(.34,1.56,.64,1) 1.05s both; }
+@keyframes s-bounce { 40% { transform: scale(1.05, .93); } 70% { transform: translateY(-2px); } }
+.sign .s-shake { transform-box: view-box; transform-origin: 24px 39px; }
+.sign-play .s-shake { animation: s-shake .55s ease-out .95s both; }
+@keyframes s-shake { 20% { transform: rotate(-8deg); } 40% { transform: rotate(7deg); } 60% { transform: rotate(-4deg); } 80% { transform: rotate(3deg); } }
+.sign .s-pop { transform-box: fill-box; transform-origin: center; }
+.sign-play .s-pop { animation: s-pop .36s cubic-bezier(.34,1.56,.64,1) .82s both; }
+@keyframes s-pop { from { transform: scale(0); } 60% { transform: scale(1.7); } to { transform: none; } }
+
+/* ── E · settled ── */
+.settle-pop { display: inline-block; }
+
+/* ── F · report unveil ── */
+.report-seal-cover {
+  position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  background: radial-gradient(120% 90% at 50% 0%, var(--accent-bg, rgba(99,102,241,.14)) 0%, var(--surface) 70%);
+  cursor: pointer; perspective: 800px; border: none; width: 100%; font-family: inherit; color: var(--text);
+}
+.env { position: relative; width: 180px; height: 112px; }
+.env-back, .env-front, .env-flap { position: absolute; left: 0; right: 0; border-radius: 10px; }
+.env-back { inset: 0; background: linear-gradient(180deg, #2d2a5c, #1d1b3e); }
+.env-paper { position: absolute; left: 14px; right: 14px; top: 10px; height: 80px; border-radius: 6px; background: #f6f6fb; }
+.env-paper i { position: absolute; left: 12px; height: 6px; border-radius: 3px; background: #c9cadc; }
+.env-front { inset: 0; background: linear-gradient(160deg, #4b45c9 0%, #2f2b86 70%); clip-path: polygon(0 0, 50% 56%, 100% 0, 100% 100%, 0 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.14); }
+.env-flap { top: 0; height: 66%; transform-origin: top; background: linear-gradient(180deg, #5b54e0, #3f39b0); clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.env-seal { position: absolute; left: 50%; top: 56%; width: 30px; height: 30px; margin: -15px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 35% 30%, #ff9aa8, #d23b52 60%, #8e1d30); color: #ffe1e6; font-weight: 900; font-size: 14px; box-shadow: 0 3px 8px rgba(0,0,0,.45); }
+.report-seal-cover .cover-title { font-size: 15px; font-weight: 800; }
+.report-seal-cover .cover-hint { font-size: 12px; color: var(--text-muted); margin-top: -6px; }
+.report-seal-cover:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.report-card .week-bar { transform-origin: bottom; }
+.report-grow .week-bar { animation: bar-grow .75s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes bar-grow { from { transform: scaleY(.04); } }
+
+/* ── G · living card ── */
+.tilt-live { transform: perspective(900px) rotateX(var(--tilt-y, 0deg)) rotateY(var(--tilt-x, 0deg)); transform-style: preserve-3d; will-change: transform; }
+.tilt-live::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1; mix-blend-mode: soft-light;
+  background: radial-gradient(circle at var(--glare-x, 50%) var(--glare-y, 30%), rgba(255,255,255,.7), rgba(255,255,255,0) 55%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-coin, .fx-spark, .fx-glint, .fx-canvas { display: none !important; }
+  .sign * { animation: none !important; }
+}
