@@ -7,10 +7,14 @@
 //   id, name, startDate, endDate?, status: 'open'|'closed', meMemberId?,
 //   members:     [{ id, name, groupId? }],
 //   expenses:    [{ id, title, amount, paidBy: memberId, splitAmong: memberId[] (empty = everyone), date, category? }],
-//   settlements: [{ id, fromUnit, toUnit, amount, date, note? }],
+//   settlements: [{ id, fromUnit, toUnit, amount, date, note?, fromMember?, toMember? }],
 // }
+//
+// A settlement inside one wallet (fromUnit === toUnit) is the partner paying
+// back what the other covered — e.g. Hanudeep repaying Muza after the trip.
 import { sumAmounts } from './finance';
 import { formatMoney } from './money';
+import { inferCategory, categoryMeta } from './categories';
 
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
@@ -70,13 +74,39 @@ export function settleTransfers(balances) {
   return out;
 }
 
+/**
+ * Inside a pay-together wallet: who still owes whom between the partners.
+ * Each member's out-of-pocket is what they paid for the trip plus wallet
+ * settlements they made (minus ones they received); the wallet's dues that
+ * are still open are assumed to be handled by its lead — the member who paid
+ * the most (the one "responsible" for the others).
+ */
+function walletInside(unit, memberRows, settlements) {
+  const ids = unit.memberIds;
+  const net = Object.fromEntries(memberRows.filter((r) => ids.includes(r.id)).map((r) => [r.id, round2(r.paid - r.share)]));
+  const lead = memberRows.filter((r) => ids.includes(r.id)).sort((a, b) => b.paid - a.paid)[0]?.id ?? ids[0];
+  const pick = (m) => (ids.includes(m) ? m : lead);
+  settlements.forEach((s) => {
+    const amt = Number(s.amount) || 0;
+    if (s.fromUnit === unit.id && s.toUnit === unit.id) {
+      if (net[s.fromMember] !== undefined) net[s.fromMember] = round2(net[s.fromMember] + amt);
+      if (net[s.toMember] !== undefined) net[s.toMember] = round2(net[s.toMember] - amt);
+    } else if (s.fromUnit === unit.id) net[pick(s.fromMember)] = round2(net[pick(s.fromMember)] + amt);
+    else if (s.toUnit === unit.id) net[pick(s.toMember)] = round2(net[pick(s.toMember)] - amt);
+  });
+  net[lead] = round2(net[lead] - unit.remaining);
+  return { lead, transfers: settleTransfers(net) };
+}
+
 export function computeTripSummary(trip) {
   const members = trip?.members ?? [];
   // Unfinished table rows (no payer / no amount) are ignored
   const expenses = (trip?.expenses ?? []).filter((e) => e.paidBy && Number(e.amount) > 0);
   const settlements = trip?.settlements ?? [];
+  const external = settlements.filter((s) => s.fromUnit !== s.toUnit);
   const units = buildUnits(members);
   const unitOfMember = Object.fromEntries(members.map((m) => [m.id, unitIdOf(m)]));
+  const memberName = Object.fromEntries(members.map((m) => [m.id, m.name]));
 
   const paid = {}, share = {};
   members.forEach((m) => { paid[m.id] = 0; share[m.id] = 0; });
@@ -95,47 +125,87 @@ export function computeTripSummary(trip) {
     const uPaid = sumAmounts(rows, (r) => r.paid);
     const uShare = sumAmounts(rows, (r) => r.share);
     const net = round2(uPaid - uShare);
-    const settledOut = sumAmounts(settlements.filter((s) => s.fromUnit === u.id));
-    const settledIn = sumAmounts(settlements.filter((s) => s.toUnit === u.id));
+    const settledOut = sumAmounts(external.filter((s) => s.fromUnit === u.id));
+    const settledIn = sumAmounts(external.filter((s) => s.toUnit === u.id));
     // Paying a settlement raises your balance; receiving one lowers it
     const remaining = round2(net + settledOut - settledIn);
-    return { ...u, paid: uPaid, share: uShare, net, settledOut, settledIn, remaining, isGroup: u.memberIds.length > 1 };
+    const row = { ...u, paid: uPaid, share: uShare, net, settledOut, settledIn, remaining, isGroup: u.memberIds.length > 1 };
+    if (row.isGroup) {
+      const inside = walletInside(row, memberRows, settlements);
+      row.lead = inside.lead;
+      row.inside = inside.transfers.map((t) => ({ ...t, fromName: memberName[t.from], toName: memberName[t.to] }));
+    }
+    return row;
   });
 
   const total = sumAmounts(expenses);
   const transfers = settleTransfers(Object.fromEntries(unitRows.map((u) => [u.id, u.remaining])));
   const unitName = Object.fromEntries(unitRows.map((u) => [u.id, u.name]));
   const outstanding = sumAmounts(transfers);
-  const settledTotal = sumAmounts(settlements);
+  const settledTotal = sumAmounts(external);
   const meUnit = trip?.meMemberId ? unitOfMember[trip.meMemberId] : null;
+
+  // Where the money went: by category, by day
+  const byCategory = {};
+  expenses.forEach((e) => { const k = e.category || inferCategory(e.title); byCategory[k] = round2((byCategory[k] ?? 0) + Number(e.amount)); });
+  const categories = Object.entries(byCategory).map(([key, amount]) => ({ key, amount })).sort((a, b) => b.amount - a.amount);
 
   return {
     total, count: expenses.length,
     perHead: members.length ? round2(total / members.length) : 0,
-    members: memberRows, units: unitRows,
+    members: memberRows, units: unitRows, categories,
     transfers: transfers.map((t) => ({ ...t, fromName: unitName[t.from], toName: unitName[t.to] })),
     outstanding, settledTotal,
     isSettled: expenses.length > 0 && transfers.length === 0,
     meUnit,
     myShare: trip?.meMemberId ? share[trip.meMemberId] ?? 0 : null,
     myPaid: trip?.meMemberId ? paid[trip.meMemberId] ?? 0 : null,
-    owedToMe: meUnit ? transfers.filter((t) => t.to === meUnit) : [],
-    iOwe: meUnit ? transfers.filter((t) => t.from === meUnit) : [],
+    owedToMe: meUnit ? transfers.filter((t) => t.to === meUnit).map((t) => ({ ...t, fromName: unitName[t.from], toName: unitName[t.to] })) : [],
+    iOwe: meUnit ? transfers.filter((t) => t.from === meUnit).map((t) => ({ ...t, fromName: unitName[t.from], toName: unitName[t.to] })) : [],
   };
 }
 
-/** Plain-text summary for sharing on WhatsApp etc. */
+/** Plain-text summary for sharing on WhatsApp etc. — everything the image shows. */
 export function tripSummaryText(trip, fmt = (n) => formatMoney(n, trip?.currency)) {
   const s = computeTripSummary(trip);
-  const lines = [`${trip.name} — trip summary`, `Total spent: ${fmt(s.total)} · ${s.members.length} people · ${fmt(s.perHead)} per head`, ''];
-  lines.push('Paid:');
-  s.members.forEach((m) => lines.push(`• ${m.name}: ${fmt(m.paid)} (share ${fmt(m.share)})`));
+  const nameOf = Object.fromEntries((trip.members ?? []).map((m) => [m.id, m.name]));
+  const unitName = Object.fromEntries(s.units.map((u) => [u.id, u.name]));
+  const status = trip.status === 'closed' ? 'closed' : 'open';
+  const lines = [`🧳 *${trip.name}* — trip summary (${status})`];
+  if (trip.startDate) lines.push(`📅 ${trip.startDate}${trip.endDate ? ` → ${trip.endDate}` : ''}`);
+  lines.push(`💰 Total ${fmt(s.total)} · ${s.members.length} people · ${fmt(s.perHead)} per head · ${s.count} expenses`, '');
+
+  if (s.categories.length) {
+    lines.push('*Where it went*');
+    s.categories.forEach((c) => lines.push(`• ${categoryMeta(c.key)?.label ?? c.key}: ${fmt(c.amount)}`));
+    lines.push('');
+  }
+  lines.push('*Paid vs share*');
+  s.units.forEach((u) => {
+    const tail = u.remaining > 0.004 ? `gets ${fmt(u.remaining)}` : u.remaining < -0.004 ? `owes ${fmt(-u.remaining)}` : 'settled';
+    lines.push(`• ${u.name}${u.isGroup ? ' (one wallet)' : ''}: paid ${fmt(u.paid)} · share ${fmt(u.share)} → ${tail}`);
+  });
   lines.push('');
   if (s.transfers.length) {
-    lines.push('To settle:');
+    lines.push('*To settle*');
     s.transfers.forEach((t) => lines.push(`→ ${t.fromName} pays ${t.toName} ${fmt(t.amount)}`));
   } else {
-    lines.push(s.count ? 'All settled ✓' : 'No expenses yet');
+    lines.push(s.count ? '✅ All settled' : 'No expenses yet');
   }
+  const external = (trip.settlements ?? []).filter((x) => x.fromUnit !== x.toUnit);
+  if (external.length) {
+    lines.push('', '*Already paid*');
+    external.forEach((x) => lines.push(`✓ ${unitName[x.fromUnit] ?? '?'} → ${unitName[x.toUnit] ?? '?'} ${fmt(x.amount)}`));
+  }
+  s.units.filter((u) => u.inside?.length).forEach((u) => {
+    lines.push('', `*Inside ${u.name}*`);
+    u.inside.forEach((t) => lines.push(`→ ${t.fromName} pays ${t.toName} ${fmt(t.amount)}`));
+  });
+  const rows = (trip.expenses ?? []).filter((e) => e.paidBy && Number(e.amount) > 0);
+  if (rows.length) {
+    lines.push('', '*All expenses*');
+    rows.forEach((e) => lines.push(`${nameOf[e.paidBy] ?? '?'} · ${e.title || '—'} · ${fmt(Number(e.amount))}`));
+  }
+  lines.push('', 'Shared from Expense Tracker');
   return lines.join('\n');
 }

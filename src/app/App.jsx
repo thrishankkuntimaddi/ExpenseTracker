@@ -55,6 +55,7 @@ import { useAppLock, AppLockContext } from '../security/useAppLock';
 import LockScreen from '../security/LockScreen';
 import SecurityBanners from '../security/SecurityBanners';
 import { useSecurityEvents } from '../security/events';
+import { pendingInvite } from '../features/trips/invite';
 
 /* One app on every screen — the same pages, the same headers:
    • phone: bottom bar Home · page · "+" · page · page (chosen in Profile →
@@ -208,6 +209,9 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     setPageOpts({});
     setActiveTab(prev);
   }, [backStack, ui.start]);
+
+  // Opened from a trip invite link: go to Trips, which asks "which one are you?"
+  useEffect(() => { if (pendingInvite()) goTo('trips'); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Deep links: once the page has rendered, scroll to / focus its target.
   // Pages load lazily, so look for the element for up to ~2 s.

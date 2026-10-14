@@ -153,7 +153,14 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 - The table you'd draw after a trip — **Person | What | Amount** — with Excel-like entry (type, Enter to move, paste from Excel)
 - **Pay as one wallet**: a couple or a family settles as one
 - A live **who-pays-whom plan** with the fewest transfers; tap **Paid** to record a settlement
-- **Share** a WhatsApp-ready summary; **Close** to log *your* share as a Travel expense and what others owe as Lent (or Borrowed) — in the trip's currency
+- **Share** the whole trip as an image or text — totals, who pays whom, what's already paid, paid vs share, wallets, where the money went, every row; **Close** to log *your* share as a Travel expense and what others owe as Lent (or Borrowed) — in the trip's currency
+- **Shared trips** — **Invite friends** turns a trip into one everybody works on, live:
+  - invite by **QR code**, **link**, the phone's share sheet (WhatsApp, contacts), **email** (with "create a free account" steps), or one tap for **friends** from earlier shared trips; they sign in (or sign up), pick their name, done — the apps take the link in **Join**
+  - everyone **sees every row** but **edits only their own** — and their wallet partner's (pays together); the **creator** can correct any row, manage people, **close** and **reopen**
+  - either side of a payment taps **Paid**; inside a wallet the app shows who still owes whom (e.g. *Hanudeep owes Muza*, assuming the one who paid most covered the wallet) and that can be marked paid too
+  - closed trips stay in everyone's history; friends can **Add to my ledger** to post their own share
+  - enforced by the security rules, not just the screen
+- Trips stay personal until you invite — "one person handles it" works as before
 
 ### 🔗 Billings (money spent for others)
 - Buying for a client or a person: goods purchased vs money received, net profit/loss live, a shareable receipt image, close to post the result to your ledger
@@ -468,6 +475,7 @@ users/{uid}                         ← { email, settings, createdAt }
   │                                    fx = { USD: 1, INR: 95.2 } — the rates when a foreign entry was made
   ├── recurring/{id}                ← { name, amount, currency?, kind, frequency, dayOfMonth?/weekday?, startDate, endDate?, autoPost, active, lastHandledKey?, … }
   ├── trips/{id}                    ← { name, currency?, startDate, endDate?, status, meMemberId?, members[], expenses[], settlements[], postedEntryIds[] }
+  │                                    (personal trips; shared ones move to shared_trips)
   ├── external_transactions/{id}    ← billing session { name, items[], received[], status, net_balance, … }
   ├── recently_deleted/{id}         ← { itemType, originalData, deletedAt, … }
   ├── devices/{deviceId}            ← { name, kind, platform, lastSeen, visible, locked?, command?, unlockRequest?, unlockApproval? }
@@ -477,6 +485,14 @@ users/{uid}                         ← { email, settings, createdAt }
   ├── push_plan/current             ← { items[{ id, at, title, body, route, type }], nextAt, sentUpTo? }
   └── drive_backup/state            ← { lastAt, lastFile, lastDevice, error? }
 ```
+
+```
+shared_trips/{tripId}               ← { name, currency?, startDate, endDate?, status, ownerUid, ownerName, members[],
+  │                                     memberUids[], uidMember{uid: memberId}, memberUnit{memberId: unit}, people{uid: {name, photo}}, … }
+  ├── expenses/{id}                 ← { title, amount|null, paidBy, splitAmong[], by, updatedAt }
+  └── settlements/{id}              ← { fromUnit, toUnit, amount, date, fromMember?, toMember?, by }
+```
+  The 20-character trip id travels only in the invite link; anyone signed in can read a trip by id and join it once while it is open. Rows: the payer's wallet or the creator. Settlements: either side or the creator.
 
 - Posted recurring occurrences are ordinary entries with id `rec_<ruleId>_<YYYY-MM-DD>` — that is what makes posting idempotent
 - **Transaction types**: `expense`, `savings`, `person` (`direction`: lent / borrowed / repaid / repayment / given_gift), `external`

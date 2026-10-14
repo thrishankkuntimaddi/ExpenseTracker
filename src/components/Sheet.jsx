@@ -11,7 +11,9 @@
 //
 // Columns: { key, label, type: 'text' | 'amount' | 'pick' | 'date', width,
 //   placeholder, options: [{ value, label }] (pick), onCreate(label) → value
-//   (pick, optional: accept new values), align }
+//   (pick, optional: accept new values), choices (pick, optional: the subset
+//   that may be picked — the rest still display), align }
+// canEditRow(row) → false locks one row (shared trips: other people's rows).
 import { useLayoutEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { evalAmount, parseDateText } from '../utils/sheetValues';
@@ -25,7 +27,7 @@ const completeOption = (options, text) => {
     .sort((a, b) => a.label.length - b.label.length || a.label.localeCompare(b.label))[0] ?? null;
 };
 
-export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly = false, tone = 'accent', footer, rowLabel = (r) => r.name ?? r.title ?? r.person ?? 'row' }) {
+export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly = false, canEditRow, tone = 'accent', footer, rowLabel = (r) => r.name ?? r.title ?? r.person ?? 'row' }) {
   const [ghost, setGhost] = useState(() => makeRow(rows));
   const [removed, setRemoved] = useState(null);   // { row, index } — for Undo
   const all = readOnly ? rows : [...rows, ghost];
@@ -81,6 +83,7 @@ export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly =
     let g = ghost;
     lines.forEach((line, i) => {
       const at = r + i;
+      if (at < next.length && canEditRow && !canEditRow(next[at])) return;
       const base = at < next.length ? next[at] : g;
       const patch = {};
       line.split('\t').forEach((raw, j) => {
@@ -88,7 +91,7 @@ export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly =
         const v = raw.trim();
         if (col.type === 'amount') { const n = evalAmount(v); patch[col.key] = Number.isFinite(n) ? String(n) : ''; }
         else if (col.type === 'date') patch[col.key] = parseDateText(v) || base[col.key];
-        else if (col.type === 'pick') { const m = matchOption(col.options ?? [], v); patch[col.key] = m ? m.value : v && col.onCreate ? col.onCreate(v) : base[col.key]; }
+        else if (col.type === 'pick') { const m = matchOption(col.choices ?? col.options ?? [], v); patch[col.key] = m ? m.value : v && col.onCreate ? col.onCreate(v) : base[col.key]; }
         else patch[col.key] = v;
       });
       if (at < next.length) next[at] = { ...next[at], ...patch };
@@ -107,11 +110,12 @@ export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly =
       </div>
       {all.map((row, r) => {
         const isGhost = !readOnly && r === rows.length;
+        const locked = readOnly || (!isGhost && canEditRow && !canEditRow(row));
         return (
-          <div key={row.id} className={`sheet-row${isGhost ? ' sheet-ghost' : ''}`} style={line}>
+          <div key={row.id} className={`sheet-row${isGhost ? ' sheet-ghost' : ''}${locked && !readOnly ? ' sheet-locked' : ''}`} style={line}>
             <span className="sheet-num">{isGhost ? '+' : r + 1}</span>
             {columns.map((col, c) => {
-              const cell = { 'data-sheet': id, 'data-r': r, 'data-c': c, className: 'sheet-cell', 'aria-label': `${col.label}, row ${r + 1}`, disabled: readOnly,
+              const cell = { 'data-sheet': id, 'data-r': r, 'data-c': c, className: 'sheet-cell', 'aria-label': `${col.label}, row ${r + 1}`, disabled: locked,
                 onPaste: (e) => paste(e, r, c), placeholder: isGhost || !row[col.key] ? col.placeholder : undefined };
               const nav = (e) => {
                 if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); move(r, c, 'next'); }
@@ -124,7 +128,7 @@ export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly =
               if (col.type === 'date') return <input key={col.key} {...cell} type="date" value={row[col.key] ?? ''} onChange={(e) => e.target.value && setCells(r, { [col.key]: e.target.value })} onKeyDown={nav} />;
               return <input key={col.key} {...cell} type="text" value={row[col.key] ?? ''} autoComplete="off" onChange={(e) => setCells(r, { [col.key]: e.target.value })} onKeyDown={nav} />;
             })}
-            {!readOnly && (isGhost
+            {!readOnly && (isGhost || locked
               ? <span />
               : <button type="button" className="sheet-del" aria-label={`Remove row ${r + 1}`} tabIndex={-1} onClick={() => remove(r)}><X size={13} /></button>)}
           </div>
@@ -144,12 +148,13 @@ export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly =
 
 /* Completes as you type; commits on Enter / leaving the cell */
 function PickCell({ cell, col, value, onCommit, onKeyDown }) {
-  const options = col.options ?? [];
-  const label = options.find((o) => o.value === value)?.label ?? (typeof value === 'string' ? value : '');
+  const options = col.choices ?? col.options ?? [];
+  const label = (col.options ?? []).find((o) => o.value === value)?.label ?? (typeof value === 'string' ? value : '');
   const [text, setText] = useState(null);   // null: not editing
   const editing = useRef(null);
   const input = useRef(null);
   const selectFrom = useRef(null);   // highlight the completed part right after React updates the input
+  const justFocused = useRef(false); // a click that focused the cell keeps it all selected (typing replaces it)
   useLayoutEffect(() => {
     if (selectFrom.current != null && input.current) { input.current.setSelectionRange(selectFrom.current, input.current.value.length); selectFrom.current = null; }
   });
@@ -165,7 +170,8 @@ function PickCell({ cell, col, value, onCommit, onKeyDown }) {
   };
   return (
     <input {...cell} ref={input} type="text" autoComplete="off" value={text ?? label}
-      onFocus={(e) => { editing.current = label; setText(label); e.target.select(); }}
+      onFocus={(e) => { editing.current = label; setText(label); e.target.select(); justFocused.current = true; }}
+      onMouseUp={(e) => { if (justFocused.current) { e.preventDefault(); justFocused.current = false; } }}
       onChange={(e) => {
         const t = e.target.value;
         const deleting = e.nativeEvent?.inputType?.startsWith('delete');
@@ -186,6 +192,7 @@ function PickCell({ cell, col, value, onCommit, onKeyDown }) {
 /* Numbers and sums; commits on Enter / leaving the cell */
 function AmountCell({ cell, value, onCommit, onKeyDown }) {
   const [text, setText] = useState(null);
+  const justFocused = useRef(false);
   const editing = useRef(null);
   const commit = () => {
     if (editing.current == null) return;
@@ -196,7 +203,8 @@ function AmountCell({ cell, value, onCommit, onKeyDown }) {
   };
   return (
     <input {...cell} type="text" inputMode="decimal" autoComplete="off" value={text ?? String(value ?? '')} style={{ textAlign: 'right', fontWeight: 700 }}
-      onFocus={(e) => { editing.current = String(value ?? ''); setText(String(value ?? '')); e.target.select(); }}
+      onFocus={(e) => { editing.current = String(value ?? ''); setText(String(value ?? '')); e.target.select(); justFocused.current = true; }}
+      onMouseUp={(e) => { if (justFocused.current) { e.preventDefault(); justFocused.current = false; } }}
       onChange={(e) => { const t = e.target.value; if (/^[\d.,+\-*/\s₹$€£¥₩₫₱₦₪฿]*$/.test(t)) { editing.current = t; setText(t); } }}
       onPaste={(e) => { cell.onPaste(e); if (e.defaultPrevented) { editing.current = null; setText(null); } }}
       onBlur={commit}

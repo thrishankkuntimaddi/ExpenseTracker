@@ -17,11 +17,14 @@ export default function TripModal({ trip, onSave, onDelete, onClose }) {
   const [endDate, setEndDate] = useState(trip?.endDate ?? '');
   const [currency, setCurrency] = useState(trip?.currency ?? getDisplayCurrency());
   const [members, setMembers] = useState(() => (trip?.members?.length ? trip.members.map((m) => ({ ...m })) : [{ id: generateId(), name: 'Me' }]));
-  const [meId, setMeId] = useState(trip?.meMemberId ?? (trip?.members?.length ? null : null));
+  // A new trip starts with its creator ("Me") ticked
+  const [meId, setMeId] = useState(() => trip?.meMemberId ?? (trip ? null : members[0]?.id ?? null));
   const [newName, setNewName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const effectiveMe = meId ?? (members.length === 1 ? members[0].id : null);
+  // People who joined a shared trip with their account stay on it
+  const joinedIds = new Set(Object.values(trip?.uidMember ?? {}));
   const validMembers = members.filter((m) => m.name.trim());
   const canSave = name.trim() && startDate && validMembers.length >= 2 && (!endDate || endDate >= startDate);
 
@@ -106,7 +109,7 @@ export default function TripModal({ trip, onSave, onDelete, onClose }) {
                     <option value="">Pays alone</option>
                     {others.map((o) => <option key={o.id} value={o.id}>Pays with {o.name.trim()}</option>)}
                   </select>
-                  <button type="button" onClick={() => removeMember(m.id)} aria-label="Remove" disabled={members.length <= 1}
+                  <button type="button" onClick={() => removeMember(m.id)} aria-label="Remove" disabled={members.length <= 1 || joinedIds.has(m.id)} title={joinedIds.has(m.id) ? 'Joined with their account' : 'Remove'}
                     style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <X size={13} />
                   </button>

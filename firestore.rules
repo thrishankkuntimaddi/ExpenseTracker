@@ -23,6 +23,88 @@ service cloud.firestore {
         && (!('wasteAmount' in d) || validMoney(d.wasteAmount));
     }
 
+    // ─── Shared trips (several accounts on one trip) ──────────────────
+    // shared_trips/{tripId}: only its creator changes the trip itself.
+    // Anyone signed in may read a trip by its id — the id is long and random
+    // and travels only inside the invite link — and may join it once, while
+    // it is open, by adding just themselves.
+    // Rows: each person writes their own rows and their wallet partner's
+    // ("pays together"); the creator writes any row. Closed trips are locked.
+    // Settlements: either side of a payment marks it, or the creator.
+    match /shared_trips/{tripId} {
+      function signedIn() { return request.auth != null; }
+      function trip() { return get(/databases/$(database)/documents/shared_trips/$(tripId)).data; }
+      function isTripOwner(t) { return signedIn() && t.ownerUid == request.auth.uid; }
+      function isTripMember(t) { return signedIn() && request.auth.uid in t.memberUids; }
+      function unitOf(t, memberId) { return t.memberUnit.get(memberId, 'm:' + memberId); }
+      function myUnit(t) { return unitOf(t, t.uidMember[request.auth.uid]); }
+
+      function validTrip(d) {
+        return d.name is string && d.name.size() > 0 && d.name.size() <= 200
+          && d.ownerUid is string
+          && d.members is list && d.members.size() <= 50
+          && d.memberUids is list && d.memberUids.size() <= 50
+          && d.uidMember is map && d.people is map && d.memberUnit is map
+          && d.status in ['open', 'closed', 'archived'];
+      }
+
+      // Joining: only themselves added, nothing else touched, nobody removed
+      function isJoin() {
+        let before = resource.data;
+        let after = request.resource.data;
+        return before.status == 'open'
+          && !(request.auth.uid in before.memberUids)
+          && after.diff(before).affectedKeys().hasOnly(['members', 'memberUids', 'uidMember', 'people', 'updatedAt'])
+          && after.memberUids.toSet().difference(before.memberUids.toSet()).hasOnly([request.auth.uid])
+          && before.memberUids.toSet().difference(after.memberUids.toSet()).size() == 0
+          && after.uidMember.diff(before.uidMember).affectedKeys().hasOnly([request.auth.uid])
+          && after.people.diff(before.people).affectedKeys().hasOnly([request.auth.uid])
+          && !(after.uidMember[request.auth.uid] in before.uidMember.values())
+          && after.members.size() >= before.members.size()
+          && after.members.size() <= before.members.size() + 1;
+      }
+
+      allow get: if signedIn();
+      allow list: if signedIn() && request.auth.uid in resource.data.memberUids;
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.auth.uid in request.resource.data.memberUids
+        && validTrip(request.resource.data);
+      allow update: if signedIn() && validTrip(request.resource.data)
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && (isTripOwner(resource.data) || isJoin());
+      allow delete: if isTripOwner(resource.data);
+
+      function validRow(e) {
+        return e.paidBy is string && e.paidBy.size() <= 64
+          && e.title is string && e.title.size() <= 200
+          && (e.amount == null || validMoney(e.amount));
+      }
+      function canWriteRow(t, e) {
+        return isTripOwner(t)
+          || (isTripMember(t) && t.status == 'open' && unitOf(t, e.paidBy) == myUnit(t));
+      }
+      match /expenses/{expenseId} {
+        allow read: if isTripMember(trip());
+        allow create: if validRow(request.resource.data) && canWriteRow(trip(), request.resource.data);
+        allow update: if validRow(request.resource.data)
+          && canWriteRow(trip(), resource.data) && canWriteRow(trip(), request.resource.data);
+        allow delete: if canWriteRow(trip(), resource.data);
+      }
+
+      function canSettle(t, s) {
+        return isTripOwner(t)
+          || (isTripMember(t) && t.status == 'open' && myUnit(t) in [s.fromUnit, s.toUnit]);
+      }
+      match /settlements/{settlementId} {
+        allow read: if isTripMember(trip());
+        allow create: if validMoney(request.resource.data.amount)
+          && request.resource.data.fromUnit is string && request.resource.data.toUnit is string
+          && canSettle(trip(), request.resource.data);
+        allow delete: if canSettle(trip(), resource.data);
+      }
+    }
+
     match /users/{userId} {
       allow read, write: if isOwner(userId);
 

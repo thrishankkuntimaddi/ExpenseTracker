@@ -25,6 +25,7 @@ export default function TripHistoryCard({ trip, onOpen, onEdit, onDelete, onArch
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
               {isArchived && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: 'var(--surface2)', color: 'var(--text-muted)', border: '1px solid var(--border)', letterSpacing: '0.05em', textTransform: 'uppercase', flexShrink: 0 }}>Archived</span>}
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.name}</div>
+              {trip.shared && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: 'var(--external-bg)', color: 'var(--external)', border: '1px solid var(--external-border)', letterSpacing: '0.05em', textTransform: 'uppercase', flexShrink: 0 }}>{trip.isOwner ? 'Shared' : `by ${trip.ownerName ?? 'a friend'}`}</span>}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
               {trip.startDate ? formatDateShort(trip.startDate) : '—'} · {(trip.members ?? []).length} people · {s.isSettled ? 'settled' : `${money(s.outstanding)} unsettled`}

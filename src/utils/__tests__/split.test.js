@@ -69,7 +69,54 @@ describe('settleTransfers', () => {
 describe('tripSummaryText', () => {
   it('reads like a WhatsApp message', () => {
     const txt = tripSummaryText(trip, (n) => `₹${n}`);
-    expect(txt).toContain('Total spent: ₹24500');
+    expect(txt).toContain('Total ₹24500');
     expect(txt).toContain('→ Bala & Esha pays Arjun ₹1800');
+  });
+});
+
+// The Goa trip: Muza pays for Hanudeep (one wallet); Hanudeep has no money on the trip
+describe('inside a pay-together wallet', () => {
+  const goa = {
+    id: 'goa', name: 'Goa', status: 'open',
+    members: [
+      { id: 'me', name: 'Thrishank' }, { id: 'mu', name: 'Muza', groupId: 'w' }, { id: 'ha', name: 'Hanudeep', groupId: 'w' },
+      { id: 'pr', name: 'Preetham' },
+    ],
+    expenses: [
+      { id: 'e1', title: 'Fuel', amount: 4000, paidBy: 'me' },
+      { id: 'e2', title: 'Lunch', amount: 4000, paidBy: 'mu' },
+    ],
+    settlements: [],
+  };
+  it('the partner who paid least owes the lead their full share once the wallet settles', () => {
+    const s = computeTripSummary(goa);
+    const w = s.units.find((u) => u.id === 'g:w');
+    expect(w.remaining).toBe(0);   // paid 4000 = share 2×2000
+    expect(w.lead).toBe('mu');
+    expect(w.inside).toEqual([{ from: 'ha', to: 'mu', amount: 2000, fromName: 'Hanudeep', toName: 'Muza' }]);
+    expect(s.transfers).toEqual([{ from: 'm:pr', to: 'm:me', amount: 2000, fromName: 'Preetham', toName: 'Thrishank' }]);
+  });
+  it('assumes the lead clears the wallet’s open dues, and honours who actually paid', () => {
+    const t = { ...goa, expenses: [{ id: 'e1', title: 'Hotel', amount: 8000, paidBy: 'me' }, { id: 'e2', title: 'Snacks', amount: 1000, paidBy: 'mu' }] };
+    const s = computeTripSummary(t);
+    const w = s.units.find((u) => u.id === 'g:w');
+    expect(w.remaining).toBe(-3500);           // share 4500, paid 1000
+    expect(w.inside).toEqual([{ from: 'ha', to: 'mu', amount: 2250, fromName: 'Hanudeep', toName: 'Muza' }]);
+    // Hanudeep himself paid 1000 of the wallet's dues → owes Muza 1000 less
+    const paidByHanu = computeTripSummary({ ...t, settlements: [{ id: 's1', fromUnit: 'g:w', toUnit: 'm:me', amount: 1000, fromMember: 'ha' }] });
+    expect(paidByHanu.units.find((u) => u.id === 'g:w').inside[0].amount).toBe(1250);
+    // …and repaying Muza inside the wallet clears it, without touching the group plan
+    const repaid = computeTripSummary({ ...t, settlements: [{ id: 's2', fromUnit: 'g:w', toUnit: 'g:w', amount: 2250, fromMember: 'ha', toMember: 'mu' }] });
+    expect(repaid.units.find((u) => u.id === 'g:w').inside).toEqual([]);
+    expect(repaid.outstanding).toBe(s.outstanding);
+    expect(repaid.settledTotal).toBe(0);
+  });
+  it('groups spending by category and the text names everything', () => {
+    const s = computeTripSummary(goa);
+    expect(s.categories.map((c) => c.key)).toContain('food');
+    const text = tripSummaryText(goa, (n) => `₹${n}`);
+    expect(text).toContain('Inside Muza & Hanudeep');
+    expect(text).toContain('Hanudeep pays Muza ₹2000');
+    expect(text).toContain('Thrishank · Fuel · ₹4000');
   });
 });

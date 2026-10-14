@@ -7,6 +7,10 @@ import { markAppReady } from '../../app/ready';
 import { googleSignInAvailable } from '../../native/googleSignIn';
 import { isNative } from '../../native';
 import { RELEASES } from '../../utils/downloads';
+import { captureInviteFromUrl } from '../trips/invite';
+
+// A trip invite link (?trip=…) is kept until the person has signed in
+const invitedAtStart = !!captureInviteFromUrl();
 
 /* Shown when the bundle was built without VITE_FIREBASE_* — better than a stuck splash */
 function SetupRequired() {
@@ -100,6 +104,7 @@ export default function AuthGate({ children }) {
         loading={authLoading}
         googleAvailable={googleSignInAvailable}
         appsLink={isNative ? null : `${RELEASES}/latest`}
+        invited={invitedAtStart}
       />
     );
   }

@@ -47,7 +47,7 @@ export default function HistoryCard({ session, onEdit, onDelete, onArchive, onUn
               </div>
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-              {session.date ? formatDate(session.date) : '—'} · {session.status?.toUpperCase() ?? 'CLOSED'}
+              {session.date ? formatDate(session.date) : '—'} · spent {formatAmount(session.total_spent ?? 0)} · got back {formatAmount(session.total_received ?? 0)}{persons !== 'Unknown' ? ` · ${persons}` : ''}
             </div>
           </div>
         </div>

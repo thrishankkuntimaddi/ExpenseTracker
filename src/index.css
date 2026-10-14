@@ -241,6 +241,7 @@ button {
 button:disabled { cursor: not-allowed; }
 
 /* ── Spin animation — used by sync button in SettingsTab ── */
+.spin { animation: spin 1s linear infinite; }
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }

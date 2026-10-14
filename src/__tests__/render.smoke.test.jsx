@@ -13,6 +13,12 @@ vi.mock('../services/firestore', () => ({
   closeExternalTransaction: async () => {}, deleteExternalTransaction: async () => {},
   moveToRecentlyDeleted: async () => {}, roundMoney: (n) => n,
 }));
+vi.mock('../services/sharedTrips', () => ({
+  subscribeToSharedTrips: () => () => {}, subscribeToSharedTripItems: () => () => {}, getSharedTrip: () => new Promise(() => {}),
+  createSharedTrip: async () => 'x', updateSharedTrip: async () => {}, saveSharedExpense: async () => {}, deleteSharedExpense: async () => {},
+  addSharedSettlement: async () => {}, deleteSharedSettlement: async () => {}, deleteSharedTrip: async () => {},
+  joinSharedTrip: async () => 'm', linkFriendToTrip: async () => {}, unlinkAccount: async () => {},
+}));
 
 const { default: TodayTab } = await import('../features/transactions/TodayTab');
 const { default: HistoryTab } = await import('../features/transactions/HistoryTab');
@@ -318,6 +324,53 @@ describe('screens render with planning features', () => {
     expect(list).toContain('Archived (1)');
     expect(list).toContain('Share summary');
     expect(list).toContain('Unarchive');
+  });
+
+  it('Shared trip: a friend sees every row, edits only their wallet\'s, and cannot close', async () => {
+    const goa = {
+      id: 'goaSharedTripId1234', name: 'Goa', status: 'open', shared: true, isOwner: false, ownerUid: 'uMe', ownerName: 'Thrishank',
+      meMemberId: 'ha', startDate: '2026-10-01',
+      members: [{ id: 'me', name: 'Thrishank' }, { id: 'mu', name: 'Muza', groupId: 'w' }, { id: 'ha', name: 'Hanudeep', groupId: 'w' }, { id: 'pr', name: 'Preetham' }],
+      uidMember: { uMe: 'me', uMu: 'mu', uHa: 'ha' }, memberUids: ['uMe', 'uMu', 'uHa'],
+      people: { uMe: { name: 'Thrishank K' }, uMu: { name: 'Muza' }, uHa: { name: 'Hanudeep' } },
+      expenses: [
+        { id: '1_a', title: 'Fuel', amount: 4000, paidBy: 'me' },
+        { id: '2_b', title: 'Lunch', amount: 4000, paidBy: 'mu' },
+      ],
+      settlements: [],
+    };
+    const ops = { saveRows: noop, addSettlement: noop, removeSettlement: noop };
+    const friend = render(<TripDetail trip={goa} ops={ops} onChange={noop} onShare={noop} onInvite={noop} onClose={noop} onReopen={noop} onDelete={noop} />);
+    expect(friend).toContain('sheet-locked');                                       // Thrishank's row is read-only for Hanudeep
+    expect(friend).toMatch(/class="sheet-row"[^>]*>(?:(?!sheet-row).)*Lunch/s);     // Muza's (wallet partner) row is editable
+    expect(friend).not.toContain('Close trip');
+    expect(friend).not.toContain('Invite');
+    expect(friend).toContain('Shared by Thrishank');
+    expect(friend).toContain('Hanudeep</strong> <span style="color:var(--text-muted)">owes</span> <strong>Muza');
+    expect(friend).toContain('Where the money went');
+    const owner = render(<TripDetail trip={{ ...goa, isOwner: true, meMemberId: 'me' }} ops={ops} onChange={noop} onShare={noop} onInvite={noop} onClose={noop} onReopen={noop} onDelete={noop} />);
+    expect(owner).not.toContain('sheet-locked');
+    expect(owner).toContain('Close trip');
+    expect(owner).toContain('Invite');
+    expect(owner).toContain('not joined');                                          // Preetham hasn't opened the link yet
+    const closedForFriend = render(<TripDetail trip={{ ...goa, status: 'closed' }} ops={ops} onChange={noop} onShare={noop} onClose={noop} onReopen={noop} onLogMine={noop} />);
+    expect(closedForFriend).toContain('Add to my ledger');
+    expect(closedForFriend).toContain('only its creator can reopen it');
+    expect(closedForFriend).not.toContain('Reopen<');
+
+    const { default: TripInviteModal } = await import('../features/trips/TripInviteModal');
+    const invite = render(<TripInviteModal trip={{ ...goa, isOwner: true }} friends={[{ uid: 'uDi', name: 'Dinesh' }]} onLinkFriend={noop} onClose={noop} />);
+    expect(invite).toContain('?trip=goaSharedTripId1234');
+    expect(invite).toContain('Email');
+    expect(invite).toContain('Dinesh');
+    expect(invite).toContain('3 of 4 joined');
+    const makeShared = render(<TripInviteModal trip={{ ...goa, shared: false }} onMakeShared={noop} onClose={noop} />);
+    expect(makeShared).toContain('Which one is you?');
+    const { default: JoinTripModal } = await import('../features/trips/JoinTripModal');
+    expect(render(<JoinTripModal tripId="goaSharedTripId1234" me={{ uid: 'uPr', name: 'Preetham' }} onJoin={noop} onOpen={noop} onClose={noop} />)).toContain('Loading the trip');
+    const { parseInvite } = await import('../features/trips/invite');
+    expect(parseInvite('https://x.github.io/ExpenseTracker/?trip=goaSharedTripId1234')).toBe('goaSharedTripId1234');
+    expect(parseInvite('hello')).toBe(null);
   });
 
   it('modals render for new and existing records', () => {

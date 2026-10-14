@@ -5,6 +5,7 @@ import {
   browserLocalPersistence,
   setPersistence,
   useDeviceLanguage as useBrowserLanguageForAuthEmails,
+  connectAuthEmulator,
 } from "firebase/auth";
 import {
   initializeFirestore,
@@ -12,6 +13,7 @@ import {
   persistentMultipleTabManager,
   terminate,
   clearIndexedDbPersistence,
+  connectFirestoreEmulator,
 } from "firebase/firestore";
 import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 import { firebaseConfig, firebaseConfigError } from "./firebaseConfig";
@@ -46,6 +48,13 @@ export const db = app ? initializeFirestore(app, {
   ignoreUndefinedProperties: true,
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 }) : null;
+
+// Local testing only (`npm run dev` with VITE_USE_EMULATORS=1): talk to the
+// Firebase emulators instead of the real project. Never part of a build.
+if (app && import.meta.env.DEV && import.meta.env.VITE_USE_EMULATORS) {
+  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  connectFirestoreEmulator(db, "127.0.0.1", 8085);
+}
 
 /* Wipe the on-device Firestore cache (call on sign-out so the next person on
    a shared device can't read the previous user's data from IndexedDB).

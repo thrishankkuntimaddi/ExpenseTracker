@@ -41,7 +41,7 @@ export default function ExternalTab({
   const [deletingId, setDeletingId]           = useState(null);
   const [closing, setClosing]                 = useState(false);
   const [showArchived, setShowArchived]       = useState(false);
-  const [showHistory, setShowHistory]         = useState(false);
+  const [showHistory, setShowHistory]         = useState(true);
   const [sharingSession, setSharingSession]   = useState(null);
 
   // Active session object currently opened in editor
@@ -310,6 +310,8 @@ export default function ExternalTab({
             handleEditSession={handleEditSession}
             archiveSession={archiveSession}
             unarchiveSession={unarchiveSession}
+            allSessions={sessions}
+            onNew={() => setShowNewModal(true)}
           />
         )}
 

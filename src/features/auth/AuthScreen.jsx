@@ -20,8 +20,9 @@ export default function AuthScreen({
   error, setError, loading,
   googleAvailable = true,   // false in the desktop app until its Google client is configured
   appsLink = null,          // website only: link to the app downloads
+  invited = false,          // opened from a trip invite link
 }) {
-  const [mode, setMode]         = useState('login');
+  const [mode, setMode]         = useState(invited ? 'signup' : 'login');
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
@@ -115,6 +116,13 @@ export default function AuthScreen({
 
           <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)', margin: 0 }}>{title}</h2>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '6px 0 20px', lineHeight: 1.5 }}>{subtitle}</p>
+
+          {invited && mode !== 'reset' && (
+            <div id="auth-invite" style={{ padding: '11px 14px', borderRadius: 12, marginBottom: 16, background: 'var(--external-bg)', border: '1px solid var(--external-border)', fontSize: 13, color: 'var(--text)', lineHeight: 1.5 }}>
+              <strong>You’ve been invited to a trip.</strong> {mode === 'signup' ? 'Create a free account' : 'Sign in'} — you’ll pick your name on the trip right after.
+              {' '}<button type="button" onClick={() => go(mode === 'signup' ? 'login' : 'signup')} style={{ border: 'none', background: 'none', padding: 0, color: 'var(--external)', font: 'inherit', fontWeight: 700, cursor: 'pointer' }}>{mode === 'signup' ? 'I already have one' : 'I’m new here'}</button>
+            </div>
+          )}
 
           {shownError && (
             <div role="alert" style={{ padding: '11px 14px', borderRadius: 10, marginBottom: 16, background: 'var(--expense-bg)', border: '1px solid var(--expense-border)', color: 'var(--expense)', fontSize: 13, fontWeight: 500, lineHeight: 1.45 }}>
