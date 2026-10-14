@@ -9,14 +9,16 @@ import { Plus, Search, ChevronRight, ChevronDown, ArrowLeft, Pencil, Trash2, Che
 import { PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill } from '../../components/Page';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { useShell } from '../../app/shellContext';
-import { debtLedger, debtTotals, DEBT_MOVES } from '../../utils/debts';
-import { formatAmount, isoToDateInput, dateInputToISO, isoToMonth } from '../../utils/dateHelpers';
+import { debtLedger, debtTotals, DEBT_MOVES, DEBT_MOVE_KEYS, debtEntryFields } from '../../utils/debts';
+import Sheet from '../../components/Sheet';
+import { generateId } from '../../utils/storage';
+import { formatAmount, isoToDateInput, dateInputToISO, isoToMonth, todayInputValue } from '../../utils/dateHelpers';
 
 const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export default function DebtsPage({
   transactions = [], income = [],
-  onUpdateTransaction, onDeleteTransaction, onUpdateIncome, onDeleteIncome,
+  onAddTransaction, onAddIncome, onUpdateTransaction, onDeleteTransaction, onUpdateIncome, onDeleteIncome,
 }) {
   const shell = useShell();
   const [openKey, setOpenKey] = useState(null);
@@ -46,11 +48,15 @@ export default function DebtsPage({
 
       <div className="tab-body">
         {ledger.length === 0 ? (
+          <>
+          <QuickDebts ledger={ledger} onAddTransaction={onAddTransaction} onAddIncome={onAddIncome} toast={shell?.toast} />
           <EmptyState Icon={ArrowLeftRight} tone="lent" title="No debts yet"
             text="Lend or borrow money and it’s tracked here per person until it’s paid back. Money you simply gave away is spending, not a debt."
             action={<PrimaryPill id="debts-empty-add" Icon={Plus} tone="lent" onClick={() => add({ move: 'lent' })}>Add a debt</PrimaryPill>} />
+          </>
         ) : (
           <>
+            <QuickDebts ledger={ledger} onAddTransaction={onAddTransaction} onAddIncome={onAddIncome} toast={shell?.toast} />
             <div className="card debts-summary" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', padding: 0, overflow: 'hidden' }}>
               <Total label="Owed to you" value={totals.owedToYou} tone="lent" count={ledger.filter((p) => p.net > 0).length} />
               <Total label="You owe" value={totals.youOwe} tone="borrowed" count={ledger.filter((p) => p.net < 0).length} border />
@@ -86,6 +92,48 @@ export default function DebtsPage({
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Quick entry: a sheet of debts, saved together ─────────────
+   Person completes from your ledger (a new name is fine), Type from
+   Lent / Borrowed / Got back / Paid back ("g" → Got back). */
+const draftRow = (list = []) => ({ id: generateId(), name: '', move: list[list.length - 1]?.move ?? 'lent', amount: '', note: '', date: todayInputValue() });
+const readyRow = (r) => r.name.trim() && DEBT_MOVES[r.move] && Number(r.amount) > 0;
+
+function QuickDebts({ ledger, onAddTransaction, onAddIncome, toast }) {
+  const [rows, setRows] = useState([]);
+  const ready = rows.filter(readyRow);
+  const sum = ready.reduce((t, r) => t + Number(r.amount), 0);
+  function save() {
+    ready.forEach((r) => {
+      const { store, fields } = debtEntryFields(r.move);
+      const iso = dateInputToISO(r.date || todayInputValue());
+      const name = r.name.trim();
+      const entry = { id: generateId(), name: name.charAt(0).toUpperCase() + name.slice(1), amount: Number(r.amount), ...fields, ...(r.note.trim() ? { note: r.note.trim() } : {}), date: iso, month: isoToMonth(iso) };
+      if (store === 'income') onAddIncome?.(entry); else onAddTransaction?.(entry);
+    });
+    setRows(rows.filter((r) => !readyRow(r)));
+    toast?.(`Added ${ready.length} debt entr${ready.length === 1 ? 'y' : 'ies'} · ${formatAmount(sum)}`);
+  }
+  return (
+    <div id="debts-quick" style={{ marginBottom: 14 }}>
+      <SectionHeading title="Quick entry" hint="type, Enter to move on — paste from Excel works" />
+      <Sheet id="debts-sheet" tone="lent" rows={rows} onChange={setRows} makeRow={draftRow} rowLabel={(r) => r.name}
+        columns={[
+          { key: 'name', label: 'Person', type: 'pick', width: 'minmax(96px, 1.1fr)', placeholder: 'Who?', options: ledger.map((p) => ({ value: p.name, label: p.name })), onCreate: (n) => n },
+          { key: 'move', label: 'Type', type: 'pick', width: 'minmax(92px, 0.9fr)', placeholder: 'Lent', options: DEBT_MOVE_KEYS.map((k) => ({ value: k, label: DEBT_MOVES[k].label })) },
+          { key: 'amount', label: 'Amount ₹', type: 'amount', width: '96px', placeholder: '0' },
+          { key: 'note', label: 'Note', type: 'text', width: 'minmax(80px, 1fr)', placeholder: 'optional' },
+          { key: 'date', label: 'Date', type: 'date', width: '132px' },
+        ]}
+        footer={
+          <button id="debts-quick-save" type="button" onClick={save} disabled={!ready.length}
+            style={{ marginLeft: 'auto', padding: '7px 14px', border: 'none', fontSize: 12, fontWeight: 750, fontFamily: 'inherit', cursor: ready.length ? 'pointer' : 'default', background: ready.length ? 'var(--lent)' : 'var(--surface)', color: ready.length ? '#fff' : 'var(--text-muted)' }}>
+            {ready.length ? `Save ${ready.length} entr${ready.length === 1 ? 'y' : 'ies'} · ${formatAmount(sum)}` : 'Fill a row to save'}
+          </button>
+        } />
     </div>
   );
 }

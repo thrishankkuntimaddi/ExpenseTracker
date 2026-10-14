@@ -289,14 +289,14 @@ describe('screens render with planning features', () => {
       ],
       settlements: [],
     };
-    // open trip → step 1: the Person | What | Amount table comes first
-    const step1 = render(<TripDetail trip={trip} onChange={noop} onEdit={noop} onShare={noop} onClose={noop} onReopen={noop} />);
-    expect(step1).toContain('What paid');
-    expect(step1).toContain('Add Row');
-    expect(step1).toContain('Done — see who pays whom');
-    expect(step1).toContain('Drag to reorder');
-    expect(step1).toContain('Tap a person to set');
-    expect(step1).toContain('24,500');
+    // open trip → one screen: the Person | What | Amount sheet and the live settlement side by side
+    const open = render(<TripDetail trip={trip} onChange={noop} onEdit={noop} onShare={noop} onClose={noop} onReopen={noop} />);
+    expect(open).toContain('data-sheet="trip-sheet"');
+    for (const h of ['Person', 'What', 'Amount ₹']) expect(open).toContain(`>${h}<`);
+    expect(open).toMatch(/data-r="4"[^>]*data-c="0"/);              // 4 rows + the empty row to type into
+    expect(open).toContain('Who pays whom');                          // no second step: the plan is right there
+    expect(open).not.toContain('Done — see who pays whom');
+    expect(open).toContain('24,500');
     // closed trip → step 2: the settlement
     const html = render(<TripDetail trip={{ ...trip, status: 'closed' }} onChange={noop} onEdit={noop} onShare={noop} onClose={noop} onReopen={noop} onDelete={noop} />);
     expect(html).toContain('Delete');

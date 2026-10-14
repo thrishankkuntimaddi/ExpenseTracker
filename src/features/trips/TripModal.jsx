@@ -25,7 +25,12 @@ export default function TripModal({ trip, onSave, onDelete, onClose }) {
   function addMember(raw) {
     const names = raw.split(/[,\n]/).map((s) => s.trim()).filter(Boolean);
     if (!names.length) return;
-    setMembers((p) => [...p, ...names.map((n) => ({ id: generateId(), name: n }))]);
+    // Skip names already on the trip ("Me" is there from the start)
+    setMembers((p) => {
+      const seen = new Set(p.map((m) => m.name.trim().toLowerCase()));
+      const fresh = names.filter((n) => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+      return [...p, ...fresh.map((n) => ({ id: generateId(), name: n }))];
+    });
     setNewName('');
   }
   function removeMember(id) {

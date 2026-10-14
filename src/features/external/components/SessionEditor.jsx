@@ -1,13 +1,13 @@
 // ─── Billing session editor (metadata, both tables, summary + actions) ──
 import { CheckCircle2, ShoppingBag, User, Save, Share2 } from 'lucide-react';
 import { formatAmount } from '../../../utils/dateHelpers';
-import EditableRowsTable from './EditableRowsTable';
+import Sheet from '../../../components/Sheet';
+import { newItemRow, newReceivedRow } from './billingHelpers';
 
 export default function SessionEditor({
   sessionName, sessionDate, onNameChange, onDateChange,
   items, received, totalSpent, totalReceived, netBalance,
-  onAddItem, onUpdateItem, onRemoveItem, onReorderItems,
-  onAddReceived, onUpdateReceived, onRemoveReceived, onReorderReceived,
+  onItemsChange, onReceivedChange, knownPeople = [],
   canClose, onDiscard, onShare, onSaveDraft, onRequestClose,
 }) {
   const isProfit = netBalance > 0;
@@ -54,23 +54,23 @@ export default function SessionEditor({
       </div>
 
       <div className="external-grid">
-        {/* Goods Purchased Table */}
-        <EditableRowsTable
-          Icon={ShoppingBag} title="Goods Purchased" tone="expense"
-          nameHeader="Item Name" field="name" placeholder="Item description"
-          totalLabel="Total Spent" total={totalSpent}
-          rows={items} onAdd={onAddItem} onUpdate={onUpdateItem}
-          onRemove={onRemoveItem} onReorder={onReorderItems}
-        />
-
-        {/* Money Received Table */}
-        <EditableRowsTable
-          Icon={User} title="Money Received" tone="income"
-          nameHeader="Person Name" field="person" placeholder="Person name"
-          totalLabel="Total Received" total={totalReceived}
-          rows={received} onAdd={onAddReceived} onUpdate={onUpdateReceived}
-          onRemove={onRemoveReceived} onReorder={onReorderReceived}
-        />
+        {/* Goods purchased · money received — two sheets, Enter moves on, paste from Excel */}
+        <div>
+          <SheetTitle Icon={ShoppingBag} tone="expense" title="Goods purchased" total={totalSpent} />
+          <Sheet id="bill-items" tone="expense" rows={items} onChange={onItemsChange} makeRow={newItemRow} rowLabel={(r) => r.name}
+            columns={[
+              { key: 'name', label: 'Item', type: 'text', placeholder: 'Cement bags, wire…' },
+              { key: 'amount', label: 'Amount ₹', type: 'amount', width: '104px', placeholder: '0' },
+            ]} />
+        </div>
+        <div>
+          <SheetTitle Icon={User} tone="income" title="Money received" total={totalReceived} />
+          <Sheet id="bill-received" tone="income" rows={received} onChange={onReceivedChange} makeRow={newReceivedRow} rowLabel={(r) => r.person}
+            columns={[
+              { key: 'person', label: 'From', type: 'pick', placeholder: 'Who paid you?', options: knownPeople.map((n) => ({ value: n, label: n })), onCreate: (n) => n },
+              { key: 'amount', label: 'Amount ₹', type: 'amount', width: '104px', placeholder: '0' },
+            ]} />
+        </div>
       </div>
 
       {/* Live Summary Bar & Actions */}
@@ -137,6 +137,17 @@ export default function SessionEditor({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function SheetTitle({ Icon, tone, title, total }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 2px 8px' }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+        <Icon size={15} style={{ color: `var(--${tone})` }} /> {title}
+      </span>
+      <span style={{ fontSize: 14, fontWeight: 800, color: `var(--${tone})`, fontVariantNumeric: 'tabular-nums' }}>{formatAmount(total)}</span>
     </div>
   );
 }

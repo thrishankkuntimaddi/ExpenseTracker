@@ -4,7 +4,7 @@ import { todayInputValue, dateInputToISO, isoToDateInput, isoToMonth } from '../
 import { filterItemsByPeriod } from '../../utils/periodHelpers';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import ShareBillingModal from './ShareBillingModal';
-import { calcTotals, newItemRow, newReceivedRow } from './components/billingHelpers';
+import { calcTotals } from './components/billingHelpers';
 import NewBillingModal from './components/NewBillingModal';
 import ConfirmCloseModal from './components/ConfirmCloseModal';
 import SessionsList from './components/SessionsList';
@@ -53,8 +53,8 @@ export default function ExternalTab({
   /* ── Local working copy of current session ── */
   const [sessionName, setSessionName]   = useState('');
   const [sessionDate, setSessionDate]   = useState(todayInputValue());
-  const [items, setItemRows]            = useState([newItemRow()]);
-  const [received, setReceivedRows]     = useState([newReceivedRow()]);
+  const [items, setItemRows]            = useState([]);
+  const [received, setReceivedRows]     = useState([]);
 
   const { totalSpent, totalReceived, netBalance } = useMemo(
     () => calcTotals(items, received),
@@ -89,12 +89,12 @@ export default function ExternalTab({
       setItemRows(
         (currentSession.items ?? []).length > 0
           ? currentSession.items.map(i => ({ ...i, amount: i.amount != null ? String(i.amount) : '' }))
-          : [newItemRow()]
+          : []
       );
       setReceivedRows(
         (currentSession.received ?? []).length > 0
           ? currentSession.received.map(r => ({ ...r, amount: r.amount != null ? String(r.amount) : '' }))
-          : [newReceivedRow()]
+          : []
       );
     }
   }
@@ -110,8 +110,9 @@ export default function ExternalTab({
   const triggerSave = useCallback((nameVal, dateVal, itemArr, rcvArr) => {
     if (!activeSessionId) return;
     const isoDate = dateInputToISO(dateVal);
-    const cleanedItems    = itemArr.map(i => ({ ...i, amount: i.amount !== '' ? (parseFloat(i.amount) || null) : null }));
-    const cleanedReceived = rcvArr.map(r => ({ ...r, amount: r.amount !== '' ? (parseFloat(r.amount) || null) : null }));
+    const filled = (r, k) => (r[k] ?? '').trim() || (r.amount !== '' && r.amount != null);
+    const cleanedItems    = itemArr.filter(i => filled(i, 'name')).map(i => ({ ...i, amount: i.amount !== '' ? (parseFloat(i.amount) || null) : null }));
+    const cleanedReceived = rcvArr.filter(r => filled(r, 'person')).map(r => ({ ...r, amount: r.amount !== '' ? (parseFloat(r.amount) || null) : null }));
     const tots = calcTotals(itemArr, rcvArr);
     updateSession({
       id:             activeSessionId,
@@ -137,76 +138,21 @@ export default function ExternalTab({
     triggerSave(sessionName, val, items, received);
   }
 
-  function updateItem(id, field, value) {
-    setItemRows(prev => {
-      const next = prev.map(i => i.id === id ? { ...i, [field]: value } : i);
-      triggerSave(sessionName, sessionDate, next, received);
-      return next;
-    });
+  // The sheets hand back the whole list after every edit
+  function changeItems(next) {
+    setItemRows(next);
+    triggerSave(sessionName, sessionDate, next, received);
   }
-
-  function addItemRow() {
-    setItemRows(prev => {
-      const next = [...prev, newItemRow()];
-      triggerSave(sessionName, sessionDate, next, received);
-      return next;
-    });
+  function changeReceived(next) {
+    setReceivedRows(next);
+    triggerSave(sessionName, sessionDate, items, next);
   }
-
-  function removeItemRow(id) {
-    setItemRows(prev => {
-      const next = prev.length > 1 ? prev.filter(i => i.id !== id) : prev;
-      triggerSave(sessionName, sessionDate, next, received);
-      return next;
-    });
-  }
-
-  function updateReceived(id, field, value) {
-    setReceivedRows(prev => {
-      const next = prev.map(r => r.id === id ? { ...r, [field]: value } : r);
-      triggerSave(sessionName, sessionDate, items, next);
-      return next;
-    });
-  }
-
-  function addReceivedRow() {
-    setReceivedRows(prev => {
-      const next = [...prev, newReceivedRow()];
-      triggerSave(sessionName, sessionDate, items, next);
-      return next;
-    });
-  }
-
-  function removeReceivedRow(id) {
-    setReceivedRows(prev => {
-      const next = prev.length > 1 ? prev.filter(r => r.id !== id) : prev;
-      triggerSave(sessionName, sessionDate, items, next);
-      return next;
-    });
-  }
-
-
-  function reorderItemRows(fromIndex, toIndex) {
-    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= items.length || toIndex >= items.length) return;
-    setItemRows(prev => {
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      triggerSave(sessionName, sessionDate, next, received);
-      return next;
-    });
-  }
-
-  function reorderReceivedRows(fromIndex, toIndex) {
-    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= received.length || toIndex >= received.length) return;
-    setReceivedRows(prev => {
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      triggerSave(sessionName, sessionDate, items, next);
-      return next;
-    });
-  }
+  // Everyone who has paid you back before, for the Person column
+  const knownPeople = useMemo(() => {
+    const seen = new Map();
+    sessions.forEach((x) => (x.received ?? []).forEach((r) => { const n = r.person?.trim(); if (n && !seen.has(n.toLowerCase())) seen.set(n.toLowerCase(), n); }));
+    return [...seen.values()];
+  }, [sessions]);
 
   /* ── Create Session ── */
   async function handleCreateSession(nameVal, dateVal) {
@@ -379,14 +325,9 @@ export default function ExternalTab({
             totalSpent={totalSpent}
             totalReceived={totalReceived}
             netBalance={netBalance}
-            onAddItem={addItemRow}
-            onUpdateItem={updateItem}
-            onRemoveItem={removeItemRow}
-            onReorderItems={reorderItemRows}
-            onAddReceived={addReceivedRow}
-            onUpdateReceived={updateReceived}
-            onRemoveReceived={removeReceivedRow}
-            onReorderReceived={reorderReceivedRows}
+            onItemsChange={changeItems}
+            onReceivedChange={changeReceived}
+            knownPeople={knownPeople}
             canClose={canClose}
             onDiscard={handleDiscard}
             onShare={handleShareCurrentSession}

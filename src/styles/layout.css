@@ -217,3 +217,34 @@ nav.desktop-nav button { margin: 0; }
 .home-fit .home-add-panel .add-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .home-fit .home-add-panel .add-form { flex: 1; }
 .add-compact .cat-scroll { flex-wrap: wrap; overflow: visible !important; row-gap: 6px; }
+
+/* ── Sheet: a small spreadsheet (components/Sheet.jsx) ─────────────── */
+.sheet { border: 1px solid var(--border); border-radius: 14px; overflow-x: auto; overflow-y: hidden; background: var(--surface); }
+.sheet-head, .sheet-row { display: grid; align-items: stretch; }
+.sheet-head { background: var(--surface2); border-bottom: 1px solid var(--border); }
+.sheet-head > span { padding: 8px 10px; font-size: 10px; font-weight: 750; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); border-left: 1px solid var(--border); }
+.sheet-head > span:first-child, .sheet-head > span:last-child { border-left: none; }
+.sheet-row { border-bottom: 1px solid var(--border); }
+.sheet-row:last-of-type { border-bottom: none; }
+.sheet-num { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 650; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.sheet-ghost .sheet-num { color: var(--accent); font-weight: 800; }
+.sheet .sheet-cell {
+  width: 100%; min-width: 0; height: 38px; padding: 0 10px; margin: 0;
+  border: none !important; border-left: 1px solid var(--border) !important; border-radius: 0 !important; box-shadow: none !important;
+  background: transparent !important; color: var(--text); font: inherit; font-size: 13.5px; outline: none;
+}
+.sheet .sheet-cell:focus { box-shadow: inset 0 0 0 2px var(--accent) !important; background: var(--accent-bg, var(--surface2)) !important; position: relative; z-index: 1; }
+.sheet .sheet-cell:disabled { color: var(--text); opacity: 1; -webkit-text-fill-color: var(--text); }
+.sheet .sheet-cell::placeholder { color: var(--text-muted); opacity: 0.7; }
+.sheet-ghost .sheet-cell::placeholder { opacity: 0.55; }
+.sheet .sheet-cell[type="date"] { font-size: 12.5px; }
+.sheet-del { width: 30px; display: flex; align-items: center; justify-content: center; border: none; background: transparent; color: var(--text-muted); cursor: pointer; opacity: 0; border-radius: 0 !important; }
+.sheet-row:hover .sheet-del, .sheet-row:focus-within .sheet-del { opacity: 1; }
+@media (hover: none) { .sheet-del { opacity: 0.6; } }
+.sheet-del:hover { color: var(--expense); }
+.sheet-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--border); background: var(--surface2); font-size: 12px; color: var(--text-muted); }
+.sheet-undo { border: none; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 750; cursor: pointer; }
+/* Trips: the sheet beside the live settlement on wide screens */
+.trip-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (min-width: 1100px) { .trip-layout { grid-template-columns: minmax(0, 1.45fr) minmax(300px, 1fr); } }
+.trip-chip { border-radius: 99px !important; }
