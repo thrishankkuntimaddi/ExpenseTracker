@@ -11,12 +11,11 @@ import {
 } from 'lucide-react';
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { formatAmount } from '../../utils/dateHelpers';
-import { categoryTotals, EMPTY_RULES } from '../../utils/categories';
+import { categoryTotals, categoryColor, EMPTY_RULES } from '../../utils/categories';
 import { latestReportDay, getReportSettings, windowLabel, reportWindow } from '../../utils/report';
 import { toKey, fromKey } from '../../utils/recurring';
 import { useStats } from '../../hooks/useStats';
 import { useViewMonth, monthName } from '../../app/month';
-import CategoryBreakdown from './components/CategoryBreakdown';
 import SpendingCalendar from './components/SpendingCalendar';
 import ReportCard from './components/ReportCard';
 import { PageHeader } from '../../components/Page';
@@ -114,6 +113,8 @@ function AvgCard({ label, value, Icon }) {
   );
 }
 
+const rupees = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;
+
 export default function StatsTab({ transactions, income, selectedPeriod, theme, settings, recurring, onPatchSettings }) {
   const { month, setMonth, period } = useViewMonth(selectedPeriod);
   const { stats, filtTxns, filtInc, pieData } = useStats(transactions, income, period, theme, settings);
@@ -129,7 +130,20 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
 
   const positive  = stats.balance >= 0;
   const hasData   = filtTxns.length > 0 || filtInc.length > 0;
-  const hasPieData = pieData.length > 0;
+  // Where the money went: spending split by category (the biggest seven,
+  // the rest together), then the other ways money left — savings, lent, gifts…
+  const moneyOut = useMemo(() => {
+    const shown = catTotals.length > 8 ? 7 : 8;   // never "1 more category" — just show it
+    const cats = catTotals.slice(0, shown).map((c) => ({ key: c.key, name: c.label, value: c.amount, count: c.count, color: categoryColor(c.key, theme) }));
+    const rest = catTotals.slice(shown);
+    if (rest.length) cats.push({ key: 'other-cats', name: `${rest.length} more categories`, value: rest.reduce((t, c) => t + c.amount, 0), color: 'var(--text-muted)' });
+    // Money that left but wasn't spending: neutral greys, so it never looks like a category
+    const NOT_SPENDING = { Savings: 'var(--savings)', Lent: '#A8A29E', 'Debt Repaid': '#78716C', 'Given (Gift)': 'var(--text-secondary)' };
+    const others = pieData.filter((d) => NOT_SPENDING[d.name] && d.value > 0)   // repayments received are money in, not out
+      .map((d) => ({ key: d.name, name: d.name === 'Given (Gift)' ? 'Given to people' : d.name, value: d.value, color: NOT_SPENDING[d.name] }));
+    return [...cats, ...others].filter((d) => d.value > 0);
+  }, [catTotals, pieData, theme]);
+  const outTotal = moneyOut.reduce((t, d) => t + d.value, 0);
 
   return (
     <div className="tab-root stats-page">
@@ -187,39 +201,38 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
 
           {/* ── RIGHT: categories, distribution, report ── */}
           <div className="stats-right">
-            <Section title="Spending by category">
-              <div style={{ marginTop: 8 }}>
-                {catTotals.length > 0
-                  ? <CategoryBreakdown totals={catTotals} theme={theme} />
-                  : <div className="card" style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>No spending in {monthName(month, { month: 'long' })}{hasData ? '' : ' yet'}.</div>}
-              </div>
-            </Section>
-
             <Section title="Where the money went">
-              {hasPieData ? (
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8, padding: 14 }}>
-                  <ResponsiveContainer width={120} height={120}>
-                    <PieChart>
-                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={34} outerRadius={55} dataKey="value" paddingAngle={3}>
-                        {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                      </Pie>
-                      <Tooltip content={<ChartTip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                    {pieData.map(d => (
-                      <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                        <div style={{ width: 10, height: 10, borderRadius: 3, background: d.color, flexShrink: 0 }} />
-                        <div>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)' }}>{d.name}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatAmount(d.value)}</div>
-                        </div>
+              {moneyOut.length > 0 ? (
+                <div className="card money-went" id="money-went" style={{ marginTop: 8, padding: 16, display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+                  <div style={{ position: 'relative', width: 150, height: 150, flexShrink: 0, margin: '0 auto' }}>
+                    <ResponsiveContainer width={150} height={150}>
+                      <PieChart>
+                        <Pie data={moneyOut} cx="50%" cy="50%" innerRadius={48} outerRadius={72} dataKey="value" paddingAngle={2} stroke="none">
+                          {moneyOut.map((e) => <Cell key={e.key} fill={e.color} />)}
+                        </Pie>
+                        <Tooltip content={<ChartTip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Out</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{rupees(outTotal)}</span>
+                    </div>
+                  </div>
+                  <div style={{ flex: '1 1 220px', minWidth: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 7 }}>
+                    {moneyOut.map((d) => (
+                      <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                        <span style={{ width: 9, height: 9, borderRadius: 3, background: d.color, flexShrink: 0 }} />
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {d.name}{d.count ? <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}> · {d.count}</span> : null}
+                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{rupees(d.value)}</span>
+                        <span style={{ width: 36, textAlign: 'right', fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{d.value / outTotal < 0.005 ? '<1' : Math.round((d.value / outTotal) * 100)}%</span>
                       </div>
                     ))}
                   </div>
                 </div>
               ) : (
-                <div className="card" style={{ marginTop: 8, padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>Nothing went out in {monthName(month, { month: 'long' })}.</div>
+                <div className="card" style={{ marginTop: 8, padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>Nothing went out in {monthName(month, { month: 'long' })}{hasData ? '' : ' yet'}.</div>
               )}
             </Section>
 

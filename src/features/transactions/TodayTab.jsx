@@ -1,6 +1,6 @@
 import { AddPanel } from '../../components/AddSheet';
 import { useMemo, useState, Fragment } from 'react';
-import { Coins, Users, Search, Zap, ArrowUpRight } from 'lucide-react';
+import { Coins, Users, Zap, ArrowUpRight } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount, todayInputValue, dateInputToISO, isoToMonth, localMonthKey } from '../../utils/dateHelpers';
 import { TRANSACTION_TYPES as TYPES, getDirectionMeta } from '../../utils/typeConfig';
@@ -64,8 +64,8 @@ export default function TodayTab(props) {
     const since = new Date(); since.setHours(0, 0, 0, 0); since.setDate(since.getDate() - 6);
     return transactions.filter(t => (isNow ? new Date(t.date) >= since : localMonthKey(t.date) === monthKey))
       .sort((a, b) => new Date(b.date) - new Date(a.date) || String(b.id).localeCompare(String(a.id)))
-      .slice(0, 6);
-  }, [transactions, isNow, monthKey]);
+      .slice(0, shell?.desktop ? 20 : 6);
+  }, [transactions, isNow, monthKey, shell?.desktop]);
   const dayLabel = (iso) => {
     const d = new Date(iso); const today = new Date(); const y = new Date(); y.setDate(today.getDate() - 1);
     return d.toDateString() === today.toDateString() ? 'Today' : d.toDateString() === y.toDateString() ? 'Yesterday' : d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -141,7 +141,7 @@ export default function TodayTab(props) {
   // Wide screens: the full Add form sits right here, open — no window to open, no quick entry
   const addPanel = shell?.desktop && (
     <div className="card home-add-panel" id="home-add-panel" style={{ padding: 16, marginBottom: 14 }}>
-      <AddPanel inline {...props} onAdd={onAdd} onAddIncome={onAddIncome}
+      <AddPanel inline compact {...props} onAdd={onAdd} onAddIncome={onAddIncome}
         onSaved={(e) => shell.toast?.(`Added ${e.name} · ${formatAmount(e.amount)}`)} />
     </div>
   );
@@ -351,22 +351,17 @@ export default function TodayTab(props) {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            {shell && (
-              <button id="home-search" onClick={() => shell.goTo('history', { focus: 'history-search' })} aria-label="Search transactions"
-                style={{ width: 34, height: 34, border: 'none', background: 'var(--surface2)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                <Search size={16} />
-              </button>
-            )}
             <ProfileButton />
           </div>
         </div>
       </div>
 
-      <div className="home-body" style={{ flex: 1, overflow: 'auto', padding: '14px 16px 20px' }}>
+      <div className={`home-body${shell?.desktop ? ' home-fit' : ''}`} style={{ flex: 1, overflow: 'auto', padding: '14px 16px 20px' }}>
         {shell?.desktop ? (
-          // Wide screens: what you do (overview, entry, bills) beside where to go (explore, recent)
+          // Wide screens, one screen, no scrolling: what you do (overview, entry)
+          // beside where to go (explore, bills, recent — which fills the rest)
           <div className="home-columns">
-            {[['overview', 'add', 'bills'], ['explore', 'recent']].map((keys, i) => (
+            {[['overview', 'add'], ['explore', 'bills', 'recent']].map((keys, i) => (
               <div key={i} className="home-column">
                 {homeSections.filter((s) => s.visible && keys.includes(s.key)).map(({ key }) => <Fragment key={key}>{section(key)}</Fragment>)}
               </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { latestReportDay, reportWindow, buildReport, windowLabel, getReportSettings, shiftReportDay } from '../report';
+import { latestReportDay, reportWindow, buildReport, windowLabel, getReportSettings, shiftReportDay, analyseSpending, reportHeadline } from '../report';
 
 const at = (y, m, d) => new Date(y, m - 1, d, 12).toISOString();
 const salary = (y, m, d, amount = 50000) => ({ id: `sal-${m}-${d}`, type: 'income', name: 'Salary', amount, date: at(y, m, d) });
@@ -61,5 +61,45 @@ describe('buildReport', () => {
     const paid = buildReport({ transactions: [...transactions, { id: 'rec_rent_2026-10-05', type: 'expense', amount: 13000, date: at(2026, 10, 5) }], income, recurring: [rent], reportKey: '2026-11-01', day: 1, todayKey: '2026-11-02' });
     expect(paid.missed).toEqual([]);
     expect(r.over).toEqual([{ key: 'food', label: 'Food & Dining', limit: 1500, spent: 2000 }]);
+  });
+});
+
+describe('report analysis', () => {
+  // 5 Oct (Mon) – 3 Nov: 30 days
+  const win = { start: '2026-10-05', days: 30 };
+  const list = [
+    spend(10, 5, 2000, 'groceries', 'Big basket'),    // Mon, week 1, essentials
+    spend(10, 10, 600, 'food', 'Pizza'),              // Sat, week 1, lifestyle
+    spend(10, 12, 20, 'food', 'Tea'), spend(10, 13, 20, 'food', 'tea'), spend(10, 14, 20, 'food', 'Tea '),   // weekdays, week 2
+    spend(10, 20, 380, 'other', 'Misc'),              // week 3
+  ];
+  const a = analyseSpending(list, win);
+  it('splits essentials from lifestyle', () => {
+    expect(a.split).toEqual({ essentials: 2000, lifestyle: 660, other: 380 });
+  });
+  it('totals each week of the window', () => {
+    expect(a.weeks).toHaveLength(5);
+    expect(a.weeks.slice(0, 3).map((w) => w.amount)).toEqual([2600, 60, 380]);
+  });
+  it('compares weekends with weekdays per day', () => {
+    // 8 weekend days in the window (10/11, 17/18, 24/25, 31/1), 22 weekdays
+    expect(a.weekend).toBe(Math.round(600 / 8));
+    expect(a.weekday).toBe(Math.round((3040 - 600) / 22));
+  });
+  it('finds what you buy most often (names match loosely) and small spends', () => {
+    expect(a.frequent).toMatchObject({ count: 3, amount: 60 });
+    expect(a.small).toEqual({ count: 3, amount: 60 });
+  });
+  it('top three categories and their share', () => {
+    expect(a.top.map((c) => c.key)).toEqual(['groceries', 'food', 'other']);
+    expect(a.topShare).toBe(100);
+  });
+  it('a plain headline', () => {
+    expect(reportHeadline({ income: 10000, spent: 9700, saved: 0, given: 0, spentChange: 189, savingsRate: 0 }))
+      .toBe('You spent 97% of what came in, saved nothing, spending up 189% on the report before.');
+    expect(reportHeadline({ income: 10000, spent: 8000, saved: 3000, given: 0, spentChange: 2, savingsRate: 30 }))
+      .toBe('You spent and set aside ₹1,000 more than you earned, saved 30%.');
+    expect(reportHeadline({ income: 0, spent: 500, saved: 0, given: 0, spentChange: null, savingsRate: null }))
+      .toBe('You spent ₹500 with no income logged.');
   });
 });

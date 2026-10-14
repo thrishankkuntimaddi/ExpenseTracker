@@ -100,15 +100,26 @@ nav button.nav-add {
 }
 .desktop-brand { display: flex; align-items: center; gap: 10px; padding: 2px 10px 12px; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; color: var(--text); }
 .desktop-brand img { border-radius: 9px; }
-.desktop-nav { display: flex; flex-direction: column; }
-.desktop-nav-title { padding: 14px 12px 5px; font-size: 10px; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.desktop-nav { display: flex; flex-direction: column; gap: 1px; }
+/* The sidebar's page list is a <nav>, but not the phone's floating tab bar:
+   no capsule, no glass rim, no margins — a plain, flat list. */
+nav.desktop-nav {
+  margin: 0 !important; padding: 0 !important; border: none !important; border-radius: 0 !important;
+  background: none !important; box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  overflow: visible; position: static !important;
+}
+nav.desktop-nav button { margin: 0; }
+.desktop-nav-title { padding: 16px 10px 6px; font-size: 10px; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
 .desktop-nav-item {
-  width: 100%; display: flex; align-items: center; gap: 11px; padding: 9px 12px; margin: 1px 0;
+  position: relative; width: 100%; display: flex; align-items: center; gap: 11px; padding: 8px 10px; margin: 0;
   border: none; background: transparent; cursor: pointer; text-align: left;
   font-size: 13.5px; font-weight: 600; font-family: inherit; color: var(--text-secondary);
 }
-.desktop-nav-item:hover { background: var(--surface2); filter: none !important; }
-.desktop-nav-item.on { background: var(--surface2); font-weight: 750; }
+.desktop-nav-item:hover { background: var(--surface3) !important; color: var(--text); filter: none !important; }
+.desktop-nav-item:active { transform: none !important; }
+.desktop-nav-item.on { background: var(--surface2) !important; font-weight: 750; }
+/* the current page: a short bar on the left edge in the page's colour */
+.desktop-nav-item.on::before { content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: currentColor; }
 .desktop-nav-item span:not(.desktop-nav-badge) { flex: 1; }
 .desktop-nav-badge {
   min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; flex: 0 0 auto;
@@ -150,8 +161,59 @@ nav button.nav-add {
 .segmented { border-radius: 99px; }
 /* Tiles and rows are cards, not capsules (glass.css rounds every button) */
 .reminder-tile { border-radius: 18px !important; }
-.debt-row, .desktop-nav-item, .desktop-profile { border-radius: 14px !important; }
+.debt-row { border-radius: 14px !important; }
+.desktop-nav-item, .desktop-profile { border-radius: 8px !important; }
 .add-kind { border-radius: 16px !important; }
 .add-amount #add-amount, .add-amount #add-amount:focus {
   background: transparent !important; border: none !important; box-shadow: none !important; outline: none !important;
 }
+
+/* ── Add form: one size for every kind ─────────────────────────────
+   Each kind's form is at least as tall as the tallest one, with the date
+   and save button pinned to the bottom — switching Expense / Income /
+   Debt / Savings never resizes the window or moves the button. */
+.add-form { display: flex; flex-direction: column; min-height: var(--add-form-h, 0); }
+.add-sheet .add-form { --add-form-h: 400px; }
+.add-foot { margin-top: auto; }
+.add-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 420px) { .add-pair { grid-template-columns: 1fr; gap: 0; } }
+/* Compact (wide-screen Home): date and save share a row, smaller amount */
+.add-compact .add-form { --add-form-h: 308px; }
+.add-compact .add-foot { display: grid; grid-template-columns: minmax(150px, 190px) 1fr; gap: 10px; align-items: stretch; }
+.add-compact .add-foot > div { margin-bottom: 0 !important; }
+.add-compact .add-foot input { height: 100%; }
+.add-compact .add-amount { padding: 2px 14px !important; margin-bottom: 10px !important; }
+.add-compact .add-amount input { font-size: 24px !important; padding: 5px 0 !important; }
+.add-compact .add-form > p { margin-bottom: 8px !important; }
+
+/* ── Wide-screen Home: everything on one screen, no page scroll ──────
+   Two columns as tall as the window; Recent activity takes whatever
+   height is left and scrolls inside its own card. Very short windows
+   fall back to scrolling the page. */
+.desktop-main.page-today .tab-header { padding-top: 12px !important; padding-bottom: 12px !important; }
+.home-fit { padding: 14px 20px 16px !important; }
+.home-fit .home-columns { min-height: 100%; height: 100%; align-items: stretch; gap: 18px; }
+.home-fit .home-column { display: flex; flex-direction: column; min-height: 0; }
+.home-fit .home-column > * { margin-bottom: 12px !important; flex-shrink: 0; }
+.home-fit .home-column > :last-child { margin-bottom: 0 !important; }
+.home-fit .home-hero { padding: 12px 18px !important; }
+.home-fit .home-hero > div:nth-child(3) { font-size: 28px !important; }
+.home-fit .home-hero > div:last-child { margin-top: 8px !important; padding-top: 8px !important; }
+.home-fit .home-add-panel { padding: 14px !important; }
+.home-fit .home-explore > div { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px !important; }
+.home-fit .explore-card { padding: 9px 10px !important; gap: 9px !important; }
+.home-fit .explore-icon { width: 30px !important; height: 30px !important; border-radius: 10px !important; }
+.home-fit .home-explore .section-label, .home-fit .home-recent .section-label { margin-top: 0 !important; }
+.home-fit .home-recent { flex: 1 1 auto; flex-shrink: 1 !important; min-height: 180px; display: flex; flex-direction: column; }
+.home-fit .home-recent > div:first-child { flex-shrink: 0; }
+.home-fit #recent-entries { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.home-fit #recent-entries > div { padding: 10px 16px !important; }
+.home-fit .home-bills .card > div { padding: 8px 14px !important; }
+@media (max-height: 640px) { .home-fit .home-columns { height: auto; } }
+@media (max-width: 999px) { .home-fit .home-columns { height: auto; } .home-fit .home-recent { flex: none; } .home-fit #recent-entries { overflow: visible; } }
+/* Wide-screen Home: the form fills its column (bottoms line up) and every
+   category is visible at once — one click, no sideways scrolling */
+.home-fit .home-add-panel { flex: 1 1 auto; flex-shrink: 1 !important; display: flex; flex-direction: column; min-height: 0; }
+.home-fit .home-add-panel .add-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.home-fit .home-add-panel .add-form { flex: 1; }
+.add-compact .cat-scroll { flex-wrap: wrap; overflow: visible !important; row-gap: 6px; }

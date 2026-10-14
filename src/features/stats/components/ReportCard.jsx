@@ -46,6 +46,8 @@ export default function ReportCard({ transactions = [], income = [], settings, r
             <Fig label="Saved" value={rupees(r.saved)} tone="savings" sub={r.savingsRate != null ? `${r.savingsRate}% of income` : null} />
             <Fig label="Left" value={rupees(r.left)} tone={r.left < 0 ? 'expense' : 'text'} />
           </div>
+          <p id="report-headline" style={{ margin: 0, padding: '0 16px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.45 }}>{r.headline}</p>
+          {r.spent > 0 && <Analysis a={r.analysis} spent={r.spent} />}
 
           <Group Icon={TrendingUp} tone="expense" title="Went up" empty="Nothing went up." rows={r.up}
             render={(c) => <>{c.label}<Amt>{c.change === 'new' ? `new · ${rupees(c.now)}` : `+${rupees(c.diff)} · ${rupees(c.now)}`}</Amt></>} />
@@ -82,6 +84,61 @@ export default function ReportCard({ transactions = [], income = [], settings, r
           It starts on the day your main income arrived the month before, so each report runs salary to salary.
         </span>
       </div>
+    </div>
+  );
+}
+
+/* Essentials vs lifestyle, week by week, and a few patterns */
+function Analysis({ a, spent }) {
+  const parts = [
+    { key: 'essentials', label: 'Essentials', color: 'var(--income)' },
+    { key: 'lifestyle', label: 'Lifestyle', color: 'var(--expense)' },
+    { key: 'other', label: 'Unsorted', color: 'var(--text-muted)' },
+  ].filter((p) => a.split[p.key] > 0);
+  const maxWeek = Math.max(1, ...a.weeks.map((w) => w.amount));
+  const lines = [
+    a.top.length > 1 && <>Top {a.top.length} categories took <strong>{a.topShare}%</strong> of spending — {a.top.map((c) => `${c.label} ${c.share}%`).join(', ')}</>,
+    a.weekend > 0 && a.weekday > 0 && Math.abs(a.weekend - a.weekday) / Math.max(a.weekend, a.weekday) >= 0.2 && (
+      a.weekend > a.weekday
+        ? <>Weekends cost more: <strong>{rupees(a.weekend)}</strong> a day vs {rupees(a.weekday)} on weekdays</>
+        : <>Weekdays cost more: <strong>{rupees(a.weekday)}</strong> a day vs {rupees(a.weekend)} on weekends</>),
+    a.frequent && <>Most often: <strong>{a.frequent.name}</strong> — {a.frequent.count} times, {rupees(a.frequent.amount)} in all</>,
+    a.small.count >= 5 && <>{a.small.count} small spends under ₹100 added up to <strong>{rupees(a.small.amount)}</strong></>,
+  ].filter(Boolean);
+  return (
+    <div id="report-analysis" style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>
+      <div>
+        <div style={{ display: 'flex', height: 10, borderRadius: 99, overflow: 'hidden', background: 'var(--surface2)' }}>
+          {parts.map((p) => <div key={p.key} style={{ width: `${(a.split[p.key] / spent) * 100}%`, background: p.color }} />)}
+        </div>
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 6 }}>
+          {parts.map((p) => (
+            <span key={p.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-secondary)' }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: p.color }} />
+              {p.label} <strong style={{ color: 'var(--text)' }}>{rupees(a.split[p.key])}</strong> · {Math.round((a.split[p.key] / spent) * 100)}%
+            </span>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 750, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>Week by week</div>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${a.weeks.length}, minmax(0, 1fr))`, gap: 8, alignItems: 'end' }}>
+          {a.weeks.map((w) => (
+            <div key={w.week} title={`Week ${w.week} · from ${fromKey(w.from).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{w.amount ? rupees(w.amount) : '—'}</span>
+              <div style={{ width: '100%', height: 44, display: 'flex', alignItems: 'flex-end' }}>
+                <div style={{ width: '100%', height: `${Math.max(4, (w.amount / maxWeek) * 100)}%`, borderRadius: 6, background: 'var(--expense)', opacity: w.amount === maxWeek ? 1 : 0.4 }} />
+              </div>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>W{w.week}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {lines.length > 0 && (
+        <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 }}>
+          {lines.map((l, i) => <li key={i} style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.45, paddingLeft: 12, position: 'relative' }}><span style={{ position: 'absolute', left: 0, top: 7, width: 5, height: 5, borderRadius: 99, background: 'var(--accent)' }} />{l}</li>)}
+        </ul>
+      )}
     </div>
   );
 }

@@ -137,13 +137,16 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Subscriptions');
   });
 
-  it('Stats: balance, breakdown, calendar, categories, distribution, then the monthly report', () => {
+  it('Stats: balance, breakdown, calendar, where the money went (by category), then the monthly report', () => {
     const html = render(<StatsTab {...common} />);
     const at = (t) => html.indexOf(t);
-    for (const t of ['Remaining balance', 'Breakdown', 'Spending Calendar', 'Spending by category', 'Where the money went', 'Monthly report']) expect(at(t)).toBeGreaterThan(-1);
+    for (const t of ['Remaining balance', 'Breakdown', 'Spending Calendar', 'Where the money went', 'Monthly report']) expect(at(t)).toBeGreaterThan(-1);
     expect(at('Breakdown')).toBeLessThan(at('Spending Calendar'));
-    expect(at('Spending Calendar')).toBeLessThan(at('Spending by category'));
-    expect(at('Spending by category')).toBeLessThan(at('Where the money went'));
+    expect(at('Spending Calendar')).toBeLessThan(at('Where the money went'));
+    expect(html).not.toContain('Spending by category');      // one card: the donut is split by category
+    const went = html.slice(at('id="money-went"'));
+    expect(went).toMatch(/Food &amp; Dining|Groceries|Transport|Shopping/);   // categories, not just "Expense"
+    expect(went.slice(0, went.indexOf('Monthly report'))).not.toContain('>Expense<');
     expect(html).toContain('id="report-day"');
     expect(html).not.toContain('Last 14 Days');
     expect(html).not.toContain('Month Trend');

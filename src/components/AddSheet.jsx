@@ -70,7 +70,7 @@ export default function AddSheet({ initialKind = 'expense', options = {}, onClos
 const AutoFocus = createContext(true);
 
 /** The kind tabs + the form. `inline`: lives on a page — stays open and clears after each save. */
-export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd, onAddIncome, inline = false, ...data }) {
+export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd, onAddIncome, inline = false, compact = false, ...data }) {
   const shell = useShell();
   const [kind, setKindState] = useState(initialKind === 'person' ? 'debt' : initialKind);
   const [round, setRound] = useState(0);              // inline: a fresh form after each save
@@ -82,14 +82,15 @@ export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd
 
   return (
     <AutoFocus.Provider value={engaged}>
-      <div role="tablist" aria-label="What are you adding?" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
+    <div className={`add-panel${compact ? ' add-compact' : ''}`}>
+      <div role="tablist" aria-label="What are you adding?" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: compact ? 12 : 16 }}>
         {ADD_KINDS.map(({ key: k, label, Icon, color, bg }) => {
           const on = kind === k;
           return (
             <button key={k} id={`add-kind-${k}`} role="tab" aria-selected={on} onClick={() => setKind(k)} className="add-kind"
-              style={{ padding: '10px 4px 8px', border: `1.5px solid ${on ? color : 'var(--border)'}`, background: on ? bg : 'var(--surface2)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-              <Icon size={18} style={{ color: on ? color : 'var(--text-secondary)' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: on ? color : 'var(--text-secondary)' }}>{label}</span>
+              style={{ padding: compact ? '8px 4px' : '10px 4px 8px', border: `1.5px solid ${on ? color : 'var(--border)'}`, background: on ? bg : 'var(--surface2)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: compact ? 'row' : 'column', alignItems: 'center', justifyContent: 'center', gap: compact ? 7 : 5 }}>
+              <Icon size={compact ? 16 : 18} style={{ color: on ? color : 'var(--text-secondary)' }} />
+              <span style={{ fontSize: compact ? 12.5 : 11, fontWeight: 700, color: on ? color : 'var(--text-secondary)' }}>{label}</span>
             </button>
           );
         })}
@@ -99,6 +100,7 @@ export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd
       {kind === 'income' && <IncomeForm key={key} {...common} income={data.income} onAddIncome={onAddIncome} />}
       {kind === 'debt' && <DebtForm key={key} {...common} {...data} onAdd={onAdd} onAddIncome={onAddIncome} initialMove={options.move} initialName={options.name} />}
       {kind === 'savings' && <SavingsForm key={key} {...common} {...data} onAdd={onAdd} initialGoal={options.goalId} />}
+    </div>
     </AutoFocus.Provider>
   );
 }
@@ -218,10 +220,12 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
           Counted as spending. It isn’t a debt, so it won’t appear in Debts — use <strong>Debt → Lent</strong> if you expect it back.
         </p>
       )}
-      <DateField value={dateInput} onChange={setDateInput} />
-      <SaveButton id="btn-save-entry" disabled={!can} tone={mode === 'given' ? 'given' : 'expense'} onClick={save}>
-        {can ? `Add ${mode === 'given' ? 'gift' : 'expense'} · ${formatAmount(finalAmount)}` : mode === 'given' ? 'Add what you gave' : 'Add expense'}
-      </SaveButton>
+      <div className="add-foot">
+        <DateField value={dateInput} onChange={setDateInput} />
+        <SaveButton id="btn-save-entry" disabled={!can} tone={mode === 'given' ? 'given' : 'expense'} onClick={save}>
+          {can ? `Add ${mode === 'given' ? 'gift' : 'expense'} · ${formatAmount(finalAmount)}` : mode === 'given' ? 'Add what you gave' : 'Add expense'}
+        </SaveButton>
+      </div>
     </div>
   );
 }
@@ -261,9 +265,11 @@ function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
         ))}
       </div>
       <AmountField value={amount} onChange={setAmount} tone="income" onEnter={save} />
-      <DateField value={dateInput} onChange={setDateInput} />
-      <SaveButton id="btn-save-income" disabled={!can} tone="income" onClick={save}>{can ? `Add income · ${formatAmount(Number(amount))}` : 'Add income'}</SaveButton>
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '10px 2px 0', lineHeight: 1.5 }}>Borrowed money, or money paid back to you? Use <strong>Debt</strong> — it’s counted as money in and tracked per person.</p>
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-2px 2px 12px', lineHeight: 1.5 }}>Borrowed money, or money paid back to you? Use <strong>Debt</strong> — it’s counted as money in and tracked per person.</p>
+      <div className="add-foot">
+        <DateField value={dateInput} onChange={setDateInput} />
+        <SaveButton id="btn-save-income" disabled={!can} tone="income" onClick={save}>{can ? `Add income · ${formatAmount(Number(amount))}` : 'Add income'}</SaveButton>
+      </div>
     </div>
   );
 }
@@ -315,8 +321,10 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
       )}
       <AmountField value={amount} onChange={setAmount} tone={meta.tone} onEnter={save} />
       <TextField id="debt-note" Icon={StickyNote} value={note} onChange={setNote} onEnter={save} placeholder="Note (optional) — e.g. for the bike repair" />
-      <DateField value={dateInput} onChange={setDateInput} />
-      <SaveButton id="btn-save-debt" disabled={!can} tone={meta.tone} onClick={save}>{can ? `${meta.label} · ${formatAmount(Number(amount))}` : `Add — ${meta.label.toLowerCase()}`}</SaveButton>
+      <div className="add-foot">
+        <DateField value={dateInput} onChange={setDateInput} />
+        <SaveButton id="btn-save-debt" disabled={!can} tone={meta.tone} onClick={save}>{can ? `${meta.label} · ${formatAmount(Number(amount))}` : `Add — ${meta.label.toLowerCase()}`}</SaveButton>
+      </div>
     </div>
   );
 }
@@ -374,10 +382,14 @@ function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
           </div>
         </>
       )}
-      {st.hasPlatform && <TextField id="savings-platform" value={platform} onChange={setPlatform} onEnter={save} placeholder="Platform — e.g. Angel One, Zerodha" />}
-      <TextField id="savings-held" Icon={User} value={heldWith} onChange={setHeldWith} onEnter={save} placeholder="Kept with — cash at home, a person, a bank…" />
-      <DateField value={dateInput} onChange={setDateInput} />
-      <SaveButton id="btn-save-savings" disabled={!can} tone="savings" onClick={save}>{can ? `Save ${formatAmount(Number(amount))}${goal ? ` for ${goal.name}` : ''}` : 'Add savings'}</SaveButton>
+      <div className={st.hasPlatform ? 'add-pair' : undefined}>
+        {st.hasPlatform && <TextField id="savings-platform" value={platform} onChange={setPlatform} onEnter={save} placeholder="Platform — e.g. Angel One" />}
+        <TextField id="savings-held" Icon={User} value={heldWith} onChange={setHeldWith} onEnter={save} placeholder="Kept with — cash, a person, a bank…" />
+      </div>
+      <div className="add-foot">
+        <DateField value={dateInput} onChange={setDateInput} />
+        <SaveButton id="btn-save-savings" disabled={!can} tone="savings" onClick={save}>{can ? `Save ${formatAmount(Number(amount))}${goal ? ` for ${goal.name}` : ''}` : 'Add savings'}</SaveButton>
+      </div>
     </div>
   );
 }

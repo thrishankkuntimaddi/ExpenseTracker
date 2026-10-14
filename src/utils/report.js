@@ -63,6 +63,76 @@ export function reportWindow(reportKey, income = []) {
   return { start, end, last: addDays(end, -1), days: Math.round((fromKey(end) - fromKey(start)) / 86400000) };
 }
 
+/* ── Analysis ─────────────────────────────────────────────────────
+   Essentials are what you'd pay anyway; lifestyle is what you choose. */
+export const ESSENTIALS = new Set(['groceries', 'rent', 'bills', 'fuel', 'transport', 'health', 'education', 'family']);
+export const LIFESTYLE = new Set(['food', 'shopping', 'entertainment', 'subscriptions', 'travel', 'personal', 'gifts']);
+const SMALL = 100;   // "small spends": under ₹100 each
+
+const nameKey = (n) => String(n ?? '').trim().toLowerCase();
+
+/** Patterns in one report's spending. `expenses` are already inside the window. */
+export function analyseSpending(expenses, { start, days }, rules = {}) {
+  const amt = (t) => Number(t.amount) || 0;
+  const total = expenses.reduce((s, t) => s + amt(t), 0);
+  // Essentials vs lifestyle
+  const split = { essentials: 0, lifestyle: 0, other: 0 };
+  expenses.forEach((t) => {
+    const c = categoryOf(t, rules) ?? 'other';
+    split[ESSENTIALS.has(c) ? 'essentials' : LIFESTYLE.has(c) ? 'lifestyle' : 'other'] += amt(t);
+  });
+  // Week by week (week 1 = the first seven days of the window)
+  const weeks = Array.from({ length: Math.max(1, Math.ceil(days / 7)) }, (_, i) => ({ week: i + 1, from: addDays(start, i * 7), amount: 0 }));
+  const startMs = fromKey(start).getTime();
+  expenses.forEach((t) => {
+    const k = localDateKey(t.date); if (!k) return;
+    const i = Math.floor(Math.round((fromKey(k).getTime() - startMs) / 86400000) / 7);
+    if (weeks[i]) weeks[i].amount += amt(t);
+  });
+  // Weekends vs weekdays: average per day of each kind
+  let weekendDays = 0;
+  for (let i = 0; i < days; i++) { const d = fromKey(addDays(start, i)).getDay(); if (d === 0 || d === 6) weekendDays++; }
+  let weekendSpent = 0;
+  expenses.forEach((t) => { const k = localDateKey(t.date); if (!k) return; const d = fromKey(k).getDay(); if (d === 0 || d === 6) weekendSpent += amt(t); });
+  const weekend = weekendDays ? weekendSpent / weekendDays : 0;
+  const weekday = days - weekendDays ? (total - weekendSpent) / (days - weekendDays) : 0;
+  // What you buy most often (by name), and small spends
+  const byName = {};
+  expenses.forEach((t) => { const k = nameKey(t.name); if (!k) return; (byName[k] ??= { name: String(t.name).trim(), count: 0, amount: 0 }); byName[k].count++; byName[k].amount += amt(t); });
+  const frequent = Object.values(byName).filter((x) => x.count >= 3).sort((a, b) => b.count - a.count || b.amount - a.amount)[0] ?? null;
+  const smalls = expenses.filter((t) => amt(t) > 0 && amt(t) < SMALL);
+  // How concentrated: the top three categories' share
+  const byCat = {};
+  expenses.forEach((t) => { const c = categoryOf(t, rules) ?? 'other'; byCat[c] = (byCat[c] ?? 0) + amt(t); });
+  const top = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 3)
+    .map(([key, amount]) => ({ key, label: categoryMeta(key)?.label ?? key, amount: Math.round(amount), share: total ? Math.round((amount / total) * 100) : 0 }));
+  const r = (n) => Math.round(n);
+  return {
+    split: { essentials: r(split.essentials), lifestyle: r(split.lifestyle), other: r(split.other) },
+    weeks: weeks.map((w) => ({ ...w, amount: r(w.amount) })),
+    weekend: r(weekend), weekday: r(weekday),
+    frequent: frequent && { ...frequent, amount: r(frequent.amount) },
+    small: { count: smalls.length, amount: r(smalls.reduce((s, t) => s + amt(t), 0)) },
+    top, topShare: total ? Math.round((top.reduce((s, c) => s + (byCat[c.key] ?? 0), 0) / total) * 100) : 0,
+  };
+}
+
+/** One plain sentence about the report. */
+export function reportHeadline({ income, spent, saved, given, spentChange, savingsRate }) {
+  const rupee = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;
+  const out = spent + saved + given;
+  const parts = [];
+  if (income > 0) {
+    const used = Math.round((spent / income) * 100);
+    parts.push(out > income ? `You spent and set aside ${rupee(out - income)} more than you earned` : `You spent ${used}% of what came in`);
+    parts.push(saved > 0 ? `saved ${savingsRate}%` : 'saved nothing');
+  } else {
+    parts.push(`You spent ${rupee(spent)} with no income logged`);
+  }
+  if (spentChange != null && Math.abs(spentChange) >= 5) parts.push(`spending ${spentChange > 0 ? 'up' : 'down'} ${Math.abs(spentChange)}% on the report before`);
+  return `${parts.join(', ')}.`;
+}
+
 const sum = (list) => Math.round(list.reduce((s, x) => s + (Number(x.amount) || 0), 0) * 100) / 100;
 
 function totals(transactions, income, { start, end }, rules) {
@@ -124,15 +194,20 @@ export function buildReport({ transactions = [], income = [], rules = {}, recurr
   const biggest = cur.expenses.slice().sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0))[0] ?? null;
   const left = Math.round((cur.income - cur.spent - cur.saved - cur.given) * 100) / 100;
 
+  const spentChange = prev.spent > 0 ? Math.round(((cur.spent - prev.spent) / prev.spent) * 100) : null;
+  const savingsRate = cur.income > 0 ? Math.round((cur.saved / cur.income) * 100) : null;
+
   return {
     reportKey, ...win,
+    headline: reportHeadline({ income: cur.income, spent: cur.spent, saved: cur.saved, given: cur.given, spentChange, savingsRate }),
+    analysis: analyseSpending(cur.expenses, win, rules),
     income: cur.income, spent: cur.spent, saved: cur.saved, given: cur.given, left,
-    savingsRate: cur.income > 0 ? Math.round((cur.saved / cur.income) * 100) : null,
+    savingsRate,
     avgPerDay: win.days > 0 ? cur.spent / win.days : 0,
     noSpendDays: Math.max(0, win.days - cur.spendDays),
     biggest: biggest && { name: biggest.name, amount: Number(biggest.amount) || 0, date: biggest.date },
     prev: { start: prevWin.start, last: prevWin.last, income: prev.income, spent: prev.spent, saved: prev.saved },
-    spentChange: prev.spent > 0 ? Math.round(((cur.spent - prev.spent) / prev.spent) * 100) : null,
+    spentChange,
     up: rows.filter((r) => r.change === 'up' || r.change === 'new'),
     down: rows.filter((r) => r.change === 'down' || r.change === 'stopped'),
     steady: rows.filter((r) => r.change === 'steady' && r.now > 0),
