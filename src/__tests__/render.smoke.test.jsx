@@ -110,14 +110,24 @@ describe('screens render with planning features', () => {
     expect(html).not.toContain('id="home-add-panel"');      // phone: the "+" sheet, not an inline form
   });
 
-  it('Home on wide screens: the full Add form sits under quick entry', () => {
+  it('Home on wide screens: the full Add form, no quick entry', () => {
     const shell = { goTo: noop, barTabs: ['history', 'bills', 'stats'], month: month(iso(0)), setMonth: noop, user: common.user, openProfile: noop, openAdd: noop, toast: noop, desktop: true };
     const html = render(<ShellContext.Provider value={shell}><TodayTab {...common} onAdd={noop} onAddIncome={noop} /></ShellContext.Provider>);
-    const quick = html.indexOf('id="home-quick-entry"'), panel = html.indexOf('id="home-add-panel"');
-    expect(quick).toBeGreaterThan(0);
-    expect(panel).toBeGreaterThan(quick);
+    expect(html).toContain('id="home-add-panel"');
+    expect(html).not.toContain('id="home-quick-entry"');
     for (const k of ['expense', 'income', 'debt', 'savings']) expect(html).toContain(`id="add-kind-${k}"`);
-    expect(html).not.toMatch(/id="add-amount"[^>]*autofocus/i);   // opening Home doesn't grab the keyboard
+    expect(html).not.toMatch(/autofocus/i);                        // opening Home doesn't grab the keyboard
+  });
+
+  it('Add: what it is for comes first, then the amount — every kind', () => {
+    const first = { expense: 'add-name', income: 'income-name', debt: 'debt-name', savings: 'savings-name' };
+    for (const [kind, id] of Object.entries(first)) {
+      const html = render(<AddSheet {...common} initialKind={kind} onAdd={noop} onAddIncome={noop} onClose={noop} />);
+      const name = html.indexOf(`id="${id}"`), amount = html.indexOf('id="add-amount"');
+      expect(name, kind).toBeGreaterThan(0);
+      expect(amount, kind).toBeGreaterThan(name);
+      expect(html.slice(html.lastIndexOf('<input', name), html.indexOf('>', name)), kind).toMatch(/autofocus/i);   // the keyboard opens on it
+    }
   });
 
   it('History tab shows search, category filter chips and badges', () => {
@@ -215,13 +225,13 @@ describe('screens render with planning features', () => {
     expect(html.match(/id="theme-(light|dark|system)"/g)).toHaveLength(3);   // one theme picker, not two
   });
 
-  it('the + sheet: four kinds, each opening on the amount (keypad up)', () => {
+  it('the + sheet: four kinds, each with an amount field and a save button', () => {
     const kinds = { expense: 'btn-save-entry', income: 'btn-save-income', debt: 'btn-save-debt', savings: 'btn-save-savings' };
     for (const [kind, save] of Object.entries(kinds)) {
       const html = render(<AddSheet {...common} initialKind={kind} onAdd={noop} onAddIncome={noop} onClose={noop} />);
       for (const k of Object.keys(kinds)) expect(html).toContain(`id="add-kind-${k}"`);
       expect(html).toContain(save);
-      expect(html).toMatch(/<input id="add-amount"[^>]*autofocus/i);
+      expect(html).toContain('id="add-amount"');
     }
     const exp = render(<AddSheet {...common} onAdd={noop} onAddIncome={noop} onClose={noop} />);
     expect(exp).toContain('Given to someone');

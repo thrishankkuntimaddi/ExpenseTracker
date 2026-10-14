@@ -52,15 +52,17 @@ import { normaliseUi } from '../utils/uiPrefs';
    • phone: bottom bar Home · page · "+" · page · page (chosen in Profile →
      Customize); every other page is a card in Home → Explore and opens with
      a back arrow; swiping moves between bar pages
-   • desktop / web (≥1024px): a sidebar with every page and "+ Add"
+   • desktop, tablet, web (≥768px wide and ≥600px tall — a phone turned
+     sideways stays a phone): a sidebar with every page; Home has the Add form
    • the avatar opens Profile & settings
    • one month for the whole app: change it on any page (or in the Stats
      calendar) and every page follows; "Now" returns to this month */
 
 function useIsDesktop() {
-  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
+  const wide = () => window.innerWidth >= 1024 || (window.innerWidth >= 768 && window.innerHeight >= 600);
+  const [isDesktop, setIsDesktop] = useState(wide);
   useEffect(() => {
-    const h = () => setIsDesktop(window.innerWidth >= 1024);
+    const h = () => setIsDesktop(wide());
     window.addEventListener('resize', h);
     return () => window.removeEventListener('resize', h);
   }, []);

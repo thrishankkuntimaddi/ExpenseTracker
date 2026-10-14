@@ -89,7 +89,7 @@ nav button.nav-add {
 @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 /* ══════════════════════════════════════════════════════════════════
-   DESKTOP / WEB (≥1024px): a sidebar with every page, then the very same
+   DESKTOP / TABLET / WEB (≥768px, not a sideways phone): a sidebar with every page, then the very same
    pages as the phone — one app, one look.
 ══════════════════════════════════════════════════════════════════ */
 .desktop-sidebar {
@@ -135,6 +135,7 @@ nav button.nav-add {
 
 /* Home on a wide screen: what you do · where to go */
 .home-columns { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 999px) { .home-columns { grid-template-columns: minmax(0, 1fr); gap: 0; } }   /* tablet portrait: one column beside the sidebar */
 .home-column { min-width: 0; }
 
 /* "Add" opens as a centred dialog instead of a bottom sheet */

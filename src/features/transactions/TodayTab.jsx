@@ -138,7 +138,7 @@ export default function TodayTab(props) {
     </div>
   );
 
-  // Wide screens: the full Add form sits right here, open — no window to open
+  // Wide screens: the full Add form sits right here, open — no window to open, no quick entry
   const addPanel = shell?.desktop && (
     <div className="card home-add-panel" id="home-add-panel" style={{ padding: 16, marginBottom: 14 }}>
       <AddPanel inline {...props} onAdd={onAdd} onAddIncome={onAddIncome}
@@ -146,7 +146,8 @@ export default function TodayTab(props) {
     </div>
   );
 
-  const addSection = (<>
+  // Wide screens: the full form only. Phone: quick entry ("chai 20"), with + for everything else.
+  const addSection = shell?.desktop ? addPanel : (
     <form className="home-add card" onSubmit={submitQuick} style={{ padding: '6px 6px 6px 14px', marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Zap size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
@@ -165,8 +166,7 @@ export default function TodayTab(props) {
         </div>
       )}
     </form>
-    {addPanel}
-  </>);
+  );
 
   // Only when something needs paying — setting bills up lives on the Bills page
   const billsSection = soon.length > 0 && (

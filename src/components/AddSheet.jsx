@@ -1,7 +1,8 @@
 // ─── AddSheet ────────────────────────────────────────────────────
 // "+" on the phone bar: one sheet to log anything. On wide screens the
-// same panel (AddPanel) sits inline on Home instead of in a window. Every kind starts the same way — the amount, with the keypad
-// already open — then the details:
+// same panel (AddPanel) sits inline on Home instead of in a window.
+// Every kind starts the same way — what it's for (or who), with the
+// keyboard already up — then the amount, then the details:
 //   Expense  spent on something, or given to someone (no return expected)
 //   Income   salary, family, anything that came in
 //   Debt     lent · borrowed · got back · paid back (see utils/debts.js)
@@ -64,7 +65,7 @@ export default function AddSheet({ initialKind = 'expense', options = {}, onClos
   );
 }
 
-// The amount field takes focus when a form opens — except inline on Home,
+// The first field takes focus when a form opens — except inline on Home,
 // where it waits until you pick a kind or save one (no focus stolen on load).
 const AutoFocus = createContext(true);
 
@@ -106,13 +107,12 @@ export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd
 const field = { width: '100%', padding: '12px 14px 12px 40px', fontSize: 15, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' };
 const iconAt = { position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' };
 
-/** The big amount field every form starts with — focused on open, so the keypad is up. */
+/** The big amount field — right after what it's for. Enter saves. */
 function AmountField({ value, onChange, tone, onEnter, id = 'add-amount' }) {
-  const autoFocus = useContext(AutoFocus);
   return (
     <div className="add-amount" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 16px', marginBottom: 12, border: `1.5px solid var(--${tone}-border, var(--border))`, background: `var(--${tone}-bg)` }}>
       <IndianRupee size={22} style={{ color: `var(--${tone})`, flexShrink: 0 }} />
-      <input id={id} value={value} autoFocus={autoFocus} inputMode="decimal" autoComplete="off" enterKeyHint="next" placeholder="0" aria-label="Amount"
+      <input id={id} value={value} inputMode="decimal" autoComplete="off" enterKeyHint="done" placeholder="0" aria-label="Amount"
         onChange={(e) => { const v = e.target.value.replace(/,/g, ''); if (v === '' || /^\d*\.?\d{0,2}$/.test(v)) onChange(v); }}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onEnter?.(); } }}
         style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', boxShadow: 'none', outline: 'none', fontSize: 32, fontWeight: 800, color: `var(--${tone})`, fontFamily: 'inherit', padding: '6px 0', letterSpacing: '-0.02em' }} />
@@ -120,11 +120,13 @@ function AmountField({ value, onChange, tone, onEnter, id = 'add-amount' }) {
   );
 }
 
-function TextField({ id, Icon = PenLine, value, onChange, placeholder, list, onEnter, inputRef }) {
+/** `first`: the field a form opens on (takes focus, Enter moves on to the amount). */
+function TextField({ id, Icon = PenLine, value, onChange, placeholder, list, onEnter, inputRef, first = false }) {
+  const autoFocus = useContext(AutoFocus) && first;
   return (
     <div style={{ position: 'relative', marginBottom: 10 }}>
       <Icon size={15} style={iconAt} />
-      <input id={id} ref={inputRef} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} list={list} autoComplete="off" enterKeyHint="done"
+      <input id={id} ref={inputRef} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} list={list} autoComplete="off" autoFocus={autoFocus} enterKeyHint={first ? 'next' : 'done'}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onEnter?.(); } }} style={field} />
     </div>
   );
@@ -201,9 +203,10 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
     <div className="add-form add-form-expense">
       <Choice idPrefix="expense-mode" value={mode} onChange={setMode} tone="expense" columns={2}
         options={[{ key: 'spent', label: 'Spent' }, { key: 'given', label: 'Given to someone', tone: 'given' }]} />
-      <AmountField value={amount} onChange={setAmount} tone={mode === 'given' ? 'given' : 'expense'} onEnter={() => document.getElementById('add-name')?.focus()} />
-      <TextField id="add-name" Icon={mode === 'given' ? User : PenLine} value={name} onChange={setName} onEnter={save}
+      <TextField id="add-name" first Icon={mode === 'given' ? User : PenLine} value={name} onChange={setName}
+        onEnter={() => (parsed ? save() : document.getElementById('add-amount')?.focus())}
         placeholder={mode === 'given' ? 'Given to whom? (no return expected)' : 'What for? — e.g. Groceries, Petrol'} list={mode === 'given' ? 'add-given-to' : undefined} />
+      <AmountField value={amount} onChange={setAmount} tone={mode === 'given' ? 'given' : 'expense'} onEnter={save} />
       <datalist id="add-given-to">{givenTo.map((n) => <option key={n} value={n} />)}</datalist>
       {mode === 'spent' && (
         <div style={{ marginBottom: 12 }}>
@@ -248,16 +251,16 @@ function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
 
   return (
     <div className="add-form add-form-income">
-      <AmountField value={amount} onChange={setAmount} tone="income" onEnter={() => document.getElementById('income-name')?.focus()} />
-      <TextField id="income-name" value={name} onChange={setName} onEnter={save} placeholder="From — Salary, Parents, Freelance…" />
+      <TextField id="income-name" first value={name} onChange={setName} onEnter={() => document.getElementById('add-amount')?.focus()} placeholder="From — Salary, Parents, Freelance…" />
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '-2px 0 12px' }}>
         {sources.map((s) => (
-          <button key={s} type="button" onClick={() => setName(s)} className="add-choice"
+          <button key={s} type="button" onClick={() => { setName(s); document.getElementById('add-amount')?.focus(); }} className="add-choice"
             style={{ padding: '6px 11px', fontSize: 12, fontWeight: 650, fontFamily: 'inherit', cursor: 'pointer', border: `1.5px solid ${name === s ? 'var(--income)' : 'var(--border)'}`, background: name === s ? 'var(--income-bg)' : 'var(--surface2)', color: name === s ? 'var(--income)' : 'var(--text-secondary)' }}>
             {s}
           </button>
         ))}
       </div>
+      <AmountField value={amount} onChange={setAmount} tone="income" onEnter={save} />
       <DateField value={dateInput} onChange={setDateInput} />
       <SaveButton id="btn-save-income" disabled={!can} tone="income" onClick={save}>{can ? `Add income · ${formatAmount(Number(amount))}` : 'Add income'}</SaveButton>
       <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '10px 2px 0', lineHeight: 1.5 }}>Borrowed money, or money paid back to you? Use <strong>Debt</strong> — it’s counted as money in and tracked per person.</p>
@@ -281,6 +284,7 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
   function pick(p) {
     setName(p.name);
     if ((move === 'got_back' || move === 'paid_back') && !amount) setAmount(String(Math.abs(p.net)));
+    document.getElementById('add-amount')?.focus();
   }
 
   function save() {
@@ -296,8 +300,7 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
       <Choice idPrefix="debt-move" value={move} onChange={setMove} columns={4}
         options={DEBT_MOVE_KEYS.map((k) => ({ key: k, label: DEBT_MOVES[k].label, tone: DEBT_MOVES[k].tone }))} />
       <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '-4px 2px 10px' }}>{meta.hint}</p>
-      <AmountField value={amount} onChange={setAmount} tone={meta.tone} onEnter={() => document.getElementById('debt-name')?.focus()} />
-      <TextField id="debt-name" Icon={User} value={name} onChange={setName} onEnter={save} list="debt-people"
+      <TextField id="debt-name" first Icon={User} value={name} onChange={setName} onEnter={() => document.getElementById('add-amount')?.focus()} list="debt-people"
         placeholder={move === 'lent' ? 'Lent to whom?' : move === 'borrowed' ? 'Borrowed from whom?' : move === 'got_back' ? 'Who paid you back?' : 'Paid back to whom?'} />
       <datalist id="debt-people">{ledger.map((p) => <option key={p.key} value={p.name} />)}</datalist>
       {open.length > 0 && (
@@ -310,6 +313,7 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
           ))}
         </div>
       )}
+      <AmountField value={amount} onChange={setAmount} tone={meta.tone} onEnter={save} />
       <TextField id="debt-note" Icon={StickyNote} value={note} onChange={setNote} onEnter={save} placeholder="Note (optional) — e.g. for the bike repair" />
       <DateField value={dateInput} onChange={setDateInput} />
       <SaveButton id="btn-save-debt" disabled={!can} tone={meta.tone} onClick={save}>{can ? `${meta.label} · ${formatAmount(Number(amount))}` : `Add — ${meta.label.toLowerCase()}`}</SaveButton>
@@ -353,6 +357,7 @@ function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
 
   return (
     <div className="add-form add-form-savings">
+      <TextField id="savings-name" first value={name} onChange={setName} onEnter={() => document.getElementById('add-amount')?.focus()} placeholder={goal ? `${goal.name} (optional name)` : 'What for? (optional) — e.g. Nifty 50 SIP'} />
       <AmountField value={amount} onChange={setAmount} tone="savings" onEnter={save} />
       <Choice idPrefix="savings-type" value={savingsType} onChange={setSavingsType} tone="savings"
         options={SAVINGS_TYPES.map((s) => ({ key: s.key, label: s.label }))} />
@@ -369,7 +374,6 @@ function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
           </div>
         </>
       )}
-      <TextField id="savings-name" value={name} onChange={setName} onEnter={save} placeholder={goal ? `${goal.name} (optional name)` : 'Name (optional) — e.g. Nifty 50 SIP'} />
       {st.hasPlatform && <TextField id="savings-platform" value={platform} onChange={setPlatform} onEnter={save} placeholder="Platform — e.g. Angel One, Zerodha" />}
       <TextField id="savings-held" Icon={User} value={heldWith} onChange={setHeldWith} onEnter={save} placeholder="Kept with — cash at home, a person, a bank…" />
       <DateField value={dateInput} onChange={setDateInput} />
