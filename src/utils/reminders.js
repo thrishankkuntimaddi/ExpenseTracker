@@ -20,11 +20,10 @@ import { localDateKey, localMonthKey, formatAmount as fullAmount } from './dateH
 import { occurrencesBetween, toKey } from './recurring';
 import { categoryOf, categoryMeta } from './categories';
 import { computeGoalProgress, isGoalOpen } from './goals';
+import { formatMoneyCompact } from './money';
 
-/* Notifications are one line: drop “.00” on whole rupees (₹15,000, not ₹15,000.00). */
-const formatAmount = (n) => (Math.round(n * 100) % 100 === 0
-  ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Math.round(n))
-  : fullAmount(n));
+/* Notifications are one line: drop “.00” on whole amounts (₹15,000, not ₹15,000.00). */
+const formatAmount = (n) => (Math.round(n * 100) % 100 === 0 ? formatMoneyCompact(n) : fullAmount(n));
 
 export const REMINDER_TYPES = ['recurring', 'daily', 'budget', 'report', 'goals', 'weekly'];
 export const TONES = [

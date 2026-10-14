@@ -8,8 +8,10 @@
 //   Debt     lent · borrowed · got back · paid back (see utils/debts.js)
 //   Savings  where it went, and optionally which goal it's for
 // When you're looking at an earlier month, the date starts on that month.
+// The currency sign on the amount is a picker: abroad, switch it once and
+// this device keeps entering in that currency until you switch back.
 import { createContext, useContext, useMemo, useState } from 'react';
-import { X, IndianRupee, PenLine, Calendar, User, StickyNote, Flag } from 'lucide-react';
+import { X, PenLine, Calendar, User, StickyNote, Flag } from 'lucide-react';
 import { ADD_KINDS } from '../app/pages';
 import Portal from './Portal';
 import { useEscape } from '../hooks/useEscape';
@@ -23,6 +25,12 @@ import { parseQuickEntry } from '../utils/smartInput';
 import { SAVINGS_TYPES, getSavingsType } from '../utils/typeConfig';
 import { DEBT_MOVES, DEBT_MOVE_KEYS, debtEntryFields, debtLedger } from '../utils/debts';
 import { isGoalOpen } from '../utils/goals';
+import { CURRENCY_GROUPS, CURRENCY_NAMES, currencySymbol, getDisplayCurrency, formatMoney, entryCurrency } from '../utils/money';
+import { rateBetween } from '../services/rates';
+
+/* The currency this device enters in (sticky: set it once when you travel). */
+const EntryCurrency = createContext({ currency: 'INR', setCurrency: () => {} });
+const useEntryCurrency = () => useContext(EntryCurrency);
 
 /** Today, or the last day of the month being viewed if that's earlier. */
 function defaultDate(month) {
@@ -79,8 +87,12 @@ export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd
   const saved = (entry) => { onSaved?.(entry); if (inline) { setEngaged(true); setRound((r) => r + 1); } };
   const common = { onSaved: saved, startDate: defaultDate(shell?.month) };
   const key = `${kind}-${round}`;
+  const [currency, setCurrencyState] = useState(entryCurrency.get);
+  const setCurrency = (c) => { setCurrencyState(c); entryCurrency.set(c); };
+  const cur = useMemo(() => ({ currency, setCurrency }), [currency]);
 
   return (
+    <EntryCurrency.Provider value={cur}>
     <AutoFocus.Provider value={engaged}>
     <div className={`add-panel${compact ? ' add-compact' : ''}`}>
       <div role="tablist" aria-label="What are you adding?" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: compact ? 12 : 16 }}>
@@ -102,6 +114,7 @@ export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd
       {kind === 'savings' && <SavingsForm key={key} {...common} {...data} onAdd={onAdd} initialGoal={options.goalId} />}
     </div>
     </AutoFocus.Provider>
+    </EntryCurrency.Provider>
   );
 }
 
@@ -109,16 +122,42 @@ export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd
 const field = { width: '100%', padding: '12px 14px 12px 40px', fontSize: 15, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' };
 const iconAt = { position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' };
 
-/** The big amount field — right after what it's for. Enter saves. */
-function AmountField({ value, onChange, tone, onEnter, id = 'add-amount' }) {
+/** The big amount field — right after what it's for. Enter saves.
+    Its currency sign is a picker; `shown` overrides it (a currency typed in the name). */
+function AmountField({ value, onChange, tone, onEnter, id = 'add-amount', shown }) {
+  const { currency, setCurrency } = useEntryCurrency();
+  const code = shown ?? currency;
+  const display = getDisplayCurrency();
+  const foreign = code !== display;
+  const n = Number(value) || 0;
   return (
-    <div className="add-amount" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 16px', marginBottom: 12, border: `1.5px solid var(--${tone}-border, var(--border))`, background: `var(--${tone}-bg)` }}>
-      <IndianRupee size={22} style={{ color: `var(--${tone})`, flexShrink: 0 }} />
+    <>
+    <div className="add-amount" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 16px', marginBottom: foreign ? 4 : 12, border: `1.5px solid var(--${tone}-border, var(--border))`, background: `var(--${tone}-bg)` }}>
+      <label title="Currency" style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer', color: `var(--${tone})` }}>
+        <span style={{ fontSize: currencySymbol(code).length > 2 ? 15 : 24, fontWeight: 800, minWidth: 18, textAlign: 'center' }}>{currencySymbol(code)}</span>
+        <span aria-hidden style={{ fontSize: 9, opacity: 0.7 }}>▾</span>
+        <select id={`${id}-currency`} aria-label="Currency" value={code} onChange={(e) => setCurrency(e.target.value)}
+          style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%' }}>
+          {CURRENCY_GROUPS.map((g) => (
+            <optgroup key={g.title} label={g.title}>
+              {g.codes.map((c) => <option key={c} value={c}>{c} · {CURRENCY_NAMES[c]}</option>)}
+            </optgroup>
+          ))}
+        </select>
+      </label>
       <input id={id} value={value} inputMode="decimal" autoComplete="off" enterKeyHint="done" placeholder="0" aria-label="Amount"
-        onChange={(e) => { const v = e.target.value.replace(/,/g, ''); if (v === '' || /^\d*\.?\d{0,2}$/.test(v)) onChange(v); }}
+        onChange={(e) => { const v = e.target.value.replace(/,/g, ''); if (v === '' || /^\d*\.?\d{0,3}$/.test(v)) onChange(v); }}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onEnter?.(); } }}
         style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', boxShadow: 'none', outline: 'none', fontSize: 32, fontWeight: 800, color: `var(--${tone})`, fontFamily: 'inherit', padding: '6px 0', letterSpacing: '-0.02em' }} />
+      {foreign && <span style={{ fontSize: 11, fontWeight: 800, color: `var(--${tone})`, opacity: 0.8 }}>{code}</span>}
     </div>
+    {foreign && (
+      <p id={`${id}-fx`} style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 2px 12px' }}>
+        {n > 0 ? `≈ ${formatMoney(n * (rateBetween(code, display) ?? 1), display)} today · ` : ''}1 {code} = {formatMoney(rateBetween(code, display) ?? 0, display)}
+        {' · '}<button type="button" onClick={() => setCurrency(display)} style={{ border: 'none', background: 'none', padding: 0, color: 'var(--accent)', fontWeight: 700, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Use {display}</button>
+      </p>
+    )}
+    </>
   );
 }
 
@@ -176,6 +215,7 @@ const stamp = (dateInput) => { const iso = dateInputToISO(dateInput); return { d
 /* ── Expense: spent, or given to someone ─────────────────────── */
 function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategory, onSaved, startDate }) {
   const rules = settings?.categoryRules ?? EMPTY_RULES;
+  const { currency } = useEntryCurrency();
   const [mode, setMode] = useState('spent');
   const [amount, setAmount] = useState('');
   const [name, setName] = useState('');
@@ -187,12 +227,13 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
   const parsed = !amount ? parseQuickEntry(name) : null;
   const finalName = (parsed?.name ?? name).trim();
   const finalAmount = parsed?.amount ?? Number(amount);
+  const finalCurrency = parsed?.currency ?? currency;
   const suggested = mode === 'spent' ? inferCategory(finalName, rules) : null;
   const can = !!finalName && amountOk(finalAmount);
 
   function save() {
     if (!can) return;
-    const base = { id: generateId(), name: finalName.charAt(0).toUpperCase() + finalName.slice(1), amount: finalAmount, ...stamp(dateInput) };
+    const base = { id: generateId(), name: finalName.charAt(0).toUpperCase() + finalName.slice(1), amount: finalAmount, currency: finalCurrency, ...stamp(dateInput) };
     const entry = mode === 'given'
       ? { ...base, type: 'person', direction: 'given_gift' }
       : { ...base, type: 'expense', category: category ?? suggested };
@@ -208,7 +249,7 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
       <TextField id="add-name" first Icon={mode === 'given' ? User : PenLine} value={name} onChange={setName}
         onEnter={() => (parsed ? save() : document.getElementById('add-amount')?.focus())}
         placeholder={mode === 'given' ? 'Given to whom? (no return expected)' : 'What for? — e.g. Groceries, Petrol'} list={mode === 'given' ? 'add-given-to' : undefined} />
-      <AmountField value={amount} onChange={setAmount} tone={mode === 'given' ? 'given' : 'expense'} onEnter={save} />
+      <AmountField value={amount} onChange={setAmount} tone={mode === 'given' ? 'given' : 'expense'} onEnter={save} shown={parsed?.currency} />
       <datalist id="add-given-to">{givenTo.map((n) => <option key={n} value={n} />)}</datalist>
       {mode === 'spent' && (
         <div style={{ marginBottom: 12 }}>
@@ -223,7 +264,7 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
       <div className="add-foot">
         <DateField value={dateInput} onChange={setDateInput} />
         <SaveButton id="btn-save-entry" disabled={!can} tone={mode === 'given' ? 'given' : 'expense'} onClick={save}>
-          {can ? `Add ${mode === 'given' ? 'gift' : 'expense'} · ${formatAmount(finalAmount)}` : mode === 'given' ? 'Add what you gave' : 'Add expense'}
+          {can ? `Add ${mode === 'given' ? 'gift' : 'expense'} · ${formatAmount(finalAmount, finalCurrency)}` : mode === 'given' ? 'Add what you gave' : 'Add expense'}
         </SaveButton>
       </div>
     </div>
@@ -234,6 +275,7 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
 const INCOME_SOURCES = ['Salary', 'Parents', 'Freelance', 'Interest', 'Refund', 'Gift'];
 
 function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
+  const { currency } = useEntryCurrency();
   const [amount, setAmount] = useState('');
   const [name, setName] = useState('');
   const [dateInput, setDateInput] = useState(startDate);
@@ -248,7 +290,7 @@ function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
 
   function save() {
     if (!can) return;
-    const entry = { id: generateId(), name: name.trim(), amount: Number(amount), type: 'income', ...incomeKindFlags('income'), ...stamp(dateInput) };
+    const entry = { id: generateId(), name: name.trim(), amount: Number(amount), currency, type: 'income', ...incomeKindFlags('income'), ...stamp(dateInput) };
     onAddIncome(entry);
     onSaved(entry);
   }
@@ -268,7 +310,7 @@ function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
       <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-2px 2px 12px', lineHeight: 1.5 }}>Borrowed money, or money paid back to you? Use <strong>Debt</strong> — it’s counted as money in and tracked per person.</p>
       <div className="add-foot">
         <DateField value={dateInput} onChange={setDateInput} />
-        <SaveButton id="btn-save-income" disabled={!can} tone="income" onClick={save}>{can ? `Add income · ${formatAmount(Number(amount))}` : 'Add income'}</SaveButton>
+        <SaveButton id="btn-save-income" disabled={!can} tone="income" onClick={save}>{can ? `Add income · ${formatAmount(Number(amount), currency)}` : 'Add income'}</SaveButton>
       </div>
     </div>
   );
@@ -276,6 +318,7 @@ function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
 
 /* ── Debt: lent · borrowed · got back · paid back ────────────── */
 function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved, startDate, initialMove = 'lent', initialName = '' }) {
+  const { currency } = useEntryCurrency();
   const [move, setMove] = useState(DEBT_MOVES[initialMove] ? initialMove : 'lent');
   const [amount, setAmount] = useState('');
   const [name, setName] = useState(initialName);
@@ -289,14 +332,16 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
 
   function pick(p) {
     setName(p.name);
-    if ((move === 'got_back' || move === 'paid_back') && !amount) setAmount(String(Math.abs(p.net)));
+    // The ledger is in the display currency; offer it in the currency being entered
+    const per = currency === getDisplayCurrency() ? 1 : (rateBetween(currency, getDisplayCurrency()) || 1);
+    if ((move === 'got_back' || move === 'paid_back') && !amount) setAmount(String(Math.round((Math.abs(p.net) / per) * 100) / 100));
     document.getElementById('add-amount')?.focus();
   }
 
   function save() {
     if (!can) return;
     const { store, fields } = debtEntryFields(move);
-    const entry = { id: generateId(), name: name.trim(), amount: Number(amount), ...fields, ...(note.trim() ? { note: note.trim() } : {}), ...stamp(dateInput) };
+    const entry = { id: generateId(), name: name.trim(), amount: Number(amount), currency, ...fields, ...(note.trim() ? { note: note.trim() } : {}), ...stamp(dateInput) };
     if (store === 'income') onAddIncome(entry); else onAdd(entry);
     onSaved(entry);
   }
@@ -323,7 +368,7 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
       <TextField id="debt-note" Icon={StickyNote} value={note} onChange={setNote} onEnter={save} placeholder="Note (optional) — e.g. for the bike repair" />
       <div className="add-foot">
         <DateField value={dateInput} onChange={setDateInput} />
-        <SaveButton id="btn-save-debt" disabled={!can} tone={meta.tone} onClick={save}>{can ? `${meta.label} · ${formatAmount(Number(amount))}` : `Add — ${meta.label.toLowerCase()}`}</SaveButton>
+        <SaveButton id="btn-save-debt" disabled={!can} tone={meta.tone} onClick={save}>{can ? `${meta.label} · ${formatAmount(Number(amount), currency)}` : `Add — ${meta.label.toLowerCase()}`}</SaveButton>
       </div>
     </div>
   );
@@ -331,6 +376,7 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
 
 /* ── Savings (optionally towards a goal) ─────────────────────── */
 function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
+  const { currency } = useEntryCurrency();
   const goals = (settings?.goals ?? []).filter(isGoalOpen);
   const [amount, setAmount] = useState('');
   const [savingsType, setSavingsType] = useState('cash');
@@ -354,7 +400,7 @@ function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
   function save() {
     if (!can) return;
     const entry = {
-      id: generateId(), type: 'savings', name: finalName, amount: Number(amount), savingsType, ...stamp(dateInput),
+      id: generateId(), type: 'savings', name: finalName, amount: Number(amount), currency, savingsType, ...stamp(dateInput),
       ...(st.hasPlatform && platform.trim() ? { platform: platform.trim() } : {}),
       ...(goalId ? { goalId } : {}),
       ...(heldWith.trim() ? { heldWith: heldWith.trim() } : {}),
@@ -388,7 +434,7 @@ function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
       </div>
       <div className="add-foot">
         <DateField value={dateInput} onChange={setDateInput} />
-        <SaveButton id="btn-save-savings" disabled={!can} tone="savings" onClick={save}>{can ? `Save ${formatAmount(Number(amount))}${goal ? ` for ${goal.name}` : ''}` : 'Add savings'}</SaveButton>
+        <SaveButton id="btn-save-savings" disabled={!can} tone="savings" onClick={save}>{can ? `Save ${formatAmount(Number(amount), currency)}${goal ? ` for ${goal.name}` : ''}` : 'Add savings'}</SaveButton>
       </div>
     </div>
   );

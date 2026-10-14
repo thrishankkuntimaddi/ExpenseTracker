@@ -1,4 +1,5 @@
 // ─── Date Helpers ────────────────────────────────────────────────
+import { formatMoney } from './money';
 
 export function formatDate(isoString) {
   const d = new Date(isoString);
@@ -10,12 +11,9 @@ export function formatDateShort(isoString) {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export function formatAmount(n) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 2,
-  }).format(n ?? 0);
+/** Money in the display currency (Profile → Currency). */
+export function formatAmount(n, currency) {
+  return formatMoney(n ?? 0, currency);
 }
 
 /** Returns today as a YYYY-MM-DD string for use in <input type="date"> */

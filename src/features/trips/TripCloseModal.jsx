@@ -10,6 +10,7 @@ import ModalShell, { PrimaryButton, GhostButton } from '../../components/ModalSh
 import { formatAmount } from '../../utils/dateHelpers';
 
 export default function TripCloseModal({ trip, summary, onConfirm, onClose }) {
+  const money = (n) => formatAmount(n, trip?.currency);   // the trip's own currency
   const hasMe = !!trip.meMemberId;
   const [logShare, setLogShare] = useState(hasMe && summary.myShare > 0);
   const [logLent, setLogLent] = useState(hasMe && summary.owedToMe.length > 0);
@@ -26,8 +27,8 @@ export default function TripCloseModal({ trip, summary, onConfirm, onClose }) {
       </>}
     >
       <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--surface2)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-        <strong style={{ color: 'var(--text)' }}>{trip.name}</strong> · {formatAmount(summary.total)} across {summary.members.length} people
-        {summary.isSettled ? ' · fully settled ✓' : ` · ${formatAmount(summary.outstanding)} still to settle`}
+        <strong style={{ color: 'var(--text)' }}>{trip.name}</strong> · {money(summary.total)} across {summary.members.length} people
+        {summary.isSettled ? ' · fully settled ✓' : ` · ${money(summary.outstanding)} still to settle`}
       </div>
 
       {!hasMe ? (
@@ -35,11 +36,11 @@ export default function TripCloseModal({ trip, summary, onConfirm, onClose }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <Opt checked={logShare} onChange={setLogShare} disabled={!(summary.myShare > 0)}
-            title={`Log my share as an expense — ${formatAmount(summary.myShare)}`} sub="Category: Travel. This is what the trip really cost you." />
+            title={`Log my share as an expense — ${money(summary.myShare)}`} sub="Category: Travel. This is what the trip really cost you." />
           <Opt checked={logLent} onChange={setLogLent} disabled={!summary.owedToMe.length}
-            title={`Record what others owe me as Lent — ${formatAmount(owed)}`} sub={summary.owedToMe.map((t) => `${t.fromName} ${formatAmount(t.amount)}`).join(' · ') || 'Nobody owes you'} />
+            title={`Record what others owe me as Lent — ${money(owed)}`} sub={summary.owedToMe.map((t) => `${t.fromName} ${money(t.amount)}`).join(' · ') || 'Nobody owes you'} />
           <Opt checked={logBorrowed} onChange={setLogBorrowed} disabled={!summary.iOwe.length}
-            title={`Record what I owe as Borrowed — ${formatAmount(iOwe)}`} sub={summary.iOwe.map((t) => `${t.toName} ${formatAmount(t.amount)}`).join(' · ') || 'You owe nobody'} />
+            title={`Record what I owe as Borrowed — ${money(iOwe)}`} sub={summary.iOwe.map((t) => `${t.toName} ${money(t.amount)}`).join(' · ') || 'You owe nobody'} />
           <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>Reopening the trip removes these entries again (they go to Recently Deleted).</div>
         </div>
       )}

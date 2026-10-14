@@ -26,10 +26,10 @@ export function formatSessionTextSummary(session) {
   } else {
     items.forEach(i => {
       const amt = parseFloat(i.amount) || 0;
-      text += `  • ${i.name || 'Item'}: ₹${amt.toFixed(2)}\n`;
+      text += `  • ${i.name || 'Item'}: ${formatAmount(amt)}\n`;
     });
   }
-  text += `  *Total Spent: ₹${totalSpent.toFixed(2)}*\n\n`;
+  text += `  *Total Spent: ${formatAmount(totalSpent)}*\n\n`;
 
   text += `👤 *MONEY RECEIVED*\n`;
   if (received.length === 0) {
@@ -37,15 +37,15 @@ export function formatSessionTextSummary(session) {
   } else {
     received.forEach(r => {
       const amt = parseFloat(r.amount) || 0;
-      text += `  • ${r.person || 'Person'}: ₹${amt.toFixed(2)}\n`;
+      text += `  • ${r.person || 'Person'}: ${formatAmount(amt)}\n`;
     });
   }
-  text += `  *Total Received: ₹${totalReceived.toFixed(2)}*\n\n`;
+  text += `  *Total Received: ${formatAmount(totalReceived)}*\n\n`;
 
   text += `─────────────────────────\n`;
   const sign = netBalance >= 0 ? '+' : '';
   const netLabel = netBalance > 0 ? '(Profit)' : netBalance < 0 ? '(Loss)' : '(Balanced)';
-  text += `💰 *NET BALANCE: ${sign}₹${netBalance.toFixed(2)} ${netLabel}*\n`;
+  text += `💰 *NET BALANCE: ${sign}${formatAmount(netBalance)} ${netLabel}*\n`;
   text += `\nShared via Expense Tracker`;
 
   return text;

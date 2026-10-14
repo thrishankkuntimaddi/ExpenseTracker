@@ -10,6 +10,7 @@ const iconBtn = (bg, border, color) => ({
 });
 
 export default function TripHistoryCard({ trip, onOpen, onEdit, onDelete, onArchive, onUnarchive, onShare }) {
+  const money = (n) => formatAmount(n, trip?.currency);   // the trip's own currency
   const [open, setOpen] = useState(false);
   const s = computeTripSummary(trip);
   const isArchived = trip.status === 'archived';
@@ -26,12 +27,12 @@ export default function TripHistoryCard({ trip, onOpen, onEdit, onDelete, onArch
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.name}</div>
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-              {trip.startDate ? formatDateShort(trip.startDate) : '—'} · {(trip.members ?? []).length} people · {s.isSettled ? 'settled' : `${formatAmount(s.outstanding)} unsettled`}
+              {trip.startDate ? formatDateShort(trip.startDate) : '—'} · {(trip.members ?? []).length} people · {s.isSettled ? 'settled' : `${money(s.outstanding)} unsettled`}
             </div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>{formatAmount(s.total)}</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>{money(s.total)}</span>
           {onShare && <span role="button" tabIndex={0} title="Share summary" onClick={(e) => { e.stopPropagation(); onShare(trip); }} onKeyDown={(e) => e.key === 'Enter' && (e.stopPropagation(), onShare(trip))} style={iconBtn('var(--accent-bg)', 'var(--accent-border)', 'var(--accent)')}><Share2 size={12} /></span>}
           {onEdit && !isArchived && <span role="button" tabIndex={0} title="Edit trip" onClick={(e) => { e.stopPropagation(); onEdit(trip); }} onKeyDown={(e) => e.key === 'Enter' && (e.stopPropagation(), onEdit(trip))} style={iconBtn('var(--surface2)', 'var(--border)', 'var(--text-secondary)')}><Pencil size={12} /></span>}
           {onUnarchive && isArchived && <span role="button" tabIndex={0} title="Unarchive" onClick={(e) => { e.stopPropagation(); onUnarchive(trip); }} onKeyDown={(e) => e.key === 'Enter' && (e.stopPropagation(), onUnarchive(trip))} style={iconBtn('var(--surface2)', 'var(--border)', 'var(--text-muted)')}><ArchiveRestore size={12} /></span>}
@@ -48,12 +49,12 @@ export default function TripHistoryCard({ trip, onOpen, onEdit, onDelete, onArch
               {(trip.expenses ?? []).filter((e) => e.paidBy && Number(e.amount) > 0).map((e) => (
                 <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '5px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
                   <span style={{ color: 'var(--text)', fontWeight: 500, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><strong>{nameOf(e.paidBy)}</strong> · {e.title}</span>
-                  <span style={{ color: 'var(--expense)', fontWeight: 700, flexShrink: 0 }}>{formatAmount(e.amount)}</span>
+                  <span style={{ color: 'var(--expense)', fontWeight: 700, flexShrink: 0 }}>{money(e.amount)}</span>
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 12, fontWeight: 700 }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Total · {formatAmount(s.perHead)} per head</span>
-                <span style={{ color: 'var(--expense)' }}>{formatAmount(s.total)}</span>
+                <span style={{ color: 'var(--text-secondary)' }}>Total · {money(s.perHead)} per head</span>
+                <span style={{ color: 'var(--expense)' }}>{money(s.total)}</span>
               </div>
             </div>
             <div>
@@ -63,10 +64,10 @@ export default function TripHistoryCard({ trip, onOpen, onEdit, onDelete, onArch
               ) : s.transfers.map((t) => (
                 <div key={`${t.from}-${t.to}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '5px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
                   <span style={{ color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.fromName} <ArrowRight size={10} style={{ verticalAlign: 'middle' }} /> {t.toName}</span>
-                  <span style={{ color: 'var(--expense)', fontWeight: 700, flexShrink: 0 }}>{formatAmount(t.amount)}</span>
+                  <span style={{ color: 'var(--expense)', fontWeight: 700, flexShrink: 0 }}>{money(t.amount)}</span>
                 </div>
               ))}
-              {s.settledTotal > 0 && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Settled so far: {formatAmount(s.settledTotal)}</div>}
+              {s.settledTotal > 0 && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Settled so far: {money(s.settledTotal)}</div>}
             </div>
           </div>
           <button onClick={() => onOpen(trip.id)} style={{ marginTop: 12, padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: 'var(--external-bg)', color: 'var(--external)', border: '1px solid var(--external-border)', cursor: 'pointer', fontFamily: 'inherit' }}>

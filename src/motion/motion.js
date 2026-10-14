@@ -5,6 +5,7 @@
 // Everything here moves with transform / opacity (or a small canvas), so
 // it stays smooth on older phones.
 import { useSyncExternalStore } from 'react';
+import { currencySymbol } from '../utils/money';
 
 const KEY = 'et_motion';            // 'off' | anything else = on
 const EVENT = 'et-motion';
@@ -47,7 +48,7 @@ function coinEl(tone, size) {
   const [hi, light, mid, dark, ink] = COIN[tone] ?? COIN.gold;
   const c = document.createElement('div');
   c.className = 'fx-coin';
-  c.textContent = '₹';
+  c.textContent = currencySymbol().slice(0, 3);
   Object.assign(c.style, {
     width: `${size}px`, height: `${size}px`, marginLeft: `${-size / 2}px`, marginTop: `${-size / 2}px`, fontSize: `${size * 0.5}px`, color: ink,
     background: `radial-gradient(circle at 32% 28%, ${hi} 0%, ${light} 28%, ${mid} 62%, ${dark} 100%)`,

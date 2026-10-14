@@ -43,7 +43,8 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
     const dateKey = trip.endDate && trip.endDate <= todayInputValue() ? trip.endDate : (trip.startDate || todayInputValue());
     const date = dateInputToISO(dateKey), month = isoToMonth(date);
     const posted = [];
-    const post = async (entry) => { if (await onAddTransaction?.(entry)) posted.push(entry.id); };
+    // Ledger entries keep the trip's currency (converted for totals at the trip's date)
+    const post = async (entry) => { if (await onAddTransaction?.({ ...entry, ...(trip.currency ? { currency: trip.currency } : {}) })) posted.push(entry.id); };
     if (logShare && s.myShare > 0) {
       await post({ id: `trip_${trip.id}_share`, name: `Trip: ${trip.name}`, amount: s.myShare, type: 'expense', category: 'travel', date, month, tripId: trip.id });
     }

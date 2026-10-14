@@ -21,6 +21,7 @@ import Sign from '../../motion/Sign';
 import { useViewMonth, monthName } from '../../app/month';
 import { generateId } from '../../utils/storage';
 import { toKey } from '../../utils/recurring';
+import { currencySymbol } from '../../utils/money';
 
 const STATUS_COLOR = { ok: 'var(--income)', pace: 'var(--lent)', warn: 'var(--waste)', over: 'var(--expense)', none: 'var(--text-muted)' };
 const STATUS_TEXT = { ok: 'On track', pace: 'Spending too fast', warn: 'Nearly spent', over: 'Over budget' };
@@ -285,7 +286,7 @@ function DeductionsEditor({ list, onChange }) {
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
         <input id="deduction-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Deduction" style={{ ...input, flex: 1 }} />
-        <input id="deduction-amount" value={amount} inputMode="decimal" onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} placeholder="₹ / month" style={{ ...input, width: 100 }} />
+        <input id="deduction-amount" value={amount} inputMode="decimal" onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} placeholder={`${currencySymbol()} / month`} style={{ ...input, width: 100 }} />
         <button aria-label="Add deduction" onClick={add} disabled={!can} style={{ width: 36, border: 'none', background: can ? 'var(--accent)' : 'var(--surface2)', color: can ? '#fff' : 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: can ? 'pointer' : 'default' }}>{can ? <Check size={14} /> : <Plus size={14} />}</button>
       </div>
     </div>

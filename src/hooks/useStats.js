@@ -6,6 +6,9 @@ import { localDateKey, localMonthKey } from "../utils/dateHelpers";
 import { computePersonDebts, computeStats, incomeKind, sumAmounts } from "../utils/finance";
 import { withCarryForward } from "../utils/carryForward";
 import { getCurrentMonthValue } from "../utils/periodHelpers";
+import { getDisplayCurrency } from "../utils/money";
+import { isMixed, liveBalance, viewEntry } from "../utils/fx";
+import { rateBetween, useRatesVersion } from "../services/rates";
 
 /** Latest month the carry chain must reach for a given period. */
 function carryHorizon(period) {
@@ -46,9 +49,13 @@ export function useStats(transactions, rawIncome, selectedPeriod, theme, setting
   /* Income + synthetic "Carried forward from <month>" entries (see utils/carryForward.js) */
   const carryCfg = settings?.carryForward;
   const horizon = carryHorizon(selectedPeriod);
+  const display = settings?.currency ?? getDisplayCurrency();
+  const ratesVersion = useRatesVersion();
   const income = useMemo(
-    () => withCarryForward(rawIncome || [], transactions || [], { carryForward: carryCfg }, horizon),
-    [rawIncome, transactions, carryCfg, horizon]
+    () => withCarryForward(rawIncome || [], transactions || [], { carryForward: carryCfg }, horizon,
+      { display, view: (e) => viewEntry(e, display, rateBetween) }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ratesVersion: re-value carry lines when rates land
+    [rawIncome, transactions, carryCfg, horizon, display, ratesVersion]
   );
 
   const filtTxns = useMemo(
@@ -66,10 +73,15 @@ export function useStats(transactions, rawIncome, selectedPeriod, theme, setting
     [transactions, income]
   );
 
-  const stats = useMemo(
-    () => computeStats(filtTxns, filtInc, personDebts),
-    [filtTxns, filtInc, personDebts]
-  );
+  /* Several currencies: what happened is at each day's rate (the views),
+     but the balance — money still held — is valued per currency at today's rate. */
+  const stats = useMemo(() => {
+    const s = computeStats(filtTxns, filtInc, personDebts);
+    if (!isMixed([filtTxns, filtInc], display)) return s;
+    const live = liveBalance(filtTxns, filtInc, display, rateBetween, (t, i) => computeStats(t, i, {}).balance);
+    return { ...s, balance: live.total, balanceAtEntryRates: s.balance, balanceParts: live.parts };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ratesVersion: live rates changed
+  }, [filtTxns, filtInc, personDebts, display, ratesVersion]);
 
   /* ── Chart data ── */
   const pieData = useMemo(() => {

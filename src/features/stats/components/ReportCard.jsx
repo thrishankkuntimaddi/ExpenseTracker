@@ -8,13 +8,15 @@ import { buildReport, latestReportDay, shiftReportDay, windowLabel, getReportSet
 import { toKey, fromKey } from '../../../utils/recurring';
 import { EMPTY_RULES } from '../../../utils/categories';
 import { motionOn, useMotion } from '../../../motion/motion';
+import { formatMoneyCompact, currencySymbol } from '../../../utils/money';
+import { SMALL_SPEND } from '../../../utils/report';
 
 /* ── F · Report unveil: each report arrives sealed, once per device ── */
 const OPENED_KEY = 'et_reports_opened';
 const openedReports = () => { try { return JSON.parse(localStorage.getItem(OPENED_KEY) ?? '[]'); } catch { return []; } };
 const markOpened = (key) => { try { localStorage.setItem(OPENED_KEY, JSON.stringify([...openedReports().filter((k) => k !== key), key].slice(-24))); } catch { /* storage unavailable */ } };
 
-const rupees = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;
+const rupees = (n) => formatMoneyCompact(n);
 
 export default function ReportCard({ transactions = [], income = [], settings, recurringRules = [], onPatchSettings }) {
   const { day } = getReportSettings(settings);
@@ -68,7 +70,7 @@ export default function ReportCard({ transactions = [], income = [], settings, r
         <button ref={cover} type="button" className="report-seal-cover" id="report-unseal" onClick={unseal} aria-label="Open your new report">
           <span className="env">
             <span className="env-back" /><span className="env-paper"><i style={{ top: 12, width: '60%' }} /><i style={{ top: 26, width: '78%' }} /><i style={{ top: 40, width: '48%' }} /></span>
-            <span className="env-front" /><span className="env-flap" /><span className="env-seal">₹</span>
+            <span className="env-front" /><span className="env-flap" /><span className="env-seal">{currencySymbol()}</span>
           </span>
           <span className="cover-title">Your new report is here</span>
           <span className="cover-hint">{windowLabel(r.start, r.last)} · tap to open</span>
@@ -151,7 +153,7 @@ function Analysis({ a, spent }) {
         ? <>Weekends cost more: <strong>{rupees(a.weekend)}</strong> a day vs {rupees(a.weekday)} on weekdays</>
         : <>Weekdays cost more: <strong>{rupees(a.weekday)}</strong> a day vs {rupees(a.weekend)} on weekends</>),
     a.frequent && <>Most often: <strong>{a.frequent.name}</strong> — {a.frequent.count} times, {rupees(a.frequent.amount)} in all</>,
-    a.small.count >= 5 && <>{a.small.count} small spends under ₹100 added up to <strong>{rupees(a.small.amount)}</strong></>,
+    a.small.count >= 5 && <>{a.small.count} small spends under {formatMoneyCompact(SMALL_SPEND)} added up to <strong>{rupees(a.small.amount)}</strong></>,
   ].filter(Boolean);
   return (
     <div id="report-analysis" style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>

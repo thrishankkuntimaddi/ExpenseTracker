@@ -9,6 +9,9 @@ import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { inferCategory } from '../../utils/categories';
 import { FREQUENCIES, WEEKDAYS, toKey } from '../../utils/recurring';
 import { SAVINGS_TYPES, getSavingsType } from '../../utils/typeConfig';
+import CurrencySelect from '../../components/CurrencySelect';
+import { rawOf } from '../../utils/fx';
+import { getDisplayCurrency } from '../../utils/money';
 
 const KINDS = [
   { key: 'expense', label: 'Expense', color: 'var(--expense)' },
@@ -17,11 +20,12 @@ const KINDS = [
 ];
 
 export default function RecurringRuleModal({ rule, preset = null, categoryRules = {}, onSave, onDelete, onClose }) {
-  const init = rule ?? preset;   // a new rule can start from a preset (Rent, SIP …)
+  const init = rawOf(rule) ?? preset;   // a new rule can start from a preset (Rent, SIP …); edited in its own currency
   const today = toKey(new Date());
   const [kind, setKind] = useState(init?.kind ?? 'expense');
   const [name, setName] = useState(init?.name ?? '');
   const [amount, setAmount] = useState(init?.amount != null ? String(init.amount) : '');
+  const [currency, setCurrency] = useState(init?.currency ?? getDisplayCurrency());
   const [category, setCategory] = useState(init?.category ?? null);
   const [categoryTouched, setCategoryTouched] = useState(!!init?.category);
   const [savingsType, setSavingsType] = useState(init?.savingsType ?? 'sip');
@@ -44,8 +48,8 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
   function save() {
     if (!canSave) return;
     const next = {
-      ...(rule ?? {}),
-      kind, name: name.trim(), amount: amt, frequency, startDate,
+      ...(rawOf(rule) ?? {}),
+      kind, name: name.trim(), amount: amt, currency, frequency, startDate,
       endDate: endDate || undefined,
       autoPost,
       dayOfMonth: frequency === 'monthly' ? dom : undefined,
@@ -88,12 +92,15 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 8 }}>
           <Field label="Name">
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === 'income' ? 'Salary' : kind === 'savings' ? 'Nifty 50 SIP' : 'House rent'} style={fieldStyle} autoFocus />
           </Field>
           <Field label="Amount">
-            <input type="text" inputMode="decimal" value={amount} placeholder="0" onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }} style={{ ...fieldStyle, fontWeight: 700 }} />
+            <div style={{ display: 'flex', gap: 4 }}>
+              <CurrencySelect compact value={currency} onChange={setCurrency} />
+              <input type="text" inputMode="decimal" value={amount} placeholder="0" onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }} style={{ ...fieldStyle, fontWeight: 700, minWidth: 0 }} />
+            </div>
           </Field>
         </div>
 

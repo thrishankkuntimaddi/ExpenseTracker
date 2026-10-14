@@ -2,7 +2,10 @@
 // Edit modal for income entries.
 
 import { useState } from 'react';
-import { X, PenLine, IndianRupee, Calendar, Check, Trash2 } from 'lucide-react';
+import { X, PenLine, Calendar, Check, Trash2 } from 'lucide-react';
+import CurrencySelect from './CurrencySelect';
+import { rawOf } from '../utils/fx';
+import { currencyOf } from '../utils/money';
 import { isoToDateInput, dateInputToISO, isoToMonth } from '../utils/dateHelpers';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 import Portal from './Portal';
@@ -11,7 +14,10 @@ import { useEscape } from '../hooks/useEscape';
 export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
   useEscape(onClose);
   const [name, setName]           = useState(entry.name ?? '');
-  const [amount, setAmount]       = useState(String(entry.amount ?? ''));
+  // Edited in the currency it was entered in (not the converted figure)
+  const raw = rawOf(entry);
+  const [amount, setAmount]       = useState(String(raw.amount ?? ''));
+  const [currency, setCurrency]   = useState(currencyOf(raw));
   const [dateInput, setDateInput] = useState(isoToDateInput(entry.date));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -21,7 +27,8 @@ export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
   function handleSave() {
     if (!canSave) return;
     const isoDate = dateInputToISO(dateInput);
-    onSave({ ...entry, name: name.trim(), amount: amtNum, date: isoDate, month: isoToMonth(isoDate) });
+    const { fx, ...base } = raw;
+    onSave({ ...base, ...(currency === currencyOf(raw) && fx ? { fx } : {}), name: name.trim(), amount: amtNum, currency, date: isoDate, month: isoToMonth(isoDate) });
     onClose();
   }
 
@@ -81,12 +88,12 @@ export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
             </div>
 
             {/* Amount */}
-            <div style={{ position: 'relative', marginBottom: 10 }}>
-              <IndianRupee size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <div style={{ position: 'relative', marginBottom: 10, display: 'flex', gap: 6 }}>
+              <CurrencySelect compact value={currency} onChange={setCurrency} />
               <input type="text" inputMode="decimal" placeholder="0.00" value={amount}
                 onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }}
                 style={{
-                  width: '100%', paddingLeft: 34, paddingRight: 12,
+                  width: '100%', paddingLeft: 12, paddingRight: 12,
                   paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 20, fontWeight: 700,
                   border: '1.5px solid var(--input-border)', background: 'var(--input-bg)',
                   color: 'var(--text)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s',

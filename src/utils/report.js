@@ -16,6 +16,7 @@ import { incomeKind } from './finance';
 import { categoryOf, categoryMeta } from './categories';
 import { occurrencesBetween, occurrenceId, toKey, fromKey } from './recurring';
 import { isBill } from './bills';
+import { formatMoneyCompact } from './money';
 
 export const DEFAULT_REPORT = { day: 1 };
 export const getReportSettings = (settings) => {
@@ -67,7 +68,8 @@ export function reportWindow(reportKey, income = []) {
    Essentials are what you'd pay anyway; lifestyle is what you choose. */
 export const ESSENTIALS = new Set(['groceries', 'rent', 'bills', 'fuel', 'transport', 'health', 'education', 'family']);
 export const LIFESTYLE = new Set(['food', 'shopping', 'entertainment', 'subscriptions', 'travel', 'personal', 'gifts']);
-const SMALL = 100;   // "small spends": under ₹100 each
+export const SMALL_SPEND = 100;   // "small spends": under 100 (rupees, dollars …) each
+const SMALL = SMALL_SPEND;
 
 const nameKey = (n) => String(n ?? '').trim().toLowerCase();
 
@@ -119,7 +121,7 @@ export function analyseSpending(expenses, { start, days }, rules = {}) {
 
 /** One plain sentence about the report. */
 export function reportHeadline({ income, spent, saved, given, spentChange, savingsRate }) {
-  const rupee = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;
+  const rupee = (n) => formatMoneyCompact(n);
   const out = spent + saved + given;
   const parts = [];
   if (income > 0) {

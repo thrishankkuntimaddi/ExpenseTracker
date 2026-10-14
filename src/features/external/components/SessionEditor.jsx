@@ -4,6 +4,7 @@ import { formatAmount } from '../../../utils/dateHelpers';
 import Sheet from '../../../components/Sheet';
 import RollingNumber from '../../../motion/RollingNumber';
 import { newItemRow, newReceivedRow } from './billingHelpers';
+import { currencySymbol } from '../../../utils/money';
 
 export default function SessionEditor({
   sessionName, sessionDate, onNameChange, onDateChange,
@@ -61,7 +62,7 @@ export default function SessionEditor({
           <Sheet id="bill-items" tone="expense" rows={items} onChange={onItemsChange} makeRow={newItemRow} rowLabel={(r) => r.name}
             columns={[
               { key: 'name', label: 'Item', type: 'text', placeholder: 'Cement bags, wire…' },
-              { key: 'amount', label: 'Amount ₹', type: 'amount', width: '104px', placeholder: '0' },
+              { key: 'amount', label: `Amount ${currencySymbol()}`, type: 'amount', width: '104px', placeholder: '0' },
             ]} />
         </div>
         <div>
@@ -69,7 +70,7 @@ export default function SessionEditor({
           <Sheet id="bill-received" tone="income" rows={received} onChange={onReceivedChange} makeRow={newReceivedRow} rowLabel={(r) => r.person}
             columns={[
               { key: 'person', label: 'From', type: 'pick', placeholder: 'Who paid you?', options: knownPeople.map((n) => ({ value: n, label: n })), onCreate: (n) => n },
-              { key: 'amount', label: 'Amount ₹', type: 'amount', width: '104px', placeholder: '0' },
+              { key: 'amount', label: `Amount ${currencySymbol()}`, type: 'amount', width: '104px', placeholder: '0' },
             ]} />
         </div>
       </div>

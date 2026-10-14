@@ -2,7 +2,7 @@
 
 /** "120+80*2" → 280 · "1,200" → 1200 · invalid → NaN */
 export function evalAmount(text) {
-  const t = String(text ?? '').replace(/[₹,\s]/g, '');
+  const t = String(text ?? '').replace(/[₹$€£¥₩₫₱₦₪฿,\s]|[A-Z]{3}/g, '');
   if (!t) return NaN;
   if (!/^[\d.+\-*/]+$/.test(t) || /^[+*/]|[+\-*/]$/.test(t) || /[+\-*/]{2}/.test(t)) return NaN;
   const tokens = t.match(/\d*\.?\d+|[+\-*/]/g);

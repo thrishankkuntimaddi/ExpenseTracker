@@ -15,12 +15,14 @@ import { formatAmount, formatDateShort } from '../../utils/dateHelpers';
 import { computeTripSummary } from '../../utils/split';
 import { generateId } from '../../utils/storage';
 import { toKey } from '../../utils/recurring';
+import { currencySymbol } from '../../utils/money';
 
 const newRow = (paidBy = '', date) => ({ id: generateId(), title: '', amount: '', paidBy, splitAmong: [], date });
 const isValidRow = (r) => r.paidBy && r.title.trim() && Number(r.amount) > 0;
 const label = { fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 };
 
 export default function TripDetail({ trip, onChange, onShare, onClose, onReopen, onDelete }) {
+  const money = (n) => formatAmount(n, trip?.currency);   // the trip's own currency
   const closed = trip.status === 'closed' || trip.status === 'archived';
   const members = useMemo(() => trip.members ?? [], [trip.members]);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -118,7 +120,7 @@ export default function TripDetail({ trip, onChange, onShare, onClose, onReopen,
   const columns = [
     { key: 'paidBy', label: 'Person', type: 'pick', width: 'minmax(96px, 1fr)', placeholder: 'Who paid?', options: members.map((m) => ({ value: m.id, label: m.name })), onCreate: createMember },
     { key: 'title', label: 'What', type: 'text', width: 'minmax(110px, 1.6fr)', placeholder: 'Fuel, hotel, dinner…' },
-    { key: 'amount', label: 'Amount ₹', type: 'amount', width: '104px', placeholder: '0' },
+    { key: 'amount', label: `Amount ${currencySymbol(trip.currency)}`, type: 'amount', width: '104px', placeholder: '0' },
   ];
 
   const editing = editingMember && members.find((m) => m.id === editingMember);
@@ -139,7 +141,7 @@ export default function TripDetail({ trip, onChange, onShare, onClose, onReopen,
                   {m.name}
                   {m.id === trip.meMemberId && <span style={{ color: 'var(--external)' }}>· me</span>}
                   {partner && <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>· with {partner.name}</span>}
-                  <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{formatAmount(paidBy[m.id] ?? 0)}</span>
+                  <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{money(paidBy[m.id] ?? 0)}</span>
                 </button>
               );
             })}
@@ -184,8 +186,8 @@ export default function TripDetail({ trip, onChange, onShare, onClose, onReopen,
         <Sheet id="trip-sheet" tone="external" columns={columns} rows={rows} onChange={setSheetRows} readOnly={closed}
           makeRow={(list) => newRow(lastPayer(list), trip.startDate)} rowLabel={(r) => r.title}
           footer={<span style={{ marginLeft: 'auto', display: 'flex', gap: 12, alignItems: 'baseline' }}>
-            <span>{validExpenses.length} item{validExpenses.length === 1 ? '' : 's'}{members.length ? ` · ${formatAmount(s.perHead)} per head` : ''}</span>
-            <strong style={{ fontSize: 14, color: 'var(--text)' }}>Total {formatAmount(s.total)}</strong>
+            <span>{validExpenses.length} item{validExpenses.length === 1 ? '' : 's'}{members.length ? ` · ${money(s.perHead)} per head` : ''}</span>
+            <strong style={{ fontSize: 14, color: 'var(--text)' }}>Total {money(s.total)}</strong>
           </span>} />
         {!closed && <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '8px 2px 0', lineHeight: 1.5 }}>Enter moves to the next cell · type a new name to add a person · sums like 120+80 work · paste rows from Excel or Sheets</p>}
       </div>
@@ -200,7 +202,7 @@ export default function TripDetail({ trip, onChange, onShare, onClose, onReopen,
                 <RollingNumber value={s.total} />
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
-                {members.length} people · {formatAmount(s.perHead)} each
+                {members.length} people · {money(s.perHead)} each
                 {trip.startDate && <> · {formatDateShort(trip.startDate)}{trip.endDate ? ` – ${formatDateShort(trip.endDate)}` : ''}</>}
               </div>
             </div>
@@ -227,7 +229,7 @@ export default function TripDetail({ trip, onChange, onShare, onClose, onReopen,
           <div style={{ padding: '11px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={label}><ArrowRight size={12} /> Who pays whom</span>
             <span ref={settledRef} className="settle-pop" style={{ fontSize: 11, fontWeight: 700, color: s.isSettled ? 'var(--income)' : 'var(--expense)' }}>
-              {!s.count ? '' : s.isSettled ? 'All settled ✓' : `${formatAmount(s.outstanding)} to settle`}
+              {!s.count ? '' : s.isSettled ? 'All settled ✓' : `${money(s.outstanding)} to settle`}
             </span>
           </div>
           {!s.count || members.length < 2 ? (
@@ -244,7 +246,7 @@ export default function TripDetail({ trip, onChange, onShare, onClose, onReopen,
                   <strong>{t.fromName}</strong> <span style={{ color: 'var(--text-muted)' }}>pays</span> <strong>{t.toName}</strong>
                   {mine && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--external)', marginLeft: 6 }}>{t.to === s.meUnit ? 'to you' : 'you pay'}</span>}
                 </div>
-                <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--expense)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{formatAmount(t.amount)}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--expense)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{money(t.amount)}</span>
                 {!closed && (
                   <button onClick={(e) => markPaid(t, e)} title="Mark as paid" style={{ height: 28, padding: '0 10px', border: 'none', background: 'var(--income)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                     <Check size={12} /> Paid
@@ -255,11 +257,11 @@ export default function TripDetail({ trip, onChange, onShare, onClose, onReopen,
           })}
           {(trip.settlements?.length ?? 0) > 0 && (
             <div style={{ borderTop: '1px solid var(--border)', padding: '8px 14px 10px' }}>
-              <div style={{ ...label, marginBottom: 4 }}>Settled so far · {formatAmount(s.settledTotal)}</div>
+              <div style={{ ...label, marginBottom: 4 }}>Settled so far · {money(s.settledTotal)}</div>
               {trip.settlements.map((x) => (
                 <div key={x.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)', padding: '3px 0' }}>
                   <CheckCircle2 size={12} style={{ color: 'var(--income)', flexShrink: 0 }} />
-                  <span style={{ flex: 1, minWidth: 0 }}>{unitName[x.fromUnit] ?? '?'} → {unitName[x.toUnit] ?? '?'} · {formatAmount(x.amount)}{x.date ? ` · ${formatDateShort(x.date)}` : ''}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>{unitName[x.fromUnit] ?? '?'} → {unitName[x.toUnit] ?? '?'} · {money(x.amount)}{x.date ? ` · ${formatDateShort(x.date)}` : ''}</span>
                   {!closed && <button onClick={() => removeSettlement(x.id)} aria-label="Undo" style={{ width: 26, height: 26, border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={12} /></button>}
                 </div>
               ))}
@@ -280,10 +282,10 @@ export default function TripDetail({ trip, onChange, onShare, onClose, onReopen,
                         {u.name}{u.id === s.meUnit && <span style={{ fontSize: 10, color: 'var(--external)', marginLeft: 6 }}>you</span>}
                         {u.isGroup && <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 6 }}>one wallet</span>}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>paid {formatAmount(u.paid)} · share {formatAmount(u.share)}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>paid {money(u.paid)} · share {money(u.share)}</div>
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: pos ? 'var(--income)' : neg ? 'var(--expense)' : 'var(--text-muted)', flexShrink: 0 }}>
-                      {pos ? `gets ${formatAmount(u.remaining)}` : neg ? `owes ${formatAmount(-u.remaining)}` : 'settled'}
+                      {pos ? `gets ${money(u.remaining)}` : neg ? `owes ${money(-u.remaining)}` : 'settled'}
                     </div>
                   </div>
                   <div style={{ marginTop: 6, height: 5, borderRadius: 99, background: 'var(--surface2)', overflow: 'hidden' }}>

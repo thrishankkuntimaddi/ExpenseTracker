@@ -10,6 +10,7 @@
 //   settlements: [{ id, fromUnit, toUnit, amount, date, note? }],
 // }
 import { sumAmounts } from './finance';
+import { formatMoney } from './money';
 
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
@@ -124,7 +125,7 @@ export function computeTripSummary(trip) {
 }
 
 /** Plain-text summary for sharing on WhatsApp etc. */
-export function tripSummaryText(trip, fmt = (n) => `₹${n}`) {
+export function tripSummaryText(trip, fmt = (n) => formatMoney(n, trip?.currency)) {
   const s = computeTripSummary(trip);
   const lines = [`${trip.name} — trip summary`, `Total spent: ${fmt(s.total)} · ${s.members.length} people · ${fmt(s.perHead)} per head`, ''];
   lines.push('Paid:');

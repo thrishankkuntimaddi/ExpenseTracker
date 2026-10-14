@@ -20,6 +20,7 @@ import { useViewMonth, monthName } from '../../app/month';
 import SpendingCalendar from './components/SpendingCalendar';
 import ReportCard from './components/ReportCard';
 import { PageHeader } from '../../components/Page';
+import { formatMoneyCompact } from '../../utils/money';
 
 /* ── Custom Tooltip ── */
 function ChartTip({ active, payload, label }) {
@@ -114,7 +115,7 @@ function AvgCard({ label, value, Icon }) {
   );
 }
 
-const rupees = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;
+const rupees = (n) => formatMoneyCompact(n);
 
 export default function StatsTab({ transactions, income, selectedPeriod, theme, settings, recurring, onPatchSettings }) {
   const { month, setMonth, period } = useViewMonth(selectedPeriod);

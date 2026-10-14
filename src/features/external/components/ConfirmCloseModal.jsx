@@ -69,8 +69,8 @@ export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalanc
             color: isProfit ? 'var(--income)' : isLoss ? 'var(--expense)' : 'var(--accent)',
             fontWeight: 600,
           }}>
-            {isProfit && `✓ ₹${netBalance.toFixed(2)} will be added to Income (from ${persons})`}
-            {isLoss   && `✓ ₹${Math.abs(netBalance).toFixed(2)} will be added to Expenses (External – ${persons})`}
+            {isProfit && `✓ ${formatAmount(netBalance)} will be added to Income (from ${persons})`}
+            {isLoss   && `✓ ${formatAmount(Math.abs(netBalance))} will be added to Expenses (External – ${persons})`}
             {isEven   && `✓ Perfectly settled. No income or expense entry will be created.`}
           </div>
 

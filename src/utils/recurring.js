@@ -115,6 +115,7 @@ export function entryFromRule(rule, dateKey, paidOnKey = null) {
     id: occurrenceId(rule.id, dateKey),
     name: rule.name,
     amount: Number(rule.amount),
+    ...(rule.currency ? { currency: rule.currency } : {}),
     date,
     month: isoToMonth(date),
     recurringId: rule.id,

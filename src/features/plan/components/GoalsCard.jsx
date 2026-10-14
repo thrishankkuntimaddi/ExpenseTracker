@@ -8,6 +8,7 @@ import { Flag, Plus, Pencil, Trophy, AlertTriangle, ArrowRightLeft, CheckCircle2
 import { formatAmount } from '../../../utils/dateHelpers';
 import { computeGoalProgress, isGoalOpen, moveGoal, endGoal, reopenGoal, GOAL_STATUS } from '../../../utils/goals';
 import { toKey } from '../../../utils/recurring';
+import { formatMoneyCompact } from '../../../utils/money';
 
 const monthLabel = (key) => new Date(key).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 
@@ -24,7 +25,7 @@ export default function GoalsCard({ goals = [], transactions = [], onAdd, onEdit
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>No goals yet</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, lineHeight: 1.5 }}>₹1,00,000 by April? Put a share aside each month — with a friend, in cash or a bank — and see where it stands.</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, lineHeight: 1.5 }}>{formatMoneyCompact(100000)} by April? Put a share aside each month — with a friend, in cash or a bank — and see where it stands.</div>
         </div>
         {onAdd && (
           <button id="goal-add-empty" onClick={onAdd} style={{ padding: '8px 12px', fontSize: 12, fontWeight: 700, background: 'var(--savings)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>

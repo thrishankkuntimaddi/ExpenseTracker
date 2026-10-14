@@ -197,7 +197,7 @@ function AmountCell({ cell, value, onCommit, onKeyDown }) {
   return (
     <input {...cell} type="text" inputMode="decimal" autoComplete="off" value={text ?? String(value ?? '')} style={{ textAlign: 'right', fontWeight: 700 }}
       onFocus={(e) => { editing.current = String(value ?? ''); setText(String(value ?? '')); e.target.select(); }}
-      onChange={(e) => { const t = e.target.value; if (/^[\d.,+\-*/\s₹]*$/.test(t)) { editing.current = t; setText(t); } }}
+      onChange={(e) => { const t = e.target.value; if (/^[\d.,+\-*/\s₹$€£¥₩₫₱₦₪฿]*$/.test(t)) { editing.current = t; setText(t); } }}
       onPaste={(e) => { cell.onPaste(e); if (e.defaultPrevented) { editing.current = null; setText(null); } }}
       onBlur={commit}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Tab') commit(); onKeyDown(e); }} />

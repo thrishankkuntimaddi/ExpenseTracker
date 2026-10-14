@@ -2,7 +2,10 @@
 // Universal edit modal for expense / person / savings transactions.
 
 import { useState } from 'react';
-import { X, PenLine, IndianRupee, Calendar, Check, Trash2 } from 'lucide-react';
+import { X, PenLine, Calendar, Check, Trash2 } from 'lucide-react';
+import CurrencySelect from './CurrencySelect';
+import { rawOf } from '../utils/fx';
+import { currencyOf } from '../utils/money';
 import { TRANSACTION_TYPES, TYPE_META, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType } from '../utils/typeConfig';
 import { isoToDateInput, dateInputToISO, isoToMonth, todayInputValue } from '../utils/dateHelpers';
 import { inferCategory } from '../utils/categories';
@@ -16,7 +19,10 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
   const [name, setName]           = useState(txn.name ?? '');
   const [category, setCategory]   = useState(txn.category ?? null);
   const [categoryTouched, setCategoryTouched] = useState(false);
-  const [amount, setAmount]       = useState(String(txn.amount ?? ''));
+  // Edited in the currency it was entered in (not the converted figure)
+  const raw = rawOf(txn);
+  const [amount, setAmount]       = useState(String(raw.amount ?? ''));
+  const [currency, setCurrency]   = useState(currencyOf(raw));
   const [dateInput, setDateInput] = useState(isoToDateInput(txn.date));
   const [type, setType]           = useState(txn.type ?? 'expense');
   const [direction, setDirection] = useState(txn.direction ?? 'lent');
@@ -33,10 +39,13 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
   function handleSave() {
     if (!canSave) return;
     const isoDate = dateInputToISO(dateInput);
+    const { fx, ...base } = raw;
     const updated = {
-      ...txn,
+      ...base,
+      ...(currency === currencyOf(raw) && fx ? { fx } : {}),   // a new currency drops the old rate snapshot
       name:    name.trim(),
       amount:  amtNum,
+      currency,
       type,
       date:    isoDate,
       month:   isoToMonth(isoDate),
@@ -194,13 +203,13 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
             )}
 
             {/* Amount */}
-            <div style={{ position: 'relative', marginBottom: 10 }}>
-              <IndianRupee size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <div style={{ position: 'relative', marginBottom: 10, display: 'flex', gap: 6 }}>
+              <CurrencySelect compact value={currency} onChange={setCurrency} />
               <input
                 type="text" inputMode="decimal" placeholder="0.00" value={amount}
                 onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }}
                 style={{
-                  width: '100%', paddingLeft: 34, paddingRight: 12,
+                  width: '100%', paddingLeft: 12, paddingRight: 12,
                   paddingTop: 11, paddingBottom: 11, borderRadius: 10, fontSize: 20, fontWeight: 700,
                   border: '1.5px solid var(--input-border)',
                   background: 'var(--input-bg)', color: 'var(--text)',

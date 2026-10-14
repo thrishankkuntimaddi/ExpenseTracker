@@ -1,5 +1,9 @@
 // ─── useFirestoreData hook ───────────────────────────────────────
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { setDisplayCurrency, currencyOf, isCurrency, DEFAULT_CURRENCY } from "../utils/money";
+import { viewEntries, unviewEntry, isMixed } from "../utils/fx";
+import { localDateKey } from "../utils/dateHelpers";
+import { rateBetween, perUsd, ensureRates, refreshLatest, useRatesVersion } from "../services/rates";
 import { background, readableFirestoreError } from "../services/sync";
 import {
   subscribeToUserData,
@@ -29,10 +33,14 @@ const DEFAULT_SETTINGS = {};
  *
  * Every mutation updates the UI optimistically and rolls back if the write
  * is rejected; the failure is surfaced through `writeError`.
+ *
+ * Currencies: state holds entries as stored; `transactions` / `income` are
+ * returned as views in the display currency (settings.currency) — see
+ * utils/fx.js. Updates accept views and store the right currency back.
  */
 export function useFirestoreData(uid, email) {
-  const [transactions, setTransactions] = useState([]);
-  const [income, setIncome]             = useState([]);
+  const [transactions, setTransactions] = useState([]);   // as stored
+  const [income, setIncome]             = useState([]);   // as stored
   const [settings, setSettings]         = useState(DEFAULT_SETTINGS);
   const [recentlyDeleted, setRecentlyDeleted] = useState([]);
   const [writeError, setWriteError]     = useState(null);
@@ -85,10 +93,35 @@ export function useFirestoreData(uid, email) {
   }, []);
   const clearWriteError = useCallback(() => setWriteError(null), []);
 
+  /* ── Currency views ── */
+  const display = isCurrency(settings?.currency) ? settings.currency : DEFAULT_CURRENCY;
+  setDisplayCurrency(display);          // formatAmount() everywhere follows it
+  const displayRef = useRef(display);
+  useEffect(() => { displayRef.current = display; }, [display]);
+  const ratesVersion = useRatesVersion();
+  const txnView = useMemo(() => viewEntries(transactions, display, rateBetween),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ratesVersion: re-convert when rates land
+    [transactions, display, ratesVersion]);
+  const incomeView = useMemo(() => viewEntries(income, display, rateBetween),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [income, display, ratesVersion]);
+
+  // Fetch the rates for the days that need converting (cached forever after)
+  useEffect(() => {
+    if (!loaded || !isMixed([transactions, income], display)) return undefined;
+    const t = setTimeout(() => {
+      const foreign = [...transactions, ...income].filter((e) => currencyOf(e) !== display && !(e.fx?.[currencyOf(e)] && e.fx?.[display]));
+      const codes = [...new Set([display, ...foreign.map(currencyOf)])];
+      refreshLatest().finally(() => ensureRates(foreign.map((e) => localDateKey(e.date)).filter(Boolean), codes));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [loaded, transactions, income, display]);
+
   /* ── Transactions ── */
 
-  const addTransaction = useCallback(async (txn) => {
+  const addTransaction = useCallback(async (entry) => {
     if (!uidRef.current) return false;
+    const txn = stamp(entry, displayRef.current);
     setTransactions(prev => [...prev, txn]);
     background(fsAddTxn(uidRef.current, txn), (err) => {
       reportError('add the transaction', err);
@@ -97,8 +130,9 @@ export function useFirestoreData(uid, email) {
     return true;
   }, [reportError]);
 
-  const updateTransaction = useCallback(async (updated) => {
+  const updateTransaction = useCallback(async (edited) => {
     if (!uidRef.current) return false;
+    const updated = unviewEntry(edited, displayRef.current);
     const previous = txnsRef.current.find(t => t.id === updated.id);
     setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t));
     background(fsUpdateTxn(uidRef.current, updated), (err) => {
@@ -123,8 +157,9 @@ export function useFirestoreData(uid, email) {
 
   /* ── Income ── */
 
-  const addIncome = useCallback(async (entry) => {
+  const addIncome = useCallback(async (given) => {
     if (!uidRef.current) return false;
+    const entry = stamp(given, displayRef.current);
     setIncome(prev => [...prev, entry]);
     background(fsAddIncome(uidRef.current, entry), (err) => {
       reportError('add the income entry', err);
@@ -133,8 +168,9 @@ export function useFirestoreData(uid, email) {
     return true;
   }, [reportError]);
 
-  const updateIncome = useCallback(async (updated) => {
+  const updateIncome = useCallback(async (edited) => {
     if (!uidRef.current) return false;
+    const updated = unviewEntry(edited, displayRef.current);
     const previous = incomeRef.current.find(i => i.id === updated.id);
     setIncome(prev => prev.map(i => i.id === updated.id ? updated : i));
     background(fsUpdateIncome(uidRef.current, updated), (err) => {
@@ -210,11 +246,26 @@ export function useFirestoreData(uid, email) {
   }, [reportError]);
 
   return {
-    transactions, income, settings, recentlyDeleted, loaded,
+    transactions: txnView, income: incomeView, settings, recentlyDeleted, loaded, currency: display,
     writeError, clearWriteError, reportError,
     addTransaction, updateTransaction, deleteTransaction,
     addIncome, updateIncome, deleteIncome,
     saveSettings, patchSettings,
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   };
+}
+
+/**
+ * A new entry, ready to store: it always records its currency (the display
+ * currency unless the form chose another) and, when that differs from the
+ * display currency, the rates in use right now — so it always converts the way
+ * it looked when it was entered.
+ */
+export function stamp(entry, display) {
+  const currency = isCurrency(entry?.currency) ? entry.currency : display;
+  const { orig: _o, fxRate: _r, ...rest } = entry;
+  if (currency === display) return { ...rest, currency };
+  const day = localDateKey(rest.date) ?? undefined;
+  const a = perUsd(currency, day), b = perUsd(display, day);
+  return { ...rest, currency, ...(a?.exact && b?.exact ? { fx: { [currency]: a.rate, [display]: b.rate } } : {}) };
 }

@@ -22,9 +22,11 @@ import { normaliseUi } from '../../utils/uiPrefs';
 import { useViewMonth, monthName } from '../../app/month';
 import { debtLedger, debtTotals } from '../../utils/debts';
 import MonthSwitcher from '../../components/MonthSwitcher';
+import { formatMoneyCompact, entryCurrency } from '../../utils/money';
+import { formatEntryAmount } from '../../utils/money';
 
 const linkBtn = { padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
-const rupees = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;   // compact: no paise
+const rupees = (n) => formatMoneyCompact(n);   // compact: no paise
 const capitalise = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 export default function TodayTab(props) {
@@ -78,14 +80,14 @@ export default function TodayTab(props) {
   /* Quick entry: "chai 20" ⏎ → a categorised expense, dated now. A live
      preview shows exactly what will be saved before you press Add. */
   const parsed = parseQuickEntry(quick);
-  const preview = parsed && { name: capitalise(parsed.name), amount: parsed.amount, category: inferCategory(parsed.name, categoryRules) };
+  const preview = parsed && { name: capitalise(parsed.name), amount: parsed.amount, currency: parsed.currency ?? entryCurrency.get(), category: inferCategory(parsed.name, categoryRules) };
   function submitQuick(e) {
     e.preventDefault();
     if (!preview) return;
     const isoDate = dateInputToISO(todayInputValue());
-    const entry = { id: generateId(), type: 'expense', name: preview.name, amount: preview.amount, category: preview.category, date: isoDate, month: isoToMonth(isoDate) };
+    const entry = { id: generateId(), type: 'expense', name: preview.name, amount: preview.amount, currency: preview.currency, category: preview.category, date: isoDate, month: isoToMonth(isoDate) };
     onAdd(entry);
-    if (shell?.celebrate) shell.celebrate(entry); else shell?.toast(`Added ${preview.name} · ${formatAmount(preview.amount)}`);
+    if (shell?.celebrate) shell.celebrate(entry); else shell?.toast(`Added ${preview.name} · ${formatAmount(preview.amount, preview.currency)}`);
     setQuick('');
   }
 
@@ -141,6 +143,11 @@ export default function TodayTab(props) {
           : <Metric label="Saved" value={stats?.totalSavings ?? 0} />}
         <Metric label="Balance" value={stats?.balance ?? 0} />
       </div>
+      {stats?.balanceParts?.length > 0 && (
+        <div id="home-balance-fx" style={{ fontSize: 10.5, marginTop: 8, opacity: 0.85, lineHeight: 1.45 }}>
+          Balance at today’s rates: {stats.balanceParts.map((p) => formatAmount(p.amount, p.currency)).join(' + ').replace(/\+ -/g, '− ').replace(/\+ −/g, '− ')}
+        </div>
+      )}
     </div>
   );
 
@@ -148,7 +155,7 @@ export default function TodayTab(props) {
   const addPanel = shell?.desktop && (
     <div className="card home-add-panel" id="home-add-panel" style={{ padding: 16, marginBottom: 14 }}>
       <AddPanel inline compact {...props} onAdd={onAdd} onAddIncome={onAddIncome}
-        onSaved={(e) => (shell.celebrate ? shell.celebrate(e) : shell.toast?.(`Added ${e.name} · ${formatAmount(e.amount)}`))} />
+        onSaved={(e) => (shell.celebrate ? shell.celebrate(e) : shell.toast?.(`Added ${e.name} · ${formatAmount(e.amount, e.currency)}`))} />
     </div>
   );
 
@@ -167,7 +174,7 @@ export default function TodayTab(props) {
       {quick.trim() && (
         <div id="quick-preview" style={{ fontSize: 12, padding: '2px 0 6px 24px', color: preview ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
           {preview
-            ? <>Expense · <strong style={{ color: 'var(--text)' }}>{preview.name}</strong> · {formatAmount(preview.amount)} · {categoryMeta(preview.category).label} · today</>
+            ? <>Expense · <strong style={{ color: 'var(--text)' }}>{preview.name}</strong> · {formatAmount(preview.amount, preview.currency)} · {categoryMeta(preview.category).label} · today</>
             : 'Add an amount — e.g. "petrol 500" or "250 swiggy"'}
         </div>
       )}
@@ -302,7 +309,7 @@ export default function TodayTab(props) {
                   color: t.color,
                   marginLeft: 12, flexShrink: 0,
                 }}>
-                  {txn.type === 'person' && txn.direction === 'repayment' ? '+' : ''}{formatAmount(txn.amount)}
+                  {txn.type === 'person' && txn.direction === 'repayment' ? '+' : ''}{formatEntryAmount(txn)}
                 </span>
               </div>
             );

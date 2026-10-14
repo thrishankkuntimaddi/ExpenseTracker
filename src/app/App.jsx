@@ -268,7 +268,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     const tone = debt ? 'violet' : entry.type === 'income' ? 'green' : entry.type === 'savings' ? 'blue' : 'gold';
     const from = document.activeElement && document.activeElement !== document.body ? document.activeElement : document.querySelector('[id^="btn-save-"]');
     flyCoin({ from, to: ['#home-summary', '#tab-today', '#side-today'], tone });
-    setToastMsg({ text: `Added ${entry.name} · ${formatAmount(entry.amount)}`, sign: tone === 'green' ? 'wallet' : tone === 'blue' ? 'piggy' : 'check' });
+    setToastMsg({ text: `Added ${entry.name} · ${formatAmount(entry.amount, entry.currency)}`, sign: tone === 'green' ? 'wallet' : tone === 'blue' ? 'piggy' : 'check' });
   };
   const shell = {
     user, goTo, back: goBack, barTabs, desktop: isDesktop, active: activeTab, celebrate,

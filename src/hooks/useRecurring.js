@@ -12,9 +12,22 @@ import {
 import { dueOccurrences, entryFromRule, nextOccurrence, toKey } from '../utils/recurring';
 import { generateId } from '../utils/storage';
 import { background } from '../services/sync';
+import { getDisplayCurrency } from '../utils/money';
+import { viewEntry, rawOf, unviewEntry } from '../utils/fx';
+import { rateBetween, useRatesVersion } from '../services/rates';
+
+/* Rules are plans, so a rule in another currency is shown at today's rate
+   (views, as in utils/fx.js); posting and saving always use the stored rule. */
+const viewRule = (r, display) => viewEntry({ ...r, fxLive: true }, display, rateBetween);
+const storedRule = (r, display) => { const { fxLive: _l, ...rest } = unviewEntry(r, display) ?? r; return rest; };
 
 export function useRecurring({ uid, transactions, income, loaded, addTransaction, addIncome, reportError }) {
-  const [rules, setRules] = useState([]);
+  const [rawRules, setRules] = useState([]);
+  const display = getDisplayCurrency();
+  const ratesVersion = useRatesVersion();
+  const rules = useMemo(() => rawRules.map((r) => { const v = viewRule(r, display); return v.orig ? v : r; }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ratesVersion: re-value at new rates
+    [rawRules, display, ratesVersion]);
   const [rulesLoaded, setRulesLoaded] = useState(false);
   const autoPostedRef = useRef(new Set());
 
@@ -47,7 +60,7 @@ export function useRecurring({ uid, transactions, income, loaded, addTransaction
 
   const post = useCallback(async ({ rule, dateKey, paidOn = null }) => {
     if (!uid) return false;
-    const { entry, target } = entryFromRule(rule, dateKey, paidOn);
+    const { entry, target } = entryFromRule(rawOf(rule), dateKey, paidOn);
     const ok = target === 'income' ? await addIncome(entry) : await addTransaction(entry);
     if (!ok) return false;
     const last = rule.lastHandledKey && rule.lastHandledKey > dateKey ? rule.lastHandledKey : dateKey;
@@ -81,8 +94,9 @@ export function useRecurring({ uid, transactions, income, loaded, addTransaction
     });
   }, [due, loaded, rulesLoaded, post]);
 
-  const saveRule = useCallback(async (rule) => {
+  const saveRule = useCallback(async (given) => {
     if (!uid) return false;
+    const rule = storedRule(given, display);
     const full = {
       active: true, autoPost: false, createdAt: new Date().toISOString(),
       ...rule,
@@ -100,15 +114,15 @@ export function useRecurring({ uid, transactions, income, loaded, addTransaction
     });
     background(upsertRecurringRule(uid, full), (err) => reportError?.('save the recurring rule', err));
     return true;
-  }, [uid, reportError]);
+  }, [uid, reportError, display]);
 
   const removeRule = useCallback(async (id) => {
     if (!uid) return false;
-    const prev = rules;
+    const prev = rawRules;
     setRules((p) => p.filter((r) => r.id !== id));
     background(deleteRecurringRule(uid, id), (err) => { reportError?.('delete the recurring rule', err); setRules(prev); });
     return true;
-  }, [uid, rules, reportError]);
+  }, [uid, rawRules, reportError]);
 
   const toggleActive = useCallback((rule) => saveRule({ ...rule, active: rule.active === false }), [saveRule]);
 

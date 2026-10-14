@@ -11,6 +11,7 @@ import { useStats } from '../../hooks/useStats';
 import { PageHeader, HeaderAction } from '../../components/Page';
 import { Plus } from 'lucide-react';
 import { useShell } from '../../app/shellContext';
+import { formatEntryAmount } from '../../utils/money';
 
 export default function IncomeTab({
   income: rawIncome = [], onUpdateIncome, onDeleteIncome,
@@ -197,7 +198,7 @@ export default function IncomeTab({
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontSize: 13, fontWeight: 700, color: isCarryForward(entry) ? 'var(--accent)' : entry.isRepaymentRec ? '#059669' : entry.isBorrowed ? 'var(--person)' : 'var(--income)' }}>
-                              {entry.amount < 0 ? '−' : '+'}{formatAmount(Math.abs(entry.amount))}
+                              {entry.amount < 0 ? '−' : '+'}{formatEntryAmount(entry, Math.abs(entry.amount)).replace('-', '')}
                             </span>
 
                             {isCarryForward(entry) && (

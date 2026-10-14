@@ -6,7 +6,7 @@ import { tripSummaryText } from '../../utils/split';
 import { formatAmount } from '../../utils/dateHelpers';
 
 export default function TripShareModal({ trip, onClose }) {
-  const text = tripSummaryText(trip, (n) => formatAmount(n));
+  const text = tripSummaryText(trip, (n) => formatAmount(n, trip.currency));
   const [copied, setCopied] = useState(false);
   const canShare = typeof navigator !== 'undefined' && !!navigator.share;
 

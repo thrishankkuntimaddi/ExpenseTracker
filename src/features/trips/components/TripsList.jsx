@@ -55,12 +55,12 @@ export default function TripsList({
                   <div style={{ display: 'flex', gap: 18, marginTop: 10 }}>
                     <div>
                       <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>Spent</div>
-                      <div style={{ fontSize: 14, fontWeight: 750, color: 'var(--text)' }}>{formatAmount(s.total)}</div>
+                      <div style={{ fontSize: 14, fontWeight: 750, color: 'var(--text)' }}>{formatAmount(s.total, t.currency)}</div>
                     </div>
                     {s.count > 0 && (
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>{s.isSettled ? 'Status' : 'To settle'}</div>
-                        <div style={{ fontSize: 14, fontWeight: 750, color: s.isSettled ? 'var(--income)' : 'var(--expense)' }}>{s.isSettled ? 'Settled' : formatAmount(s.outstanding)}</div>
+                        <div style={{ fontSize: 14, fontWeight: 750, color: s.isSettled ? 'var(--income)' : 'var(--expense)' }}>{s.isSettled ? 'Settled' : formatAmount(s.outstanding, t.currency)}</div>
                       </div>
                     )}
                   </div>

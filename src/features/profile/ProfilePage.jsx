@@ -12,6 +12,7 @@ import { PAGE_KEYS, SLOT_KEYS, HOME_SECTIONS, normaliseUi, serialiseUi, move, se
 import { Section, Group } from '../settings/SettingsGroup';
 import SettingsTab from '../settings/SettingsTab';
 import RemindersCard from '../settings/RemindersCard';
+import CurrencyCard from '../settings/CurrencyCard';
 import { useShell } from '../../app/shellContext';
 
 export default function ProfilePage(props) {
@@ -88,6 +89,9 @@ export default function ProfilePage(props) {
 
         {/* ── Animations: one row ── */}
         <MotionRow />
+
+        {/* ── Currency ── */}
+        <CurrencyCard settings={settings} transactions={transactions} income={income} onPatchSettings={onPatchSettings} />
 
         {/* ── Reminders: tiles ── */}
         <section id="group-reminders" style={{ marginBottom: 18, scrollMarginTop: 12 }}>

@@ -8,11 +8,14 @@ import { fieldStyle } from '../../components/formTokens';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { generateId } from '../../utils/storage';
 import { toKey } from '../../utils/recurring';
+import { getDisplayCurrency } from '../../utils/money';
+import CurrencySelect from '../../components/CurrencySelect';
 
 export default function TripModal({ trip, onSave, onDelete, onClose }) {
   const [name, setName] = useState(trip?.name ?? '');
   const [startDate, setStartDate] = useState(trip?.startDate ?? toKey(new Date()));
   const [endDate, setEndDate] = useState(trip?.endDate ?? '');
+  const [currency, setCurrency] = useState(trip?.currency ?? getDisplayCurrency());
   const [members, setMembers] = useState(() => (trip?.members?.length ? trip.members.map((m) => ({ ...m })) : [{ id: generateId(), name: 'Me' }]));
   const [meId, setMeId] = useState(trip?.meMemberId ?? (trip?.members?.length ? null : null));
   const [newName, setNewName] = useState('');
@@ -55,7 +58,7 @@ export default function TripModal({ trip, onSave, onDelete, onClose }) {
     const final = cleaned.map((m) => (m.groupId && counts[m.groupId] > 1 ? m : { id: m.id, name: m.name }));
     onSave({
       ...(trip ?? {}),
-      name: name.trim(), startDate, endDate: endDate || undefined,
+      name: name.trim(), startDate, endDate: endDate || undefined, currency,
       members: final,
       meMemberId: final.some((m) => m.id === effectiveMe) ? effectiveMe : undefined,
     });
@@ -83,6 +86,10 @@ export default function TripModal({ trip, onSave, onDelete, onClose }) {
           <Field label="From"><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={fieldStyle} /></Field>
           <Field label="To (optional)"><input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} style={fieldStyle} /></Field>
         </div>
+
+        <Field label="Currency" hint="Everything on this trip is in this currency. Your share is converted at the trip’s rate when you close it.">
+          <CurrencySelect id="trip-currency" value={currency} onChange={setCurrency} />
+        </Field>
 
         <Field label={`People (${validMembers.length})`} hint="Tick who you are. “Pays with” joins two people into one wallet — their spending and dues are combined.">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

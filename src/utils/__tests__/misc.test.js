@@ -7,9 +7,18 @@ import { csvToRecords } from '../importHelpers';
 describe('parseQuickEntry', () => {
   it('splits a trailing or leading amount off the description', () => {
     expect(parseQuickEntry('chai 20')).toEqual({ name: 'chai', amount: 20 });
-    expect(parseQuickEntry('Swiggy dinner ₹250.50')).toEqual({ name: 'Swiggy dinner', amount: 250.5 });
+    expect(parseQuickEntry('Swiggy dinner ₹250.50')).toEqual({ name: 'Swiggy dinner', amount: 250.5, currency: 'INR' });
     expect(parseQuickEntry('250 swiggy')).toEqual({ name: 'swiggy', amount: 250 });
-    expect(parseQuickEntry('rs 40 auto')).toEqual({ name: 'auto', amount: 40 });
+    expect(parseQuickEntry('rs 40 auto')).toEqual({ name: 'auto', amount: 40, currency: 'INR' });
+  });
+  it('picks up a currency written with the amount', () => {
+    expect(parseQuickEntry('coffee $4.50')).toEqual({ name: 'coffee', amount: 4.5, currency: 'USD' });
+    expect(parseQuickEntry('taxi 30 AED')).toEqual({ name: 'taxi', amount: 30, currency: 'AED' });
+    expect(parseQuickEntry('€12 museum')).toEqual({ name: 'museum', amount: 12, currency: 'EUR' });
+    expect(parseQuickEntry('lunch 400rs')).toEqual({ name: 'lunch', amount: 400, currency: 'INR' });
+    expect(parseQuickEntry('fuel 20 kwd')).toEqual({ name: 'fuel', amount: 20, currency: 'KWD' });
+    expect(parseQuickEntry('bus ticket abc 20')).toEqual({ name: 'bus ticket abc', amount: 20 });
+    expect(parseQuickEntry('20 abc tea')).toEqual({ name: 'abc tea', amount: 20 });
   });
   it('leaves ordinary names alone', () => {
     expect(parseQuickEntry('Hotel 7 Hills')).toBeNull();

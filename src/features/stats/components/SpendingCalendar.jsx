@@ -10,6 +10,7 @@ import { formatAmount, localDateKey, localMonthKey } from '../../../utils/dateHe
 import { sumAmounts } from '../../../utils/finance';
 import { categoryOf, categoryColor } from '../../../utils/categories';
 import { CategoryIcon } from '../../../components/CategoryPicker';
+import { formatEntryAmount } from '../../../utils/money';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -114,7 +115,7 @@ export default function SpendingCalendar({ transactions = [], initialMonth, mont
               <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', fontSize: 12 }}>
                 <CategoryIcon category={c} size={12} style={{ color: categoryColor(c, theme), flexShrink: 0 }} />
                 <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{t.name}</span>
-                <span style={{ fontWeight: 700, color: 'var(--text)' }}>{formatAmount(t.amount)}</span>
+                <span style={{ fontWeight: 700, color: 'var(--text)' }}>{formatEntryAmount(t)}</span>
               </div>
             );
           })}

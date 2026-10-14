@@ -12,6 +12,7 @@
 import { localMonthKey } from './dateHelpers';
 import { formatMonthLabel } from './periodHelpers';
 import { computeStats } from './finance';
+import { byCurrency, isMixed } from './fx';
 
 export const DEFAULT_CARRY_SETTINGS = { enabled: true, startMonth: '2026-11', includeNegative: false };
 
@@ -73,8 +74,26 @@ export function carryEntry(monthKey, { amount, from }) {
   };
 }
 
-/** income + synthetic carry entries (zero amounts are skipped). */
-export function withCarryForward(income = [], transactions = [], settings, upToMonth) {
+/**
+ * income + synthetic carry entries (zero amounts are skipped).
+ * With several currencies, money is carried per currency (what is left in
+ * dollars stays dollars) and each carry line is valued at today's rate —
+ * pass { display, view } where view(entry) converts a stored-form entry.
+ */
+export function withCarryForward(income = [], transactions = [], settings, upToMonth, fx) {
+  if (fx && isMixed([income, transactions], fx.display)) {
+    const t = byCurrency(transactions), i = byCurrency(income.filter((e) => !e.isCarryForward));
+    const extra = [];
+    [...new Set([...Object.keys(t), ...Object.keys(i)])].sort().forEach((cur) => {
+      const map = computeCarryForward({ transactions: t[cur] ?? [], income: i[cur] ?? [], settings, upToMonth });
+      Object.entries(map).filter(([, v]) => v.amount !== 0).forEach(([k, v]) => {
+        const e = { ...carryEntry(k, v), currency: cur, fxLive: true };
+        if (cur !== fx.display) e.id = `carry_${k}_${cur}`;
+        extra.push(fx.view(e));
+      });
+    });
+    return extra.length ? [...income, ...extra] : income;
+  }
   const map = computeCarryForward({ transactions, income, settings, upToMonth });
   const extra = Object.entries(map).filter(([, v]) => v.amount !== 0).map(([k, v]) => carryEntry(k, v));
   return extra.length ? [...income, ...extra] : income;

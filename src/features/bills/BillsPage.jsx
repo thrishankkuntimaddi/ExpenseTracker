@@ -14,6 +14,7 @@ import { describeSchedule, fromKey, toKey, monthlyEquivalent } from '../../utils
 import { EMPTY_RULES, categoryMeta } from '../../utils/categories';
 import { useShell } from '../../app/shellContext';
 import { useViewMonth } from '../../app/month';
+import { formatEntryAmount } from '../../utils/money';
 
 const STATUS = {
   paid:     { label: 'Paid',     color: 'var(--income)' },
@@ -55,7 +56,7 @@ export default function BillsPage({ transactions = [], income = [], recurring, s
     // Paying ahead of the due date records today's date on the entry
     const ok = await recurring.post({ rule: item.rule, dateKey: item.dateKey, paidOn: item.dateKey > todayKey ? todayKey : null });
     setBusy((b) => { const n = { ...b }; delete n[k]; return n; });
-    if (ok) shell?.toast(`Paid ${item.rule.name} · ${formatAmount(item.amount)}`);
+    if (ok) shell?.toast(`Paid ${item.rule.name} · ${formatEntryAmount(item.rule, item.amount)}`);
   }
 
   return (
@@ -115,7 +116,7 @@ export default function BillsPage({ transactions = [], income = [], recurring, s
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 750, color: item.status === 'paid' ? 'var(--text-secondary)' : KIND_COLOR[item.rule.kind], fontVariantNumeric: 'tabular-nums' }}>{formatAmount(item.amount)}</div>
+                    <div style={{ fontSize: 14, fontWeight: 750, color: item.status === 'paid' ? 'var(--text-secondary)' : KIND_COLOR[item.rule.kind], fontVariantNumeric: 'tabular-nums' }}>{formatEntryAmount(item.rule, item.amount)}</div>
                   </div>
                   {item.status === 'paid' ? (
                     <span aria-label="Paid" style={{ ...roundBtn, background: 'var(--income-bg)', color: 'var(--income)' }}><Check size={15} /></span>
@@ -165,7 +166,7 @@ export default function BillsPage({ transactions = [], income = [], recurring, s
                         {describeSchedule(r).replace('Monthly on the', 'Every')}{r.kind === 'expense' && r.category ? ` · ${categoryMeta(r.category).label}` : r.kind === 'income' ? ' · income' : ' · savings'}{paused ? ' · paused' : r.autoPost ? ' · auto' : ''}
                       </div>
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 750, color: KIND_COLOR[r.kind], flexShrink: 0 }}>{r.kind === 'income' ? '+' : ''}{formatAmount(r.amount)}</span>
+                    <span style={{ fontSize: 13, fontWeight: 750, color: KIND_COLOR[r.kind], flexShrink: 0 }}>{r.kind === 'income' ? '+' : ''}{formatEntryAmount(r)}</span>
                     <button onClick={() => recurring.toggleActive(r)} aria-label={paused ? `Resume ${r.name}` : `Pause ${r.name}`} style={{ ...roundBtn, border: 'none', cursor: 'pointer' }}>{paused ? <Play size={12} /> : <Pause size={12} />}</button>
                     <button onClick={() => setRuleModal({ rule: r })} aria-label={`Edit ${r.name}`} style={{ ...roundBtn, border: 'none', cursor: 'pointer' }}><Pencil size={12} /></button>
                   </div>

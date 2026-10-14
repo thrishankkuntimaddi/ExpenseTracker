@@ -447,7 +447,7 @@ export default function RecentlyDeletedModal({
                               color: isIncome ? 'var(--income)' : 'var(--text)',
                             }}
                           >
-                            {formatAmount(item.amount)}
+                            {formatAmount(item.amount, item.currency)}
                           </div>
                         </div>
 
