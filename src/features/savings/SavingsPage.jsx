@@ -15,7 +15,7 @@ import { formatAmount, localMonthKey } from '../../utils/dateHelpers';
 import { generateId } from '../../utils/storage';
 import { useShell } from '../../app/shellContext';
 import { useViewMonth, monthName } from '../../app/month';
-import { formatEntryAmount } from '../../utils/money';
+import EntryAmount from '../../components/EntryAmount';
 
 const sum = (list) => list.reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
@@ -126,7 +126,7 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
                       <div style={{ fontSize: 13, fontWeight: 650, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {st.label}{t.platform ? ` · ${t.platform}` : ''}{t.goalId ? ` · ${goals.find((g) => g.id === t.goalId)?.name ?? 'goal'}` : ''}{t.heldWith ? ` · with ${t.heldWith}` : ''}</div>
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 750, color: 'var(--savings)' }}>{formatEntryAmount(t)}</span>
+                    <span style={{ fontSize: 13, fontWeight: 750, color: 'var(--savings)' }}><EntryAmount entry={t} /></span>
                   </div>
                 );
               })}

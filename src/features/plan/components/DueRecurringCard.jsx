@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { CalendarClock, Check, SkipForward, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatAmount } from '../../../utils/dateHelpers';
+import EntryAmount from '../../../components/EntryAmount';
 import { fromKey } from '../../../utils/recurring';
 import { CategoryBadge } from '../../../components/CategoryPicker';
 import ConfirmDeleteModal from '../../../components/ConfirmDeleteModal';
@@ -103,7 +104,7 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
               </div>
             </div>
             <span style={{ fontSize: 13, fontWeight: 800, color: KIND_COLOR[rule.kind] ?? 'var(--text)', flexShrink: 0 }}>
-              {rule.kind === 'income' ? '+' : ''}{formatAmount(rule.amount)}
+              <EntryAmount entry={rule} prefix={rule.kind === 'income' ? '+' : ''} />
             </span>
             <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
               <button

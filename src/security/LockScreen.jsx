@@ -113,7 +113,7 @@ function PinEntry({ lock, user, onForgot }) {
       </div>
 
       <RemoteUnlock lock={lock} />
-      <button id="lock-forgot" onClick={onForgot} style={{ ...linkBtn, marginTop: 6 }}><KeyRound size={13} /> Forgot PIN?</button>
+      <div><button id="lock-forgot" onClick={onForgot} style={{ ...linkBtn, marginTop: 12 }}><KeyRound size={13} /> Forgot PIN?</button></div>
     </>
   );
 }

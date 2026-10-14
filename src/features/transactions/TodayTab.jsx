@@ -22,8 +22,8 @@ import { normaliseUi } from '../../utils/uiPrefs';
 import { useViewMonth, monthName } from '../../app/month';
 import { debtLedger, debtTotals } from '../../utils/debts';
 import MonthSwitcher from '../../components/MonthSwitcher';
-import { formatMoneyCompact, entryCurrency } from '../../utils/money';
-import { formatEntryAmount } from '../../utils/money';
+import { formatMoneyCompact, entryCurrency, formatEntryAmount } from '../../utils/money';
+import EntryAmount from '../../components/EntryAmount';
 
 const linkBtn = { padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
 const rupees = (n) => formatMoneyCompact(n);   // compact: no paise
@@ -204,10 +204,10 @@ export default function TodayTab(props) {
                   {b.rule.autoPost ? `Auto · ${dueLabel(b.dateKey, todayKey)}` : dueLabel(b.dateKey, todayKey)}
                 </div>
               </div>
-              <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{formatAmount(b.amount)}</span>
+              <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}><EntryAmount entry={b.rule} amount={b.amount} /></span>
               {!b.rule.autoPost && recurring?.post && (
                 <button id={`home-pay-${b.rule.id}`} onClick={async () => {
-                  if (await recurring.post({ rule: b.rule, dateKey: b.dateKey, paidOn: b.dateKey > todayKey ? todayKey : null })) shell?.toast(`Paid ${b.rule.name} · ${formatAmount(b.amount)}`);
+                  if (await recurring.post({ rule: b.rule, dateKey: b.dateKey, paidOn: b.dateKey > todayKey ? todayKey : null })) shell?.toast(`Paid ${b.rule.name} · ${formatEntryAmount(b.rule, b.amount)}`);
                 }} style={{ padding: '7px 13px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: b.status === 'upcoming' ? 'var(--surface2)' : 'var(--income)', color: b.status === 'upcoming' ? 'var(--text-secondary)' : '#fff' }}>
                   Pay
                 </button>
@@ -309,7 +309,7 @@ export default function TodayTab(props) {
                   color: t.color,
                   marginLeft: 12, flexShrink: 0,
                 }}>
-                  {txn.type === 'person' && txn.direction === 'repayment' ? '+' : ''}{formatEntryAmount(txn)}
+                  <EntryAmount entry={txn} prefix={txn.type === 'person' && txn.direction === 'repayment' ? '+' : ''} />
                 </span>
               </div>
             );

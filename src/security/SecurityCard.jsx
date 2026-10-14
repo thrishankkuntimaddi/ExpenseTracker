@@ -156,7 +156,7 @@ function DeviceList({ devices, lockOn }) {
       )}
       {shown.map((d, i) => {
         const isThis = d.id === devices.thisId;
-        const liveNow = isThis || isLive(d, now);
+        const liveNow = isThis || (!d.locked && isLive(d, now));
         const Icon = KIND_ICON[d.platform] ?? (/Android|iPhone/.test(d.name ?? '') ? Smartphone : /Desktop/.test(d.name ?? '') ? Laptop : Globe);
         return (
           <div key={d.id} className="device-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: i ? '1px solid var(--border)' : 'none' }}>
@@ -169,7 +169,7 @@ function DeviceList({ devices, lockOn }) {
                 {isThis && <span style={{ fontSize: 10.5, color: 'var(--accent)', fontWeight: 700 }}>this device</span>}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                {liveNow ? 'On screen now' : d.lastSeen ? `Last seen ${timeAgo(d.lastSeen)}` : 'Not seen yet'}{d.kind ? ` · ${d.kind}` : ''}
+                {d.locked && !isThis ? 'Needs the PIN to open' : liveNow ? 'On screen now' : d.lastSeen ? `Last seen ${timeAgo(d.lastSeen)}` : 'Not seen yet'}{d.kind ? ` · ${d.kind}` : ''}
                 {d.unlockRequest && now - d.unlockRequest.at < 120000 && ' · asking to unlock'}
               </div>
             </div>

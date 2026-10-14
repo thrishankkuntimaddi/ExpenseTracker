@@ -13,7 +13,7 @@ import EditTransactionModal from '../../components/EditTransactionModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import ProfileButton from '../../components/ProfileButton';
 import BackButton from '../../components/BackButton';
-import { formatEntryAmount } from '../../utils/money';
+import EntryAmount from '../../components/EntryAmount';
 
 const ALL_TIME = { type: 'all' };
 
@@ -330,7 +330,7 @@ export default function HistoryTab({
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                               <span style={{ fontSize: 13, fontWeight: 700, color: amtColor }}>
-                                {txn.type === 'person' && txn.direction === 'repayment' ? '+' : ''}{formatEntryAmount(txn)}
+                                <EntryAmount entry={txn} prefix={txn.type === 'person' && txn.direction === 'repayment' ? '+' : ''} />
                               </span>
                               <button
                                 onClick={e => { e.stopPropagation(); setEditingTxn(txn); }}

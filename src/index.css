@@ -444,3 +444,7 @@ button:disabled { cursor: not-allowed; }
 @keyframes livePulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--income) 60%, transparent); } 100% { box-shadow: 0 0 0 6px transparent; } }
 .locked-tag { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 99px; font-size: 9.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); background: var(--surface2); }
 @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+/* Security banners float over pages: dense glass so the page never shows through */
+.security-banners .card { background: var(--glass-fill-dense, rgba(255, 255, 255, 0.94)); -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); }
+[data-theme="monoflow"] .security-banners .card { background: rgba(24, 27, 36, 0.97); }

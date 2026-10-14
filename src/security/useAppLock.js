@@ -136,7 +136,8 @@ export function useAppLock(user, { onRemoteSignOut } = {}) {
   const serverFails = cfg.fails ?? 0;
   const fails = Math.max(localFails.count, serverFails);
   const lastFailAt = Math.max(localFails.lastAt || 0, cfg.lastFailAt || 0);
-  const waitUntil = fails ? lastFailAt + lockoutFor(fails) : 0;
+  const lockMs = lockoutFor(fails);
+  const waitUntil = fails && lockMs ? lastFailAt + lockMs : 0;      // 1–4 wrong PINs: no wait
   const needsSignIn = fails >= MAX_TRIES;
   // Tick while a wait is running so the countdown moves
   useEffect(() => {
@@ -159,6 +160,7 @@ export function useAppLock(user, { onRemoteSignOut } = {}) {
     if (waitUntil > Date.now()) return { ok: false, wait: waitUntil - Date.now() };
     if (await checkPin(pin, cfgRef.current)) { finishUnlock(); return { ok: true }; }
     const next = { count: fails + 1, lastAt: Date.now() };
+    setNow(next.lastAt);          // the countdown starts from this moment
     setLocalFails(next);
     writeJson(FAILS_KEY, next);
     if (uid) {

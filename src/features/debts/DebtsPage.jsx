@@ -15,7 +15,7 @@ import Sign from '../../motion/Sign';
 import { generateId } from '../../utils/storage';
 import { formatAmount, isoToDateInput, dateInputToISO, isoToMonth, todayInputValue } from '../../utils/dateHelpers';
 import { currencySymbol } from '../../utils/money';
-import { formatEntryAmount } from '../../utils/money';
+import EntryAmount from '../../components/EntryAmount';
 
 const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -252,7 +252,7 @@ function PersonDebt({ person, onBack, onAdd, onUpdate, onDelete }) {
                       <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>{fmtDate(e.date)}</span>
                       {e.note && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.note}</span>}
                     </span>
-                    <span style={{ fontSize: 14, fontWeight: 750, color: isIn ? 'var(--income)' : 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{isIn ? '+' : '−'}{formatEntryAmount(e)}</span>
+                    <span style={{ fontSize: 14, fontWeight: 750, color: isIn ? 'var(--income)' : 'var(--text)', fontVariantNumeric: 'tabular-nums' }}><EntryAmount entry={e} prefix={isIn ? '+' : '−'} /></span>
                     <button aria-label="Edit" onClick={() => setEditing(e.id)} style={iconBtn}><Pencil size={13} /></button>
                     <button aria-label="Delete" onClick={() => setDeleting(e)} style={iconBtn}><Trash2 size={13} /></button>
                   </div>
