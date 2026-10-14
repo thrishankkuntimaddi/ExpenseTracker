@@ -34,7 +34,7 @@ function nativeShell() {
     },
     closeBundle() {
       // PWA-only files: the apps have their own launcher icons
-      for (const f of ['sw.js', 'manifest.json', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'])
+      for (const f of ['sw.js', 'manifest.json', 'privacy.html', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'])
         fs.rmSync(path.resolve(outDir, f), { force: true })
     },
   }
