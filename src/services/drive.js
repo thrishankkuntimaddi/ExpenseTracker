@@ -125,7 +125,7 @@ export async function driveToken({ interactive = true, hint } = {}) {
       const client = window.google.accounts.oauth2.initTokenClient({
         client_id: WEB_CLIENT_ID, scope: DRIVE_SCOPE, hint,
         callback: (r) => (r.error ? reject(new Error(r.error_description || r.error)) : resolve(remember(r.access_token, Number(r.expires_in) || 3500))),
-        error_callback: (e) => reject(Object.assign(new Error(e?.type === 'popup_closed' ? 'Google Drive access was not given.' : (e?.message || 'Google sign-in failed.')), { code: 'cancelled' })),
+        error_callback: (e) => reject(Object.assign(new Error(e?.type === 'popup_closed' ? 'Google Drive access was not given (the Google window was closed — if it said “Access blocked”, the app’s Google sign-in isn’t fully set up yet).' : (e?.message || 'Google sign-in failed.')), { code: 'cancelled' })),
       });
       client.requestAccessToken({ prompt: '' });
     });
@@ -160,6 +160,9 @@ async function api(token, url, init = {}) {
     let msg = `${res.status}`;
     try { const j = await res.json(); msg = j.error?.message || msg; } catch { /* not JSON */ }
     if (res.status === 403 && /storage|quota/i.test(msg)) throw new Error('Your Google Drive is full. Free some space, then try again.');
+    if (res.status === 403 && /has not been used|is disabled|SERVICE_DISABLED|accessNotConfigured/i.test(msg)) {
+      throw new Error('Google Drive isn’t switched on for this app yet. It needs the Drive API enabled in its Google Cloud project — try again later.');
+    }
     throw new Error(`Google Drive: ${msg}`);
   }
   return res;
