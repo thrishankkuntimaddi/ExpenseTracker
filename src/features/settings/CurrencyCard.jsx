@@ -3,6 +3,7 @@
 // every entry keeps the currency it was made in. Budgets and goal targets
 // are plans, so they can be re-stated at today's rate in the same step.
 import { useEffect, useMemo, useState } from 'react';
+import { CardFrame } from './SettingsGroup';
 import { Coins, RefreshCw } from 'lucide-react';
 import CurrencySelect from '../../components/CurrencySelect';
 import { CURRENCY_NAMES, currencyOf, formatMoney, entryCurrency } from '../../utils/money';
@@ -10,7 +11,7 @@ import { convertSettingsMoney } from '../../utils/fx';
 import { latestRates, rateBetween, refreshLatest, useRatesVersion } from '../../services/rates';
 import { formatDateShort } from '../../utils/dateHelpers';
 
-export default function CurrencyCard({ settings, transactions = [], income = [], onPatchSettings }) {
+export default function CurrencyCard({ settings, transactions = [], income = [], onPatchSettings, bare = false }) {
   useRatesVersion();
   const current = settings?.currency ?? 'INR';
   const [pending, setPending] = useState(null);          // a new currency waiting for confirmation
@@ -35,9 +36,7 @@ export default function CurrencyCard({ settings, transactions = [], income = [],
   }
 
   return (
-    <section id="group-currency" style={{ marginBottom: 18, scrollMarginTop: 12 }}>
-      <p className="section-label" style={{ padding: '0 6px' }}>Currency</p>
-      <div className="card" style={{ padding: '14px 16px' }}>
+    <CardFrame bare={bare} id="group-currency" title="Currency">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="settings-icon" style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--income)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Coins size={16} style={{ color: '#fff' }} />
@@ -86,8 +85,7 @@ export default function CurrencyCard({ settings, transactions = [], income = [],
             </button>
           </div>
         )}
-      </div>
-    </section>
+    </CardFrame>
   );
 }
 

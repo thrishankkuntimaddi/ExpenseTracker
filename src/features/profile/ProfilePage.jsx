@@ -1,136 +1,175 @@
-// ─── Profile (phone) ─────────────────────────────────────────────
-// Opened from the avatar (phone) or the sidebar (desktop): who is signed
-// in, the theme in one row, reminders as tiles, how the layout is arranged,
-// then every other setting grouped into a few sections.
+// ─── Profile ─────────────────────────────────────────────────────
+// Opened from the avatar (phone) or the sidebar (desktop). One pattern for
+// everything, like a phone's Settings app:
+//   • who is signed in, then Appearance (theme, animations) as quick switches
+//   • every other setting is a row — icon, title, one-line summary — grouped
+//     into a few sections
+//   • a row opens its setting: beside the list on wide screens (two panes),
+//     full screen on phones (Back — or the Android back button — returns)
 import { useMotionPref, setMotionPref } from '../../motion/motion';
-import { useMemo } from 'react';
-import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick } from 'lucide-react';
 import Avatar from '../../components/Avatar';
 import { displayNameOf } from '../../app/shellContext';
 import { PAGE_META } from '../../app/pages';
 import { PAGE_KEYS, SLOT_KEYS, HOME_SECTIONS, normaliseUi, serialiseUi, move, setTabAt } from '../../utils/uiPrefs';
 import { Section, Group } from '../settings/SettingsGroup';
+import { SettingsNav } from '../settings/settingsNav';
 import SettingsTab from '../settings/SettingsTab';
 import RemindersCard from '../settings/RemindersCard';
 import CurrencyCard from '../settings/CurrencyCard';
 import SecurityCard from '../../security/SecurityCard';
 import DriveBackupCard from '../settings/DriveBackupCard';
 import { useShell } from '../../app/shellContext';
+import { useEscape } from '../../hooks/useEscape';
+import { normaliseReminders, REMINDER_TYPES } from '../../utils/reminders';
+import { CURRENCY_NAMES, isCurrency, DEFAULT_CURRENCY } from '../../utils/money';
+import { FREQUENCIES } from '../../services/drive';
+import { timeAgo } from '../../services/sync';
+
+const REMINDER_NAMES = { recurring: 'bills', daily: 'log the day', budget: 'budget', report: 'report', goals: 'goals', weekly: 'weekly' };
 
 export default function ProfilePage(props) {
-  const { user, transactions = [], income = [], devices, securityEvents, drive, settings, themePref = 'system', theme, onThemePrefChange, onPatchSettings, onBack, recurring } = props;
+  const { user, transactions = [], income = [], devices, securityEvents, drive, settings, themePref = 'system', theme, onThemePrefChange, onPatchSettings, onBack, recurring, openGroup } = props;
   const desktop = useShell()?.desktop;
+  const twoPane = useTwoPane(desktop);   // list and setting side by side only when there's room
   const ui = useMemo(() => normaliseUi(settings?.ui), [settings?.ui]);
   const save = (patch) => onPatchSettings?.({ ui: serialiseUi({ ...ui, ...patch }) });
+
+  /* Which setting is open: phones show the list until one is picked; wide
+     screens always show one beside the list */
+  const [chosen, setChosen] = useState(openGroup ?? null);
+  const active = chosen ?? (twoPane ? 'reminders' : null);
+  const [panelEl, setPanelEl] = useState(null);
+  const [openTitle, setOpenTitle] = useState('');
+  const [openSummary, setOpenSummary] = useState('');
+  const announce = useCallback(({ title, summary }) => { setOpenTitle(title); setOpenSummary(typeof summary === 'string' ? summary : ''); }, []);
+  const nav = useMemo(() => ({ active, open: setChosen, panelEl, announce }), [active, panelEl, announce]);
+  const phonePanel = !twoPane && !!active;
+  useEscape(() => setChosen(null), phonePanel);   // Android back / Esc closes the setting first
 
   const months = useMemo(() => new Set([...transactions, ...income].map((t) => t.month).filter(Boolean)).size, [transactions, income]);
   const since = user?.metadata?.creationTime ? new Date(user.metadata.creationTime) : null;
   const providers = user?.providerData?.map((p) => p.providerId) ?? [];
   const deviceCount = devices?.devices?.length ?? 0;
 
+  // One-line summaries for the rows
+  const rem = normaliseReminders(settings?.reminders);
+  const remOn = REMINDER_TYPES.filter((t) => rem[t]?.enabled);
+  const remSummary = remOn.length ? `${remOn.length} on · ${remOn.map((t) => REMINDER_NAMES[t]).join(', ')}` : 'Off';
+  const currency = isCurrency(settings?.currency) ? settings.currency : DEFAULT_CURRENCY;
+  const driveSummary = drive?.cfg?.enabled
+    ? `On · ${(FREQUENCIES.find((f) => f.key === drive.cfg.frequency)?.label ?? 'Every week').toLowerCase()}${drive.state?.lastAt ? ` · last ${timeAgo(drive.state.lastAt)}` : ''}`
+    : 'Off — copies to your own Google Drive';
+
   return (
     <div className="tab-root profile-page">
       <div className="tab-header" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {onBack && (
-          <button id="btn-profile-back" onClick={onBack} aria-label="Back"
+        {(phonePanel || onBack) && (
+          <button id="btn-profile-back" onClick={phonePanel ? () => setChosen(null) : onBack} aria-label="Back"
             style={{ width: 34, height: 34, border: 'none', background: 'var(--surface2)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
             <ArrowLeft size={17} />
           </button>
         )}
         <div style={{ minWidth: 0 }}>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>Profile</h1>
-          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Account, look & layout, settings</p>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>{phonePanel ? openTitle || 'Profile' : 'Profile'}</h1>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{phonePanel ? openSummary || 'Profile' : 'Account, look & layout, settings'}</p>
         </div>
       </div>
 
-      <div className="tab-body">
-        {/* ── Who's signed in ── */}
-        <div className="card profile-hero" style={{ padding: '18px 16px 14px', marginBottom: 18 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <Avatar user={user} size={58} />
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayNameOf(user)}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 7 }}>
-                {providers.includes('google.com') && <Pill>Google</Pill>}
-                {providers.includes('password') && <Pill>Email</Pill>}
-                {(user?.emailVerified || providers.includes('google.com')) && <Pill tone="income"><ShieldCheck size={10} /> Verified</Pill>}
+      <div className="tab-body profile-body">
+        <SettingsNav.Provider value={nav}>
+          <div className={`profile-split${twoPane ? ' two-pane' : ''}${phonePanel ? ' panel-open' : ''}`}>
+            <div className="profile-list">
+              {/* ── Who's signed in ── */}
+              <div className="card profile-hero" style={{ padding: '16px 16px 12px', marginBottom: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <Avatar user={user} size={54} />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayNameOf(user)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
+                      {providers.includes('google.com') && <Pill>Google</Pill>}
+                      {providers.includes('password') && <Pill>Email</Pill>}
+                      {(user?.emailVerified || providers.includes('google.com')) && <Pill tone="income"><ShieldCheck size={10} /> Verified</Pill>}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                  <Stat value={(transactions.length + income.length).toLocaleString('en-IN')} label="Entries" />
+                  <Stat value={months} label={months === 1 ? 'Month' : 'Months'} />
+                  <Stat value={deviceCount} label={deviceCount === 1 ? 'Device' : 'Devices'} />
+                </div>
+                {since && !Number.isNaN(since.getTime()) && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8 }}>
+                    Member since {since.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Appearance: two quick switches in one card ── */}
+              <section style={{ marginBottom: 18 }}>
+                <p className="section-label" style={{ padding: '0 6px' }}>Appearance</p>
+                <div className="card settings-section">
+                  <ThemeRow themePref={themePref} theme={theme} onChange={onThemePrefChange} />
+                  <MotionRow />
+                </div>
+              </section>
+
+              {/* ── Security: app lock, devices, alerts ── */}
+              <SecurityCard user={user} devices={devices} events={securityEvents} />
+
+              {/* ── Notifications ── */}
+              <Section title="Notifications">
+                <Group id="reminders" title="Reminders" Icon={Bell} color="var(--accent)" summary={remSummary}>
+                  <RemindersCard uid={user?.uid} settings={settings} onPatchSettings={onPatchSettings} transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} />
+                </Group>
+              </Section>
+
+              {/* ── Customize ── */}
+              <Section title="Customize">
+                {!desktop && (
+                  <Group id="custom-bar" title="Bottom bar" Icon={LayoutGrid} color="var(--savings)"
+                    summary={['Home', ...ui.tabs.map((k) => PAGE_META[k].label)].join(' · ')}>
+                    <BarEditor tabs={ui.tabs} onChange={(tabs) => save({ tabs })} />
+                  </Group>
+                )}
+                <Group id="custom-home" title="Home screen" Icon={HomeIcon} color="var(--expense)"
+                  summary={ui.home.filter((s) => s.visible).map((s) => HOME_SECTIONS.find((h) => h.key === s.key).label).join(' · ')}>
+                  <HomeEditor home={ui.home} onChange={(home) => save({ home })} />
+                </Group>
+                <Group id="custom-start" title="Open the app on" Icon={Rocket} color="var(--income)" summary={PAGE_META[ui.start].label}>
+                  <div role="radiogroup" aria-label="Start page" style={{ padding: '12px 16px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {PAGE_KEYS.map((k) => (
+                      <Chip key={k} id={`start-${k}`} active={ui.start === k} onClick={() => save({ start: k })}>{PAGE_META[k].label}</Chip>
+                    ))}
+                  </div>
+                </Group>
+              </Section>
+
+              {/* ── Money · Backup & sync · App · Account ── */}
+              <SettingsTab {...props} embedded
+                moneyExtra={
+                  <Group id="currency" title="Currency" Icon={Coins} color="var(--income)" summary={`${currency} · ${CURRENCY_NAMES[currency]}`}>
+                    <CurrencyCard bare settings={settings} transactions={transactions} income={income} onPatchSettings={onPatchSettings} />
+                  </Group>
+                }
+                dataExtra={drive && (
+                  <Group id="drive" title="Google Drive backup" Icon={HardDriveUpload} color="var(--savings)" summary={driveSummary}>
+                    <DriveBackupCard bare user={user} onPatchSettings={onPatchSettings} drive={drive} />
+                  </Group>
+                )} />
+            </div>
+
+            {/* ── The open setting ── */}
+            <div className="profile-detail" ref={setPanelEl}>
+              <div className="profile-detail-empty">
+                <MousePointerClick size={22} />
+                <span>Pick a setting on the left</span>
               </div>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-            <Stat value={(transactions.length + income.length).toLocaleString('en-IN')} label="Entries" />
-            <Stat value={months} label={months === 1 ? 'Month' : 'Months'} />
-            <Stat value={deviceCount} label={deviceCount === 1 ? 'Device' : 'Devices'} />
-          </div>
-          {since && !Number.isNaN(since.getTime()) && (
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 10 }}>
-              Member since {since.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-            </div>
-          )}
-        </div>
-
-        {/* ── Theme: one row ── */}
-        <div className="card theme-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px 10px 16px', marginBottom: 18 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Theme</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{themePref === 'system' ? `Follows this device · ${theme === 'monoflow' ? 'dark' : 'light'} now` : 'This device only'}</div>
-          </div>
-          <div role="radiogroup" aria-label="Theme" className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
-            {[{ key: 'light', label: 'Light', Icon: Sun }, { key: 'dark', label: 'Dark', Icon: Moon }, { key: 'system', label: 'Auto', Icon: Monitor }].map(({ key, label, Icon }) => {
-              const on = themePref === key;
-              return (
-                <button key={key} id={`theme-${key}`} role="radio" aria-checked={on} onClick={() => onThemePrefChange?.(key)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 11px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: on ? 'var(--shadow-sm)' : 'none' }}>
-                  <Icon size={13} /> {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── Animations: one row ── */}
-        <MotionRow />
-
-        {/* ── Security: app lock, devices, alerts ── */}
-        <SecurityCard user={user} devices={devices} events={securityEvents} />
-
-        {/* ── Google Drive backup ── */}
-        {drive && <DriveBackupCard user={user} onPatchSettings={onPatchSettings} drive={drive} />}
-
-        {/* ── Currency ── */}
-        <CurrencyCard settings={settings} transactions={transactions} income={income} onPatchSettings={onPatchSettings} />
-
-        {/* ── Reminders: tiles ── */}
-        <section id="group-reminders" style={{ marginBottom: 18, scrollMarginTop: 12 }}>
-          <p className="section-label" style={{ padding: '0 6px' }}>Reminders</p>
-          <div className="card settings-section">
-            <RemindersCard uid={user?.uid} settings={settings} onPatchSettings={onPatchSettings} transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} />
-          </div>
-        </section>
-
-        {/* ── Customize ── */}
-        <Section title="Customize">
-          {!desktop && (
-            <Group id="custom-bar" title="Bottom bar" Icon={LayoutGrid} color="var(--savings)"
-              summary={['Home', ...ui.tabs.map((k) => PAGE_META[k].label)].join(' · ')}>
-              <BarEditor tabs={ui.tabs} onChange={(tabs) => save({ tabs })} />
-            </Group>
-          )}
-          <Group id="custom-home" title="Home screen" Icon={HomeIcon} color="var(--expense)"
-            summary={ui.home.filter((s) => s.visible).map((s) => HOME_SECTIONS.find((h) => h.key === s.key).label).join(' · ')}>
-            <HomeEditor home={ui.home} onChange={(home) => save({ home })} />
-          </Group>
-          <Group id="custom-start" title="Open the app on" Icon={Rocket} color="var(--income)" summary={PAGE_META[ui.start].label}>
-            <div role="radiogroup" aria-label="Start page" style={{ padding: '12px 16px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {PAGE_KEYS.map((k) => (
-                <Chip key={k} id={`start-${k}`} active={ui.start === k} onClick={() => save({ start: k })}>{PAGE_META[k].label}</Chip>
-              ))}
-            </div>
-          </Group>
-        </Section>
-
-        <SettingsTab {...props} embedded />
+        </SettingsNav.Provider>
       </div>
     </div>
   );
@@ -250,16 +289,52 @@ function Stat({ value, label }) {
   );
 }
 
+/* Wide enough for the list and the open setting side by side (beside the sidebar) */
+const TWO_PANE_MIN = 1100;
+function useTwoPane(desktop) {
+  const check = () => typeof window !== 'undefined' && window.innerWidth >= TWO_PANE_MIN;
+  const [wide, setWide] = useState(check);
+  useEffect(() => {
+    const h = () => setWide(check());
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return !!desktop && wide;
+}
+
+/* Light · Dark · Auto — per device */
+function ThemeRow({ themePref, theme, onChange }) {
+  return (
+    <div className="theme-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px 11px 16px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+      <div style={{ flex: '1 1 100px', minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Theme</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{themePref === 'system' ? `Follows this device · ${theme === 'monoflow' ? 'dark' : 'light'} now` : 'This device only'}</div>
+      </div>
+      <div role="radiogroup" aria-label="Theme" className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
+        {[{ key: 'light', label: 'Light', Icon: Sun }, { key: 'dark', label: 'Dark', Icon: Moon }, { key: 'system', label: 'Auto', Icon: Monitor }].map(({ key, label, Icon }) => {
+          const on = themePref === key;
+          return (
+            <button key={key} id={`theme-${key}`} role="radio" aria-checked={on} onClick={() => onChange?.(key)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 11px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: on ? 'var(--shadow-sm)' : 'none' }}>
+              <Icon size={13} /> {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* Coins, rolling numbers, liquid budget, signs, the living card — per device.
    The device's own "reduce motion" setting always wins. */
 function MotionRow() {
   const pref = useMotionPref();
   const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   return (
-    <div className="card theme-row" id="motion-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px 10px 16px', marginTop: -8, marginBottom: 18 }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
+    <div className="theme-row" id="motion-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px 11px 16px', flexWrap: 'wrap' }}>
+      <div style={{ flex: '1 1 140px', minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Animations</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{reduced ? 'Off — your device asks for reduced motion' : 'Coins, rolling numbers, liquid budget · this device only'}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{reduced ? 'Off — your device asks for reduced motion' : 'Coins, rolling numbers · this device only'}</div>
       </div>
       <div role="radiogroup" aria-label="Animations" className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
         {[{ key: 'on', label: 'On' }, { key: 'off', label: 'Off' }].map(({ key, label }) => {

@@ -38,6 +38,8 @@ export default function SettingsTab({
   onResetPassword, onResendVerification, onDeleteAccount,
   devices,
   embedded = false,   // inside the phone Profile page: no page header, Appearance lives up there
+  moneyExtra = null,  // Profile adds its own rows to these sections (Currency; Drive backup)
+  dataExtra = null,
 }) {
   const [feedback, setFeedback]       = useState(null);
   const carry = getCarrySettings(settings);
@@ -207,6 +209,7 @@ export default function SettingsTab({
             )}
 
             <Section title="Money">
+            {moneyExtra}
             {/* ── Theme (per device) ── */}
             {!embedded && <Group id="appearance" color="var(--accent)" title="Appearance" Icon={Palette} summary={themePref === 'system' ? `System (${isMonoflow ? 'dark' : 'light'} now)` : isMonoflow ? 'Dark' : 'Light'}>
               <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -272,7 +275,8 @@ export default function SettingsTab({
             </Section>
 
             {/* ── Sync & devices ── */}
-            <Section title="Sync & devices">
+            <Section title="Backup & sync">
+            {dataExtra}
             <Group id="sync" color="var(--savings)" title="Sync" Icon={Cloud} summary={`${syncLine.label} · ${devices?.devices?.length ?? 0} device${(devices?.devices?.length ?? 0) === 1 ? '' : 's'}`}>
               <div id="sync-status" data-tone={syncLine.tone} style={{ padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, borderBottom: '1px solid var(--border)' }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `var(--${SYNC_TONE[syncLine.tone]}-bg)` }}>
@@ -290,10 +294,8 @@ export default function SettingsTab({
                 Your devices — which are live right now, and locking or signing them out — are under <strong>Security → Your devices</strong>.
               </div>
             </Group>
-            </Section>
 
             {/* ── Data Management ── */}
-            <Section title="Your data">
             <Group id="data-management" color="var(--income)" title="Data Management" Icon={Database} summary={'Backup, import, export, trash'}>
               <ActionRow id="btn-recently-deleted" Icon={RotateCcw} label="Recently Deleted" sub={`${recentlyDeleted.length} ${recentlyDeleted.length === 1 ? 'item' : 'items'} in trash — view or revert`} iconColor="var(--expense)" onClick={() => setShowTrashModal(true)} />
               <ActionRow id="btn-export" Icon={Download} label={exporting ? 'Preparing backup…' : 'Export Backup (JSON)'} sub="Everything: transactions, income, billings, trips, recurring, trash, settings" iconColor="var(--savings)" onClick={() => !exporting && handleExport()} />

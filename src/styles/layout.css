@@ -141,8 +141,18 @@ nav.desktop-nav button { margin: 0; }
 .desktop-main .tab-header { margin: 16px 20px 0; border-radius: 24px; }
 .desktop-main .tab-body, .desktop-main .home-body { padding: 18px 20px 40px !important; }
 /* Pages that read best as one column stay a comfortable width */
-.desktop-main:is(.page-bills, .page-budget, .page-savings, .page-people, .page-income, .page-profile) > .tab-root { max-width: 860px; }
-.desktop-main.page-profile .settings-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+.desktop-main:is(.page-bills, .page-budget, .page-savings, .page-people, .page-income) > .tab-root { max-width: 860px; }
+/* Profile on a wide screen: settings list · the open setting (two panes, each scrolls) */
+.desktop-main.page-profile > .tab-root { max-width: 1180px; }
+.desktop-main.page-profile .profile-body:has(.two-pane) { overflow: hidden !important; display: flex; flex-direction: column; padding-bottom: 0 !important; }
+.desktop-main.page-profile .profile-split.two-pane { display: grid; grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); gap: 22px; flex: 1; min-height: 0; }
+.desktop-main.page-profile .profile-split.two-pane .profile-list,
+.desktop-main.page-profile .profile-split.two-pane .profile-detail { display: block; overflow-y: auto; min-height: 0; padding: 0 4px 32px; }
+.desktop-main.page-profile .settings-group.is-active > .settings-row-btn { background: var(--accent-bg); }
+.desktop-main.page-profile .settings-group.is-active > .settings-row-btn .settings-icon { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
+.desktop-main.page-profile .two-pane .profile-detail-empty { display: flex; }
+/* Narrower desktop/tablet: one column like the phone, a comfortable width */
+.desktop-main.page-profile .profile-split:not(.two-pane) { max-width: 680px; margin: 0 auto; }
 
 /* Home on a wide screen: what you do · where to go */
 .home-columns { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
@@ -258,3 +268,18 @@ nav.desktop-nav button { margin: 0; }
 .overview-stat .k { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
 .overview-stat .v { font-size: 18px; font-weight: 800; color: var(--text); margin-top: 3px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .overview-stat .s { font-size: 11px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Profile: settings rows that open panels (features/profile, settings/SettingsGroup) ── */
+.profile-split.panel-open .profile-list { display: none; }          /* phone: a setting is open */
+.profile-split:not(.panel-open) .profile-detail { display: none; }  /* phone: the list */
+.settings-row-btn:hover { background: var(--surface2); }
+.settings-panel { animation: panel-in .18s ease; }
+@keyframes panel-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.settings-panel-head { display: flex; align-items: center; gap: 12px; margin: 2px 4px 12px; }
+.settings-panel-body { overflow: hidden; }
+.profile-detail-empty { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 240px; color: var(--text-muted); font-size: 13px; }
+.profile-detail:has(.settings-panel) .profile-detail-empty { display: none !important; }
+/* Inside Profile every section is one column of rows */
+.profile-list .settings-layout { display: block !important; }
+/* Phone / narrow: the page header already names the open setting */
+.profile-split:not(.two-pane) .settings-panel-head { display: none; }

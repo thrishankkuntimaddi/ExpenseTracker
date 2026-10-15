@@ -3,6 +3,7 @@
 // app keeps the newest copies in "Expense Tracker backups" in your Drive.
 // Restore any of them here — on this device or a new one.
 import { useState } from 'react';
+import { CardFrame } from './SettingsGroup';
 import { HardDriveUpload, CloudUpload, History, ExternalLink, Loader2, CheckCircle2, AlertTriangle, RotateCcw } from 'lucide-react';
 import { FREQUENCIES, driveToken, listBackups, downloadBackup, folderUrl, disconnectDrive } from '../../services/drive';
 import { restoreBackup } from '../../services/firestore';
@@ -13,7 +14,7 @@ import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 
 const fmtSize = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
-export default function DriveBackupCard({ user, onPatchSettings, drive }) {
+export default function DriveBackupCard({ user, onPatchSettings, drive, bare = false }) {
   const { cfg, state, running, needsTap, run } = drive;
   const [msg, setMsg] = useState(null);           // { text, tone }
   const [list, setList] = useState(null);         // { folderId, files } once loaded
@@ -52,9 +53,7 @@ export default function DriveBackupCard({ user, onPatchSettings, drive }) {
   }
 
   return (
-    <section id="group-drive" style={{ marginBottom: 18, scrollMarginTop: 12 }}>
-      <p className="section-label" style={{ padding: '0 6px' }}>Google Drive backup</p>
-      <div className="card" style={{ padding: '14px 16px' }}>
+    <CardFrame bare={bare} id="group-drive" title="Google Drive backup">
         {restoring && (
           <ConfirmDeleteModal title={`Restore ${restoring.name}?`}
             message="Entries in the backup are written back to your account (same entries are replaced with the backed-up version). Nothing that isn’t in the backup is deleted."
@@ -130,8 +129,7 @@ export default function DriveBackupCard({ user, onPatchSettings, drive }) {
             </a>
           </div>
         )}
-      </div>
-    </section>
+    </CardFrame>
   );
 }
 

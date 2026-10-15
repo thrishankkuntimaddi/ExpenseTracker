@@ -228,8 +228,13 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Asha Rao');
     expect(html).toContain('AR');                            // initials avatar
     expect(html).toContain('Member since February 2025');
-    for (const t of ['Theme', 'Reminders', 'Customize', 'Bottom bar', 'Home screen', 'Open the app on', 'Money', 'Sync &amp; devices', 'Your data', 'Account', 'Reset']) expect(html).toContain(t);
-    for (const k of ['recurring', 'daily', 'budget', 'report', 'goals', 'weekly']) expect(html).toContain(`id="reminder-${k}"`);
+    // One pattern: quick switches, then sections of rows that open their setting
+    for (const t of ['Appearance', 'Theme', 'Animations', 'Notifications', 'Reminders', 'Customize', 'Bottom bar', 'Home screen', 'Open the app on',
+      'Money', 'Currency', 'Month Carry Forward', 'Backup &amp; sync', 'Sync', 'Data Management', 'App', 'Account', 'Reset']) expect(html).toContain(t);
+    for (const id of ['reminders', 'custom-bar', 'custom-home', 'custom-start', 'currency', 'month-carry-forward', 'sync', 'data-management', 'account', 'reset']) expect(html).toContain(`id="group-${id}"`);
+    expect(html).toContain('INR · Indian rupee');           // row summaries say what's set
+    expect(html).not.toContain('id="reminder-daily"');       // settings open on tap, not all at once
+    expect(html).toContain('class="profile-detail"');        // the panel beside (wide) / instead of (phone) the list
     expect(html).toContain('Home · Bills · Stats · Income');  // bar summary follows settings.ui (Home fixed first; Plan → Bills)
     expect(html.match(/id="theme-(light|dark|system)"/g)).toHaveLength(3);   // one theme picker, not two
   });

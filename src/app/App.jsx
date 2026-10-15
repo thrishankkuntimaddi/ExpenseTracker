@@ -367,6 +367,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
       <ProfilePage
         {...commonProps}
         onBack={isDesktop ? null : goBack}
+        openGroup={pageOpts.openGroup}
         onSignOut={signOut}
         onDeleteAccount={deleteAccount}
         onResetPassword={resetPassword}
