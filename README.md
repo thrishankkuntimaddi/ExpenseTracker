@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.11.0** · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.12.0** · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
@@ -43,6 +43,7 @@ What makes it different from a spreadsheet or a basic tracker:
 - **Bills that ask** — "Have you paid rent?" on the 5th; rent, EMIs, SIPs and salary post on schedule.
 - **A monthly report** on the day you choose, salary to salary.
 - **Money with people** — lent, borrowed, paid back; trip splits with a minimal who-pays-whom plan that posts your share into your own ledger.
+- **Trips with friends** — invite by QR code, link or email; everyone adds what they paid on their own phone, sees who owes whom live, and marks payments done.
 - **Your data, your copy** — scheduled backups to your own Google Drive, export to JSON/CSV any time.
 - **Locked when it should be** — one PIN for every device, fingerprint/face where available, and remote lock or sign-out from your phone.
 - **Works offline and syncs** across every device; **updates itself** everywhere.
@@ -75,6 +76,7 @@ These links always point at the newest [release](https://github.com/thrishankkun
 | Reminders when the app is closed | ✅ cloud push (Chrome, Edge, Firefox; iPhone once added to the Home Screen) | ✅ pop up with sound (or quiet), optionally on the minute | ✅ while it runs in the menu bar / tray |
 | App lock | ✅ PIN · passkey (Touch ID / Windows Hello) | ✅ PIN · fingerprint / face / screen lock | ✅ PIN · passkey where the system offers one |
 | Google Drive backup | ✅ when you tap *Back up now* (browsers need a tap) | ✅ automatic | ✅ automatic |
+| Shared trips (invite, join, edit your rows live) | ✅ | ✅ join by pasting the link (a scanned QR opens the website) | ✅ |
 | Open at login, menu bar / tray | — | — | ✅ |
 | Updates without reinstalling | ✅ | ✅ | ✅ |
 | System back button, status bar follows theme | — | ✅ | — |
@@ -87,7 +89,7 @@ These limits are the operating systems', not choices: a browser can't wake a clo
 
 Sign in with **Google** or with **email + password** (create an account, verify the email; *Forgot password?* sends a reset link). The same account works on every platform. There are no shared demo credentials — every user has their own isolated data.
 
-All data is private to your account: `firestore.rules` only lets a signed-in user read and write `users/{their uid}/**`, and validates the shape of transactions, income, recurring rules and trips.
+All data is private to your account: `firestore.rules` only lets a signed-in user read and write `users/{their uid}/**`, and validates the shape of transactions, income, recurring rules and trips. The one exception is a **shared trip** (`shared_trips/{id}`): the people who joined it can read it, each edits only their own rows (and their wallet partner's), and only its creator can change, close or delete it.
 
 ---
 
@@ -283,7 +285,8 @@ ExpenseTracker/
     │   ├── auth/               # Sign-in and sign-up
     │   ├── transactions/       # Home (TodayTab), History
     │   ├── income/ debts/ bills/ budget/ savings/ stats/
-    │   ├── trips/              # Trips & splits
+    │   ├── trips/              # Trips & splits: TripDetail (sheet + settlement), invite (QR / link / email),
+    │                           #   JoinTripModal, tripCard.js (share image)
     │   ├── external/           # Billings
     │   ├── plan/               # Shared modals and cards: recurring rule, budget editor, goals
     │   ├── profile/            # Profile page
@@ -291,7 +294,7 @@ ExpenseTracker/
     ├── security/               # App lock: pin.js (hash + lockout rules), useAppLock.js (state machine),
     │                           #   LockScreen, SecurityCard (lock, devices, alerts), SecurityBanners,
     │                           #   biometric.js, reauth.js, events.js
-    ├── components/             # AddSheet, Sheet (spreadsheet entry), CurrencySelect, EntryAmount, modals, …
+    ├── components/             # AddSheet, Sheet (spreadsheet entry), ShareSummaryModal, CurrencySelect, modals, …
     ├── motion/                 # Coin drop, rolling numbers, liquid gauge, signs, tilt
     ├── native/                 # Platform layer: index.js, updates.js, reminders.js (delivery),
     │                           #   push.js (FCM), googleSignIn.js (Android + desktop)
@@ -300,6 +303,7 @@ ExpenseTracker/
     ├── services/
     │   ├── firebase.js         # App, Auth, Firestore (persistent cache), optional App Check
     │   ├── firestore.js        # All Firestore reads/writes: entries, trash, devices, lock, security events
+    │   ├── sharedTrips.js      # Shared trips: trip doc + one doc per row / settlement, join, invite friends
     │   ├── sync.js             # Sync status, background writes, readable errors
     │   ├── rates.js            # Exchange rates: fetch, per-day cache, lookups
     │   └── drive.js            # Google Drive: tokens per platform, backup, list, restore, prune
@@ -307,6 +311,7 @@ ExpenseTracker/
         ├── finance.js          # Every balance rule
         ├── money.js            # Currencies, formatting, display / entry currency
         ├── fx.js               # Currency views: day-rate history, live-rate balance, per-currency carry
+        ├── shareCard.js        # The share image (Trips, Billings)
         ├── categories.js, budget.js, recurring.js, bills.js, goals.js, debts.js, report.js, split.js,
         │   carryForward.js, reminders.js, smartInput.js, backup.js, import/exportHelpers.js, dateHelpers.js, …
         └── __tests__/          # Vitest
@@ -504,6 +509,7 @@ shared_trips/{tripId}               ← { name, currency?, startDate, endDate?, 
 
 - No ads, no trackers, no selling or sharing of data — see the [privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html)
 - Firestore rules: a user can reach only `users/{their uid}/**`; entries, recurring rules and trips are shape-validated
+- Shared trips: readable only with the invite link (a random 20-character id) or once joined; edit rights are enforced by the rules, not just hidden in the app — tested against the Firestore emulator
 - Signing out (or a remote sign-out) wipes the device's offline copy of your data
 - App lock stores only a salted PBKDF2-SHA256 hash (150,000 iterations); biometrics never leave the device
 - Drive access is limited to files the app creates (`drive.file`); backups live only in your Drive
@@ -517,6 +523,8 @@ shared_trips/{tripId}               ← { name, currency?, startDate, endDate?, 
 |---|---|
 | **Android: "No credentials available" on Google sign-in** | Update to 3.11.0 or later — it falls back to Google's classic account picker. Still failing: add a Google account in Android Settings → Accounts and update *Google Play services*, or sign in with email |
 | **Android reminders arrive late or not at all** | Profile → Reminders → turn on *On the minute*; in Android Settings → Apps → Expense Tracker → Battery choose **Unrestricted** (vivo/iQOO/Oppo/Xiaomi: also allow *Auto-start*) |
+| **Shared trip: "This invite isn't valid any more"** | The trip was deleted by its creator, or the link was cut off when pasted — ask for the link again |
+| **Shared trip: can't edit a row** | Rows belong to the person who paid. Only they, their pay-together partner and the trip's creator can change it; a closed trip is locked until the creator reopens it |
 | **Android app says "install the new app"** | A release added native code — download the latest APK and install it over the current one. Data and sign-in stay |
 | **Drive backup: "Access blocked … not completed the Google verification process"** | The OAuth consent screen of that client's project is still in *Testing* — fill in Branding and *Publish app* (see [step 6](#6-google-cloud-setup-for-sign-in-and-drive-backup)) |
 | **Drive backup: "Google Drive isn't switched on for this app yet"** | Enable the Google Drive API in the project that owns the client (see step 6), wait a few minutes, retry |
@@ -555,9 +563,11 @@ shared_trips/{tripId}               ← { name, currency?, startDate, endDate?, 
 - [x] **App lock** across devices, live devices, remote lock / sign-out, intrusion alerts (3.11)
 - [x] **Google Drive backup** and restore (3.11)
 - [x] **Cloud push** for website reminders, pop-up reminders on Android (3.11)
-- [ ] Load only recent months live and sync changes since the last visit (fewer Firestore reads)
-- [ ] Automatic capture from UPI and bank notifications on Android (on-device)
-- [ ] Play Store listing and a notarised Mac build
+- [x] **Shared trips** — invite by QR / link / email / friends, per-person editing, wallet balances, full share images (3.12)
+- [ ] 🧪 **Sync only what changed** since the last visit (far fewer Firestore reads) — built, *in review* on branch [`upi-and-playstore`](https://github.com/thrishankkuntimaddi/ExpenseTracker/tree/upi-and-playstore)
+- [ ] 🧪 **Auto-capture UPI and bank payments** on Android, on-device — built, *in review* on the same branch (Android 15+ hides some bank SMS from all apps)
+- [ ] 🧪 **Play Store** — store build (`.aab`) and submission kit on the same branch; listing needs the developer account
+- [ ] Notarised Mac build
 - [ ] Shared budgets for couples and families
 - [ ] Receipt photos and OCR
 
