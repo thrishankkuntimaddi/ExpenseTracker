@@ -146,6 +146,9 @@
       #app-splash.sp-exit { opacity: 0; visibility: hidden; pointer-events: none; }
       #app-splash.sp-exit .sp-stage { animation: sp-dive .75s cubic-bezier(.7,0,.84,0) both; }
       #app-splash.sp-exit .sp-title { animation: sp-fade .3s ease both; }
+      /* After a restart the app did itself: just the logo, no intro, a quick fade */
+      #app-splash.sp-quick *, #app-splash.sp-quick *::before, #app-splash.sp-quick *::after { animation: none !important; }
+      #app-splash.sp-quick.sp-exit { transition-duration: .15s; }
       @keyframes sp-dive { from { transform: translateZ(0) rotateX(14deg); } to { transform: translateZ(900px) rotateX(0deg); filter: blur(6px); } }
       @keyframes sp-fade { to { opacity: 0; transform: translateY(-10px); } }
 
@@ -272,39 +275,12 @@
             });
           });
         } else {
-          // Production: register SW and auto-reload when a new one activates.
-          // This prevents blank screens caused by stale JS/CSS asset references.
+          // Production: register the service worker (offline copy). It never
+          // reloads the page: a new version takes over once the old tabs are
+          // closed, and every fresh open already loads the newest code.
           window.addEventListener('load', function() {
             navigator.serviceWorker.register('/ExpenseTracker/sw.js')
-              .then(function(reg) {
-                console.log('[SW] Registered, scope:', reg.scope);
-
-                // When a new SW takes over, reload to get fresh assets.
-                var refreshing = false;
-                navigator.serviceWorker.addEventListener('controllerchange', function() {
-                  if (!refreshing) {
-                    refreshing = true;
-                    console.log('[SW] New SW active — reloading for fresh assets.');
-                    window.location.reload();
-                  }
-                });
-
-                // Tell a waiting SW to skip waiting immediately.
-                if (reg.waiting) {
-                  reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-                }
-                reg.addEventListener('updatefound', function() {
-                  var newWorker = reg.installing;
-                  if (newWorker) {
-                    newWorker.addEventListener('statechange', function() {
-                      if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        // New SW installed; tell it to activate now.
-                        newWorker.postMessage({ type: 'SKIP_WAITING' });
-                      }
-                    });
-                  }
-                });
-              })
+              .then(function(reg) { console.log('[SW] Registered, scope:', reg.scope); })
               .catch(function(e) { console.warn('[SW] Registration failed:', e); });
           });
         }

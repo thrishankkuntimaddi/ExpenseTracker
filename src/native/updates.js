@@ -15,14 +15,19 @@
 import { platform } from './index';
 import { App as CapApp } from '@capacitor/app';
 import { useSyncExternalStore } from 'react';
+import { markQuickBoot } from '../app/quickBoot';
 
 const PAGES = 'https://thrishankkuntimaddi.github.io/ExpenseTracker';
 export const OTA_MANIFEST = import.meta.env.VITE_OTA_MANIFEST || `${PAGES}/app/update.json`;   // overridable for tests
-export const APK_URL = 'https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Android.apk';
+// Installers are mirrored on the website (scripts/mirror-release.mjs): some
+// networks crawl when downloading from github's file host
+export const APK_URL = `${PAGES}/app/files/ExpenseTracker-Android.apk`;
 export const THIS_BUILD = Number(import.meta.env.VITE_APP_BUILD) || 0;
 export const THIS_VERSION = import.meta.env.VITE_APP_VERSION ?? '0.0.0';
 const SEEN_KEY = 'et_seen_build';
 const CHECK_EVERY_MS = 30 * 60 * 1000;
+const CHECK_TIMEOUT_MS = 30 * 1000;          // a check that hangs longer is given up (and retried later)
+const STUCK_MS = 15 * 60 * 1000;             // a download that never finishes doesn't block checks forever
 
 /* ── Tiny store: what the update banner / Settings show ────────── */
 // state.kind: 'idle' | 'checking' | 'current' | 'downloading' | 'ready' | 'native-needed' | 'error' | 'updated'
@@ -113,16 +118,25 @@ async function applyDownloadedUpdate() {
   const [{ bundles }, cur] = await Promise.all([u.list(), u.current()]);
   const pending = pickPendingBundle(bundles, { build: THIS_BUILD, currentId: cur?.bundle?.id });
   if (!pending) return false;
+  markQuickBoot();                   // the restart below shouldn't replay the intro
   await u.set({ id: pending.id });   // reloads the app into the new bundle
   return true;
 }
 
 /* ── Desktop: Tauri updater ────────────────────────────────────── */
 let pendingDesktop = null;
+/** Give up on a promise that takes too long (a stalled network request). */
+function withTimeout(promise, ms, what) {
+  let t;
+  return Promise.race([promise, new Promise((_, reject) => { t = setTimeout(() => reject(Object.assign(new Error(`${what} timed out`), { code: 'timeout' })), ms); })])
+    .finally(() => clearTimeout(t));
+}
+
 async function checkDesktop() {
   set({ kind: 'checking' });
   const { check } = await import('@tauri-apps/plugin-updater');
-  const update = await check();
+  // Endpoints: the website mirror first (fast everywhere), GitHub releases as a fallback
+  const update = await withTimeout(check({ timeout: CHECK_TIMEOUT_MS }), CHECK_TIMEOUT_MS + 5000, 'Update check');
   if (!update) return set({ kind: 'current' });
   set({ kind: 'downloading', version: update.version });
   await update.download();
@@ -133,11 +147,12 @@ async function checkDesktop() {
 /** Install the downloaded update and restart (desktop and Android). */
 export async function restartToUpdate() {
   if (platform === 'android') {
-    if (pendingAndroid) { const { u } = await updater(); await u.set({ id: pendingAndroid }); }
+    if (pendingAndroid) { const { u } = await updater(); markQuickBoot(); await u.set({ id: pendingAndroid }); }
     return;
   }
   if (!pendingDesktop) return;
   await pendingDesktop.install();
+  markQuickBoot();
   const { relaunch } = await import('@tauri-apps/plugin-process');
   await relaunch();
 }
@@ -145,20 +160,26 @@ export async function restartToUpdate() {
 /* ── Web: service worker ───────────────────────────────────────── */
 async function checkWeb() {
   const reg = await navigator.serviceWorker?.getRegistration?.();
-  await reg?.update?.();   // a new worker takes over and the page reloads once (index.html)
+  // Refreshes the offline copy in the background; the page is never reloaded
+  // under you — the next time you open the app it is the new version
+  await withTimeout(reg?.update?.() ?? Promise.resolve(), CHECK_TIMEOUT_MS, 'Update check').catch(() => {});
   set({ kind: 'current' });
 }
 
 /** Check now (Settings button, launch, every 30 min, coming back to the app). */
+let busySince = 0;
 export async function checkForUpdates() {
-  if (state.kind === 'downloading' || state.kind === 'checking') return state;
+  // One check at a time — but a check stuck on a dead connection must not block the next one forever
+  if ((state.kind === 'downloading' || state.kind === 'checking') && Date.now() - busySince < STUCK_MS) return state;
+  busySince = Date.now();
   try {
     if (platform === 'android') await checkAndroid();
     else if (platform === 'desktop') await checkDesktop();
     else await checkWeb();
   } catch (err) {
     console.warn('[updates] check failed:', err);
-    set({ kind: 'error', message: navigator.onLine === false ? 'You’re offline — will check again later.' : 'Couldn’t check for updates right now.' });
+    set({ kind: 'error', message: navigator.onLine === false ? 'You’re offline — will check again later.'
+      : err?.code === 'timeout' ? 'The update server is slow to answer — will try again later.' : 'Couldn’t check for updates right now.' });
   }
   return state;
 }

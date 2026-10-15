@@ -38,3 +38,17 @@ describe('pickPendingBundle', () => {
     expect(pickPendingBundle(undefined, { build: 1 })).toBeNull();
   });
 });
+
+describe('quick boot after a self-restart', async () => {
+  const { markQuickBoot, takeQuickBoot } = await import('../../app/quickBoot');
+  it('skips the intro once, only right after the app restarted itself', () => {
+    const store = {};
+    globalThis.localStorage = { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } };
+    expect(takeQuickBoot()).toBe(false);
+    markQuickBoot();
+    expect(takeQuickBoot()).toBe(true);
+    expect(takeQuickBoot()).toBe(false);          // once
+    markQuickBoot();
+    expect(takeQuickBoot(Date.now() + 120000)).toBe(false);   // a restart long ago doesn't count
+  });
+});

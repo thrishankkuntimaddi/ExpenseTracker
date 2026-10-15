@@ -3,6 +3,8 @@ name: Deploy web app
 on:
   push:
     branches: [main]
+    # Docs-only changes don't redeploy (each deploy also ships an Android update)
+    paths-ignore: ['**.md', 'docs/**']
   pull_request:
   workflow_dispatch:
 
@@ -70,6 +72,14 @@ jobs:
         run: |
           npm run build:native
           node scripts/make-ota.mjs
+
+      # The latest release's installers + desktop update files, served from the
+      # site too — some networks crawl on github's release file host
+      - name: Mirror the latest release on the website
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/mirror-release.mjs dist/app
 
       - name: Setup Pages
         if: github.event_name != 'pull_request'

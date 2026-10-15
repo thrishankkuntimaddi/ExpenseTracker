@@ -2,6 +2,10 @@
 // Picks the right installer from the latest GitHub release for the visitor.
 export const RELEASES = 'https://github.com/thrishankkuntimaddi/ExpenseTracker/releases';
 const latest = (file) => `${RELEASES}/latest/download/${file}`;
+// The latest installers are mirrored on the website (scripts/mirror-release.mjs):
+// some networks (several Indian ISPs) crawl when downloading from github's file host
+const MIRROR = 'https://thrishankkuntimaddi.github.io/ExpenseTracker/app/files/';
+export const MIRRORED = ['ExpenseTracker-Android.apk', 'ExpenseTracker-Mac-AppleSilicon.dmg', 'ExpenseTracker-Mac-Intel.dmg', 'ExpenseTracker-Windows-Setup.exe'];
 
 /**
  * { label, file, url } for this device, or null when there's nothing to
@@ -23,7 +27,7 @@ export function pickDownload(ua = '', arch = null, platformHint = '') {
   return null;
 }
 
-export const downloadUrl = (file) => latest(file);
+export const downloadUrl = (file) => (MIRRORED.includes(file) ? MIRROR + file : latest(file));
 
 /** The CPU architecture, where the browser exposes it (Chromium). */
 export async function detectArch() {

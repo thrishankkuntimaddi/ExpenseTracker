@@ -8,18 +8,19 @@ const BASE = '/ExpenseTracker/';
 // opened online still work offline.
 const ASSETS = __ASSETS__; /* global __ASSETS__ */
 
-// ── Install: skip waiting immediately so new SW takes over right away ──
+// ── Install: pre-cache, then WAIT. A new version takes over when every tab
+//    / app window of the old one is closed — never by reloading a page you're
+//    using. (Pages load index.html network-first, so a fresh open already
+//    runs the newest code; this only refreshes the offline copy.)
 self.addEventListener('install', (e) => {
   // Pre-cache the HTML shell plus this build's assets. A failure is
   // non-fatal: anything missed is cached on first fetch instead.
   e.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll([BASE + 'index.html', ...ASSETS.map((a) => BASE + a)]))
-      .then(() => self.skipWaiting())   // activate ASAP, don't wait for old tabs
       .catch((err) => {
         // Don't let a cache-add failure block SW install
         console.warn('[SW] Install pre-cache failed (non-fatal):', err);
-        return self.skipWaiting();
       })
   );
 });
@@ -46,12 +47,7 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// ── Message: allow app to force SW update/reload ──
-self.addEventListener('message', (e) => {
-  if (e.data && e.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
+// (No "skip waiting" message: pages can't force a takeover mid-use.)
 
 // ── Fetch strategy ──────────────────────────────────────────────
 //  HTML navigation  →  NETWORK-FIRST (always get latest deploy)
@@ -66,6 +62,8 @@ self.addEventListener('fetch', (e) => {
   //    fonts are cross-origin and go straight to the network. (Matching on
   //    the URL text instead would also catch our own firebase-*.js chunk.)
   if (e.request.method !== 'GET' || new URL(url).origin !== self.location.origin) return;
+  // App updates and installers (/app/…) go straight to the network — never cached here
+  if (new URL(url).pathname.startsWith(BASE + 'app/')) return;
 
   // ── HTML navigation: NETWORK-FIRST ──
   // Always try to pull the freshest index.html; fall back to the cache when

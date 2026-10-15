@@ -29,7 +29,7 @@ const lazyPage = (load) => lazy(() => load().then((m) => {
 }, (err) => {
   let reloaded = true;
   try { reloaded = sessionStorage.getItem(RELOAD_KEY) === '1'; sessionStorage.setItem(RELOAD_KEY, '1'); } catch { /* storage unavailable */ }
-  if (!reloaded) { window.location.reload(); return new Promise(() => {}); }
+  if (!reloaded) { markQuickBoot(); window.location.reload(); return new Promise(() => {}); }
   throw err;
 }));
 const HistoryTab       = lazyPage(() => import('../features/transactions/HistoryTab'));
@@ -56,6 +56,7 @@ import LockScreen from '../security/LockScreen';
 import SecurityBanners from '../security/SecurityBanners';
 import { useSecurityEvents } from '../security/events';
 import { pendingInvite } from '../features/trips/invite';
+import { markQuickBoot } from './quickBoot';
 
 /* One app on every screen — the same pages, the same headers:
    • phone: bottom bar Home · page · "+" · page · page (chosen in Profile →

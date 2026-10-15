@@ -32,7 +32,7 @@
     "targets": "all",
     "category": "Finance",
     "shortDescription": "Personal finance, synced across devices",
-    "copyright": "\u00a9 Thrishank Kuntimaddi",
+    "copyright": "© Thrishank Kuntimaddi",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -55,6 +55,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE4QTA3QkEzMDBENDUwRkUKUldUK1VOUUFvM3VnR0JGNms5L1NrV2hDV3RZdDNnT3oweURCV1FBd0UyWURTOG1iTW9rZVQ1OVkK",
       "endpoints": [
+        "https://thrishankkuntimaddi.github.io/ExpenseTracker/app/desktop.json",
         "https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/latest.json"
       ],
       "windows": {

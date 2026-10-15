@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # start the website deploy that mirrors the release
 
 # Firebase web config + desktop Google client, from repository variables
 # (or secrets). Exported only when set, so a committed .env still wins.
@@ -186,6 +187,11 @@ jobs:
             out/*.AppImage
             out/*.app.tar.gz
             out/latest.json
+      # Put the new installers / update files on the website mirror right away
+      - name: Refresh the website mirror
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-web.yml --repo "$GITHUB_REPOSITORY" --ref main
       # Only the newest release is kept, so the download page never shows stale apps
       - name: Remove older releases
         env:

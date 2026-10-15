@@ -7,6 +7,7 @@ import './motion/motion.css'
 import App from './app/App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { confirmBundleBoots, startAutoUpdates } from './native/updates.js'
+import { takeQuickBoot } from './app/quickBoot.js'
 
 // Android: tell the over-the-air updater this bundle boots, before anything
 // else (a bundle that never gets here is rolled back automatically).
@@ -38,7 +39,10 @@ function bootstrap() {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     // The apps open many times a day: a short intro. The website keeps the full one.
     const isApp = '__TAURI_INTERNALS__' in window || !!window.Capacitor?.isNativePlatform?.();
-    const MIN_MS = reduced ? 0 : isApp ? 900 : 2600;
+    // A restart the app did itself (update, stale screen): no intro again
+    const quick = takeQuickBoot();
+    if (quick) splash.classList.add('sp-quick');
+    const MIN_MS = reduced || quick ? 0 : isApp ? 900 : 2600;
     const MAX_WAIT_MS = 8000;
     const elapsed = Date.now() - performance.timeOrigin;
     const minDelay = new Promise((r) => setTimeout(r, Math.max(0, MIN_MS - elapsed)));
