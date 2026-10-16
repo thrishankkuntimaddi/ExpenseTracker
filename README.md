@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.12.2** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.14.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
