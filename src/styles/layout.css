@@ -226,6 +226,17 @@ nav.desktop-nav button { margin: 0; }
 .home-fit .home-add-panel { flex: 1 1 auto; flex-shrink: 1 !important; display: flex; flex-direction: column; min-height: 0; }
 .home-fit .home-add-panel .add-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .home-fit .home-add-panel .add-form { flex: 1; }
+/* A window too short for the whole form: the form scrolls inside its card
+   instead of being cut off (Add button out of reach) */
+.home-fit .home-add-panel { overflow-y: auto; overscroll-behavior: contain; }
+/* Touch tablets in landscape (Xiaomi Pad 5: 1280×800): one screen is too
+   short, and a finger expects the page to scroll — so it does */
+@media (pointer: coarse) and (max-height: 900px) {
+  .home-fit .home-columns { height: auto; }
+  .home-fit .home-add-panel { overflow: visible; flex: none; }
+  .home-fit .home-recent { flex: none; }
+  .home-fit #recent-entries { overflow: visible; }
+}
 .add-compact .cat-scroll { flex-wrap: wrap; overflow: visible !important; row-gap: 6px; }
 
 /* ── Sheet: a small spreadsheet (components/Sheet.jsx) ─────────────── */
