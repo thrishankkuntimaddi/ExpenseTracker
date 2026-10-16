@@ -18,7 +18,7 @@
 // someone holding the link can read the trip before joining.
 import {
   doc, collection, deleteDoc, onSnapshot, query, where, serverTimestamp, setDoc,
-  updateDoc, getDoc, getDocs, writeBatch, runTransaction, deleteField, arrayUnion,
+  updateDoc, getDoc, getDocs, writeBatch, runTransaction, deleteField, arrayUnion, arrayRemove,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { noteSnapshot, reportListenError } from "./sync";
@@ -224,17 +224,23 @@ export async function linkFriendToTrip(tripId, friend, memberId, members) {
     members,
     memberUnit: memberUnitMap(members),
     memberUids: arrayUnion(friend.uid),
+    removedUids: arrayRemove(friend.uid),        // the creator brought them back
+    retiredMembers: arrayRemove(memberId),
     [`uidMember.${friend.uid}`]: memberId,
     [`people.${friend.uid}`]: clean({ name: friend.name, photo: friend.photo || undefined }),
     updatedAt: serverTimestamp(),
   }));
 }
 
-/** Creator only: take an account off the trip (its person and rows stay). */
-export async function unlinkAccount(tripId, uid, memberUids) {
+/** Creator only: take an account off the trip (its person and rows stay).
+    The account can't rejoin by the link, and nobody else can take over its
+    person (and so its rows) — only the creator can link someone to it. */
+export async function unlinkAccount(tripId, uid, memberUids, memberId) {
   await updateDoc(tripRef(tripId), {
     memberUids: memberUids.filter((u) => u !== uid),
     [`uidMember.${uid}`]: deleteField(),
+    removedUids: arrayUnion(uid),
+    ...(memberId ? { retiredMembers: arrayUnion(memberId) } : {}),
     updatedAt: serverTimestamp(),
   });
 }

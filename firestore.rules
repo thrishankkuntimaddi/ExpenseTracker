@@ -48,12 +48,25 @@ service cloud.firestore {
           && d.status in ['open', 'closed', 'archived'];
       }
 
-      // Joining: only themselves added, nothing else touched, nobody removed
+      // Joining: only themselves added, nothing else touched, nobody removed.
+      // The people already on the trip (names, wallets) can't be changed by a
+      // joiner — at most one new person is appended: { id, name }, them.
+      // An account the creator took off can't come back by the link, and the
+      // person it was can't be claimed by anyone else.
       function isJoin() {
         let before = resource.data;
         let after = request.resource.data;
+        let n = before.members.size();
         return before.status == 'open'
           && !(request.auth.uid in before.memberUids)
+          && !(request.auth.uid in before.get('removedUids', []))
+          && !(after.uidMember[request.auth.uid] in before.get('retiredMembers', []))
+          && after.members[0:n] == before.members
+          && (after.members.size() == n
+              || (after.members[n].keys().hasOnly(['id', 'name'])
+                  && after.members[n].id == after.uidMember[request.auth.uid]
+                  && after.members[n].name is string && after.members[n].name.size() <= 100))
+          && after.people[request.auth.uid].keys().hasOnly(['name', 'photo'])
           && after.diff(before).affectedKeys().hasOnly(['members', 'memberUids', 'uidMember', 'people', 'updatedAt'])
           && after.memberUids.toSet().difference(before.memberUids.toSet()).hasOnly([request.auth.uid])
           && before.memberUids.toSet().difference(after.memberUids.toSet()).size() == 0
@@ -75,10 +88,14 @@ service cloud.firestore {
         && (isTripOwner(resource.data) || isJoin());
       allow delete: if isTripOwner(resource.data);
 
+      // A row says who wrote it (`by`) — always the account writing it
       function validRow(e) {
-        return e.paidBy is string && e.paidBy.size() <= 64
+        return e.keys().hasOnly(['title', 'amount', 'paidBy', 'splitAmong', 'date', 'category', 'by', 'updatedAt'])
+          && e.by == request.auth.uid
+          && e.paidBy is string && e.paidBy.size() <= 64
           && e.title is string && e.title.size() <= 200
-          && (e.amount == null || validMoney(e.amount));
+          && (e.amount == null || validMoney(e.amount))
+          && (!('splitAmong' in e) || (e.splitAmong is list && e.splitAmong.size() <= 50));
       }
       function canWriteRow(t, e) {
         return isTripOwner(t)
@@ -98,8 +115,11 @@ service cloud.firestore {
       }
       match /settlements/{settlementId} {
         allow read: if isTripMember(trip());
-        allow create: if validMoney(request.resource.data.amount)
-          && request.resource.data.fromUnit is string && request.resource.data.toUnit is string
+        // A payment is positive and marked by the account that marks it
+        allow create: if validMoney(request.resource.data.amount) && request.resource.data.amount > 0
+          && request.resource.data.by == request.auth.uid
+          && request.resource.data.fromUnit is string && request.resource.data.fromUnit.size() <= 80
+          && request.resource.data.toUnit is string && request.resource.data.toUnit.size() <= 80
           && canSettle(trip(), request.resource.data);
         allow delete: if canSettle(trip(), resource.data);
       }

@@ -133,7 +133,7 @@ export function useTrips(user, reportError) {
 
   const join = useCallback((tripId, claim) => joinSharedTrip(tripId, me, claim), [me]);
   const linkFriend = useCallback((tripId, friend, memberId, members) => linkFriendToTrip(tripId, friend, memberId, members), []);
-  const unlink = useCallback((trip, accountUid) => unlinkAccount(trip.id, accountUid, trip.memberUids ?? []), []);
+  const unlink = useCallback((trip, accountUid) => unlinkAccount(trip.id, accountUid, trip.memberUids ?? [], trip.uidMember?.[accountUid]), []);
 
   /** People from my other shared trips — one tap to add them to a new one. */
   const friends = useMemo(() => {

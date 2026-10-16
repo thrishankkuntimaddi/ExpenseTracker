@@ -41,7 +41,9 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
 
   /* ── Who may touch what ── */
   const myId = trip.meMemberId;
-  const unitOf = useMemo(() => Object.fromEntries(members.map((m) => [m.id, unitIdOf(m)])), [members]);
+  // Shared trips: the wallets the server enforces (memberUnit), so the
+  // screen never offers an edit the rules would refuse
+  const unitOf = useMemo(() => Object.fromEntries(members.map((m) => [m.id, (shared && trip.memberUnit?.[m.id]) || unitIdOf(m)])), [members, shared, trip.memberUnit]);
   const myUnit = myId ? unitOf[myId] : null;
   const walletIds = useMemo(() => members.filter((m) => myUnit && unitOf[m.id] === myUnit).map((m) => m.id), [members, unitOf, myUnit]);
   const canEditRow = (r) => !closed && (isOwner || walletIds.includes(r.paidBy));
