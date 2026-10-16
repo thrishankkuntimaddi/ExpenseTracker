@@ -7,7 +7,7 @@
 //   • a row opens its setting: beside the list on wide screens (two panes),
 //     full screen on phones (Back — or the Android back button — returns)
 import { useMotionPref, setMotionPref } from '../../motion/motion';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick } from 'lucide-react';
 import Avatar from '../../components/Avatar';
 import { displayNameOf } from '../../app/shellContext';
@@ -44,9 +44,27 @@ export default function ProfilePage(props) {
   const [openTitle, setOpenTitle] = useState('');
   const [openSummary, setOpenSummary] = useState('');
   const announce = useCallback(({ title, summary }) => { setOpenTitle(title); setOpenSummary(typeof summary === 'string' ? summary : ''); }, []);
-  const nav = useMemo(() => ({ active, open: setChosen, panelEl, announce }), [active, panelEl, announce]);
   const phonePanel = !twoPane && !!active;
   useEscape(() => setChosen(null), phonePanel);   // Android back / Esc closes the setting first
+
+  /* Phones: opening a setting hides the list, which loses its scroll
+     position — remember it, start the setting at its top, and put the list
+     back where it was on Back (no scrolling down to "Account" again) */
+  const bodyRef = useRef(null);
+  const listScroll = useRef(0);
+  const wasOpen = useRef(phonePanel);
+  useLayoutEffect(() => {
+    const el = bodyRef.current;
+    if (!el || wasOpen.current === phonePanel) return;
+    wasOpen.current = phonePanel;
+    if (phonePanel) el.scrollTop = 0;
+    else el.scrollTop = listScroll.current;
+  }, [phonePanel]);
+  const openSetting = useCallback((id) => {
+    if (bodyRef.current && !twoPane) listScroll.current = bodyRef.current.scrollTop;
+    setChosen(id);
+  }, [twoPane]);
+  const nav = useMemo(() => ({ active, open: openSetting, panelEl, announce }), [active, openSetting, panelEl, announce]);
 
   const months = useMemo(() => new Set([...transactions, ...income].map((t) => t.month).filter(Boolean)).size, [transactions, income]);
   const since = user?.metadata?.creationTime ? new Date(user.metadata.creationTime) : null;
@@ -77,7 +95,7 @@ export default function ProfilePage(props) {
         </div>
       </div>
 
-      <div className="tab-body profile-body">
+      <div className="tab-body profile-body" ref={bodyRef}>
         <SettingsNav.Provider value={nav}>
           <div className={`profile-split${twoPane ? ' two-pane' : ''}${phonePanel ? ' panel-open' : ''}`}>
             <div className="profile-list">
