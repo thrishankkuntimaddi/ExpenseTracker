@@ -2,11 +2,12 @@
 // Turn it on once (Google asks for Drive access), pick how often, and the
 // app keeps ONE encrypted copy in Drive's hidden app storage (not visible as
 // a file in Drive, unreadable without your account). Restore it here — on
-// this device or a new one, signed in to the same account.
+// this device or a new one, signed in to the same account. "Change account"
+// sends the backups to another Google account from then on.
 import { useState } from 'react';
 import { CardFrame } from './SettingsGroup';
-import { HardDriveUpload, CloudUpload, History, Loader2, CheckCircle2, AlertTriangle, RotateCcw, ShieldCheck } from 'lucide-react';
-import { FREQUENCIES, driveToken, listBackups, downloadBackup, disconnectDrive } from '../../services/drive';
+import { HardDriveUpload, CloudUpload, History, Loader2, CheckCircle2, AlertTriangle, RotateCcw, ShieldCheck, UserRoundCog } from 'lucide-react';
+import { FREQUENCIES, driveToken, listBackups, downloadBackup, disconnectDrive, canChooseAccount } from '../../services/drive';
 import { restoreBackup } from '../../services/firestore';
 import { parseBackup, describeBackup } from '../../utils/backup';
 import { timeAgo } from '../../services/sync';
@@ -22,7 +23,11 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
   const [list, setList] = useState(null);         // { folderId, files } once loaded
   const [busy, setBusy] = useState(false);
   const [restoring, setRestoring] = useState(null);
+  const [changing, setChanging] = useState(false);
   const save = (patch) => onPatchSettings?.({ driveBackup: { ...cfg, ...patch } });
+  const account = cfg.account ?? state.account ?? null;
+  const tokenFor = () => driveToken({ interactive: true, hint: user?.email, account: cfg.account });
+  const fail = (err) => setMsg({ text: err.message, tone: 'expense', install: err?.code === 'native-needed' });
 
   async function turnOn() {
     setMsg(null);
@@ -32,26 +37,36 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
       await run({ interactive: true });
       setMsg({ text: 'Backed up to your Google Drive. The next ones happen on their own.', tone: 'income' });
     } catch (err) {
-      setMsg({ text: err.message, tone: 'expense' });
+      fail(err);
       if (err?.code === 'cancelled' || err?.code === 'unsupported') save({ enabled: false });
     }
   }
   async function now() {
     setMsg(null);
-    try { await run({ interactive: true }); setMsg({ text: 'Backed up just now.', tone: 'income' }); setList(null); } catch (err) { setMsg({ text: err.message, tone: 'expense' }); }
+    try { await run({ interactive: true }); setMsg({ text: 'Backed up just now.', tone: 'income' }); setList(null); } catch (err) { fail(err); }
+  }
+  async function changeAccount() {
+    setChanging(false); setMsg(null);
+    try {
+      const file = await run({ interactive: true, choose: true });
+      if (!file) return;
+      if (file.account) save({ account: file.account });
+      setList(null);
+      setMsg({ text: `Backed up to ${file.account ?? 'the account you picked'}. Backups go there from now on, on all your devices.`, tone: 'income' });
+    } catch (err) { fail(err); }
   }
   async function showList() {
     setMsg(null); setBusy(true);
-    try { setList(await listBackups(await driveToken({ interactive: true, hint: user?.email }))); } catch (err) { setMsg({ text: err.message, tone: 'expense' }); } finally { setBusy(false); }
+    try { setList(await listBackups(await tokenFor())); } catch (err) { fail(err); } finally { setBusy(false); }
   }
   async function restore(file) {
     setRestoring(null); setBusy(true); setMsg(null);
     try {
-      const text = await downloadBackup(await driveToken({ interactive: true, hint: user?.email }), file.id, user.uid);
+      const text = await downloadBackup(await tokenFor(), file.id, user.uid);
       const backup = parseBackup(text);
       await restoreBackup(user.uid, backup);
       setMsg({ text: `Restored ${describeBackup(backup)} from ${file.name}. Entries with the same id were replaced; nothing else was removed.`, tone: 'income' });
-    } catch (err) { setMsg({ text: err.message, tone: 'expense' }); } finally { setBusy(false); }
+    } catch (err) { fail(err); } finally { setBusy(false); }
   }
 
   return (
@@ -60,6 +75,11 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
           <ConfirmDeleteModal title={`Restore ${restoring.name}?`}
             message="Entries in the backup are written back to your account (same entries are replaced with the backed-up version). Nothing that isn’t in the backup is deleted."
             confirmLabel="Restore" ConfirmIcon={RotateCcw} onConfirm={() => restore(restoring)} onCancel={() => setRestoring(null)} />
+        )}
+        {changing && (
+          <ConfirmDeleteModal title="Back up to another Google account?"
+            message={`Pick the account in Google’s window. A backup is made there right away, and every backup after that goes there — from all your devices.${account ? ` The copy in ${account} stays in that Drive; Restore shows the new account’s copy.` : ''}`}
+            confirmLabel="Pick account" ConfirmIcon={UserRoundCog} onConfirm={changeAccount} onCancel={() => setChanging(false)} />
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="settings-icon" style={{ width: 32, height: 32, borderRadius: 9, background: cfg.enabled ? 'var(--savings)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -73,6 +93,7 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
                 : state.lastAt ? `Last backup ${timeAgo(state.lastAt)}${state.lastDevice ? ` · ${state.lastDevice}` : ''}${state.lastFile?.size ? ` · ${fmtSize(state.lastFile.size)}` : ''}`
                 : 'A copy only you hold — even if our servers had a problem, your data is in your Drive'}
             </div>
+            {cfg.enabled && account && <div id="drive-account" style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>To {account}</div>}
           </div>
           {cfg.enabled && (
             <button id="drive-toggle" className="toggle-track on" aria-pressed aria-label="Google Drive backup" onClick={() => { save({ enabled: false }); disconnectDrive(); }}>
@@ -107,11 +128,14 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
                 {running ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CloudUpload size={14} />} Back up now
               </button>
               <button id="drive-list" onClick={showList} disabled={busy} style={btn(false)}><History size={14} /> Restore…</button>
+              {(canChooseAccount() || platform === 'android') && (
+                <button id="drive-account-change" onClick={() => setChanging(true)} disabled={running} style={btn(false)}><UserRoundCog size={14} /> Change account</button>
+              )}
             </div>
           </>
         )}
 
-        {msg && <div role="status" style={{ marginTop: 10, fontSize: 12, lineHeight: 1.5, color: `var(--${msg.tone})` }}>{msg.tone === 'income' ? <CheckCircle2 size={12} style={{ verticalAlign: -2 }} /> : <AlertTriangle size={12} style={{ verticalAlign: -2 }} />} {msg.text}</div>}
+        {msg && <div role="status" style={{ marginTop: 10, fontSize: 12, lineHeight: 1.5, color: `var(--${msg.tone})` }}>{msg.tone === 'income' ? <CheckCircle2 size={12} style={{ verticalAlign: -2 }} /> : <AlertTriangle size={12} style={{ verticalAlign: -2 }} />} {msg.text}{msg.install && <> <a href={APK_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 700 }}>Get the new app</a></>}</div>}
         {busy && !list && <div style={{ marginTop: 10 }}><Loader2 size={16} style={{ animation: 'spin 1s linear infinite', color: 'var(--text-muted)' }} /></div>}
 
         {list && (

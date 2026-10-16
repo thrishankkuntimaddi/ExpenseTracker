@@ -1,5 +1,7 @@
 package com.thrishank.expensetracker;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.Intent;
 
@@ -30,7 +32,8 @@ import java.util.Collections;
  * the scopes the app asks for — "drive.appdata" (its hidden storage) and
  * "drive.file" (only files this app creates). Defaults to drive.file.
  *
- *   authorize({ interactive, scopes? }) → { accessToken, email? }
+ *   authorize({ interactive, scopes?, account? }) → { accessToken, email? }
+ *   chooseAccount() → { email }   Google's account picker (no permission needed)
  *
  * Once the user has said yes, Google returns tokens silently — that is what
  * lets the daily backup run without asking again. interactive: false never
@@ -41,13 +44,42 @@ public class GoogleDrivePlugin extends Plugin {
     static final String SCOPE = "https://www.googleapis.com/auth/drive.file";
 
     private ActivityResultLauncher<IntentSenderRequest> consentLauncher;
+    private ActivityResultLauncher<Intent> pickerLauncher;
     private PluginCall pending;
+    private PluginCall picking;
 
     @Override
     public void load() {
         // Registered while the activity is being created (Capacitor loads plugins then)
         consentLauncher = getActivity().registerForActivityResult(
             new ActivityResultContracts.StartIntentSenderForResult(), this::onConsent);
+        pickerLauncher = getActivity().registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), this::onPicked);
+    }
+
+    /** Which Google account backups go to: Google's own picker (it can add one too). */
+    @PluginMethod
+    public void chooseAccount(PluginCall call) {
+        Intent intent = AccountManager.newChooseAccountIntent(
+            null, null, new String[] { "com.google" }, null, null, null, null);
+        if (picking != null) picking.reject("Superseded", "cancelled");
+        picking = call;
+        pickerLauncher.launch(intent);
+    }
+
+    private void onPicked(ActivityResult activityResult) {
+        PluginCall call = picking;
+        picking = null;
+        if (call == null) return;
+        Intent data = activityResult.getData();
+        String email = data == null ? null : data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+        if (activityResult.getResultCode() != Activity.RESULT_OK || email == null) {
+            call.reject("No account was picked", "cancelled");
+            return;
+        }
+        JSObject out = new JSObject();
+        out.put("email", email);
+        call.resolve(out);
     }
 
     @PluginMethod
@@ -62,9 +94,10 @@ public class GoogleDrivePlugin extends Plugin {
             }
         } catch (Exception ignored) { }
         if (scopes.isEmpty()) scopes.add(new Scope(SCOPE));
-        AuthorizationRequest request = AuthorizationRequest.builder()
-            .setRequestedScopes(scopes)
-            .build();
+        AuthorizationRequest.Builder builder = AuthorizationRequest.builder().setRequestedScopes(scopes);
+        String account = call.getString("account");
+        if (account != null && !account.isEmpty()) builder.setAccount(new Account(account, "com.google"));
+        AuthorizationRequest request = builder.build();
         Identity.getAuthorizationClient(getActivity())
             .authorize(request)
             .addOnSuccessListener(result -> {

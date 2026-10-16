@@ -24,21 +24,23 @@ export function useDriveBackup({ uid, email, settings, loaded }) {
 
   useEffect(() => (uid ? subscribeBackupState(uid, setState) : undefined), [uid]);
 
-  const run = useCallback(async ({ interactive = true } = {}) => {
+  const account = cfg.account;
+  // choose: pick another Google account (it is used from then on)
+  const run = useCallback(async ({ interactive = true, choose = false } = {}) => {
     if (!uid || busy.current) return null;
     busy.current = true; setRunning(true);
     try {
-      const file = await backupNow({ uid, email, interactive, deviceName: describeDevice() });
+      const file = await backupNow({ uid, email, account, choose, interactive, deviceName: describeDevice() });
       setNeedsTap(false);
       return file;
     } catch (err) {
       if (err?.code === 'consent-required') { setNeedsTap(true); if (interactive) throw err; return null; }
-      if (err?.code === 'cancelled') { if (interactive) throw err; return null; }
+      if (['cancelled', 'native-needed', 'unsupported'].includes(err?.code)) { if (interactive) throw err; return null; }
       noteBackupError(uid, err?.message ?? 'Backup failed');
       if (interactive) throw err;
       return null;
     } finally { busy.current = false; setRunning(false); }
-  }, [uid, email]);
+  }, [uid, email, account]);
 
   // The schedule
   useEffect(() => {

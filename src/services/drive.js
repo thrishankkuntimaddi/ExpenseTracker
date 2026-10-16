@@ -21,6 +21,10 @@
 //   web      Google Identity Services (needs VITE_GOOGLE_WEB_CLIENT_ID), or
 //            for Google accounts a Firebase re-auth popup with the Drive scope.
 //            Browsers need a click for these, so a due backup waits for one.
+//
+// Which Google account: the one you sign in with, unless you pick another
+// ("Change account" — settings.driveBackup.account, shared by your devices).
+// Every token is checked against it, so no device backs up to an old account.
 import { registerPlugin } from '@capacitor/core';
 import { doc, setDoc, onSnapshot, runTransaction } from 'firebase/firestore';
 import { GoogleAuthProvider, reauthenticateWithPopup } from 'firebase/auth';
@@ -47,7 +51,7 @@ export const FREQUENCIES = [
   { key: 'weekly', label: 'Every week', ms: 7 * 24 * 3600e3 },
   { key: 'monthly', label: 'Every month', ms: 30 * 24 * 3600e3 },
 ];
-export const DEFAULT_DRIVE = { enabled: false, frequency: 'daily' };
+export const DEFAULT_DRIVE = { enabled: false, frequency: 'daily', account: null };
 // One copy, always (older settings carried a "keep" count)
 export const driveSettings = (settings) => ({ ...DEFAULT_DRIVE, ...(settings?.driveBackup ?? {}), keep: 1 });
 
@@ -94,22 +98,61 @@ function loadGis() {
   return gisLoading;
 }
 
+const sameEmail = (a, b) => String(a ?? '').toLowerCase() === String(b ?? '').toLowerCase();
+
 /**
  * An access token for Drive. `interactive: false` never shows anything and
  * throws { code: 'consent-required' } when a tap is needed.
+ * `account`: the Google account backups go to (a token for any other is
+ * refused). `choose`: show Google's account picker and use whichever is picked.
  */
-export async function driveToken({ interactive = true, hint } = {}) {
+export async function driveToken({ interactive = true, hint, account = null, choose = false } = {}) {
+  const opts = { interactive, hint: account ?? hint, account: choose ? null : account, choose };
+  let token = await rawToken(opts);
+  if (choose || !account) return token;
+  let got = await tokenAccount(token);
+  if (!got || sameEmail(got, account)) return token;
+  // This device still holds access for another account: forget it and ask
+  // once more (Google preselects the right one)
+  disconnectDrive();
+  if (interactive && platform !== 'android') {
+    token = await rawToken(opts);
+    got = await tokenAccount(token);
+    if (!got || sameEmail(got, account)) return token;
+    disconnectDrive();
+  }
+  throw Object.assign(new Error(platform === 'android' && !nativePicksAccount()
+    ? `Backups go to ${account} — install the new app so this phone can use that account.`
+    : `Backups go to ${account}, but Google gave access for ${got}. Tap “Back up now” and pick ${account}.`),
+  { code: interactive ? 'wrong-account' : 'consent-required' });
+}
+
+/** Can this app pick the Google account? (Android apps from before 3.14.3 can't.) */
+export function nativePicksAccount() {
+  if (platform !== 'android') return true;
+  const h = window.Capacitor?.PluginHeaders?.find((p) => p.name === 'GoogleDrive');
+  return !!h?.methods?.some((m) => m.name === 'chooseAccount');
+}
+export const canChooseAccount = () => (platform === 'web' ? !!WEB_CLIENT_ID : nativePicksAccount());
+
+async function rawToken({ interactive, hint, account, choose }) {
   const need = () => Object.assign(new Error('Tap “Back up now” to connect Google Drive.'), { code: 'consent-required' });
   if (platform === 'android') {
     try {
-      const r = await GoogleDrive.authorize({ interactive, scopes: SCOPES.split(' ') });
+      let pick = account;
+      if (choose) {
+        if (!nativePicksAccount()) throw Object.assign(new Error('Changing the Google account needs the new Android app. Install it (your data stays), then try again.'), { code: 'native-needed' });
+        pick = (await GoogleDrive.chooseAccount()).email;
+      }
+      const r = await GoogleDrive.authorize({ interactive, scopes: SCOPES.split(' '), ...(pick ? { account: pick } : {}) });
       return r.accessToken;
     } catch (err) {
       if (err?.code === 'consent-required') throw need();
-      if (err?.code === 'cancelled') throw Object.assign(new Error('Google Drive access was not given.'), { code: 'cancelled' });
+      if (err?.code === 'cancelled') throw Object.assign(new Error(choose ? 'No account was picked — backups stay where they were.' : 'Google Drive access was not given.'), { code: 'cancelled' });
       throw err;
     }
   }
+  if (choose) disconnectDrive();
   const c = cached();
   if (c && (await grantedScopes(c)).has(APPDATA_SCOPE)) return c;
   if (platform === 'desktop') {
@@ -128,7 +171,7 @@ export async function driveToken({ interactive = true, hint } = {}) {
       }
     }
     if (!interactive) throw need();
-    const r = await desktopOAuth({ scope: `openid email ${SCOPES}`, extra: { access_type: 'offline', prompt: 'consent', ...(hint ? { login_hint: hint } : {}) } });
+    const r = await desktopOAuth({ scope: `openid email ${SCOPES}`, extra: { access_type: 'offline', prompt: choose ? 'select_account consent' : 'consent', ...(hint && !choose ? { login_hint: hint } : {}) } });
     if (!r) throw Object.assign(new Error('Google Drive access was not given.'), { code: 'cancelled' });
     if (r.refresh_token) { try { localStorage.setItem(DESKTOP_RT_KEY, r.refresh_token); } catch { /* storage unavailable */ } }
     return remember(r.access_token, r.expires_in);
@@ -139,14 +182,15 @@ export async function driveToken({ interactive = true, hint } = {}) {
     await loadGis();
     return new Promise((resolve, reject) => {
       const client = window.google.accounts.oauth2.initTokenClient({
-        client_id: WEB_CLIENT_ID, scope: SCOPES, hint,
+        client_id: WEB_CLIENT_ID, scope: SCOPES, ...(choose ? {} : { hint }),
         callback: (r) => (r.error ? reject(new Error(r.error_description || r.error)) : resolve(remember(r.access_token, Number(r.expires_in) || 3500))),
         error_callback: (e) => reject(Object.assign(new Error(e?.type === 'popup_closed' ? 'Google Drive access was not given (the Google window was closed — if it said “Access blocked”, the app’s Google sign-in isn’t fully set up yet).' : (e?.message || 'Google sign-in failed.')), { code: 'cancelled' })),
       });
-      client.requestAccessToken({ prompt: '' });
+      client.requestAccessToken({ prompt: choose ? 'select_account' : '' });
     });
   }
   // No web client configured: Google accounts can grant Drive through a Firebase re-auth popup
+  if (choose) throw Object.assign(new Error('Changing the Google account isn’t available on this website. Use the Android or desktop app.'), { code: 'unsupported' });
   const user = auth?.currentUser;
   if (!user?.providerData?.some((p) => p.providerId === 'google.com')) {
     throw Object.assign(new Error('Drive backup on the website needs a Google account here. Use the Android or desktop app, or sign in with Google.'), { code: 'unsupported' });
@@ -196,6 +240,16 @@ export async function grantedScopes(token) {
   } catch { /* offline: treat as unknown */ }
   scopeCache.set(token, set);
   return set;
+}
+
+/** The Google account a token belongs to (Drive "about"; remembered per token). */
+const accountCache = new Map();
+export async function tokenAccount(token) {
+  if (accountCache.has(token)) return accountCache.get(token);
+  let email = null;
+  try { email = (await (await api(token, '/about?fields=user(emailAddress)')).json()).user?.emailAddress ?? null; } catch { /* unknown */ }
+  if (email) accountCache.set(token, email);
+  return email;
 }
 
 /* The old visible folder (only looked up, never created any more — except
@@ -273,8 +327,9 @@ export function subscribeBackupState(uid, cb) {
  * copy (and, once, the old visible folder). Returns the new file.
  * Throws (code 'consent-required' when not interactive).
  */
-export async function backupNow({ uid, email, interactive = true, deviceName }) {
-  const token = await driveToken({ interactive, hint: email });
+export async function backupNow({ uid, email, account = null, choose = false, interactive = true, deviceName }) {
+  const token = await driveToken({ interactive, hint: email, account, choose });
+  const usedAccount = await tokenAccount(token);
   const [data, key] = await Promise.all([exportAllUserData(uid, email), backupKey(uid)]);
   const text = await encryptBackup(key, JSON.stringify(data));
   const scopes = await grantedScopes(token);
@@ -299,9 +354,9 @@ export async function backupNow({ uid, email, interactive = true, deviceName }) 
   }
   await setDoc(stateRef(uid), {
     lastAt: Date.now(), lastFile: { id: file.id, name: file.name, size: Number(file.size) || text.length },
-    lastDevice: deviceName ?? null, error: null, hidden, encrypted: true, ...(legacyCleared ? { legacyCleared: true } : {}),
+    lastDevice: deviceName ?? null, error: null, hidden, encrypted: true, account: usedAccount, ...(legacyCleared ? { legacyCleared: true } : {}),
   }, { merge: true });
-  return file;
+  return { ...file, account: usedAccount };
 }
 
 export function noteBackupError(uid, message) {
