@@ -51,10 +51,6 @@ p { margin: 0; }
 .btn-sm { padding: 9px 15px; font-size: .88rem; border-radius: 12px; }
 .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
 
-/* ── Moved banner (people who used the app at this address) ── */
-.moved { position: relative; z-index: 60; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: center; padding: 10px 16px; background: linear-gradient(90deg, #2A2160, #3B2470); font-size: .9rem; text-align: center; }
-.moved[hidden] { display: none; }
-.moved-btn { font-weight: 800; color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 
 /* ── Nav: calm — a thin line, links to the right, one button ── */
 .nav { position: sticky; top: 0; z-index: 50; background: rgba(10, 12, 17, .92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--rim); }

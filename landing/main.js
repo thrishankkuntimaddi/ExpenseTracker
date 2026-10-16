@@ -4,7 +4,6 @@
 //   • the download for this device is highlighted
 //   • the demo video plays only while on screen
 //   • star rating + note → a prefilled GitHub feedback issue
-//   • people who used the app at this address get "Open the app"
 (function () {
   var REPO = 'thrishankkuntimaddi/ExpenseTracker';
 
@@ -75,8 +74,4 @@
   stars.forEach(function (s) { s.addEventListener('click', function () { rating = Number(s.dataset.rate); paint(); }); });
   if (text) text.addEventListener('input', update);
 
-  // Used the app here before (its data lives under this address): point to the new one
-  try {
-    if (Object.keys(localStorage).some(function (k) { return /^et_(device_id|theme|motion)/.test(k); })) document.getElementById('moved').hidden = false;
-  } catch { /* storage unavailable */ }
 })();
