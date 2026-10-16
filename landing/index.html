@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Expense Tracker</title>
-  <meta name="description" content="A free, open-source personal finance app: expenses, budgets with a daily safe-to-spend, bills that remind you, trips split with friends and encrypted backups — on the web, Android, Mac, Windows and Linux." />
-  <meta name="theme-color" content="#0B0D12" />
+  <title>Expense Tracker — know where every rupee goes</title>
+  <meta name="description" content="A free, open-source personal finance app: expenses, budgets with a daily safe-to-spend, bills that remind you, trips split with friends, savings goals and encrypted backups — on the web, Android, Mac, Windows and Linux." />
+  <meta name="theme-color" content="#0A0C11" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Expense Tracker" />
-  <meta property="og:description" content="Know where your money goes. Budgets, bills, trips with friends — free and open source, on every device." />
+  <meta property="og:title" content="Expense Tracker — know where every rupee goes" />
+  <meta property="og:description" content="Budgets that pace you, bills that remind you, trips split fairly. Free and open source, on every device." />
   <meta property="og:image" content="https://thrishankkuntimaddi.github.io/ExpenseTracker/assets/og-image.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <script>
     // Old links and installed web apps still point here: send them to the app.
@@ -30,11 +30,11 @@
 </head>
 <body>
   <div class="moved" id="moved" hidden>
-    Expense Tracker now opens at its own address.
-    <a data-app target="_blank" rel="noopener" href="https://expensetracker-in.web.app/">Open the app ↗</a>
+    <span>Expense Tracker now opens at its own address.</span>
+    <a class="moved-btn" data-app target="_blank" rel="noopener" href="https://expensetracker-in.web.app/">Open the app ↗</a>
   </div>
 
-  <header class="nav">
+  <header class="nav" id="nav">
     <div class="wrap nav-row">
       <a class="brand" href="#top"><img src="assets/icon-192.png" alt="" width="28" height="28" /><span>Expense Tracker</span></a>
       <nav class="nav-links" aria-label="Sections">
@@ -48,87 +48,206 @@
   </header>
 
   <main id="top">
+    <!-- ── Hero ── -->
     <section class="hero">
-      <div class="wrap">
-        <div class="hero-copy">
-          <p class="kicker">Free and open source</p>
-          <h1>Know where your money goes.</h1>
-          <p class="lead">Expenses, bills, budgets, savings and trips with friends — in one calm app that tells you what’s safe to spend today. On the web, Android, Mac, Windows and Linux.</p>
+      <div class="glow g1"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy reveal">
+          <span class="pill"><i class="dot"></i> Free · open source · no ads · made in India</span>
+          <h1>Know where every <span class="grad">rupee</span> goes.</h1>
+          <p class="lead">Expenses, income, bills, budgets, savings goals and trips with friends — in one calm place that paces your month and tells you what’s safe to spend today. On the web, Android, Mac, Windows and Linux.</p>
           <div class="cta-row">
-            <a class="btn btn-primary" data-app target="_blank" rel="noopener" href="https://expensetracker-in.web.app/">Open the app ↗</a>
-            <a class="btn btn-ghost" href="#download" data-download-primary>Download</a>
+            <a class="btn btn-primary btn-lg" data-app target="_blank" rel="noopener" href="https://expensetracker-in.web.app/">Open the app — it’s free ↗</a>
+            <a class="btn btn-ghost btn-lg" href="#download" data-download-primary>Download the app</a>
           </div>
+          <ul class="trust">
+            <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1l7 3v5c0 4.4-3 8.3-7 9.6C6 17.3 3 13.4 3 9V4l7-3z"/></svg> App lock &amp; encrypted backups</li>
+            <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10l4 4 8-8"/></svg> Syncs across every device</li>
+            <li><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/></svg> Works offline</li>
+          </ul>
         </div>
-        <div class="hero-shot">
-          <img src="assets/desktop-home.webp" alt="Expense Tracker on a laptop: this month’s spending, bills due this week and recent entries" width="1600" height="1000" fetchpriority="high" />
+        <div class="hero-visual reveal" aria-hidden="true">
+          <div class="screen screen-desktop tilt">
+            <div class="chrome"><i></i><i></i><i></i></div>
+            <img src="assets/desktop-home.webp" alt="" width="1600" height="1000" fetchpriority="high" />
+          </div>
+          <div class="screen screen-phone float">
+            <img src="assets/phone-home.webp" alt="" width="780" height="1688" />
+          </div>
+          <div class="chip chip-a float-slow"><b>₹719</b><span>safe to spend today</span></div>
         </div>
+      </div>
+      <div class="wrap platforms reveal">
+        <span>Works on</span>
+        <ul><li>Web</li><li>Android</li><li>macOS</li><li>Windows</li><li>Linux</li><li>iPhone &amp; iPad <small>(web app)</small></li></ul>
       </div>
     </section>
 
+    <!-- ── Features ── -->
     <section class="section" id="features">
       <div class="wrap">
-        <h2>What it does</h2>
-        <div class="features">
-          <div class="feature"><h3>Quick to log</h3><p>Type “chai 20” or “petrol 1500” — it fills in the category and learns your choices.</p></div>
-          <div class="feature"><h3>A budget that paces you</h3><p>What’s left this month, what’s safe to spend today, and where you’ll end up.</p></div>
-          <div class="feature"><h3>Bills that remind you</h3><p>Rent, EMIs, SIPs and salary on schedule, with a reminder on the day.</p></div>
-          <div class="feature"><h3>Trips with friends</h3><p>Everyone adds what they paid; it shows the fewest payments to settle up.</p></div>
-          <div class="feature"><h3>Savings goals</h3><p>Track what you’re saving for and where the money is kept.</p></div>
-          <div class="feature"><h3>Private</h3><p>App lock on every device and encrypted backups in your own Google Drive.</p></div>
+        <div class="section-head reveal">
+          <span class="eyebrow">Everything your money touches</span>
+          <h2>Built for how people in India actually spend.</h2>
+          <p>Type “chai 20” and it’s logged and categorised. Rent on the 5th, SIPs on the 10th, a Goa trip with four friends — it all has a place.</p>
+        </div>
+
+        <div class="grid-features">
+          <article class="fcard reveal"><div class="ficon">⚡</div><h3>Logs as fast as you think</h3><p>“Swiggy 250”, “petrol 1500” — the India-aware engine picks the category, learns your overrides and gets out of the way.</p></article>
+          <article class="fcard reveal"><div class="ficon">🎯</div><h3>A budget that paces you</h3><p>A daily <em>safe to spend</em>, a projected month end and gentle envelopes per category — useful even before you set one up.</p></article>
+          <article class="fcard reveal"><div class="ficon">🧾</div><h3>Bills that ask, not nag</h3><p>“Have you paid rent?” on the day. Rent, EMIs, SIPs and salary post themselves on schedule.</p></article>
+          <article class="fcard reveal"><div class="ficon">✈️</div><h3>Trips, split fairly</h3><p>Invite friends by QR or link. Everyone adds what they paid; the app shows the fewest payments to settle up.</p></article>
+          <article class="fcard reveal"><div class="ficon">🏦</div><h3>Savings goals with holders</h3><p>Track where the money actually sits — cash, a bank, a friend — and when it moved.</p></article>
+          <article class="fcard reveal"><div class="ficon">🌍</div><h3>Any currency, counted right</h3><p>History at the rate of its day, what you still hold at today’s rate. Perfect for travel and earnings abroad.</p></article>
+        </div>
+
+        <div class="showcase reveal">
+          <div class="show-copy">
+            <span class="eyebrow">Budget</span>
+            <h3>See the month before it happens.</h3>
+            <p>How much is left, what’s safe for today, where you’ll land by the 30th — and which category is running hot. Salary-to-salary reports land on the day you choose.</p>
+            <ul class="ticks"><li>Safe-to-spend today</li><li>Projected month end</li><li>Per-category envelopes</li><li>Monthly report, salary to salary</li></ul>
+          </div>
+          <div class="show-media"><div class="screen screen-desktop"><div class="chrome"><i></i><i></i><i></i></div><img loading="lazy" src="assets/desktop-budget.webp" alt="The Budget page: money left this month, safe to spend today and category envelopes" width="1600" height="1000" /></div></div>
+        </div>
+
+        <div class="showcase reverse reveal">
+          <div class="show-copy">
+            <span class="eyebrow">Trips &amp; splits</span>
+            <h3>Goa with four friends? Sorted.</h3>
+            <p>Everyone adds what they paid on their own phone. Wallet partners pay together, each person edits only their rows, and one tap shows who pays whom.</p>
+            <ul class="ticks"><li>Invite by QR, link or email</li><li>Live balances for everyone</li><li>Fewest payments to settle</li><li>Your share lands in your ledger</li></ul>
+          </div>
+          <div class="show-media"><div class="screen screen-desktop"><div class="chrome"><i></i><i></i><i></i></div><img loading="lazy" src="assets/desktop-trip.webp" alt="Trips: Goa 2026 with spent, to settle and what you get back" width="1600" height="1000" /></div></div>
+        </div>
+
+        <div class="showcase reveal">
+          <div class="show-copy">
+            <span class="eyebrow">Your phone, your laptop</span>
+            <h3>The same app everywhere — in sync.</h3>
+            <p>Add a coffee on your phone and it’s on your laptop before you sit down. Every platform updates itself.</p>
+            <ul class="ticks"><li>Android, Mac, Windows, Linux, web</li><li>Offline first, syncs when back</li><li>Light and Midnight themes</li><li>Coin drops, rolling totals, sounds</li></ul>
+          </div>
+          <div class="show-media phones">
+            <div class="screen screen-phone"><img loading="lazy" src="assets/phone-stats.webp" alt="Stats on a phone: income, spent, saved" width="780" height="1688" /></div>
+            <div class="screen screen-phone"><img loading="lazy" src="assets/phone-home-light.webp" alt="Home in the light theme" width="780" height="1688" /></div>
+            <div class="screen screen-phone"><img loading="lazy" src="assets/phone-bills.webp" alt="Bills and payments" width="780" height="1688" /></div>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="section alt">
-      <div class="wrap split">
-        <div>
-          <h2>The same app on your phone and laptop</h2>
-          <p class="muted-p">Add an expense on your phone and it’s on your laptop a moment later. Works offline, and every version updates itself.</p>
-        </div>
-        <div class="phones">
-          <img loading="lazy" src="assets/phone-home.webp" alt="Home on a phone" width="780" height="1688" />
-          <img loading="lazy" src="assets/phone-stats.webp" alt="Stats on a phone" width="780" height="1688" />
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="demo">
-      <div class="wrap split">
-        <div>
-          <h2>A quick look</h2>
-          <p class="muted-p">Logging an expense, checking the month, and the stats — in about 30 seconds.</p>
-        </div>
-        <div class="video">
-          <video src="assets/demo.mp4" poster="assets/demo-poster.jpg" muted loop playsinline preload="metadata" aria-label="A 30-second tour of the app" data-autoplay></video>
-        </div>
-      </div>
-    </section>
-
-    <section class="section alt" id="download">
+    <!-- ── Privacy ── -->
+    <section class="section privacy">
       <div class="wrap">
-        <h2>Download</h2>
-        <p class="muted-p">One account on every device. Or just use it in your browser.</p>
-        <div class="downloads">
-          <a data-platform="android" href="https://thrishankkuntimaddi.github.io/ExpenseTracker/app/files/ExpenseTracker-Android.apk"><b>Android</b><span>.apk · Android 7+</span></a>
-          <a data-platform="mac-arm" href="https://thrishankkuntimaddi.github.io/ExpenseTracker/app/files/ExpenseTracker-Mac-AppleSilicon.dmg"><b>Mac (Apple chip)</b><span>.dmg</span></a>
-          <a data-platform="mac-intel" href="https://thrishankkuntimaddi.github.io/ExpenseTracker/app/files/ExpenseTracker-Mac-Intel.dmg"><b>Mac (Intel)</b><span>.dmg</span></a>
-          <a data-platform="windows" href="https://thrishankkuntimaddi.github.io/ExpenseTracker/app/files/ExpenseTracker-Windows-Setup.exe"><b>Windows</b><span>10 / 11</span></a>
-          <a data-platform="linux" href="https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Linux.AppImage"><b>Linux</b><span>.AppImage</span></a>
-          <a data-platform="web" data-app target="_blank" rel="noopener" href="https://expensetracker-in.web.app/"><b>Web / iPhone</b><span>Open in the browser ↗</span></a>
+        <div class="section-head reveal">
+          <span class="eyebrow">Private by design</span>
+          <h2>Your data. Your Drive. Your lock.</h2>
         </div>
-        <p class="fine">Mac: right-click the app → Open the first time. Windows: “More info” → “Run anyway” the first time.</p>
+        <div class="grid-privacy">
+          <article class="pcard reveal"><h3>🔒 App lock on every device</h3><p>One PIN everywhere, fingerprint or face where available, and remote lock or sign-out from your phone.</p></article>
+          <article class="pcard reveal"><h3>☁️ Encrypted backups — in your Drive</h3><p>Hidden in Google Drive’s app storage, sealed with AES-256, only the latest copy kept. Useless to anyone without your account.</p></article>
+          <article class="pcard reveal"><h3>🛡️ Alerts that matter, once</h3><p>A new device signs in or someone tries wrong PINs? You hear about it once — on your devices and by email.</p></article>
+          <article class="pcard reveal"><h3>📤 Leave any time</h3><p>Export everything to JSON or CSV whenever you like. No ads, no selling data, no lock-in.</p></article>
+        </div>
       </div>
     </section>
 
-    <section class="section">
-      <div class="wrap oss">
-        <div>
-          <h2>Open source</h2>
-          <p class="muted-p">MIT licensed. Read the code, suggest something, or report a bug.</p>
+    <!-- ── Demo ── -->
+    <section class="section demo" id="demo">
+      <div class="wrap demo-grid">
+        <div class="demo-copy reveal">
+          <span class="eyebrow">30-second tour</span>
+          <h2>See it in motion.</h2>
+          <ol class="steps">
+            <li><b>Type it.</b> “Coffee with Muza 240” — category picked, coin drops, the month’s total rolls.</li>
+            <li><b>Check the pace.</b> What’s left, what’s safe for today, what’s due this week.</li>
+            <li><b>Look back.</b> Income, spending and savings at a glance, every month.</li>
+          </ol>
+          <a class="btn btn-primary" data-app target="_blank" rel="noopener" href="https://expensetracker-in.web.app/">Try it yourself ↗</a>
         </div>
-        <div class="oss-links">
-          <a class="btn btn-ghost" href="https://github.com/thrishankkuntimaddi/ExpenseTracker" target="_blank" rel="noopener">★ Star on GitHub<span class="count" data-stars></span></a>
-          <a class="btn btn-ghost" href="https://github.com/thrishankkuntimaddi/ExpenseTracker/issues/new?labels=feedback" target="_blank" rel="noopener">Send feedback</a>
+        <div class="demo-media reveal">
+          <div class="screen screen-phone big">
+            <video src="assets/demo.mp4" poster="assets/demo-poster.jpg" muted loop playsinline preload="metadata" aria-label="A 30-second tour of the app" data-autoplay></video>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Download ── -->
+    <section class="section download" id="download">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <span class="eyebrow">Get the app</span>
+          <h2>Install once. It keeps itself up to date.</h2>
+          <p>Same account everywhere. Or skip installing — the web app works in any browser.</p>
+        </div>
+        <div class="grid-download">
+          <a class="dcard reveal" data-platform="android" href="https://thrishankkuntimaddi.github.io/ExpenseTracker/app/files/ExpenseTracker-Android.apk"><span class="dicon">🤖</span><b>Android</b><span>Android 7+ · .apk</span></a>
+          <a class="dcard reveal" data-platform="mac-arm" href="https://thrishankkuntimaddi.github.io/ExpenseTracker/app/files/ExpenseTracker-Mac-AppleSilicon.dmg"><span class="dicon">💻</span><b>Mac — Apple chip</b><span>M1 and newer · .dmg</span></a>
+          <a class="dcard reveal" data-platform="mac-intel" href="https://thrishankkuntimaddi.github.io/ExpenseTracker/app/files/ExpenseTracker-Mac-Intel.dmg"><span class="dicon">💻</span><b>Mac — Intel</b><span>Older Macs · .dmg</span></a>
+          <a class="dcard reveal" data-platform="windows" href="https://thrishankkuntimaddi.github.io/ExpenseTracker/app/files/ExpenseTracker-Windows-Setup.exe"><span class="dicon">🪟</span><b>Windows</b><span>10 / 11 · installer</span></a>
+          <a class="dcard reveal" data-platform="linux" href="https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Linux.AppImage"><span class="dicon">🐧</span><b>Linux</b><span>.AppImage</span></a>
+          <a class="dcard reveal" data-platform="web" data-app target="_blank" rel="noopener" href="https://expensetracker-in.web.app/"><span class="dicon">🌐</span><b>Web &amp; iPhone</b><span>Open, then Add to Home Screen</span></a>
+        </div>
+        <p class="fine reveal">First launch on a Mac: right-click the app → Open (it isn’t notarised by Apple yet). Windows may say “protected your PC” → More info → Run anyway. Both only once.</p>
+      </div>
+    </section>
+
+    <!-- ── Open source & feedback ── -->
+    <section class="section oss" id="open-source">
+      <div class="wrap oss-grid">
+        <div class="oss-card reveal">
+          <span class="eyebrow">Open source · MIT</span>
+          <h2>Built in the open.</h2>
+          <p>Read every line, run it yourself, or make it better. Stars help more people find it.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="https://github.com/thrishankkuntimaddi/ExpenseTracker" target="_blank" rel="noopener">★ Star on GitHub <span class="gh-count light" data-stars></span></a>
+            <a class="btn btn-ghost" href="https://github.com/thrishankkuntimaddi/ExpenseTracker/fork" target="_blank" rel="noopener">Fork it</a>
+          </div>
+          <dl class="repo-stats"><div><dt>Stars</dt><dd data-stars>—</dd></div><div><dt>Forks</dt><dd data-forks>—</dd></div><div><dt>Latest</dt><dd data-version>—</dd></div></dl>
+        </div>
+        <div class="oss-card feedback reveal">
+          <span class="eyebrow">Feedback</span>
+          <h2>Tell us what you think.</h2>
+          <p>How’s it working for you?</p>
+          <div class="rate" role="radiogroup" aria-label="Your rating">
+            <button type="button" role="radio" aria-checked="false" data-rate="1" aria-label="1 star">★</button>
+            <button type="button" role="radio" aria-checked="false" data-rate="2" aria-label="2 stars">★</button>
+            <button type="button" role="radio" aria-checked="false" data-rate="3" aria-label="3 stars">★</button>
+            <button type="button" role="radio" aria-checked="false" data-rate="4" aria-label="4 stars">★</button>
+            <button type="button" role="radio" aria-checked="false" data-rate="5" aria-label="5 stars">★</button>
+          </div>
+          <textarea id="fb-text" rows="3" placeholder="What do you love? What’s missing? (optional)"></textarea>
+          <div class="cta-row">
+            <a class="btn btn-primary" id="fb-send" href="https://github.com/thrishankkuntimaddi/ExpenseTracker/issues/new?labels=feedback" target="_blank" rel="noopener">Send feedback</a>
+            <a class="btn btn-ghost" href="https://github.com/thrishankkuntimaddi/ExpenseTracker/issues/new?labels=bug" target="_blank" rel="noopener">Report a bug</a>
+          </div>
+          <p class="fine">Opens a GitHub issue with your note — public, so others can add to it.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── FAQ ── -->
+    <section class="section faq">
+      <div class="wrap narrow">
+        <div class="section-head reveal"><h2>Questions</h2></div>
+        <details class="reveal"><summary>Is it really free?</summary><p>Yes — no ads, no premium tier, no selling data. It’s open source under the MIT licence.</p></details>
+        <details class="reveal"><summary>Where is my data kept?</summary><p>In your own account on Google’s Firebase, readable only by you (shared trips: by the people on that trip). Backups go to your own Google Drive, encrypted. You can export everything any time.</p></details>
+        <details class="reveal"><summary>Does it work offline?</summary><p>Yes. Add and edit offline on any device; it syncs when you’re back online.</p></details>
+        <details class="reveal"><summary>What about iPhone?</summary><p>Open the web app in Safari and tap Share → Add to Home Screen. It runs like an app, offline included.</p></details>
+        <details class="reveal"><summary>Can my friends use it for a trip without installing anything?</summary><p>Yes — they open your invite link in any browser, sign in or create a free account, and pick their name.</p></details>
+      </div>
+    </section>
+
+    <!-- ── Final CTA ── -->
+    <section class="final reveal">
+      <div class="wrap">
+        <h2>Start with one entry. “chai 20”.</h2>
+        <p class="final-sub">Free, no ads, your data stays yours. Takes a minute to set up.</p>
+        <div class="cta-row center">
+          <a class="btn btn-primary btn-lg" data-app target="_blank" rel="noopener" href="https://expensetracker-in.web.app/">Open Expense Tracker ↗</a>
+          <a class="btn btn-ghost btn-lg" href="#download" data-download-primary>Download the app</a>
         </div>
       </div>
     </section>
@@ -136,10 +255,11 @@
 
   <footer class="footer">
     <div class="wrap foot-row">
-      <span>Expense Tracker</span>
+      <span class="brand small"><img src="assets/icon-192.png" alt="" width="22" height="22" /> Expense Tracker</span>
       <nav aria-label="Footer">
         <a href="privacy.html">Privacy</a>
         <a href="https://github.com/thrishankkuntimaddi/ExpenseTracker" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thrishankkuntimaddi/ExpenseTracker/releases" target="_blank" rel="noopener">Releases</a>
         <a href="https://github.com/thrishankkuntimaddi/ExpenseTracker/blob/main/LICENSE" target="_blank" rel="noopener">MIT licence</a>
       </nav>
     </div>
