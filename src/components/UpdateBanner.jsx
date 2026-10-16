@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Sparkles, Download, RotateCcw, X } from 'lucide-react';
 import { useUpdateState, dismissUpdateNote, restartToUpdate, APK_URL } from '../native/updates';
 import { platform } from '../native';
+import { play } from '../sound/sound';
 
 // Closed once, a note stays closed for that version (Settings → App still
 // has Restart / Install); it comes back only for a newer one
@@ -20,6 +21,7 @@ export default function UpdateBanner() {
     dismissUpdateNote();
   };
   const show = ['updated', 'ready', 'native-needed'].includes(u.kind) && u.message && closed !== noteId;
+  useEffect(() => { if (show) play('banner'); }, [show, noteId]);
   useEffect(() => {
     if (u.kind !== 'updated') return undefined;
     const t = setTimeout(dismissUpdateNote, 5000);

@@ -5,10 +5,11 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { formatAmount } from '../utils/dateHelpers';
 import { motionOn } from './motion';
+import { play } from '../sound/sound';
 
 const DIGITS = '0123456789';
 
-export default function RollingNumber({ value, format = formatAmount, className, style, id }) {
+export default function RollingNumber({ value, format = formatAmount, className, style, id, sound = false }) {
   const text = format(value);
   const shown = useRef(text);
   const [roll, setRoll] = useState(null);   // { from, to, key }
@@ -19,9 +20,12 @@ export default function RollingNumber({ value, format = formatAmount, className,
     if (shown.current === text) return;
     const from = shown.current;
     shown.current = text;
-    if (motionOn()) setRoll({ from, to: text, key: Date.now() });
-    else setRoll(null);
-  }, [text]);
+    if (motionOn()) {
+      setRoll({ from, to: text, key: Date.now() });
+      // cash rolling, as long as the digits roll (the headline totals only)
+      if (sound) play('roll', { ms: 700 + Math.min(9, from.length) * 55 });
+    } else setRoll(null);
+  }, [text, sound]);
 
   useLayoutEffect(() => {
     if (!roll || !box.current) return undefined;

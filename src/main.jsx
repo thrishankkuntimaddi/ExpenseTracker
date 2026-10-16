@@ -8,6 +8,7 @@ import App from './app/App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { confirmBundleBoots, startAutoUpdates } from './native/updates.js'
 import { takeQuickBoot } from './app/quickBoot.js'
+import { play, wireTapSounds } from './sound/sound.js'
 
 // Android: tell the over-the-air updater this bundle boots, before anything
 // else (a bundle that never gets here is rolled back automatically).
@@ -34,6 +35,7 @@ function bootstrap() {
   // a moment, so it doesn't flash. A slow network can't hold it forever.
   // Skipped for reduced motion. Wall-clock based (not rAF), so a page opened
   // in a background tab is ready when it's shown.
+  wireTapSounds();   // a soft tick on anything pressable (Profile → Sounds)
   const splash = document.getElementById('app-splash');
   if (splash) {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -52,6 +54,7 @@ function bootstrap() {
       setTimeout(r, Math.max(0, MAX_WAIT_MS - elapsed));
     });
     Promise.all([minDelay, ready]).then(() => {
+      if (!quick) play('open');   // when it's switched on (off by default)
       splash.classList.add('sp-exit');
       setTimeout(() => splash.remove(), 800);
     });

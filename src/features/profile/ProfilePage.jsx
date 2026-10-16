@@ -8,7 +8,7 @@
 //     full screen on phones (Back — or the Android back button — returns)
 import { useMotionPref, setMotionPref } from '../../motion/motion';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music } from 'lucide-react';
 import Avatar from '../../components/Avatar';
 import { displayNameOf } from '../../app/shellContext';
 import { PAGE_META } from '../../app/pages';
@@ -20,6 +20,8 @@ import RemindersCard from '../settings/RemindersCard';
 import CurrencyCard from '../settings/CurrencyCard';
 import SecurityCard from '../../security/SecurityCard';
 import DriveBackupCard from '../settings/DriveBackupCard';
+import SoundsCard, { soundsSummary } from '../settings/SoundsCard';
+import { useSoundPrefs } from '../../sound/sound';
 import { useShell } from '../../app/shellContext';
 import { useEscape } from '../../hooks/useEscape';
 import { normaliseReminders, REMINDER_TYPES } from '../../utils/reminders';
@@ -75,6 +77,7 @@ export default function ProfilePage(props) {
   const rem = normaliseReminders(settings?.reminders);
   const remOn = REMINDER_TYPES.filter((t) => rem[t]?.enabled);
   const remSummary = remOn.length ? `${remOn.length} on · ${remOn.map((t) => REMINDER_NAMES[t]).join(', ')}` : 'Off';
+  const sounds = useSoundPrefs();
   const currency = isCurrency(settings?.currency) ? settings.currency : DEFAULT_CURRENCY;
   const driveSummary = drive?.cfg?.enabled
     ? `On · ${(FREQUENCIES.find((f) => f.key === drive.cfg.frequency)?.label ?? 'Every week').toLowerCase()}${drive.state?.lastAt ? ` · last ${timeAgo(drive.state.lastAt)}` : ''}`
@@ -133,6 +136,13 @@ export default function ProfilePage(props) {
                   <MotionRow />
                 </div>
               </section>
+
+              {/* ── Sounds: taps, money, rolling totals… ── */}
+              <Section title="Sounds">
+                <Group id="sounds" title="Sounds" Icon={Music} color="var(--savings)" summary={soundsSummary(sounds)}>
+                  <SoundsCard />
+                </Group>
+              </Section>
 
               {/* ── Security: app lock, devices, alerts ── */}
               <SecurityCard user={user} devices={devices} events={securityEvents} />

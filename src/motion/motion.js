@@ -6,6 +6,7 @@
 // it stays smooth on older phones.
 import { useSyncExternalStore } from 'react';
 import { currencySymbol } from '../utils/money';
+import { play } from '../sound/sound';
 
 const KEY = 'et_motion';            // 'off' | anything else = on
 const EVENT = 'et-motion';
@@ -14,6 +15,9 @@ const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia
 const userOff = () => { try { return localStorage.getItem(KEY) === 'off'; } catch { return false; } };
 
 /** Animations wanted right now? (false on the server and in tests) */
+// gold = spent, green = came in, blue = saved, violet = debts / settling up
+const TONE_SOUND = { gold: 'debit', green: 'credit', blue: 'save', violet: 'transfer' };
+
 export const motionOn = () => typeof window !== 'undefined' && typeof document !== 'undefined' && !reducedMotion() && !userOff();
 export const motionPref = () => (userOff() ? 'off' : 'on');
 export function setMotionPref(on) {
@@ -61,6 +65,8 @@ function coinEl(tone, size) {
  * @param to     element, selector or rect it lands on; the first visible of a list wins
  */
 export function flyCoin({ from, to, tone = 'gold' }) {
+  // The money sound plays even with animations off (Profile → Sounds)
+  play(TONE_SOUND[tone] ?? 'debit');
   if (!motionOn()) return;
   const a = rectOf(from);
   const targets = Array.isArray(to) ? to : [to];

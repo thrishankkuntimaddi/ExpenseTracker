@@ -11,6 +11,7 @@ import { dismissSecurityEvent, isEventHandled } from '../services/firestore';
 import { background } from '../services/sync';
 import { eventText } from './events';
 import { notifyNow } from '../native/reminders';
+import { play } from '../sound/sound';
 
 const ALERT_TYPES = ['wrong_pins', 'locked_out', 'lock_off', 'new_device'];
 const NOTIFIED_KEY = 'et_alerts_notified';   // system notifications already shown on this device
@@ -34,6 +35,7 @@ export default function SecurityBanners({ uid, devices, events }) {
     if (!notified.current) notified.current = readNotified();
     const fresh = alerts.filter((e) => !notified.current.has(e.id));
     if (!fresh.length) return;
+    play('banner');
     fresh.forEach((e) => {
       notified.current.add(e.id);
       const t = eventText(e);

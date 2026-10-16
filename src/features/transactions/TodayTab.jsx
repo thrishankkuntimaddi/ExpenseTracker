@@ -124,7 +124,7 @@ export default function TodayTab(props) {
       </div>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8, marginTop: 10 }}>Spent</div>
       <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 0, fontVariantNumeric: 'tabular-nums' }}>
-        <RollingNumber id="home-spent" value={stats?.totalExpense ?? 0} />
+        <RollingNumber id="home-spent" value={stats?.totalExpense ?? 0} sound />
       </div>
       {safeToday && (
         <>
