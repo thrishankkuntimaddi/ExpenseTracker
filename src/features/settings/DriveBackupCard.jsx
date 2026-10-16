@@ -1,11 +1,12 @@
 // ─── Profile → Google Drive backup ───────────────────────────────
 // Turn it on once (Google asks for Drive access), pick how often, and the
-// app keeps the newest copies in "Expense Tracker backups" in your Drive.
-// Restore any of them here — on this device or a new one.
+// app keeps ONE encrypted copy in Drive's hidden app storage (not visible as
+// a file in Drive, unreadable without your account). Restore it here — on
+// this device or a new one, signed in to the same account.
 import { useState } from 'react';
 import { CardFrame } from './SettingsGroup';
-import { HardDriveUpload, CloudUpload, History, ExternalLink, Loader2, CheckCircle2, AlertTriangle, RotateCcw } from 'lucide-react';
-import { FREQUENCIES, driveToken, listBackups, downloadBackup, folderUrl, disconnectDrive } from '../../services/drive';
+import { HardDriveUpload, CloudUpload, History, Loader2, CheckCircle2, AlertTriangle, RotateCcw, ShieldCheck } from 'lucide-react';
+import { FREQUENCIES, driveToken, listBackups, downloadBackup, disconnectDrive } from '../../services/drive';
 import { restoreBackup } from '../../services/firestore';
 import { parseBackup, describeBackup } from '../../utils/backup';
 import { timeAgo } from '../../services/sync';
@@ -45,7 +46,7 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
   async function restore(file) {
     setRestoring(null); setBusy(true); setMsg(null);
     try {
-      const text = await downloadBackup(await driveToken({ interactive: true, hint: user?.email }), file.id);
+      const text = await downloadBackup(await driveToken({ interactive: true, hint: user?.email }), file.id, user.uid);
       const backup = parseBackup(text);
       await restoreBackup(user.uid, backup);
       setMsg({ text: `Restored ${describeBackup(backup)} from ${file.name}. Entries with the same id were replaced; nothing else was removed.`, tone: 'income' });
@@ -81,7 +82,7 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
 
         {!cfg.enabled && (
           <>
-            <p style={note}>Like WhatsApp: a full copy of everything — entries, trips, bills, settings — goes to a folder “Expense Tracker backups” in your Google Drive, on the schedule you pick. The app can only see the files it creates there.</p>
+            <p style={note}>Like WhatsApp: a full copy of everything — entries, trips, bills, settings — goes to your Google Drive on the schedule you pick. It’s kept in Drive’s hidden app storage (it doesn’t show up as a file), encrypted, and only the latest copy is kept. The app can’t see anything else in your Drive.</p>
             <button id="drive-enable" onClick={turnOn} disabled={running} style={btn(true)}>
               {running ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CloudUpload size={14} />} Connect Google Drive
             </button>
@@ -94,10 +95,10 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
               <select id="drive-frequency" value={cfg.frequency} onChange={(e) => save({ frequency: e.target.value })} style={select} aria-label="How often">
                 {FREQUENCIES.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
               </select>
-              <select id="drive-keep" value={cfg.keep} onChange={(e) => save({ keep: Number(e.target.value) })} style={select} aria-label="Copies to keep">
-                {[3, 5, 10, 20, 30].map((n) => <option key={n} value={n}>Keep {n} copies</option>)}
-              </select>
             </div>
+            <p style={{ ...note, display: 'flex', gap: 6 }}><ShieldCheck size={13} style={{ flexShrink: 0, marginTop: 1, color: 'var(--income)' }} /><span>{state?.hidden === false
+              ? 'Encrypted, one copy. This Android app keeps it in the “Expense Tracker backups” folder until you install the new app — then it moves to hidden storage.'
+              : 'Encrypted, one copy, in Drive’s hidden app storage — it doesn’t appear in your Drive and can only be opened by signing in here.'}</span></p>
             {needsTap && <p id="drive-due" style={{ ...note, color: 'var(--lent)' }}><AlertTriangle size={12} style={{ verticalAlign: -2 }} /> A backup is due — tap Back up now{platform === 'web' ? ' (browsers need a tap to reach Google).' : '.'}</p>}
             {platform === 'web' && !needsTap && <p style={note}>On the website, a due backup waits for your tap. The Android and desktop apps back up by themselves.</p>}
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
@@ -114,7 +115,7 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
 
         {list && (
           <div id="drive-backups" style={{ marginTop: 12, borderTop: '1px solid var(--border)' }}>
-            {list.files.length === 0 && <p style={note}>No backups in your Drive yet.</p>}
+            {list.files.length === 0 && <p style={note}>No backup in your Drive yet.</p>}
             {list.files.slice(0, 15).map((f) => (
               <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -124,9 +125,6 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
                 <button onClick={() => setRestoring(f)} disabled={busy} style={btn(false)}><RotateCcw size={13} /> Restore</button>
               </div>
             ))}
-            <a href={folderUrl(list.folderId)} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 10, fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>
-              Open the folder in Google Drive <ExternalLink size={12} />
-            </a>
           </div>
         )}
     </CardFrame>

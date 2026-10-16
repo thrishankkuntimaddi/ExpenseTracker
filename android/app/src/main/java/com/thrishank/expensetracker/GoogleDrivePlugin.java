@@ -18,14 +18,19 @@ import com.google.android.gms.auth.api.identity.AuthorizationResult;
 import com.google.android.gms.auth.api.identity.Identity;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.Scope;
+import com.getcapacitor.JSArray;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import java.util.Collections;
 
 /**
  * Backups to the user's own Google Drive: a short-lived access token for
- * the "drive.file" scope (only files this app creates).
+ * the scopes the app asks for — "drive.appdata" (its hidden storage) and
+ * "drive.file" (only files this app creates). Defaults to drive.file.
  *
- *   authorize({ interactive }) → { accessToken, email? }
+ *   authorize({ interactive, scopes? }) → { accessToken, email? }
  *
  * Once the user has said yes, Google returns tokens silently — that is what
  * lets the daily backup run without asking again. interactive: false never
@@ -48,8 +53,17 @@ public class GoogleDrivePlugin extends Plugin {
     @PluginMethod
     public void authorize(PluginCall call) {
         final boolean interactive = Boolean.TRUE.equals(call.getBoolean("interactive", true));
+        List<Scope> scopes = new ArrayList<>();
+        try {
+            JSArray asked = call.getArray("scopes");
+            if (asked != null) for (int i = 0; i < asked.length(); i++) {
+                String sc = asked.getString(i);
+                if (sc.startsWith("https://www.googleapis.com/auth/drive.")) scopes.add(new Scope(sc));
+            }
+        } catch (Exception ignored) { }
+        if (scopes.isEmpty()) scopes.add(new Scope(SCOPE));
         AuthorizationRequest request = AuthorizationRequest.builder()
-            .setRequestedScopes(Collections.singletonList(new Scope(SCOPE)))
+            .setRequestedScopes(scopes)
             .build();
         Identity.getAuthorizationClient(getActivity())
             .authorize(request)

@@ -1,11 +1,17 @@
 // ─── Google Drive backup ─────────────────────────────────────────
 // Like WhatsApp's backup: a full copy of your data, on a schedule you pick,
-// in YOUR Google Drive — a folder "Expense Tracker backups" you can open,
-// download or delete yourself. We never hold a copy or your Google tokens on
-// a server; the app talks to Drive directly.
+// in YOUR Google Drive — in its hidden app storage (appDataFolder), which
+// doesn't show up as files in Drive and only this app can read. One copy:
+// each backup replaces the last (the new one is saved before the old one
+// goes). The copy is encrypted (utils/backupCrypto.js) with a key kept in
+// your account, so the file alone is unreadable. We never hold a copy or
+// your Google tokens on a server; the app talks to Drive directly.
 //
-// Access is the narrow "drive.file" scope: the app sees only the files it
-// created, nothing else in your Drive.
+// Access: "drive.appdata" (its own hidden storage) + "drive.file" (only
+// files it created — used to clear out the old visible "Expense Tracker
+// backups" folder). Nothing else in your Drive is visible to it.
+// Android apps from before 3.13 can only get drive.file: they keep one
+// encrypted copy in that folder until the app is updated.
 //
 // Getting a token, per platform:
 //   android  Google's AuthorizationClient (GoogleDrivePlugin.java) — after
@@ -16,15 +22,18 @@
 //            for Google accounts a Firebase re-auth popup with the Drive scope.
 //            Browsers need a click for these, so a due backup waits for one.
 import { registerPlugin } from '@capacitor/core';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, runTransaction } from 'firebase/firestore';
 import { GoogleAuthProvider, reauthenticateWithPopup } from 'firebase/auth';
 import { auth, db } from './firebase';
 import { platform } from '../native';
 import { desktopOAuth, desktopRefresh } from '../native/googleSignIn';
 import { exportAllUserData } from './firestore';
+import { newBackupKey, encryptBackup, decryptBackup } from '../utils/backupCrypto';
 
 export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-export const FOLDER_NAME = 'Expense Tracker backups';
+export const APPDATA_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const SCOPES = `${APPDATA_SCOPE} ${DRIVE_SCOPE}`;
+export const FOLDER_NAME = 'Expense Tracker backups';     // the old, visible place (cleared out)
 const API = 'https://www.googleapis.com/drive/v3';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,createdTime';
 const WEB_CLIENT_ID = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID;
@@ -38,8 +47,9 @@ export const FREQUENCIES = [
   { key: 'weekly', label: 'Every week', ms: 7 * 24 * 3600e3 },
   { key: 'monthly', label: 'Every month', ms: 30 * 24 * 3600e3 },
 ];
-export const DEFAULT_DRIVE = { enabled: false, frequency: 'daily', keep: 10 };
-export const driveSettings = (settings) => ({ ...DEFAULT_DRIVE, ...(settings?.driveBackup ?? {}) });
+export const DEFAULT_DRIVE = { enabled: false, frequency: 'daily' };
+// One copy, always (older settings carried a "keep" count)
+export const driveSettings = (settings) => ({ ...DEFAULT_DRIVE, ...(settings?.driveBackup ?? {}), keep: 1 });
 
 /** Is a backup due? (pure) */
 export function backupDue(cfg, lastAt, now = Date.now()) {
@@ -92,7 +102,7 @@ export async function driveToken({ interactive = true, hint } = {}) {
   const need = () => Object.assign(new Error('Tap “Back up now” to connect Google Drive.'), { code: 'consent-required' });
   if (platform === 'android') {
     try {
-      const r = await GoogleDrive.authorize({ interactive });
+      const r = await GoogleDrive.authorize({ interactive, scopes: SCOPES.split(' ') });
       return r.accessToken;
     } catch (err) {
       if (err?.code === 'consent-required') throw need();
@@ -101,18 +111,24 @@ export async function driveToken({ interactive = true, hint } = {}) {
     }
   }
   const c = cached();
-  if (c) return c;
+  if (c && (await grantedScopes(c)).has(APPDATA_SCOPE)) return c;
   if (platform === 'desktop') {
     let rt = null;
     try { rt = localStorage.getItem(DESKTOP_RT_KEY); } catch { /* storage unavailable */ }
     if (rt) {
-      try { const r = await desktopRefresh(rt); return remember(r.access_token, r.expires_in); } catch (err) {
+      try {
+        const r = await desktopRefresh(rt);
+        // Granted before hidden backups existed: ask again (once) for the new scope
+        if ((await grantedScopes(r.access_token)).has(APPDATA_SCOPE)) return remember(r.access_token, r.expires_in);
+        if (!interactive) throw need();
+      } catch (err) {
+        if (err.code === 'consent-required') throw err;
         if (err.code !== 'invalid_grant') throw err;
         try { localStorage.removeItem(DESKTOP_RT_KEY); } catch { /* storage unavailable */ }
       }
     }
     if (!interactive) throw need();
-    const r = await desktopOAuth({ scope: `openid email ${DRIVE_SCOPE}`, extra: { access_type: 'offline', prompt: 'consent', ...(hint ? { login_hint: hint } : {}) } });
+    const r = await desktopOAuth({ scope: `openid email ${SCOPES}`, extra: { access_type: 'offline', prompt: 'consent', ...(hint ? { login_hint: hint } : {}) } });
     if (!r) throw Object.assign(new Error('Google Drive access was not given.'), { code: 'cancelled' });
     if (r.refresh_token) { try { localStorage.setItem(DESKTOP_RT_KEY, r.refresh_token); } catch { /* storage unavailable */ } }
     return remember(r.access_token, r.expires_in);
@@ -123,7 +139,7 @@ export async function driveToken({ interactive = true, hint } = {}) {
     await loadGis();
     return new Promise((resolve, reject) => {
       const client = window.google.accounts.oauth2.initTokenClient({
-        client_id: WEB_CLIENT_ID, scope: DRIVE_SCOPE, hint,
+        client_id: WEB_CLIENT_ID, scope: SCOPES, hint,
         callback: (r) => (r.error ? reject(new Error(r.error_description || r.error)) : resolve(remember(r.access_token, Number(r.expires_in) || 3500))),
         error_callback: (e) => reject(Object.assign(new Error(e?.type === 'popup_closed' ? 'Google Drive access was not given (the Google window was closed — if it said “Access blocked”, the app’s Google sign-in isn’t fully set up yet).' : (e?.message || 'Google sign-in failed.')), { code: 'cancelled' })),
       });
@@ -137,6 +153,7 @@ export async function driveToken({ interactive = true, hint } = {}) {
   }
   const provider = new GoogleAuthProvider();
   provider.addScope(DRIVE_SCOPE);
+  provider.addScope(APPDATA_SCOPE);
   provider.setCustomParameters({ login_hint: user.email ?? '' });
   const result = await reauthenticateWithPopup(user, provider);
   const token = GoogleAuthProvider.credentialFromResult(result)?.accessToken;
@@ -168,33 +185,81 @@ async function api(token, url, init = {}) {
   return res;
 }
 
-async function folderId(token) {
+/** Which Drive scopes a token carries (tokeninfo; remembered per token). */
+const scopeCache = new Map();
+export async function grantedScopes(token) {
+  if (scopeCache.has(token)) return scopeCache.get(token);
+  let set = new Set();
+  try {
+    const r = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(token)}`);
+    if (r.ok) set = new Set(String((await r.json()).scope ?? '').split(' '));
+  } catch { /* offline: treat as unknown */ }
+  scopeCache.set(token, set);
+  return set;
+}
+
+/* The old visible folder (only looked up, never created any more — except
+   by Android apps that can't use hidden storage yet) */
+async function legacyFolderId(token, { create = false } = {}) {
   const q = encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
   const found = await (await api(token, `/files?q=${q}&fields=files(id)&spaces=drive`)).json();
   if (found.files?.[0]) return found.files[0].id;
+  if (!create) return null;
   const made = await (await api(token, '/files?fields=id', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder', description: 'Backups made by the Expense Tracker app. Restore one from the app: Profile → Google Drive backup.' }),
+    body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder', description: 'Encrypted backup made by the Expense Tracker app. Restore it from the app: Profile → Google Drive backup.' }),
   })).json();
   return made.id;
 }
 
+const FILE_FIELDS = 'files(id,name,size,createdTime)';
+/** Backups this app can see: hidden ones, or (older Android apps) the legacy folder's. */
 export async function listBackups(token) {
-  const id = await folderId(token);
-  const q = encodeURIComponent(`'${id}' in parents and trashed=false and mimeType='application/json'`);
-  const r = await (await api(token, `/files?q=${q}&orderBy=createdTime desc&fields=files(id,name,size,createdTime)&pageSize=100`)).json();
+  const scopes = await grantedScopes(token);
+  if (scopes.has(APPDATA_SCOPE)) {
+    const r = await (await api(token, `/files?spaces=appDataFolder&orderBy=createdTime desc&fields=${FILE_FIELDS}&pageSize=50`)).json();
+    return { hidden: true, files: r.files ?? [] };
+  }
+  return { hidden: false, ...(await listLegacy(token)) };
+}
+async function listLegacy(token) {
+  const id = await legacyFolderId(token);
+  if (!id) return { folderId: null, files: [] };
+  const q = encodeURIComponent(`'${id}' in parents and trashed=false`);
+  const r = await (await api(token, `/files?q=${q}&orderBy=createdTime desc&fields=${FILE_FIELDS}&pageSize=100`)).json();
   return { folderId: id, files: r.files ?? [] };
 }
 
-export async function downloadBackup(token, fileId) {
-  return (await api(token, `/files/${fileId}?alt=media`)).text();
+/** The backup's JSON text (decrypted with this account's key). */
+export async function downloadBackup(token, fileId, uid) {
+  const text = await (await api(token, `/files/${fileId}?alt=media`)).text();
+  return decryptBackup(await backupKey(uid), text);
 }
 
 async function upload(token, parent, name, text) {
   const boundary = `et${Math.random().toString(36).slice(2)}`;
-  const meta = { name, parents: [parent], mimeType: 'application/json', appProperties: { app: 'expensetracker', kind: 'backup' } };
+  const meta = { name, parents: [parent], mimeType: 'application/json', appProperties: { app: 'expensetracker', kind: 'backup', enc: 'aes-gcm' } };
   const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${text}\r\n--${boundary}--`;
   return (await api(token, UPLOAD, { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body })).json();
+}
+
+/* ── The account's backup key ──
+   users/{uid}/backup_key/current — made once, shared by your devices. Kept
+   by "Delete all my data" (it isn't data, and it's what opens the backups
+   that could bring the data back). */
+const keyRef = (uid) => doc(db, 'users', uid, 'backup_key', 'current');
+let keyCache = null;
+export async function backupKey(uid) {
+  if (keyCache?.uid === uid) return keyCache.k;
+  const k = await runTransaction(db, async (tx) => {
+    const cur = await tx.get(keyRef(uid));
+    if (cur.exists() && cur.data()?.k) return cur.data().k;
+    const fresh = newBackupKey();
+    tx.set(keyRef(uid), { k: fresh, alg: 'AES-GCM-256', createdAt: Date.now() });
+    return fresh;
+  });
+  keyCache = { uid, k };
+  return k;
 }
 
 /* ── Backup state (shared by your devices, so one backs up per period) ── */
@@ -204,18 +269,38 @@ export function subscribeBackupState(uid, cb) {
 }
 
 /**
- * Back up now: export everything, upload, keep the newest `keep`.
- * Returns the new file. Throws (code 'consent-required' when not interactive).
+ * Back up now: export everything, encrypt, upload, then remove every older
+ * copy (and, once, the old visible folder). Returns the new file.
+ * Throws (code 'consent-required' when not interactive).
  */
-export async function backupNow({ uid, email, keep = DEFAULT_DRIVE.keep, interactive = true, deviceName }) {
+export async function backupNow({ uid, email, interactive = true, deviceName }) {
   const token = await driveToken({ interactive, hint: email });
-  const data = await exportAllUserData(uid, email);
-  const text = JSON.stringify(data);
-  const { folderId: parent, files } = await listBackups(token);
+  const [data, key] = await Promise.all([exportAllUserData(uid, email), backupKey(uid)]);
+  const text = await encryptBackup(key, JSON.stringify(data));
+  const scopes = await grantedScopes(token);
+  const hidden = scopes.has(APPDATA_SCOPE);
+  const before = await listBackups(token);
+  const parent = hidden ? 'appDataFolder' : await legacyFolderId(token, { create: true });
   const file = await upload(token, parent, backupFileName(), text);
-  const old = backupsToPrune([file, ...files], keep);
+  // The new copy is safe in Drive: now drop the rest
+  const old = backupsToPrune([file, ...before.files], 1);
   await Promise.all(old.map((f) => api(token, `/files/${f.id}`, { method: 'DELETE' }).catch(() => {})));
-  await setDoc(stateRef(uid), { lastAt: Date.now(), lastFile: { id: file.id, name: file.name, size: Number(file.size) || text.length }, lastDevice: deviceName ?? null, error: null }, { merge: true });
+  // Hidden storage works: the old, readable copies in "Expense Tracker backups" go
+  let legacyCleared = false;
+  if (hidden && scopes.has(DRIVE_SCOPE)) {
+    try {
+      const legacy = await listLegacy(token);
+      // The app's own old copies: deleted for good. The folder: moved to
+      // Drive's trash (not deleted) — in case you kept anything else in it
+      await Promise.all(legacy.files.map((f) => api(token, `/files/${f.id}`, { method: 'DELETE' })));
+      if (legacy.folderId) await api(token, `/files/${legacy.folderId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) });
+      legacyCleared = true;
+    } catch { /* next time */ }
+  }
+  await setDoc(stateRef(uid), {
+    lastAt: Date.now(), lastFile: { id: file.id, name: file.name, size: Number(file.size) || text.length },
+    lastDevice: deviceName ?? null, error: null, hidden, encrypted: true, ...(legacyCleared ? { legacyCleared: true } : {}),
+  }, { merge: true });
   return file;
 }
 

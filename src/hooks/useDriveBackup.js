@@ -28,7 +28,7 @@ export function useDriveBackup({ uid, email, settings, loaded }) {
     if (!uid || busy.current) return null;
     busy.current = true; setRunning(true);
     try {
-      const file = await backupNow({ uid, email, keep: latest.current.cfg.keep, interactive, deviceName: describeDevice() });
+      const file = await backupNow({ uid, email, interactive, deviceName: describeDevice() });
       setNeedsTap(false);
       return file;
     } catch (err) {
