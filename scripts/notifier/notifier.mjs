@@ -25,7 +25,7 @@ import { getMessaging } from 'firebase-admin/messaging';
 import { getAuth } from 'firebase-admin/auth';
 
 const DRY = process.env.DRY_RUN === '1';
-const APP_URL = process.env.APP_URL || 'https://expensetracker-385b0.web.app/';
+const APP_URL = process.env.APP_URL || 'https://expensetracker-in.web.app/';
 const LATE_LIMIT = 3 * 3600e3;      // a reminder more than 3 h late is dropped, not sent stale
 const ALERT_TYPES = new Set(['wrong_pins', 'locked_out', 'lock_off', 'pin_reset_started']);   // + new_device (see alerts)
 

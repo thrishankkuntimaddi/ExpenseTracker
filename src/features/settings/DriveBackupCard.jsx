@@ -11,6 +11,7 @@ import { restoreBackup } from '../../services/firestore';
 import { parseBackup, describeBackup } from '../../utils/backup';
 import { timeAgo } from '../../services/sync';
 import { platform } from '../../native';
+import { APK_URL } from '../../native/updates';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 
 const fmtSize = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
@@ -97,7 +98,7 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
               </select>
             </div>
             <p style={{ ...note, display: 'flex', gap: 6 }}><ShieldCheck size={13} style={{ flexShrink: 0, marginTop: 1, color: 'var(--income)' }} /><span>{state?.hidden === false
-              ? 'Encrypted, one copy. This Android app keeps it in the “Expense Tracker backups” folder until you install the new app — then it moves to hidden storage.'
+              ? <>Encrypted, one copy — but this Android app keeps it in the “Expense Tracker backups” folder. Install the new app (your data stays) and it moves to hidden storage. <a href={APK_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 700 }}>Get the new app</a></>
               : 'Encrypted, one copy, in Drive’s hidden app storage — it doesn’t appear in your Drive and can only be opened by signing in here.'}</span></p>
             {needsTap && <p id="drive-due" style={{ ...note, color: 'var(--lent)' }}><AlertTriangle size={12} style={{ verticalAlign: -2 }} /> A backup is due — tap Back up now{platform === 'web' ? ' (browsers need a tap to reach Google).' : '.'}</p>}
             {platform === 'web' && !needsTap && <p style={note}>On the website, a due backup waits for your tap. The Android and desktop apps back up by themselves.</p>}

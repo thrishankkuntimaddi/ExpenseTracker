@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.12.2** · [Open the app](https://expensetracker-385b0.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.12.2** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
@@ -54,7 +54,7 @@ What makes it different from a spreadsheet or a basic tracker:
 
 | Platform | How | Updates |
 |---|---|---|
-| **Web** (any browser, iPhone/iPad too) | **[expensetracker-385b0.web.app](https://expensetracker-385b0.web.app/)** — on iPhone: Share → *Add to Home Screen* | Each deploy, on the next open |
+| **Web** (any browser, iPhone/iPad too) | **[expensetracker-in.web.app](https://expensetracker-in.web.app/)** — on iPhone: Share → *Add to Home Screen* | Each deploy, on the next open |
 | **Android** 7+ | [ExpenseTracker-Android.apk](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Android.apk) — allow "install unknown apps" for your browser once | Over the air, in the background |
 | **Mac** (Apple Silicon) | [ExpenseTracker-Mac-AppleSilicon.dmg](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Mac-AppleSilicon.dmg) | Downloads in the background → *Restart to update* |
 | **Mac** (Intel) | [ExpenseTracker-Mac-Intel.dmg](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest/download/ExpenseTracker-Mac-Intel.dmg) | same |
@@ -409,7 +409,7 @@ GitHub may start scheduled runs a few minutes late, and pauses schedules in repo
 
 | What | How |
 |---|---|
-| **Web app + product page + Android OTA** | Push to `main`. `deploy-web.yml` lints, tests and builds; the **web app** goes to **Firebase Hosting** (`expensetracker-385b0.web.app`, root of the site); **GitHub Pages** gets the **product page** (`landing/`), the privacy policy and the app update files under `/app/` (Android bundle + manifest, desktop manifest, mirrored installers) — `scripts/build-pages.mjs`. |
+| **Web app + product page + Android OTA** | Push to `main`. `deploy-web.yml` lints, tests and builds; the **web app** goes to **Firebase Hosting** (`expensetracker-in.web.app`, root of the site); **GitHub Pages** gets the **product page** (`landing/`), the privacy policy and the app update files under `/app/` (Android bundle + manifest, desktop manifest, mirrored installers) — `scripts/build-pages.mjs`. |
 | **Hosting setup (once)** | The `FIREBASE_SERVICE_ACCOUNT` secret needs the **Firebase Hosting Admin** role (Google Cloud → IAM). A custom address (e.g. `expensetracker.web.app`): `firebase hosting:sites:create expensetracker`, point `firebase.json` at it, set the repository variable `APP_URL`, and add the domain to Firebase Auth's authorised domains, the reCAPTCHA (App Check) key and the web OAuth client's JavaScript origins. Without the secret the workflow skips the app deploy. |
 | **New version** (all platforms) | Bump `version` in `package.json`, `package-lock.json`, `src-tauri/Cargo.toml` and `src-tauri/Cargo.lock`, commit as `release: X.Y.Z — …`, then `git tag vX.Y.Z && git push origin main vX.Y.Z`. `build-apps.yml` builds the signed APK and the Mac (Apple Silicon + Intel), Windows and Linux installers, writes `latest.json`, publishes the release and removes older ones. |
 | **Native code changed?** | When Android native code or Capacitor plugins change, raise `expensetracker.minNativeVersion` in `package.json` to the new version, so older APKs are asked to install the new one instead of receiving a bundle they can't run. |
@@ -418,7 +418,7 @@ GitHub may start scheduled runs a few minutes late, and pauses schedules in repo
 
 ## 🔑 Environment variables & secrets
 
-`APP_URL` (repository variable): where the web app is served — used in trip invite links and emails. Default `https://expensetracker-385b0.web.app/`.
+`APP_URL` (repository variable): where the web app is served — used in trip invite links and emails. Default `https://expensetracker-in.web.app/`.
 
 
 ### Build time (`.env` locally; repository variables or secrets in CI)
