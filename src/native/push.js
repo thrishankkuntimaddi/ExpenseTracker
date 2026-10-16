@@ -45,10 +45,17 @@ export async function registerPush(uid, deviceId, { reminders = false } = {}) {
   try {
     const token = platform === 'android' ? await androidToken() : await webToken();
     if (!token) return false;
+    // Unchanged and written today: nothing to do (this runs on every return to the app)
+    const sig = `${uid}|${deviceId}|${token}|${reminders}`;
+    try {
+      const last = JSON.parse(localStorage.getItem('et_push_reg') || 'null');
+      if (last?.sig === sig && Date.now() - last.at < 24 * 3600e3) return true;
+    } catch { /* storage unavailable */ }
     await setDoc(doc(db, 'users', uid, 'push_tokens', deviceId), {
       token, platform, reminders: platform === 'web' && reminders, security: true,
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone, updatedAt: Date.now(),
     }, { merge: true });
+    try { localStorage.setItem('et_push_reg', JSON.stringify({ sig, at: Date.now() })); } catch { /* storage unavailable */ }
     return true;
   } catch (err) {
     console.warn('[push] registration failed:', err?.message);
@@ -58,6 +65,7 @@ export async function registerPush(uid, deviceId, { reminders = false } = {}) {
 
 export function unregisterPush(uid, deviceId) {
   if (!uid || !db) return Promise.resolve();
+  try { localStorage.removeItem('et_push_reg'); } catch { /* storage unavailable */ }
   return deleteDoc(doc(db, 'users', uid, 'push_tokens', deviceId)).catch(() => {});
 }
 

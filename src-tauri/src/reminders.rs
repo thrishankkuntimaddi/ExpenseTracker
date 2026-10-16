@@ -19,8 +19,9 @@ pub struct Reminder {
 
 pub type SharedReminders = Arc<Mutex<Vec<Reminder>>>;
 
-/// Ignore reminders whose time passed long ago (e.g. the computer was asleep).
-const STALE_MS: i64 = 15 * 60 * 1000;
+/// Ignore reminders whose time passed long ago. A laptop asleep at 21:00 and
+/// opened at 22:30 still gets the evening reminder; one from yesterday doesn't.
+const STALE_MS: i64 = 3 * 60 * 60 * 1000;
 
 fn now_ms() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
@@ -47,9 +48,14 @@ pub fn take_due(items: &mut Vec<Reminder>, now: i64) -> Vec<Reminder> {
 pub fn start(app: AppHandle, list: SharedReminders) {
     std::thread::spawn(move || loop {
         std::thread::sleep(Duration::from_secs(20));
-        let due = take_due(&mut list.lock().unwrap(), now_ms());
-        if due.is_empty() || busy_in_app(&app) {
-            continue; // nothing due, or the user is looking at the app right now
+        let mut items = list.lock().unwrap();
+        if busy_in_app(&app) {
+            continue; // the user is looking at the app: keep what's due for when they leave
+        }
+        let due = take_due(&mut items, now_ms());
+        drop(items);
+        if due.is_empty() {
+            continue;
         }
         for r in due {
             notify(&app, &r.title, &r.body);

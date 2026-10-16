@@ -133,7 +133,9 @@ self.addEventListener('push', (e) => {
   let p = {};
   try { p = e.data ? e.data.json() : {}; } catch { p = { data: { title: 'Expense Tracker', body: e.data?.text() } }; }
   const d = { ...(p.notification || {}), ...(p.data || {}) };
-  if (!d.title) return;
+  // A push must always show something (Chrome otherwise shows its own
+  // "site updated in the background" note)
+  if (!d.title) d.title = 'Expense Tracker';
   e.waitUntil(self.registration.showNotification(d.title, {
     body: d.body || '', icon: BASE + 'icon-192.png', badge: BASE + 'icon-192.png',
     tag: d.tag || 'et-push', renotify: d.type === 'security', data: { route: d.route || 'today' },

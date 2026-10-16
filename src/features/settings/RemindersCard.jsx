@@ -74,6 +74,8 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
     const turningOn = !cfg[type].enabled;
     // Turning on the first reminder also turns this device on (asks permission once)
     if (turningOn && !deviceOn && !(await turnDeviceOn(true))) return;
+    // On already (the Android app is on by default) but never allowed to notify: ask now
+    if (turningOn && deviceOn && perm === 'prompt') setPerm(await requestNotificationPermission());
     setType(type, { enabled: turningOn });
     setSelected(turningOn ? type : null);
     setPreviewType(type);
@@ -141,6 +143,13 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
       {(note || blocked) && (
         <div role="status" style={{ margin: '10px 16px 0', padding: '9px 12px', borderRadius: 10, fontSize: 12, lineHeight: 1.5, background: 'var(--surface2)', border: '1px solid var(--border)', color: blocked && !note ? 'var(--expense)' : 'var(--text-secondary)' }}>
           {note ?? 'Notifications are blocked for this app — allow them in your system or browser settings.'}
+        </div>
+      )}
+      {/* On, but never allowed to notify (Android 13+ asks once): nothing would arrive */}
+      {!note && !blocked && deviceOn && perm === 'prompt' && anyReminderOn(cfg) && (
+        <div role="status" style={{ margin: '10px 16px 0', padding: '9px 12px', borderRadius: 10, fontSize: 12, lineHeight: 1.5, background: 'var(--expense-bg)', border: '1px solid var(--expense-border)', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ flex: 1 }}>Reminders can’t arrive yet — allow notifications for this app.</span>
+          <button onClick={async () => setPerm(await requestNotificationPermission())} style={{ border: 'none', borderRadius: 8, padding: '6px 10px', background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' }}>Allow</button>
         </div>
       )}
 

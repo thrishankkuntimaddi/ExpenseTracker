@@ -24,7 +24,7 @@ const EXACT_KEY = 'et_reminders_exact';        // 'on' | 'off'
 const BUDGET_KEY = 'et_budget_alerts';         // { 'YYYY-MM:80': epochMs }
 const QUIET_CHANNEL = 'reminders';             // LOW: no sound, no pop-up (Android can't change a channel later,
 const ALERT_CHANNEL = 'reminders_alert';       // HIGH: pops up with a sound   so each style has its own)
-const HOLD_MS = 15 * 60 * 1000;                // nothing this soon while the app is on screen
+const RESYNC_MS = 60 * 60 * 1000;              // re-plan hourly while running (a new day, the 45-day window moves on)
 
 const isAndroid = platform === 'android';
 
@@ -51,9 +51,12 @@ export const reminderStyle = {
 };
 
 /** Android: arrive on the minute (needs "Alarms & reminders" permission on Android 12+). */
+// Unset: on time whenever Android allows it without asking (12–13 grant it;
+// 14+ need "Alarms & reminders") — inexact alarms can be hours late in Doze
+let exactAllowed = false;
 export const exactTiming = {
   available: isAndroid,
-  get: () => read(EXACT_KEY, 'off') === 'on',
+  get: () => { const v = read(EXACT_KEY, null); return v == null ? exactAllowed : v === 'on'; },
   async set(on) {
     if (on && isAndroid) {
       const s = await LocalNotifications.checkExactNotificationSetting().catch(() => null);
@@ -179,6 +182,8 @@ export async function notifyNow({ id, title, body, route = 'profile' }) {
 }
 
 /* ── Planning + handing over ─────────────────────────────────── */
+const HORIZON_DAYS = 45;    // planned ahead: still arriving if the app isn't opened for weeks
+let askedThisRun = false;
 let input = null;           // { cfg, data } from the app
 let webTimers = [];
 let syncing = null, again = false;
@@ -195,23 +200,31 @@ export function syncReminders() {
       const enabled = deviceDelivery.get() && input;
       const now = Date.now();
       const budgetAt = read(BUDGET_KEY, {});
-      const plan = input ? buildSchedule(now, input.cfg, { ...input.data, budgetAt }) : [];
-      if (pushUid && input) uploadPlan(pushUid, plan).catch(() => {});
-      let items = enabled ? plan : [];
-      // Remember when each budget alert was planned so it fires exactly once
+      const plan = input ? buildSchedule(now, input.cfg, { ...input.data, budgetAt }, HORIZON_DAYS) : [];
+      // Remember when each budget alert was planned so it fires exactly once —
+      // from the whole plan, which also goes to cloud push (recording only
+      // this device's items re-planned it every day on devices with delivery off)
       const nextBudget = { ...budgetAt };
-      items.filter((i) => i.type === 'budget' && nextBudget[i.key] == null).forEach((i) => { nextBudget[i.key] = i.at; });
+      plan.filter((i) => i.type === 'budget' && nextBudget[i.key] == null).forEach((i) => { nextBudget[i.key] = i.at; });
       if (JSON.stringify(nextBudget) !== JSON.stringify(budgetAt)) write(BUDGET_KEY, nextBudget);
-      // While the app is on screen, hold anything about to fire (re-planned on leaving)
-      if (isAndroid && typeof document !== 'undefined' && document.visibilityState === 'visible') items = items.filter((i) => i.at > now + HOLD_MS);
+      if (pushUid && input) uploadPlan(pushUid, plan).catch(() => {});
+      const items = enabled ? plan : [];
       lastPlan = items;
 
       if (isAndroid) {
-        const pending = await LocalNotifications.getPending().catch(() => ({ notifications: [] }));
-        if (pending.notifications.length) await LocalNotifications.cancel({ notifications: pending.notifications.map((n) => ({ id: n.id })) }).catch(() => {});
-        if (items.length && (await notificationPermission()) === 'granted') {
+        let perm = await notificationPermission();
+        // Android 13+: reminders are on but the app was never allowed to
+        // notify — ask (once per run) instead of silently scheduling nothing
+        if (items.length && perm === 'prompt' && !askedThisRun) { askedThisRun = true; perm = await requestNotificationPermission(); }
+        if (perm === 'granted') {
           await ensureChannel();
-          await LocalNotifications.schedule({ notifications: items.map(toAndroid) });
+          // Schedule first (same id replaces), then drop only what's gone —
+          // never a moment with nothing scheduled
+          if (items.length) await LocalNotifications.schedule({ notifications: items.map(toAndroid) });
+          const keep = new Set(items.map((i) => i.id));
+          const pending = await LocalNotifications.getPending().catch(() => ({ notifications: [] }));
+          const stale = pending.notifications.filter((n) => !keep.has(n.id) && n.id !== 999001);
+          if (stale.length) await LocalNotifications.cancel({ notifications: stale.map((n) => ({ id: n.id })) }).catch(() => {});
         }
       } else if (platform === 'desktop') {
         await invoke('set_reminders', { items: items.map(({ id, at, title, body }) => ({ id, at, title, body })) }).catch(() => {});
@@ -242,6 +255,13 @@ export function initReminders() {
   navigator.serviceWorker?.addEventListener?.('message', (e) => {
     if (e.data?.type === 'reminder-tap') tapHandler?.(e.data.route);
   });
-  // Leaving / returning: re-plan (Android drops its hold; a new day starts)
+  if (isAndroid) {
+    LocalNotifications.checkExactNotificationSetting()
+      .then((s) => { exactAllowed = s?.exact_alarm === 'granted'; syncReminders(); })
+      .catch(() => {});
+  }
+  // Leaving / returning, and hourly while running (the desktop tray window
+  // never becomes "visible"): re-plan — a new day starts, the window moves on
   document.addEventListener('visibilitychange', () => syncReminders());
+  setInterval(() => syncReminders(), RESYNC_MS);
 }

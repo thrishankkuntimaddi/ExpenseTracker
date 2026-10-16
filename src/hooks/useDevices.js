@@ -1,6 +1,6 @@
 // ─── useDevices ──────────────────────────────────────────────────
 // "Your devices" in Settings. Each install has a random id (localStorage);
-// while the app is on screen it writes lastSeen every 90 seconds and says
+// while the app is on screen it writes lastSeen every 5 minutes and says
 // when it goes to the background, so other devices can show it as "Live".
 // Other devices can send it commands (lock, sign out) through the same doc —
 // see security/useAppLock.js.
@@ -11,8 +11,10 @@ import { generateId } from '../utils/storage';
 import { platform } from '../native';
 
 export const DEVICE_ID_KEY = 'et_device_id';
-const HEARTBEAT_MS = 90 * 1000;
-export const OPEN_NOW_MS = 3 * 60 * 1000;   // two heartbeats plus slack
+// Every 5 min (was 90 s): each beat is a write here and a read on every other
+// open device — the daily free quota ran out with several devices open
+const HEARTBEAT_MS = 5 * 60 * 1000;
+export const OPEN_NOW_MS = 11 * 60 * 1000;   // two heartbeats plus slack
 
 /** On screen right now: visible and heard from in the last few minutes. */
 export const isLive = (d, now = Date.now()) => d?.visible !== false && !!d?.lastSeen && now - d.lastSeen < OPEN_NOW_MS;

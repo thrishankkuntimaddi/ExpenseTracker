@@ -253,7 +253,15 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   // Cloud push: the reminder plan is uploaded for the website's reminders;
   // this device gets security alerts (and, on the website, reminders) by push
   useEffect(() => { setPushUser(user.uid); return () => setPushUser(null); }, [user.uid]);
-  useEffect(() => { registerPush(user.uid, devices.thisId, { reminders: deviceDelivery.get() }); }, [user.uid, devices.thisId]);
+  useEffect(() => {
+    const reg = () => registerPush(user.uid, devices.thisId, { reminders: deviceDelivery.get() });
+    reg();
+    // Coming back to the app: register again (a token the notifier dropped,
+    // or one the browser rotated, is replaced instead of staying silent)
+    const onVisible = () => { if (document.visibilityState === 'visible') reg(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [user.uid, devices.thisId]);
   useEffect(() => {
     onReminderTap((route) => { if (['today', 'plan', 'bills', 'budget', 'stats', 'history', 'savings'].includes(route)) goTo(route === 'plan' ? 'bills' : route); });
   }, [goTo]);
