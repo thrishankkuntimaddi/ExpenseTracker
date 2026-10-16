@@ -213,3 +213,34 @@ textarea:focus { outline: 2px solid rgba(139,123,255,.5); outline-offset: 1px; }
   .oss-card { padding: 24px; }
   .section-head { margin-bottom: 36px; }
 }
+
+/* ── Compact sections below the hero (no wasted space) ── */
+.section { padding: 64px 0; }
+.section.tight { padding: 48px 0; }
+.section-head { margin-bottom: 28px; }
+.grid-features { gap: 14px; }
+.fcard { display: flex; gap: 14px; align-items: flex-start; padding: 18px; }
+.fcard h3 { margin: 2px 0 4px; font-size: 1.02rem; }
+.fcard p { font-size: .92rem; }
+.ficon { width: 38px; height: 38px; border-radius: 11px; font-size: 1.1rem; flex-shrink: 0; }
+.tour { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.tcard { margin: 0; }
+.tshot { border-radius: 12px; overflow: hidden; border: 1px solid var(--rim-strong); background: var(--surface-solid); aspect-ratio: 16 / 10; }
+.tshot img { width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.tcard figcaption { margin-top: 10px; color: var(--muted); font-size: .92rem; }
+.tcard figcaption b { color: var(--text); margin-right: 6px; }
+.demo-grid { gap: 40px; }
+.steps { margin: 18px 0 0; gap: 12px; }
+.screen-phone.big { width: min(240px, 70vw); border-radius: 30px; border-width: 5px; }
+.grid-download { gap: 10px; }
+.dcard { padding: 14px 16px; border-radius: 14px; }
+.dicon { width: 40px; height: 40px; font-size: 1.2rem; border-radius: 11px; }
+.fine { margin-top: 14px; }
+.closing { padding: 40px 0 48px; border-top: 1px solid var(--rim); }
+.closing-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; }
+.closing h2 { font-size: clamp(1.4rem, 2.4vw, 1.8rem); }
+.closing p { margin-top: 6px; color: var(--muted); }
+.closing-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.gh-count:not(:empty) { margin-left: 4px; }
+@media (max-width: 920px) { .tour { grid-template-columns: 1fr 1fr; } .section { padding: 48px 0; } }
+@media (max-width: 600px) { .tour { grid-template-columns: 1fr; } .closing-actions .btn { flex: 1 1 100%; } }

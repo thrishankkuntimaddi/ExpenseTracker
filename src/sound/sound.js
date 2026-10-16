@@ -91,12 +91,17 @@ function coin(c, { at = 0, base = 1975, gain = 0.16, dur = 0.45 }) {
 }
 
 const SOUNDS = {
-  // A soft "drop" tick: a tiny pitch fall with a hint of click
-  tap: (c) => { tone(c, { freq: 1500, to: 620, dur: 0.045, gain: 0.12, attack: 0.002 }); noise(c, { dur: 0.012, gain: 0.05, freq: 2400, q: 2 }); },
-  debit: (c) => { coin(c, { base: 1568 }); coin(c, { at: 0.09, base: 1175, gain: 0.08, dur: 0.3 }); },
-  credit: (c) => [1046.5, 1318.5, 1568, 2093].forEach((f, i) => tone(c, { freq: f, at: i * 0.07, dur: 0.32, gain: 0.13, type: 'triangle' })),
-  save: (c) => { coin(c, { base: 1760, gain: 0.12 }); tone(c, { freq: 220, to: 150, at: 0.06, dur: 0.16, gain: 0.12, type: 'sine' }); },
-  transfer: (c) => { coin(c, { base: 1760, gain: 0.12, dur: 0.3 }); coin(c, { at: 0.11, base: 2093, gain: 0.12, dur: 0.35 }); },
+  // A short, soft, dry tick — no pitch slide: a brief high "tk" over a
+  // muted low body, gone in ~25 ms (the feel of a phone's touch sound)
+  tap: (c) => {
+    tone(c, { freq: 1250, dur: 0.022, gain: 0.07, attack: 0.0012 });
+    tone(c, { freq: 480, dur: 0.028, gain: 0.045, attack: 0.0015 });
+    noise(c, { dur: 0.006, gain: 0.025, freq: 3600, q: 0.7 });
+  },
+  debit: (c) => { coin(c, { base: 1568, gain: 0.11, dur: 0.32 }); coin(c, { at: 0.08, base: 1175, gain: 0.05, dur: 0.22 }); },
+  credit: (c) => [1046.5, 1318.5, 1568].forEach((f, i) => tone(c, { freq: f, at: i * 0.06, dur: 0.26, gain: 0.08, type: 'triangle' })),
+  save: (c) => { coin(c, { base: 1760, gain: 0.09, dur: 0.3 }); tone(c, { freq: 220, to: 150, at: 0.05, dur: 0.12, gain: 0.07, type: 'sine' }); },
+  transfer: (c) => { coin(c, { base: 1760, gain: 0.08, dur: 0.25 }); coin(c, { at: 0.1, base: 2093, gain: 0.08, dur: 0.28 }); },
   roll: (c, { ms = 900 } = {}) => {
     // ticks that start fast and slow down as the digits settle, then a ding
     const n = 14, total = ms / 1000;
@@ -128,14 +133,16 @@ export function play(name, { force = false, ...opts } = {}) {
   try { fn(c, opts); } catch { /* audio unavailable */ }
 }
 
-/* Taps: one listener for the whole app — anything pressable ticks */
+/* Taps: one listener for the whole app — anything pressable ticks.
+   On 'click', not on touch-down: a click only happens for a real tap, so
+   starting a scroll or a swipe on a button stays silent. */
 const PRESSABLE = 'button, a[href], [role="button"], [role="tab"], [role="radio"], [role="switch"], [role="menuitem"], summary, label.toggle, .toggle-track, input[type="checkbox"], input[type="radio"], select';
 let tapsWired = false;
 export function wireTapSounds() {
   if (tapsWired || typeof document === 'undefined') return;
   tapsWired = true;
-  document.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return;
+  document.addEventListener('click', (e) => {
+    if (e.button !== 0) return;
     const el = e.target?.closest?.(PRESSABLE);
     if (!el || el.disabled || el.getAttribute('aria-disabled') === 'true' || el.closest('[data-no-tap-sound]')) return;
     play('tap');
