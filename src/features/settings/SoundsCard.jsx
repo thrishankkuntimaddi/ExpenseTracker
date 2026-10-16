@@ -4,11 +4,6 @@
 import { Play, Volume1, Volume2 } from 'lucide-react';
 import { useSoundPrefs, setSoundPrefs, SOUND_KINDS, play } from '../../sound/sound';
 
-export const soundsSummary = (p) => {
-  if (!p.on) return 'Off';
-  const on = SOUND_KINDS.filter((k) => p[k.key]).map((k) => k.label.toLowerCase());
-  return on.length ? `On · ${on.join(', ')}` : 'On · nothing picked';
-};
 
 export default function SoundsCard() {
   const p = useSoundPrefs();

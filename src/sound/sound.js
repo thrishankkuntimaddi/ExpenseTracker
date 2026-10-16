@@ -141,3 +141,10 @@ export function wireTapSounds() {
     play('tap');
   }, true);
 }
+
+/** One line for the Profile row. */
+export const soundsSummary = (p) => {
+  if (!p.on) return 'Off';
+  const on = SOUND_KINDS.filter((k) => p[k.key]).map((k) => k.label.toLowerCase());
+  return on.length ? `On · ${on.join(', ')}` : 'On · nothing picked';
+};

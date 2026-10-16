@@ -36,9 +36,9 @@
       if (!res[0]) return;
       var d = { stars: res[0].stargazers_count, forks: res[0].forks_count, version: res[1] && res[1].tag_name, at: Date.now() };
       show(d);
-      try { localStorage.setItem('etl_gh', JSON.stringify(d)); } catch (e) { /* private mode */ }
+      try { localStorage.setItem('etl_gh', JSON.stringify(d)); } catch { /* private mode */ }
     }).catch(function () {});
-  } catch (e) { /* storage unavailable */ }
+  } catch { /* storage unavailable */ }
 
   // The download for this device
   var ua = navigator.userAgent, pick = null;
@@ -78,5 +78,5 @@
   // Used the app here before (its data lives under this address): point to the new one
   try {
     if (Object.keys(localStorage).some(function (k) { return /^et_(device_id|theme|motion)/.test(k); })) document.getElementById('moved').hidden = false;
-  } catch (e) { /* storage unavailable */ }
+  } catch { /* storage unavailable */ }
 })();
