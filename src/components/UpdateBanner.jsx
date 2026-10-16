@@ -1,14 +1,25 @@
 // A small, dismissible note about updates: "Updated to vX", "Update ready —
 // Restart" (desktop and Android), or
 // "Install the new app" when a bundle needs newer native code.
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Sparkles, Download, RotateCcw, X } from 'lucide-react';
 import { useUpdateState, dismissUpdateNote, restartToUpdate, APK_URL } from '../native/updates';
 import { platform } from '../native';
 
+// Closed once, a note stays closed for that version (Settings → App still
+// has Restart / Install); it comes back only for a newer one
+const CLOSED_KEY = 'et_update_note_closed';
+const closedFor = () => { try { return localStorage.getItem(CLOSED_KEY); } catch { return null; } };
+
 export default function UpdateBanner() {
   const u = useUpdateState();
-  const show = ['updated', 'ready', 'native-needed'].includes(u.kind) && u.message;
+  const [closed, setClosed] = useState(closedFor);
+  const noteId = `${u.kind}:${u.version}`;
+  const close = () => {
+    if (u.kind !== 'updated') { try { localStorage.setItem(CLOSED_KEY, noteId); } catch { /* storage unavailable */ } setClosed(noteId); }
+    dismissUpdateNote();
+  };
+  const show = ['updated', 'ready', 'native-needed'].includes(u.kind) && u.message && closed !== noteId;
   useEffect(() => {
     if (u.kind !== 'updated') return undefined;
     const t = setTimeout(dismissUpdateNote, 5000);
@@ -34,7 +45,7 @@ export default function UpdateBanner() {
           <action.Icon size={13} /> {action.label}
         </button>
       )}
-      <button onClick={dismissUpdateNote} aria-label="Dismiss" style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 2 }}>
+      <button onClick={close} aria-label="Dismiss" style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 2 }}>
         <X size={14} />
       </button>
     </div>

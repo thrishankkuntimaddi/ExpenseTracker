@@ -145,7 +145,9 @@ export function useAuth() {
    *  - Refuses (returns { pending: n }) while changes are still waiting to
    *    upload, unless { force: true } — signing out would discard them.
    *  - { forgetDevice: true } also clears this device's id and preferences
-   *    ("Clear this device").
+   *    ("Clear this device"). Otherwise the id stays, so signing in again
+   *    is the same device (alerts already answered stay answered, and it
+   *    isn't reported as a new device).
    */
   const signOut = useCallback(async ({ force = false, forgetDevice = false } = {}) => {
     const { pending } = getSyncState();
@@ -159,8 +161,6 @@ export function useAuth() {
     clearLegacyDataCache();
     if (forgetDevice) {
       try { Object.keys(localStorage).filter((k) => k.startsWith("et_")).forEach((k) => localStorage.removeItem(k)); } catch { /* storage unavailable */ }
-    } else {
-      try { localStorage.removeItem(DEVICE_ID_KEY); } catch { /* storage unavailable */ }
     }
     // The Firestore instance can't be reused after clearing, so reload.
     try {

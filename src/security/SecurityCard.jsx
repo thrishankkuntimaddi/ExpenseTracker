@@ -177,7 +177,6 @@ function DeviceList({ devices, lockOn }) {
               <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                 {lockOn && !d.locked && <IconBtn id={`device-lock-${d.id}`} label={`Lock ${d.name}`} onClick={() => setConfirm({ device: d, type: 'lock' })}><Lock size={13} /></IconBtn>}
                 <IconBtn id={`device-signout-${d.id}`} label={`Sign out ${d.name}`} onClick={() => setConfirm({ device: d, type: 'signout' })}><LogOut size={13} /></IconBtn>
-                {!liveNow && <IconBtn label={`Remove ${d.name} from this list`} onClick={() => devices.remove(d.id)}><X size={13} /></IconBtn>}
               </div>
             )}
           </div>
@@ -191,6 +190,7 @@ function DeviceList({ devices, lockOn }) {
         </div>
       )}
       {!lockOn && others.length > 0 && <p style={{ ...note, padding: '0 16px 12px', margin: 0 }}>Turn on app lock to lock other devices from here.</p>}
+      <p style={{ ...note, padding: '0 16px 12px', margin: 0 }}>A device leaves this list when it signs out (or you sign it out here). One you no longer use drops off after 30 days unseen.</p>
     </div>
   );
 }

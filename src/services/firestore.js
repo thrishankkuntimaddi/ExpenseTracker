@@ -318,8 +318,32 @@ export function subscribeToSecurityEvents(uid, onData) {
   return listen(query(eventsRef(uid), orderBy("at", "desc"), limit(15)), "security alerts",
     (snap) => onData(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
 }
-export function markSecurityEventSeen(uid, id, deviceId) {
-  return setDoc(doc(db, "users", uid, "security_events", id), { seenBy: { [deviceId]: Date.now() } }, { merge: true });
+/** "It was me" / acted on: gone on every device, with one write. */
+export function dismissSecurityEvent(uid, id, device) {
+  return setDoc(doc(db, "users", uid, "security_events", id), { dismissedAt: Date.now(), dismissedBy: device ?? null }, { merge: true });
+}
+/** Handled already: dismissed on any device (older events stored seenBy per device). */
+export const isEventHandled = (e) => !!e?.dismissedAt || Object.keys(e?.seenBy ?? {}).length > 0;
+
+/* Devices this account has been used on — so a sign-in from a new one can
+   be reported once (users/{uid}/security/known_devices: { ids: { id: at } }) */
+const knownDevicesRef = (uid) => doc(db, "users", uid, "security", "known_devices");
+export async function noteDeviceSignIn(uid, deviceId, deviceName) {
+  const snap = await getDocFromServer(knownDevicesRef(uid));
+  if (snap.exists() && snap.data()?.ids?.[deviceId]) return false;
+  if (!snap.exists()) {
+    // First time this check runs on the account: every device already in
+    // the list is known — nothing to report
+    const current = await getDocsFromServer(collection(db, "users", uid, "devices"));
+    const ids = Object.fromEntries([...current.docs.map((d) => [d.id, Date.now()]), [deviceId, Date.now()]]);
+    await setDoc(knownDevicesRef(uid), { ids });
+    return false;
+  }
+  const batch = writeBatch(db);
+  batch.set(knownDevicesRef(uid), { ids: { [deviceId]: Date.now() } }, { merge: true });
+  batch.set(doc(eventsRef(uid), `new_device-${deviceId}`), { type: "new_device", deviceId, device: deviceName ?? null, at: Date.now(), notified: false });
+  await batch.commit();
+  return true;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

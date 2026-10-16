@@ -5,7 +5,7 @@
 // Other devices can send it commands (lock, sign out) through the same doc —
 // see security/useAppLock.js.
 import { useEffect, useState, useCallback } from 'react';
-import { subscribeToDevices, touchDevice, removeDevice, patchDevice } from '../services/firestore';
+import { subscribeToDevices, touchDevice, removeDevice, patchDevice, noteDeviceSignIn } from '../services/firestore';
 import { background } from '../services/sync';
 import { generateId } from '../utils/storage';
 import { platform } from '../native';
@@ -46,6 +46,17 @@ export function useDevices(uid) {
 
   useEffect(() => (uid ? subscribeToDevices(uid, setDevices) : undefined), [uid]);
 
+  // First sign-in on this device for this account → one "new device" alert
+  // (checked once per device and account; nothing is read after that)
+  useEffect(() => {
+    if (!uid) return;
+    const key = `et_known_${uid}`;
+    try { if (localStorage.getItem(key)) return; } catch { return; }
+    noteDeviceSignIn(uid, thisId, describeDevice())
+      .then(() => { try { localStorage.setItem(key, '1'); } catch { /* storage unavailable */ } })
+      .catch(() => { /* offline: try again next time */ });
+  }, [uid, thisId]);
+
   // Tidy up: a device not seen for 30 days is gone (reinstall, cleared data, old phone)
   useEffect(() => {
     if (!uid) return;
@@ -78,7 +89,6 @@ export function useDevices(uid) {
     };
   }, [uid, thisId]);
 
-  const remove = useCallback((id) => { if (uid) background(removeDevice(uid, id)); }, [uid]);
   /** Send a command to another device: 'lock' | 'signout'. */
   const command = useCallback((id, type) => {
     if (uid) background(patchDevice(uid, id, { command: { type, at: Date.now(), from: describeDevice(), fromId: thisId } }));
@@ -88,5 +98,5 @@ export function useDevices(uid) {
     if (uid) background(patchDevice(uid, id, { unlockApproval: { nonce, approved, at: Date.now(), by: describeDevice() } }));
   }, [uid]);
 
-  return { devices, thisId, remove, command, answerUnlock };
+  return { devices, thisId, command, answerUnlock };
 }

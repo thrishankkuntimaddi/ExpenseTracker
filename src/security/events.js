@@ -17,6 +17,7 @@ export function eventText(e) {
     case 'lock_on': return { title: 'App lock turned on', sub: `on ${e.device}` };
     case 'lock_off': return { title: 'App lock turned off', sub: `on ${e.device}`, bad: true };
     case 'pin_changed': return { title: 'PIN changed', sub: `on ${e.device}` };
+    case 'new_device': return { title: 'Signed in on a new device', sub: `${e.device ?? 'A device'} — first time on your account`, bad: true };
     case 'pin_reset_started': return { title: 'PIN reset after signing in again', sub: `on ${e.device}` };
     default: return { title: e?.type ?? 'Event', sub: e?.device ?? '' };
   }

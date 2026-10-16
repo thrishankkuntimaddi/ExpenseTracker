@@ -140,12 +140,25 @@ service cloud.firestore {
               || (request.resource.data.settlements is list && request.resource.data.settlements.size() <= 1000));
       }
 
+      // Security alerts: the app writes new ones (unsent) and may only mark
+      // them answered afterwards; whether it was emailed is the notifier's
+      // business (it uses the admin SDK) — so an alert can't be re-sent or
+      // hidden from email by editing it
+      match /security_events/{eventId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.notified == false
+          && request.resource.data.type is string && request.resource.data.type.size() <= 40;
+        allow update: if isOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy', 'dismissedAt', 'dismissedBy']);
+      }
+
       // Owner-only for every other subcollection (external_transactions,
       // recently_deleted, devices, …). Rules are OR'd, so the validated
       // collections above are excluded here.
       match /{collection}/{rest=**} {
         allow read, write: if isOwner(userId)
-          && !(collection in ['transactions', 'income', 'recurring', 'trips']);
+          && !(collection in ['transactions', 'income', 'recurring', 'trips', 'security_events']);
       }
     }
   }
