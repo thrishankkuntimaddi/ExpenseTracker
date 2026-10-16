@@ -5,7 +5,6 @@
 // lets them create an account — and then asks which person on the trip
 // they are. The apps take the same link (or just the code) in "Join a trip".
 import { isNative } from '../../native';
-import { RELEASES } from '../../utils/downloads';
 
 const PUBLIC_APP = 'https://thrishankkuntimaddi.github.io/ExpenseTracker/';
 const PENDING_KEY = 'et_join_trip';
@@ -29,16 +28,15 @@ export function parseInvite(text) {
 }
 
 export function inviteMessage(trip, link) {
+  const who = trip.ownerName ? `${trip.ownerName} invited you` : 'You’re invited';
   return [
-    `You're on the trip “${trip.name}” in Expense Tracker.`,
+    `🧳 ${who} to the trip “${trip.name}” on Expense Tracker.`,
     '',
-    'Add what you spend — fuel, food, tolls, anything — and everyone sees who owes whom, live.',
+    'Everyone adds what they spend — fuel, food, tolls — and sees who owes whom, live. No more maths at the end.',
     '',
-    `1. Open: ${link}`,
-    '2. Sign in, or create a free account (Google or email).',
-    '3. Pick your name on the trip — done.',
+    `Join here: ${link}`,
     '',
-    `Android / desktop app: ${RELEASES}`,
+    'Sign in, or create a free account in a few seconds — then pick your name on the trip.',
   ].join('\n');
 }
 

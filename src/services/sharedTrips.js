@@ -98,6 +98,34 @@ export function subscribeToSharedTripItems(tripId, onData) {
   return () => { u1(); u2(); };
 }
 
+/* ── Invite preview ──
+   trip_invites/{tripId}: what someone who opens the link sees BEFORE
+   signing in — the trip's name, who organises it, dates, how many people.
+   Nothing else (no rows, no money, no other names). Written by the creator. */
+const previewRef = (id) => doc(db, "trip_invites", id);
+export function invitePreviewOf(trip) {
+  const ownerUid = trip.ownerUid;
+  return clean({
+    tripId: trip.id, ownerUid, name: String(trip.name ?? "").slice(0, 200),
+    ownerName: String(trip.ownerName ?? trip.people?.[ownerUid]?.name ?? "").slice(0, 100) || undefined,
+    ownerPhoto: trip.people?.[ownerUid]?.photo || undefined,
+    startDate: trip.startDate || undefined, endDate: trip.endDate || undefined,
+    people: (trip.members ?? []).length, status: trip.status ?? "open", updatedAt: Date.now(),
+  });
+}
+export function saveInvitePreview(trip) {
+  return setDoc(previewRef(trip.id), invitePreviewOf(trip));
+}
+/** Anyone with the link (signed in or not) — null if missing. */
+export async function getInvitePreview(id) {
+  try { const s = await getDoc(previewRef(id)); return s.exists() ? s.data() : null; } catch { return null; }
+}
+
+/* ── Invite by email (sent by the notifier with the app's own mailer) ── */
+export function requestInviteEmail(uid, { to, tripId, fromName }) {
+  return setDoc(doc(db, "users", uid, "outbox", generateId()), { type: "trip_invite", to: String(to).trim().toLowerCase(), tripId, fromName: String(fromName ?? "").slice(0, 100), at: Date.now(), sent: false });
+}
+
 /** Read one trip before joining (the link is enough to read it). */
 export async function getSharedTrip(id) {
   const snap = await getDoc(tripRef(id));
@@ -137,6 +165,7 @@ export async function createSharedTrip(trip, owner) {
   });
   // The trip document first: the rules for its rows read it
   await setDoc(tripRef(id), data);
+  await saveInvitePreview({ ...data, id }).catch(() => {});
   const ops = [
     ...expenses.filter((e) => String(e.title ?? "").trim() || (e.amount !== "" && e.amount != null))
       .map((e) => (b) => b.set(expRef(id, e.id), expenseDoc(e, owner.uid))),
@@ -156,6 +185,10 @@ export async function updateSharedTrip(id, patch) {
   if (patch.members) out.memberUnit = memberUnitMap(patch.members);
   Object.keys(out).forEach((k) => { if (out[k] === undefined) out[k] = deleteField(); });
   await updateDoc(tripRef(id), out);
+  // What invitees see before signing in follows the trip (name, dates, people, open/closed)
+  if (["name", "startDate", "endDate", "members", "status"].some((k) => k in patch)) {
+    getDoc(tripRef(id)).then((s) => s.exists() && saveInvitePreview({ id, ...s.data() })).catch(() => {});
+  }
 }
 
 export async function saveSharedExpense(tripId, row, uid) {
@@ -182,6 +215,7 @@ export async function deleteSharedTrip(id) {
     await batch.commit();
   }
   await deleteDoc(tripRef(id));
+  await deleteDoc(previewRef(id)).catch(() => {});
 }
 
 /**

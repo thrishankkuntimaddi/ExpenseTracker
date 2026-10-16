@@ -125,6 +125,20 @@ service cloud.firestore {
       }
     }
 
+    // What an invite link shows before signing in (trip name, organiser,
+    // dates, how many people). Readable by id only; written by the trip's
+    // creator only.
+    match /trip_invites/{tripId} {
+      function creator() { return get(/databases/$(database)/documents/shared_trips/$(tripId)).data.ownerUid; }
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if request.auth != null && request.auth.uid == creator()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['tripId', 'ownerUid', 'name', 'ownerName', 'ownerPhoto', 'startDate', 'endDate', 'people', 'status', 'updatedAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 200;
+      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    }
+
     match /users/{userId} {
       allow read, write: if isOwner(userId);
 
@@ -173,12 +187,23 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy', 'dismissedAt', 'dismissedBy']);
       }
 
+      // Emails the notifier sends for you (trip invites): one address each,
+      // unsent; the notifier caps how many go out a day
+      match /outbox/{mailId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.type == 'trip_invite'
+          && request.resource.data.sent == false
+          && request.resource.data.to is string && request.resource.data.to.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$') && request.resource.data.to.size() <= 200
+          && request.resource.data.tripId is string && request.resource.data.tripId.size() <= 40;
+      }
+
       // Owner-only for every other subcollection (external_transactions,
       // recently_deleted, devices, …). Rules are OR'd, so the validated
       // collections above are excluded here.
       match /{collection}/{rest=**} {
         allow read, write: if isOwner(userId)
-          && !(collection in ['transactions', 'income', 'recurring', 'trips', 'security_events']);
+          && !(collection in ['transactions', 'income', 'recurring', 'trips', 'security_events', 'outbox']);
       }
     }
   }

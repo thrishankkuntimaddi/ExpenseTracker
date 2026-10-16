@@ -1,8 +1,9 @@
 // ─── TripInviteModal ──────────────────────────────────────────────
 // Bring friends onto a trip. Every way leads to the same link:
 //   QR code (scan with a phone camera) · copy link · share to WhatsApp /
-//   contacts (the phone's share sheet) · email (with "create an account"
-//   steps) · or add someone from friends you've shared trips with before.
+//   contacts (the phone's share sheet) · an invite email sent by the app
+//   (a designed email with the trip and a Join button) or from your own mail
+//   app · or add someone from friends you've shared trips with before.
 // A personal trip becomes shared the first time — it moves to shared
 // storage with all its rows; nothing else changes.
 import { useEffect, useState } from 'react';
@@ -11,6 +12,8 @@ import ModalShell, { Field, PrimaryButton, GhostButton } from '../../components/
 import { fieldStyle } from '../../components/formTokens';
 import Avatar from '../../components/Avatar';
 import { inviteLink, inviteMessage, inviteMailto } from './invite';
+import { saveInvitePreview, requestInviteEmail } from '../../services/sharedTrips';
+import { auth } from '../../services/firebase';
 import { generateId } from '../../utils/storage';
 
 export default function TripInviteModal({ trip, friends = [], onMakeShared, onLinkFriend, onClose }) {
@@ -70,6 +73,26 @@ function Invite({ trip, friends, onLinkFriend, onClose }) {
   async function share() {
     try { await navigator.share({ title: `Join “${trip.name}”`, text: inviteMessage(trip, link) }); } catch { /* cancelled */ }
   }
+  // What the link shows before signing in — kept current by the organiser
+  useEffect(() => { if (trip.isOwner) saveInvitePreview(trip).catch(() => {}); }, [trip]);
+
+  /* Invite by email: the app sends a designed email (Join button, what the app does) */
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [to, setTo] = useState('');
+  const [sent, setSent] = useState([]);
+  const [mailError, setMailError] = useState('');
+  async function sendEmail(e) {
+    e.preventDefault();
+    const addrs = to.split(/[\s,;]+/).map((a) => a.trim()).filter(Boolean);
+    const bad = addrs.find((a) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a));
+    if (!addrs.length || bad) { setMailError(bad ? `“${bad}” isn’t an email address.` : 'Type an email address.'); return; }
+    setMailError('');
+    const me = auth?.currentUser;
+    try {
+      await Promise.all(addrs.slice(0, 10).map((a) => requestInviteEmail(me.uid, { to: a, tripId: trip.id, fromName: me.displayName || trip.ownerName || '' })));
+      setSent((s) => [...s, ...addrs.slice(0, 10)]); setTo('');
+    } catch { setMailError('Couldn’t send — check your connection and try again.'); }
+  }
 
   const members = trip.members ?? [];
   const joined = new Set(Object.values(trip.uidMember ?? {}));
@@ -95,9 +118,22 @@ function Invite({ trip, friends, onLinkFriend, onClose }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
         <Action onClick={() => copy('link', link)} Icon={copied === 'link' ? Check : Copy}>{copied === 'link' ? 'Copied' : 'Copy link'}</Action>
         {canShare && <Action onClick={share} Icon={Send} primary>WhatsApp, contacts…</Action>}
-        <Action href={inviteMailto(trip, link)} Icon={Mail}>Email</Action>
+        <Action onClick={() => setEmailOpen((o) => !o)} Icon={Mail}>Email</Action>
         <Action onClick={() => copy('msg', inviteMessage(trip, link))} Icon={copied === 'msg' ? Check : Copy}>{copied === 'msg' ? 'Copied' : 'Copy message'}</Action>
       </div>
+
+      {emailOpen && (
+        <form id="trip-invite-email" onSubmit={sendEmail} style={{ display: 'grid', gap: 8, padding: 12, borderRadius: 14, background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>We’ll email them an invite to “{trip.name}” with a Join button — they sign in or create a free account and pick their name.</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input id="trip-invite-to" type="email" multiple value={to} onChange={(e) => setTo(e.target.value)} placeholder="friend@example.com" autoComplete="email" style={{ ...fieldStyle, flex: 1, minWidth: 0 }} />
+            <PrimaryButton type="submit" color="var(--external)"><Send size={14} /> Send</PrimaryButton>
+          </div>
+          {mailError && <div style={{ fontSize: 12, color: 'var(--expense)' }}>{mailError}</div>}
+          {sent.length > 0 && <div id="trip-invite-sent" style={{ fontSize: 12, color: 'var(--income)', lineHeight: 1.5 }}><Check size={12} style={{ verticalAlign: -2 }} /> Invite on its way to {sent.join(', ')} — it usually arrives within a few minutes.</div>}
+          <a href={inviteMailto(trip, link)} style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>Or send it from your own email app</a>
+        </form>
+      )}
 
       {addable.length > 0 && (
         <div>

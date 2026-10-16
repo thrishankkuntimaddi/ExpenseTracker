@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Mail, Lock, Eye, EyeOff, ArrowLeft, ArrowRight, CheckCircle2,
-  Wallet, ReceiptText, Map as MapIcon, Target,
+  Wallet, ReceiptText, Map as MapIcon, Target, Plane, Users, CalendarDays,
 } from 'lucide-react';
+import { getInvitePreview } from '../../services/sharedTrips';
+import Avatar from '../../components/Avatar';
+import { formatDateShort } from '../../utils/dateHelpers';
 
 /* One screen for every signed-out state:
    'login' | 'signup' | 'reset' (forgot password).
@@ -21,8 +24,12 @@ export default function AuthScreen({
   googleAvailable = true,   // false in the desktop app until its Google client is configured
   appsLink = null,          // website only: link to the app downloads
   invited = false,          // opened from a trip invite link
+  inviteId = null,          // …and which trip
 }) {
   const [mode, setMode]         = useState(invited ? 'signup' : 'login');
+  // The trip behind the link: name, organiser, dates (readable before signing in)
+  const [trip, setTrip] = useState(null);
+  useEffect(() => { if (inviteId) getInvitePreview(inviteId).then(setTrip); }, [inviteId]);
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
@@ -118,9 +125,27 @@ export default function AuthScreen({
           <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '6px 0 20px', lineHeight: 1.5 }}>{subtitle}</p>
 
           {invited && mode !== 'reset' && (
-            <div id="auth-invite" style={{ padding: '11px 14px', borderRadius: 12, marginBottom: 16, background: 'var(--external-bg)', border: '1px solid var(--external-border)', fontSize: 13, color: 'var(--text)', lineHeight: 1.5 }}>
-              <strong>You’ve been invited to a trip.</strong> {mode === 'signup' ? 'Create a free account' : 'Sign in'} — you’ll pick your name on the trip right after.
-              {' '}<button type="button" onClick={() => go(mode === 'signup' ? 'login' : 'signup')} style={{ border: 'none', background: 'none', padding: 0, color: 'var(--external)', font: 'inherit', fontWeight: 700, cursor: 'pointer' }}>{mode === 'signup' ? 'I already have one' : 'I’m new here'}</button>
+            <div id="auth-invite" style={{ borderRadius: 16, marginBottom: 16, background: 'var(--external-bg)', border: '1px solid var(--external-border)', color: 'var(--text)', overflow: 'hidden' }}>
+              {trip && (
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '14px 14px 12px' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 13, background: 'var(--external)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Plane size={20} style={{ color: '#fff' }} /></div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div id="auth-invite-trip" style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.name}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 10px', fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 2 }}>
+                      {trip.startDate && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CalendarDays size={11} />{formatDateShort(trip.startDate)}{trip.endDate ? ` – ${formatDateShort(trip.endDate)}` : ''}</span>}
+                      {trip.people > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Users size={11} />{trip.people} people</span>}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div style={{ padding: trip ? '10px 14px 12px' : '12px 14px', borderTop: trip ? '1px solid var(--external-border)' : 'none', fontSize: 13, lineHeight: 1.5, display: 'flex', gap: 10, alignItems: 'center' }}>
+                {trip?.ownerName && <Avatar user={{ displayName: trip.ownerName, photoURL: trip.ownerPhoto }} size={28} />}
+                <span>
+                  <strong>{trip?.ownerName ? `${trip.ownerName} opened this trip` : 'You’ve been invited to a trip'}</strong>{trip?.ownerName ? ' and invited you to join.' : '.'}
+                  {trip?.status && trip.status !== 'open' ? ' It’s closed right now — ask them to reopen it.' : ` ${mode === 'signup' ? 'Create a free account' : 'Sign in'} — then pick your name on the trip.`}
+                  {' '}<button type="button" id="auth-invite-switch" onClick={() => go(mode === 'signup' ? 'login' : 'signup')} style={{ border: 'none', background: 'none', padding: 0, color: 'var(--external)', font: 'inherit', fontWeight: 700, cursor: 'pointer' }}>{mode === 'signup' ? 'I already have an account' : 'I’m new — create one'}</button>
+                </span>
+              </div>
             </div>
           )}
 

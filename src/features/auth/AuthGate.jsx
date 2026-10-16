@@ -10,7 +10,7 @@ import { RELEASES } from '../../utils/downloads';
 import { captureInviteFromUrl } from '../trips/invite';
 
 // A trip invite link (?trip=…) is kept until the person has signed in
-const invitedAtStart = !!captureInviteFromUrl();
+const inviteAtStart = captureInviteFromUrl();   // trip id from an invite link, or null
 
 /* Shown when the bundle was built without VITE_FIREBASE_* — better than a stuck splash */
 function SetupRequired() {
@@ -104,7 +104,8 @@ export default function AuthGate({ children }) {
         loading={authLoading}
         googleAvailable={googleSignInAvailable}
         appsLink={isNative ? null : `${RELEASES}/latest`}
-        invited={invitedAtStart}
+        invited={!!inviteAtStart}
+        inviteId={inviteAtStart}
       />
     );
   }

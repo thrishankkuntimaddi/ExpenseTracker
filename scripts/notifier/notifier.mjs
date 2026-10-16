@@ -17,6 +17,7 @@
 //   SMTP_URL                  e.g. smtps://you%40gmail.com:app-password@smtp.gmail.com:465 (optional)
 //   MAIL_FROM                 "Expense Tracker <you@gmail.com>" (optional)
 //   APP_URL                   link in emails (default: the GitHub Pages site)
+//   JOIN_URL / LANDING_URL    trip invite links: the app (?trip=…) and the product page
 //   DRY_RUN=1                 log only
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
@@ -150,11 +151,11 @@ function emailOf(text, e, extra, tz) {
 }
 
 /** Claim the event for this run; false if another run (or an earlier one) has it. */
-async function claim(ref) {
+async function claim(ref, field = 'notified') {
   return db.runTransaction(async (tx) => {
     const cur = await tx.get(ref);
-    if (!cur.exists || cur.data().notified !== false) return false;
-    tx.update(ref, { notified: 'sending', claimedAt: FieldValue.serverTimestamp() });
+    if (!cur.exists || cur.data()[field] !== false) return false;
+    tx.update(ref, { [field]: 'sending', claimedAt: FieldValue.serverTimestamp() });
     return true;
   });
 }
@@ -223,9 +224,103 @@ async function alerts() {
   }
 }
 
+/* ── 3. Trip invites by email ──
+   users/{uid}/outbox/{id} { type: 'trip_invite', to, tripId, fromName } —
+   written by the app's invite window. One email each (claimed first, like
+   alerts), at most 20 a day per account, and only for a trip that account
+   organises. */
+const INVITES_PER_DAY = 20;
+const JOIN_BASE = process.env.JOIN_URL || APP_URL;          // where the app runs (?trip=<id>)
+const LANDING_URL = process.env.LANDING_URL || 'https://thrishankkuntimaddi.github.io/ExpenseTracker/';
+
+function inviteEmail({ fromName, trip, link }) {
+  const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const who = fromName || trip.ownerName || 'A friend';
+  const fmt = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+  const dates = trip.startDate ? `${fmt(trip.startDate)}${trip.endDate ? ` – ${fmt(trip.endDate)}` : ''}` : '';
+  const meta = [dates, trip.people ? `${trip.people} people` : ''].filter(Boolean).join(' · ');
+  const subject = `${who} invited you to “${trip.name}” on Expense Tracker`;
+  const text = [
+    `${who} invited you to the trip “${trip.name}”${meta ? ` (${meta})` : ''} on Expense Tracker.`,
+    '', 'Everyone adds what they spend — fuel, food, tolls — and sees who owes whom, live. No maths at the end.',
+    '', `Join the trip: ${link}`, 'Sign in, or create a free account in a few seconds — then pick your name on the trip.',
+    '', `Get Expense Tracker (web, Android, Mac, Windows, Linux): ${LANDING_URL}`,
+  ].join('\n');
+  const feature = (icon, title, body) => `<td style="width:33%;padding:8px;vertical-align:top"><div style="font-size:22px">${icon}</div><div style="font-weight:700;font-size:13px;margin:6px 0 2px;color:#1a1a2e">${title}</div><div style="font-size:12px;color:#666;line-height:1.45">${body}</div></td>`;
+  const html = `<!doctype html><html><body style="margin:0;background:#f2f3f7;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(20,20,60,.08)">
+<tr><td style="background:linear-gradient(135deg,#5b4cf0,#9a4fe0);padding:28px 26px 24px;color:#fff">
+  <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.85">Expense Tracker · Trip invite</div>
+  <div style="font-size:24px;font-weight:800;margin-top:10px;line-height:1.25">${esc(who)} invited you to join</div>
+</td></tr>
+<tr><td style="padding:22px 26px 6px">
+  <table role="presentation" width="100%" style="border:1px solid #e7e7f0;border-radius:16px"><tr>
+    <td style="width:52px;padding:14px 0 14px 14px"><div style="width:44px;height:44px;border-radius:13px;background:#0ea5a4;color:#fff;font-size:22px;line-height:44px;text-align:center">✈️</div></td>
+    <td style="padding:14px"><div style="font-size:18px;font-weight:800;color:#1a1a2e">${esc(trip.name)}</div>${meta ? `<div style="font-size:13px;color:#666;margin-top:3px">${esc(meta)}</div>` : ''}</td>
+  </tr></table>
+  <p style="font-size:15px;line-height:1.55;color:#333;margin:18px 0 6px">Add what you spend on the trip — fuel, food, tolls, tickets — and everyone sees who owes whom, live. When it ends, one tap shows the simplest way to settle up.</p>
+  <div style="text-align:center;margin:22px 0 8px"><a href="${esc(link)}" style="display:inline-block;background:#5b4cf0;color:#ffffff;text-decoration:none;font-weight:800;font-size:16px;padding:14px 30px;border-radius:14px">Join “${esc(trip.name)}”</a></div>
+  <p style="font-size:12.5px;color:#888;text-align:center;margin:0 0 22px">Sign in, or create a free account in a few seconds — then pick your name.</p>
+</td></tr>
+<tr><td style="background:#f8f8fc;padding:18px 18px 8px;border-top:1px solid #eee">
+  <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a8aa0;padding:0 8px">More than trips</div>
+  <table role="presentation" width="100%"><tr>
+    ${feature('🎯', 'Budgets that pace you', 'A daily “safe to spend” and a projected month end.')}
+    ${feature('🧾', 'Bills that remind you', 'Rent, EMIs and SIPs on schedule — never missed.')}
+    ${feature('🔒', 'Private by design', 'App lock, encrypted backups in your own Drive.')}
+  </tr></table>
+  <div style="text-align:center;padding:10px 0 16px"><a href="${esc(LANDING_URL)}" style="font-size:13px;font-weight:700;color:#5b4cf0;text-decoration:none">Get the app — web, Android, Mac, Windows, Linux →</a></div>
+</td></tr>
+</table>
+<p style="max-width:520px;margin:14px auto 0;font-size:11px;color:#9a9aae;text-align:center;line-height:1.5">You got this because ${esc(who)} entered your address to invite you to a trip. No account was created for you, and you won’t get more emails unless you’re invited again.</p>
+</body></html>`;
+  return { subject, text, html };
+}
+
+async function invites() {
+  let docs;
+  try {
+    docs = (await db.collectionGroup('outbox').where('sent', '==', false).get()).docs;
+  } catch (err) {
+    console.warn('outbox query needs its index; scanning instead:', err.message);
+    docs = (await db.collectionGroup('outbox').get()).docs.filter((d) => d.data().sent === false);
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const counts = new Map();
+  for (const d of docs) {
+    const m = d.data();
+    const uid = uidOf(d.ref);
+    const done = (fields) => (DRY ? null : d.ref.update(fields).catch(() => {}));
+    try {
+      if (m.type !== 'trip_invite' || !m.to || !m.tripId) { await done({ sent: 'invalid' }); continue; }
+      if (now - (m.at ?? 0) > STALE_AFTER) { await done({ sent: 'stale' }); continue; }
+      const metaRef = db.collection('users').doc(uid).collection('security').doc('notifier');
+      if (!counts.has(uid)) { const meta = (await metaRef.get()).data() ?? {}; counts.set(uid, meta.invites?.day === today ? meta.invites.count : 0); }
+      if (counts.get(uid) >= INVITES_PER_DAY) { await done({ sent: 'limit' }); continue; }
+      const trip = (await db.collection('trip_invites').doc(m.tripId).get()).data();
+      const shared = (await db.collection('shared_trips').doc(m.tripId).get()).data();
+      if (!trip || !shared || shared.ownerUid !== uid) { await done({ sent: 'not-yours' }); continue; }
+      if (!DRY && !(await claim(d.ref, 'sent'))) continue;
+      const link = `${JOIN_BASE}${JOIN_BASE.includes('?') ? '&' : '?'}trip=${m.tripId}`;
+      try {
+        if (await mail(m.to, { ...inviteEmail({ fromName: m.fromName, trip, link }), id: `${uid}-${d.id}` })) stats.invites = (stats.invites ?? 0) + 1;
+        counts.set(uid, counts.get(uid) + 1);
+        if (!DRY) await metaRef.set({ invites: { day: today, count: counts.get(uid) } }, { merge: true });
+        await done({ sent: true, sentAt: FieldValue.serverTimestamp() });
+      } catch (err) {
+        const attempts = (m.attempts ?? 0) + 1;
+        console.error('invite failed', d.id, err.message);
+        await done({ sent: attempts >= 3 ? 'failed' : false, attempts, lastError: String(err.message).slice(0, 300) });
+      }
+    } catch (err) {
+      console.error('invite failed', d.id, err.message);
+    }
+  }
+}
+
 // Each part on its own: a failure in one (e.g. a quota error) must not stop the other
 let failed = false;
-for (const [name, run] of [['reminders', reminders], ['alerts', alerts]]) {
+for (const [name, run] of [['reminders', reminders], ['alerts', alerts], ['invites', invites]]) {
   try { await run(); } catch (err) { failed = true; console.error(`${name} failed:`, err); }
 }
 console.log('done', JSON.stringify(stats));
