@@ -4,7 +4,7 @@
 // when it goes to the background, so other devices can show it as "Live".
 // Other devices can send it commands (lock, sign out) through the same doc —
 // see security/useAppLock.js.
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { subscribeToDevices, touchDevice, removeDevice, patchDevice, noteDeviceSignIn } from '../services/firestore';
 import { background } from '../services/sync';
 import { generateId } from '../utils/storage';
@@ -19,6 +19,13 @@ export const OPEN_NOW_MS = 11 * 60 * 1000;   // two heartbeats plus slack
 /** On screen right now: visible and heard from in the last few minutes. */
 export const isLive = (d, now = Date.now()) => d?.visible !== false && !!d?.lastSeen && now - d.lastSeen < OPEN_NOW_MS;
 export const FORGET_AFTER_MS = 30 * 24 * 3600 * 1000;  // reinstalls / cleared app data leave old ids behind
+// A device only acts on a command for 7 days (security/useAppLock.js)
+export const COMMAND_TTL_MS = 7 * 24 * 3600 * 1000;
+
+/** Signed out from another device, but hasn't opened the app to act on it yet
+    (or never will — the app was deleted). It leaves "Your devices" at once;
+    its doc stays so the sign-out still reaches it if it opens again. */
+export const isSignedOut = (d) => d?.command?.type === 'signout';
 
 export function getDeviceId() {
   try {
@@ -43,8 +50,9 @@ export function describeDevice(ua = typeof navigator !== 'undefined' ? navigator
 }
 
 export function useDevices(uid) {
-  const [devices, setDevices] = useState([]);
+  const [all, setDevices] = useState([]);
   const thisId = getDeviceId();
+  const devices = useMemo(() => all.filter((d) => d.id === thisId || !isSignedOut(d)), [all, thisId]);
 
   useEffect(() => (uid ? subscribeToDevices(uid, setDevices) : undefined), [uid]);
 
@@ -59,13 +67,15 @@ export function useDevices(uid) {
       .catch(() => { /* offline: try again next time */ });
   }, [uid, thisId]);
 
-  // Tidy up: a device not seen for 30 days is gone (reinstall, cleared data, old phone)
+  // Tidy up: a device not seen for 30 days is gone (reinstall, cleared data, old phone),
+  // and so is one signed out from here whose sign-out has expired unanswered
   useEffect(() => {
     if (!uid) return;
     const now = Date.now();
-    devices.filter((d) => d.id !== thisId && d.lastSeen && now - d.lastSeen > FORGET_AFTER_MS)
+    all.filter((d) => d.id !== thisId && ((d.lastSeen && now - d.lastSeen > FORGET_AFTER_MS)
+      || (isSignedOut(d) && now - (d.command.at ?? 0) > COMMAND_TTL_MS)))
       .forEach((d) => background(removeDevice(uid, d.id)));
-  }, [uid, devices, thisId]);
+  }, [uid, all, thisId]);
 
   useEffect(() => {
     if (!uid) return undefined;

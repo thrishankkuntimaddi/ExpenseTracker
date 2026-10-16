@@ -149,7 +149,7 @@ function DeviceList({ devices, lockOn }) {
         <ConfirmDeleteModal
           title={confirm.type === 'signout' ? `Sign out ${confirm.device === 'all' ? 'every other device' : confirm.device.name}?` : `Lock ${confirm.device === 'all' ? 'every other device' : confirm.device.name}?`}
           message={confirm.type === 'signout'
-            ? 'It signs out and clears its copy of your data the moment it is online. Your data stays safe in your account.'
+            ? 'It leaves this list now, and signs out and clears its copy of your data the next time it opens the app. Your data stays safe in your account.'
             : 'It needs your PIN (or an approval from here) to open again.'}
           confirmLabel={confirm.type === 'signout' ? 'Sign out' : 'Lock'} ConfirmIcon={confirm.type === 'signout' ? LogOut : Lock}
           onConfirm={doIt} onCancel={() => setConfirm(null)} />
@@ -190,7 +190,7 @@ function DeviceList({ devices, lockOn }) {
         </div>
       )}
       {!lockOn && others.length > 0 && <p style={{ ...note, padding: '0 16px 12px', margin: 0 }}>Turn on app lock to lock other devices from here.</p>}
-      <p style={{ ...note, padding: '0 16px 12px', margin: 0 }}>A device leaves this list when it signs out (or you sign it out here). One you no longer use drops off after 30 days unseen.</p>
+      <p style={{ ...note, padding: '0 16px 12px', margin: 0 }}>A device leaves this list when it signs out, or the moment you sign it out here — even one whose app was deleted. One you no longer use drops off after 30 days unseen.</p>
     </div>
   );
 }

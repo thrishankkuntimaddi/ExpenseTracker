@@ -17,7 +17,7 @@ import {
   subscribeToDevice, patchDevice,
 } from '../services/firestore';
 import { background } from '../services/sync';
-import { getDeviceId, describeDevice } from '../hooks/useDevices';
+import { getDeviceId, describeDevice, COMMAND_TTL_MS } from '../hooks/useDevices';
 import { checkPin, makePinRecord, lockoutFor, ALERT_AT, MAX_TRIES, shouldRelock, DEFAULT_LOCK_AFTER } from './pin';
 import { verifyBiometric, biometricEnrolled } from './biometric';
 import { platform } from '../native';
@@ -116,7 +116,7 @@ export function useAppLock(user, { onRemoteSignOut } = {}) {
     return subscribeToDevice(uid, deviceId, (d) => {
       const cmd = d?.command;
       const done = Number(localStorage.getItem(CMD_KEY) || 0);
-      if (cmd?.at && cmd.at > done && Date.now() - cmd.at < 7 * 86400e3) {
+      if (cmd?.at && cmd.at > done && Date.now() - cmd.at < COMMAND_TTL_MS) {
         try { localStorage.setItem(CMD_KEY, String(cmd.at)); } catch { /* storage unavailable */ }
         background(patchDevice(uid, deviceId, { command: null }));
         if (cmd.type === 'lock') lock('remote');

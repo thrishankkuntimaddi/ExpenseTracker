@@ -77,6 +77,15 @@ describe('describeDevice', async () => {
   });
 });
 
+describe('isSignedOut', async () => {
+  const { isSignedOut } = await import('../../hooks/useDevices');
+  it('a device signed out from elsewhere leaves the list; a locked one stays', () => {
+    expect(isSignedOut({ command: { type: 'signout', at: 1 } })).toBe(true);
+    expect(isSignedOut({ command: { type: 'lock', at: 1 } })).toBe(false);
+    expect(isSignedOut({ lastSeen: 1 })).toBe(false);
+  });
+});
+
 describe('pickDownload', async () => {
   const { pickDownload } = await import('../downloads');
   const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/140.0 Safari/537.36';
