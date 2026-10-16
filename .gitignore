@@ -35,3 +35,4 @@ src-tauri/gen/schemas
 
 # Notifier job dependencies (installed in CI)
 scripts/notifier/node_modules
+dist-pages

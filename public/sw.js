@@ -2,7 +2,7 @@
 // The build ID is stamped in by vite.config.js at build time, so every
 // deploy gets a fresh cache name automatically (no manual bumping).
 const CACHE_NAME = 'et-__BUILD_ID__';
-const BASE = '/ExpenseTracker/';
+const BASE = new URL(self.registration.scope).pathname;   // where the app is served
 // Every hashed JS/CSS file of this build, stamped in at build time. Screens
 // load on demand, so pre-caching them all is what makes a screen you never
 // opened online still work offline.

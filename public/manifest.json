@@ -2,32 +2,32 @@
   "name": "Expense Tracker",
   "short_name": "Expenses",
   "description": "Personal finance tracker with real-time cloud sync",
-  "start_url": "/ExpenseTracker/",
-  "scope": "/ExpenseTracker/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#E4E5EA",
   "theme_color": "#E4E5EA",
   "icons": [
     {
-      "src": "/ExpenseTracker/icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/ExpenseTracker/icon-512.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/ExpenseTracker/icon-maskable-512.png",
+      "src": "icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/ExpenseTracker/apple-touch-icon.png",
+      "src": "apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png"
     }
@@ -37,5 +37,5 @@
     "productivity"
   ],
   "lang": "en-IN",
-  "id": "/ExpenseTracker/"
+  "id": "./"
 }

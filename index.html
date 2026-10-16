@@ -279,7 +279,7 @@
           // reloads the page: a new version takes over once the old tabs are
           // closed, and every fresh open already loads the newest code.
           window.addEventListener('load', function() {
-            navigator.serviceWorker.register('/ExpenseTracker/sw.js')
+            navigator.serviceWorker.register('%BASE_URL%sw.js')
               .then(function(reg) { console.log('[SW] Registered, scope:', reg.scope); })
               .catch(function(e) { console.warn('[SW] Registration failed:', e); });
           });

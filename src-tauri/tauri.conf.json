@@ -7,7 +7,7 @@
   "build": {
     "frontendDist": "../dist-native",
     "beforeBuildCommand": "npm run build:native",
-    "devUrl": "http://localhost:5173/ExpenseTracker/",
+    "devUrl": "http://localhost:5173/",
     "beforeDevCommand": "npm run dev"
   },
   "app": {

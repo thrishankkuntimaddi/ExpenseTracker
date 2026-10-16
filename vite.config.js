@@ -63,7 +63,8 @@ function swBuildId() {
 }
 
 // https://vite.dev/config/
-//   vite build                → website (GitHub Pages, /ExpenseTracker/, service worker)
+//   vite build                → website: the web app at the root of its own site
+//                               (Firebase Hosting; APP_BASE=/sub/ to serve it elsewhere)
 //   vite build --mode native  → dist-native/ for the Android (Capacitor) and desktop (Tauri) apps
 export default defineConfig(({ mode }) => {
   const native = mode === 'native'
@@ -85,7 +86,7 @@ export default defineConfig(({ mode }) => {
         },
       },
     ],
-    base: native ? './' : '/ExpenseTracker/',
+    base: native ? './' : (process.env.APP_BASE || '/'),
     define: {
       'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
       'import.meta.env.VITE_APP_BUILD': JSON.stringify(git.build),

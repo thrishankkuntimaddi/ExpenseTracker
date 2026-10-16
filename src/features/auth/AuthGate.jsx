@@ -6,7 +6,7 @@ import AuthScreen from './AuthScreen';
 import { markAppReady } from '../../app/ready';
 import { googleSignInAvailable } from '../../native/googleSignIn';
 import { isNative } from '../../native';
-import { RELEASES } from '../../utils/downloads';
+import { DOWNLOADS_URL } from '../../config/sites';
 import { captureInviteFromUrl } from '../trips/invite';
 
 // A trip invite link (?trip=…) is kept until the person has signed in
@@ -103,7 +103,7 @@ export default function AuthGate({ children }) {
         setError={setError}
         loading={authLoading}
         googleAvailable={googleSignInAvailable}
-        appsLink={isNative ? null : `${RELEASES}/latest`}
+        appsLink={isNative ? null : DOWNLOADS_URL}
         invited={!!inviteAtStart}
         inviteId={inviteAtStart}
       />

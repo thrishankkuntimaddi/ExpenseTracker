@@ -1,12 +1,13 @@
 // ─── Trip invites ─────────────────────────────────────────────────
 // An invite is a link to the web app with the trip's id:
-//   https://thrishankkuntimaddi.github.io/ExpenseTracker/?trip=<id>
+//   https://<the web app>/?trip=<id>   (config/sites.js)
 // Opened anywhere (QR scan, WhatsApp, email), it signs the person in — or
 // lets them create an account — and then asks which person on the trip
 // they are. The apps take the same link (or just the code) in "Join a trip".
 import { isNative } from '../../native';
+import { APP_URL } from '../../config/sites';
 
-const PUBLIC_APP = 'https://thrishankkuntimaddi.github.io/ExpenseTracker/';
+const PUBLIC_APP = APP_URL;
 const PENDING_KEY = 'et_join_trip';
 const ID_RE = /^[A-Za-z0-9]{16,40}$/;
 

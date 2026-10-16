@@ -64,7 +64,11 @@ jobs:
       - name: Verify Firebase configuration is present
         run: node scripts/check-config.mjs
 
+      # The web app: served from the root of its own site (Firebase Hosting)
       - name: Build
+        env:
+          APP_BASE: /
+          VITE_APP_URL: ${{ vars.APP_URL }}
         run: npm run build
 
       # Over-the-air update for the Android app, published next to the website
@@ -81,6 +85,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/mirror-release.mjs dist/app
 
+      # GitHub Pages: the product page + app update files (dist-pages/)
+      - name: Assemble the product page
+        run: node scripts/build-pages.mjs
+
+      # The web app → Firebase Hosting. Needs the FIREBASE_SERVICE_ACCOUNT
+      # secret with the "Firebase Hosting Admin" role (README → Hosting).
+      - name: Deploy the web app to Firebase Hosting
+        if: github.event_name != 'pull_request'
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then echo "FIREBASE_SERVICE_ACCOUNT not set — skipping the app deploy"; exit 0; fi
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" npx --yes firebase-tools@15.31.0 deploy --only hosting \
+            --project "${{ vars.VITE_FIREBASE_PROJECT_ID || 'expensetracker-385b0' }}" --non-interactive
+          rm -f "$RUNNER_TEMP/sa.json"
+
       - name: Setup Pages
         if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v5
@@ -89,7 +110,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: './dist-pages'
 
   deploy:
     if: github.event_name != 'pull_request'
