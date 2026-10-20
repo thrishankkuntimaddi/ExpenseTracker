@@ -6,7 +6,7 @@
 import {
   ShoppingCart, Users, PiggyBank,
   TrendingDown, TrendingUp,
-  Coins, LineChart, Banknote, Gift,
+  Coins, LineChart, Banknote, Gift, Landmark,
 } from 'lucide-react';
 
 /* ── Per-type meta (expense / savings / income / external) ── */
@@ -46,14 +46,23 @@ export const PERSON_DIRECTIONS = [
   { key: 'given_gift', label: 'Given (No Debt)',      color: 'var(--given)',         bg: 'var(--given-bg)',         Icon: Gift,         description: 'Gave money, no debt expected'  },
 ];
 
-/* ── Savings sub-categories ── */
+/* ── Savings sub-categories ──
+   Taking cash out of the bank isn't saving — it's money you'll spend in
+   shops (Expense → Withdrew cash, then "Paid with cash"). So "cash" is no
+   longer offered for new savings; older entries keep it and read
+   "Cash kept aside". */
 export const SAVINGS_TYPES = [
-  { key: 'cash',        label: 'Cash Savings', color: 'var(--savings)', Icon: Coins,      hasPlatform: false },
-  { key: 'sip',         label: 'SIP',          color: '#7C3AED',        Icon: TrendingUp, hasPlatform: true  },
-  { key: 'mutual_fund', label: 'Mutual Fund',  color: '#0891B2',        Icon: LineChart,  hasPlatform: true  },
-  { key: 'trading',     label: 'Trading',      color: '#059669',        Icon: Banknote,   hasPlatform: true  },
-  { key: 'other',       label: 'Other',        color: '#475569',        Icon: PiggyBank,  hasPlatform: false },
+  { key: 'deposit',     label: 'Bank / FD / RD',    color: 'var(--savings)', Icon: Landmark,   hasPlatform: true  },
+  { key: 'sip',         label: 'SIP',               color: '#7C3AED',        Icon: TrendingUp, hasPlatform: true  },
+  { key: 'mutual_fund', label: 'Mutual Fund',       color: '#0891B2',        Icon: LineChart,  hasPlatform: true  },
+  { key: 'trading',     label: 'Trading',           color: '#059669',        Icon: Banknote,   hasPlatform: true  },
+  { key: 'other',       label: 'Other',             color: '#475569',        Icon: PiggyBank,  hasPlatform: false },
+  { key: 'cash',        label: 'Cash kept aside',   color: '#64748B',        Icon: Coins,      hasPlatform: false, legacy: true },
 ];
+/* What a new savings entry can be (pickers) */
+export const SAVINGS_CHOICES = SAVINGS_TYPES.filter((t) => !t.legacy);
+/* The picker for an existing entry: the choices, plus its own old type */
+export const savingsChoicesFor = (key) => (SAVINGS_CHOICES.some((t) => t.key === key) || !key ? SAVINGS_CHOICES : [...SAVINGS_CHOICES, getSavingsType(key)]);
 
 export function getSavingsType(key) {
   return SAVINGS_TYPES.find(t => t.key === key) ?? SAVINGS_TYPES[0];

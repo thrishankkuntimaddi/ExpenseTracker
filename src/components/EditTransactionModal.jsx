@@ -6,7 +6,7 @@ import { X, PenLine, Calendar, Check, Trash2, Flame } from 'lucide-react';
 import CurrencySelect from './CurrencySelect';
 import { rawOf } from '../utils/fx';
 import { currencyOf } from '../utils/money';
-import { TRANSACTION_TYPES, TYPE_META, PERSON_DIRECTIONS, SAVINGS_TYPES, getSavingsType } from '../utils/typeConfig';
+import { TRANSACTION_TYPES, TYPE_META, PERSON_DIRECTIONS, savingsChoicesFor, getSavingsType } from '../utils/typeConfig';
 import { isoToDateInput, dateInputToISO, isoToMonth, todayInputValue } from '../utils/dateHelpers';
 import { inferCategory } from '../utils/categories';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
@@ -29,6 +29,9 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
   const [savingsType, setSavingsType] = useState(txn.savingsType ?? 'cash');
   const [platform, setPlatform]   = useState(txn.platform ?? '');
   const [waste, setWaste]         = useState(raw.wasteAmount > 0 ? String(raw.wasteAmount) : '');   // how much of it was wasted
+  const [paidCash, setPaidCash]   = useState(txn.paidWith === 'cash');
+  const isWithdrawal = txn.type === 'cash';     // cash taken out of the account: only name, amount, date
+  const canPayCash = type === 'expense' || (type === 'person' && direction === 'given_gift');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const sel     = TRANSACTION_TYPES.find(t => t.key === type) ?? TRANSACTION_TYPES[0];
@@ -52,6 +55,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
       month:   isoToMonth(isoDate),
     };
     if (type === 'person')   updated.direction = direction;
+    if (canPayCash && paidCash) updated.paidWith = 'cash'; else delete updated.paidWith;
     if (type === 'expense') {
       updated.category = effectiveCategory;
       if (categoryTouched) onLearnCategory?.(updated.name, effectiveCategory);
@@ -99,7 +103,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>Edit Transaction</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{isWithdrawal ? 'Edit cash withdrawal' : 'Edit Transaction'}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>Changes persist immediately</div>
               </div>
               <button onClick={onClose} style={{
@@ -112,7 +116,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
             </div>
 
             {/* Type picker */}
-            <div style={{
+            {!isWithdrawal && <div style={{
               display: 'flex', background: 'var(--surface2)', borderRadius: 12,
               padding: 3, marginBottom: 14, border: '1px solid var(--border)',
             }}>
@@ -128,7 +132,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
                   <t.Icon size={12} />{t.label}
                 </button>
               ))}
-            </div>
+            </div>}
 
             {/* Person direction */}
             {type === 'person' && (
@@ -153,7 +157,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>Savings Type</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {SAVINGS_TYPES.map(st => (
+                  {savingsChoicesFor(txn.savingsType).map(st => (
                     <button key={st.key} onClick={() => setSavingsType(st.key)} style={{
                       padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
                       border: `1.5px solid ${savingsType === st.key ? st.color : 'var(--border)'}`,
@@ -239,6 +243,19 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
                     outline: 'none', fontFamily: 'inherit',
                   }}
                 />
+              </div>
+            )}
+
+            {/* Paid with — cash spent in shops comes out of "cash in hand" */}
+            {canPayCash && (
+              <div role="radiogroup" aria-label="Paid with" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginRight: 2 }}>Paid with</span>
+                {[[false, 'UPI / card'], [true, 'Cash']].map(([cash, label]) => (
+                  <button key={label} type="button" role="radio" aria-checked={paidCash === cash} id={`edit-paid-${cash ? 'cash' : 'account'}`} onClick={() => setPaidCash(cash)}
+                    style={{ padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1.5px solid ${paidCash === cash ? 'var(--accent)' : 'var(--border)'}`, background: paidCash === cash ? 'var(--accent-bg)' : 'transparent', color: paidCash === cash ? 'var(--accent)' : 'var(--text-secondary)' }}>
+                    {label}
+                  </button>
+                ))}
               </div>
             )}
 

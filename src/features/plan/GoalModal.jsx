@@ -8,7 +8,7 @@ import { Check, Trash2, XCircle } from 'lucide-react';
 import ModalShell, { Field, PrimaryButton, GhostButton } from '../../components/ModalShell';
 import { fieldStyle } from '../../components/formTokens';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
-import { SAVINGS_TYPES } from '../../utils/typeConfig';
+import { SAVINGS_CHOICES } from '../../utils/typeConfig';
 import { toKey } from '../../utils/recurring';
 import { endGoal } from '../../utils/goals';
 import { ordinal } from '../../utils/report';
@@ -105,7 +105,7 @@ export default function GoalModal({ goal, onSave, onDelete, onClose }) {
           <Field label="Also count these savings" hint="This goal was created before goals took their own money — it also counts matching savings entries.">
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
               <button type="button" onClick={() => setSavingsType('')} style={chip(savingsType === '')}>All savings</button>
-              {SAVINGS_TYPES.map((st) => (
+              {SAVINGS_CHOICES.map((st) => (
                 <button key={st.key} type="button" onClick={() => setSavingsType(st.key)} style={chip(savingsType === st.key)}>{st.label}</button>
               ))}
             </div>

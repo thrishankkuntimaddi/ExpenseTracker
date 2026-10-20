@@ -84,7 +84,7 @@ export function normaliseDate(raw) {
   return isNaN(parsed) ? null : parsed.toISOString();
 }
 
-const TXN_TYPES = ['savings', 'person', 'expense'];
+const TXN_TYPES = ['savings', 'person', 'expense', 'cash'];
 
 /**
  * Convert CSV text into { transactions, income, skipped }.

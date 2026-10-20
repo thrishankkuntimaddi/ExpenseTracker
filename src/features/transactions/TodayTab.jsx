@@ -4,10 +4,11 @@ import LiquidGauge from '../../motion/LiquidGauge';
 import Sign from '../../motion/Sign';
 import { useTilt } from '../../motion/useTilt';
 import { useMemo, useRef, useState, Fragment } from 'react';
-import { Coins, Users, Zap, ArrowUpRight } from 'lucide-react';
+import { Coins, Users, Zap, ArrowUpRight, Banknote } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount, todayInputValue, dateInputToISO, isoToMonth, localMonthKey } from '../../utils/dateHelpers';
-import { TRANSACTION_TYPES as TYPES, getDirectionMeta } from '../../utils/typeConfig';
+import { TRANSACTION_TYPES as TYPES, getDirectionMeta, getSavingsType } from '../../utils/typeConfig';
+import { cashSummary } from '../../utils/cash';
 import { useStats } from '../../hooks/useStats';
 import { inferCategory, categoryOf, categoryMeta, EMPTY_RULES } from '../../utils/categories';
 import { parseQuickEntries } from '../../utils/smartInput';
@@ -103,6 +104,7 @@ export default function TodayTab(props) {
   const monthTxns = transactions.filter((t) => localMonthKey(t.date) === monthKey);
   const monthIncome = income.filter((i) => localMonthKey(i.date) === monthKey).reduce((s, i) => s + (Number(i.amount) || 0), 0);
   const debts = debtTotals(debtLedger(transactions, income));
+  const cash = cashSummary(transactions, monthKey);
   const savedThisMonth = monthTxns.filter((t) => t.type === 'savings').reduce((s, t) => s + (Number(t.amount) || 0), 0);
   const exploreLine = {
     history: `${monthTxns.length} entr${monthTxns.length === 1 ? 'y' : 'ies'} this month`,
@@ -154,6 +156,12 @@ export default function TodayTab(props) {
       {stats?.balanceParts?.length > 0 && (
         <div id="home-balance-fx" style={{ fontSize: 10.5, marginTop: 8, opacity: 0.85, lineHeight: 1.45 }}>
           Balance at today’s rates: {stats.balanceParts.map((p) => formatAmount(p.amount, p.currency)).join(' + ').replace(/\+ -/g, '− ').replace(/\+ −/g, '− ')}
+        </div>
+      )}
+      {cash.used && (
+        <div id="home-cash" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, marginTop: 8, opacity: 0.9 }}>
+          <Banknote size={13} />
+          <span>Cash in hand <strong>{formatAmount(Math.max(0, cash.inHand))}</strong>{cash.monthSpent > 0 ? <> · {formatAmount(cash.monthSpent)} paid in cash in {monthAbbr}</> : null}</span>
         </div>
       )}
     </div>
@@ -279,6 +287,7 @@ export default function TodayTab(props) {
             // Pick the right color meta: direction-aware for person, type-based otherwise
             const t = txn.type === 'person'
               ? getDirectionMeta(txn.direction)
+              : txn.type === 'cash' ? { color: 'var(--lent)', bg: 'var(--lent-bg)', Icon: Banknote }
               : (TYPES.find(x => x.key === txn.type) || TYPES[0]);
             const dirMeta = txn.type === 'person' ? getDirectionMeta(txn.direction) : null;
             return (
@@ -311,13 +320,15 @@ export default function TodayTab(props) {
                         <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{dayLabel(txn.date)}</span>
                         <CategoryBadge category={categoryOf(txn, categoryRules)} compact theme={theme} />
                         {txn.recurringId && <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>recurring</span>}
+                        {txn.paidWith === 'cash' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}><Banknote size={10} />cash</span>}
                       </span>
                     ) : (
                       <span style={{ fontSize: 11, color: t.color, fontWeight: 600 }}>
                         <span style={{ fontSize: 10, color: 'var(--text-muted)', marginRight: 6 }}>{dayLabel(txn.date)}</span>
                         {txn.type === 'person'
                           ? dirMeta?.label ?? 'Person'
-                          : `${txn.savingsType ? txn.savingsType.toUpperCase() : 'Savings'}${txn.platform ? ' · ' + txn.platform : ''}`
+                          : txn.type === 'cash' ? 'Withdrew cash'
+                          : `${txn.savingsType ? getSavingsType(txn.savingsType).label : 'Savings'}${txn.platform ? ' · ' + txn.platform : ''}`
                         }
                       </span>
                     )}

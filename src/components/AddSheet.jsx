@@ -14,7 +14,7 @@
 // was for, the amount) comes along, so picking the wrong kind costs nothing.
 // Expense also takes several items at once: "coffee 250 water 50 tea 150".
 import { createContext, useContext, useMemo, useRef, useState } from 'react';
-import { X, PenLine, Calendar, User, StickyNote, Flag } from 'lucide-react';
+import { X, PenLine, Calendar, User, StickyNote, Flag, Banknote } from 'lucide-react';
 import { ADD_KINDS } from '../app/pages';
 import Portal from './Portal';
 import { useEscape } from '../hooks/useEscape';
@@ -25,7 +25,8 @@ import { formatAmount, todayInputValue, dateInputToISO, isoToMonth } from '../ut
 import { incomeKindFlags } from '../utils/finance';
 import { inferCategory, categoryMeta, EMPTY_RULES } from '../utils/categories';
 import { parseQuickEntry, parseQuickEntries } from '../utils/smartInput';
-import { SAVINGS_TYPES, getSavingsType } from '../utils/typeConfig';
+import { SAVINGS_CHOICES, getSavingsType } from '../utils/typeConfig';
+import { cashSummary } from '../utils/cash';
 import { DEBT_MOVES, DEBT_MOVE_KEYS, debtEntryFields, debtLedger } from '../utils/debts';
 import { isGoalOpen } from '../utils/goals';
 import { CURRENCY_GROUPS, CURRENCY_NAMES, currencySymbol, getDisplayCurrency, formatMoney, entryCurrency } from '../utils/money';
@@ -276,19 +277,22 @@ const stamp = (dateInput) => { const iso = dateInputToISO(dateInput); return { d
 function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategory, onSaved, startDate }) {
   const rules = settings?.categoryRules ?? EMPTY_RULES;
   const { currency } = useEntryCurrency();
-  const [mode, setMode] = useState('spent');
+  const [mode, setMode] = useState('spent');         // 'spent' | 'given' | 'withdraw'
   const [amount, setAmount] = useDraft('amount');
   const [name, setName] = useDraft('name');
   const [category, setCategory] = useState(null);
+  const [paidCash, setPaidCash] = useState(false);    // UPI / card (default) or cash
   const [dateInput, setDateInput] = useState(startDate);
   const givenTo = useMemo(() => [...new Set(transactions.filter((t) => t.type === 'person' && t.direction === 'given_gift').map((t) => t.name?.trim()).filter(Boolean))], [transactions]);
+  const cash = useMemo(() => cashSummary(transactions), [transactions]);
+  const withdraw = mode === 'withdraw';
 
   // "chai 20" typed in the name also works — and "coffee 250 water 50 tea 150"
   // adds three expenses, each with its own category
   const many = !amount && mode === 'spent' ? parseQuickEntries(name) : [];
   const multi = many.length > 1;
   const parsed = !amount && !multi ? parseQuickEntry(name) : null;
-  const finalName = (parsed?.name ?? name).trim();
+  const finalName = (parsed?.name ?? name).trim() || (withdraw ? 'Cash withdrawal' : '');
   const finalAmount = parsed?.amount ?? Number(amount);
   const finalCurrency = parsed?.currency ?? currency;
   const suggested = mode === 'spent' ? inferCategory(finalName, rules) : null;
@@ -296,19 +300,21 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
   const manyItems = multi ? many.map((m) => ({ ...m, name: m.name.charAt(0).toUpperCase() + m.name.slice(1), currency: m.currency ?? currency, category: inferCategory(m.name, rules) })) : [];
   const manyCurrency = new Set(manyItems.map((m) => m.currency)).size === 1 ? manyItems[0]?.currency : null;
   const manyTotal = manyItems.reduce((s, m) => s + m.amount, 0);
+  const paid = !withdraw && paidCash ? { paidWith: 'cash' } : {};
+  const tone = mode === 'given' ? 'given' : withdraw ? 'lent' : 'expense';
 
   function save() {
     if (!can) return;
     if (multi) {
       const at = stamp(dateInput);
-      manyItems.forEach((m) => onAdd({ id: generateId(), type: 'expense', name: m.name, amount: m.amount, currency: m.currency, category: m.category, ...at }));
+      manyItems.forEach((m) => onAdd({ id: generateId(), type: 'expense', name: m.name, amount: m.amount, currency: m.currency, category: m.category, ...paid, ...at }));
       onSaved({ type: 'expense', name: `${manyItems.length} expenses`, amount: manyTotal, currency: manyItems[0].currency, ...(manyCurrency ? {} : { toast: `Added ${manyItems.length} expenses` }), ...at });
       return;
     }
     const base = { id: generateId(), name: finalName.charAt(0).toUpperCase() + finalName.slice(1), amount: finalAmount, currency: finalCurrency, ...stamp(dateInput) };
-    const entry = mode === 'given'
-      ? { ...base, type: 'person', direction: 'given_gift' }
-      : { ...base, type: 'expense', category: category ?? suggested };
+    const entry = withdraw ? { ...base, type: 'cash' }
+      : mode === 'given' ? { ...base, type: 'person', direction: 'given_gift', ...paid }
+      : { ...base, type: 'expense', category: category ?? suggested, ...paid };
     if (mode === 'spent' && category) onLearnCategory?.(finalName, category);
     onAdd(entry);
     onSaved(entry);
@@ -316,12 +322,12 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
 
   return (
     <div className="add-form add-form-expense">
-      <Choice idPrefix="expense-mode" value={mode} onChange={setMode} tone="expense" columns={2}
-        options={[{ key: 'spent', label: 'Spent' }, { key: 'given', label: 'Given to someone', tone: 'given' }]} />
-      <TextField id="add-name" first Icon={mode === 'given' ? User : PenLine} value={name} onChange={setName}
+      <Choice idPrefix="expense-mode" value={mode} onChange={setMode} tone="expense" columns={3}
+        options={[{ key: 'spent', label: 'Spent' }, { key: 'given', label: 'Gave someone', tone: 'given' }, { key: 'withdraw', label: 'Withdrew cash', tone: 'lent' }]} />
+      <TextField id="add-name" first Icon={mode === 'given' ? User : withdraw ? Banknote : PenLine} value={name} onChange={setName}
         onEnter={() => (parsed || multi ? save() : document.getElementById('add-amount')?.focus())}
-        placeholder={mode === 'given' ? 'Given to whom? (no return expected)' : 'What for? — or “coffee 250 water 50”'} list={mode === 'given' ? 'add-given-to' : undefined} />
-      <AmountField value={amount} onChange={setAmount} tone={mode === 'given' ? 'given' : 'expense'} onEnter={save} shown={parsed?.currency} />
+        placeholder={mode === 'given' ? 'Given to whom? (no return expected)' : withdraw ? 'From where? — ATM, bank (optional)' : 'What for? — or “coffee 250 water 50”'} list={mode === 'given' ? 'add-given-to' : undefined} />
+      <AmountField value={amount} onChange={setAmount} tone={tone} onEnter={save} shown={parsed?.currency} />
       <datalist id="add-given-to">{givenTo.map((n) => <option key={n} value={n} />)}</datalist>
       {multi && (
         <div id="add-many" className="add-many" aria-live="polite">
@@ -339,15 +345,32 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
           <CategoryPicker size="sm" value={category ?? suggested} suggested={suggested} onChange={setCategory} theme={theme} />
         </div>
       )}
+      {!withdraw && (
+        <div role="radiogroup" aria-label="Paid with" className="add-paid">
+          <span className="add-paid-label">Paid with</span>
+          {[[false, 'UPI / card'], [true, 'Cash']].map(([c, label]) => (
+            <button key={label} type="button" role="radio" aria-checked={paidCash === c} id={`paid-${c ? 'cash' : 'account'}`} onClick={() => setPaidCash(c)}
+              className={`add-paid-opt${paidCash === c ? ' on' : ''}`}>{c && <Banknote size={12} />}{label}</button>
+          ))}
+          {paidCash && cash.used && <span id="paid-cash-left" className="add-paid-left">{formatAmount(cash.inHand)} in hand</span>}
+        </div>
+      )}
       {mode === 'given' && (
         <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-4px 2px 12px', lineHeight: 1.5 }}>
           Counted as spending. It isn’t a debt, so it won’t appear in Debts — use <strong>Debt → Lent</strong> if you expect it back.
         </p>
       )}
+      {withdraw && (
+        <p id="withdraw-hint" style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-2px 2px 12px', lineHeight: 1.5 }}>
+          Not spending, not saving — the money just moves from your account to your wallet. When you spend it, add the expense with <strong>Paid with: Cash</strong>.
+          {cash.used && <> Cash in hand now: <strong>{formatAmount(cash.inHand)}</strong>.</>}
+        </p>
+      )}
       <div className="add-foot">
         <DateField value={dateInput} onChange={setDateInput} />
-        <SaveButton id="btn-save-entry" disabled={!can} tone={mode === 'given' ? 'given' : 'expense'} onClick={save}>
+        <SaveButton id="btn-save-entry" disabled={!can} tone={tone} onClick={save}>
           {multi ? `Add ${manyItems.length} expenses${manyCurrency ? ` · ${formatAmount(manyTotal, manyCurrency)}` : ''}`
+            : withdraw ? (can ? `Withdrew ${formatAmount(finalAmount, finalCurrency)}` : 'Add cash withdrawal')
             : can ? `Add ${mode === 'given' ? 'gift' : 'expense'} · ${formatAmount(finalAmount, finalCurrency)}` : mode === 'given' ? 'Add what you gave' : 'Add expense'}
         </SaveButton>
       </div>
@@ -463,7 +486,7 @@ function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
   const { currency } = useEntryCurrency();
   const goals = (settings?.goals ?? []).filter(isGoalOpen);
   const [amount, setAmount] = useDraft('amount');
-  const [savingsType, setSavingsType] = useState('cash');
+  const [savingsType, setSavingsType] = useState('deposit');
   const [name, setName] = useDraft('name');
   const [platform, setPlatform] = useState('');
   const [goalId, setGoalId] = useState(goals.some((g) => g.id === initialGoal) ? initialGoal : '');
@@ -498,7 +521,10 @@ function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
       <TextField id="savings-name" first value={name} onChange={setName} onEnter={() => document.getElementById('add-amount')?.focus()} placeholder={goal ? `${goal.name} (optional name)` : 'What for? (optional) — e.g. Nifty 50 SIP'} />
       <AmountField value={amount} onChange={setAmount} tone="savings" onEnter={save} />
       <Choice idPrefix="savings-type" value={savingsType} onChange={setSavingsType} tone="savings"
-        options={SAVINGS_TYPES.map((s) => ({ key: s.key, label: s.label }))} />
+        options={SAVINGS_CHOICES.map((s) => ({ key: s.key, label: s.label }))} />
+      <p id="savings-cash-hint" style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-4px 2px 12px', lineHeight: 1.5 }}>
+        Took cash out to spend? That isn’t saving — use <strong>Expense → Withdrew cash</strong>.
+      </p>
       {goals.length > 0 && (
         <>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 2px 6px' }}>For a goal?</div>

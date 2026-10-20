@@ -91,7 +91,7 @@ export const BILL_PRESETS = [
   { key: 'home',        label: 'Send home',        name: 'Money to parents',  kind: 'expense', category: 'family' },
   { key: 'emi',         label: 'Loan EMI',         name: 'Loan EMI',          kind: 'expense', category: 'bills' },
   { key: 'sip',         label: 'SIP',              name: 'Mutual fund SIP',   kind: 'savings', savingsType: 'sip' },
-  { key: 'fd',          label: 'FD / RD',          name: 'Recurring deposit', kind: 'savings', savingsType: 'other' },
+  { key: 'fd',          label: 'FD / RD',          name: 'Recurring deposit', kind: 'savings', savingsType: 'deposit' },
   { key: 'term',        label: 'Term insurance',   name: 'Term insurance',    kind: 'expense', category: 'health', frequency: 'yearly' },
   { key: 'health',      label: 'Health insurance', name: 'Health insurance',  kind: 'expense', category: 'health', frequency: 'yearly' },
   { key: 'policy',      label: 'LIC / policy',     name: 'LIC premium',       kind: 'expense', category: 'bills', frequency: 'yearly' },

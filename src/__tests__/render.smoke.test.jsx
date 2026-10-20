@@ -266,11 +266,15 @@ describe('screens render with planning features', () => {
       expect(html).toContain('id="add-amount"');
     }
     const exp = render(<AddSheet {...common} onAdd={noop} onAddIncome={noop} onClose={noop} />);
-    expect(exp).toContain('Given to someone');
+    expect(exp).toContain('Gave someone');
+    expect(exp).toContain('id="expense-mode-withdraw"');                // cash out of the bank: not spending, not saving
+    expect(exp).toContain('id="paid-cash"');                            // "Paid with: Cash"
     const debt = render(<AddSheet {...common} initialKind="person" onAdd={noop} onAddIncome={noop} onClose={noop} />);
     for (const m of ['lent', 'borrowed', 'got_back', 'paid_back']) expect(debt).toContain(`id="debt-move-${m}"`);
     const sav = render(<AddSheet {...common} initialKind="savings" options={{ goalId: 'g1' }} onAdd={noop} onAddIncome={noop} onClose={noop} />);
     expect(sav).toContain('id="savings-goal-g1"');
+    expect(sav).not.toContain('Cash Savings');                          // cash isn't offered as saving any more
+    expect(sav).toContain('id="savings-type-deposit"');
     expect(sav).toContain('placeholder="Emergency fund (optional name)"');   // pre-selected goal
   });
 

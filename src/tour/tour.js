@@ -80,6 +80,7 @@ const PAGE_GUIDES = {
     { target: ['#home-quick-entry', ...ADD], title: 'Add', text: ({ desktop }) => (desktop
       ? 'Pick Expense, Income, Debt or Savings, type what it was for, then the amount. Enter saves.'
       : 'Type “chai 20” here, or several — “coffee 250 water 50”. The + below opens every kind of entry.') },
+    { target: ['#home-cash'], optional: true, title: 'Cash in hand', text: 'Cash you took out, minus what you paid in cash. Taking cash out: + → Expense → Withdrew cash. Paying in cash: pick “Paid with: Cash”.' },
     { target: ['.home-bills'], optional: true, title: 'Due soon', text: 'Bills due this week, or late. Tap one to mark it paid.' },
     { target: ['#home-explore', '.home-explore'], optional: true, title: 'Explore', text: 'Every page that isn’t in your bar, with a live line about each.' },
   ],
@@ -110,7 +111,7 @@ const PAGE_GUIDES = {
     { target: ['#budget-categories'], optional: true, title: 'Categories', text: 'Limits per category. A category over its limit turns red.' },
   ],
   savings: () => [
-    { target: HEADER, title: 'Savings & goals', text: 'SIPs, funds, deposits and cash you set aside.' },
+    { target: HEADER, title: 'Savings & goals', text: 'SIPs, funds and deposits. Cash taken out to spend isn’t saving — that’s Expense → Withdrew cash.' },
     { target: ['#savings-goals'], optional: true, title: 'Goals', text: 'Save towards something, and note who holds the money — a bank, cash, a friend.' },
     { target: ['#savings-add', '#savings-empty-add'], optional: true, title: 'Add savings', text: 'Record money saved, optionally for a goal.' },
   ],

@@ -346,3 +346,10 @@ nav.desktop-nav button { margin: 0; }
 .add-many { margin: -2px 0 12px; padding: 8px 12px; border-radius: 12px; background: var(--expense-bg); border: 1px solid var(--expense-border); }
 .add-many-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12.5px; }
 .add-many-row + .add-many-row { border-top: 1px solid var(--expense-border); }
+
+/* ── Add → Expense: "Paid with" (components/AddSheet) ── */
+.add-paid { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: -2px 0 12px; }
+.add-paid-label { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-right: 2px; }
+.add-paid-opt { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface2); color: var(--text-secondary); }
+.add-paid-opt.on { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
+.add-paid-left { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-left: auto; }

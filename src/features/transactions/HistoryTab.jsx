@@ -8,7 +8,7 @@
 // person's balance is back to zero, then Settled; everything else is Done.
 // Tap a row (or ✎) to edit it.
 import { useState, useMemo, useCallback } from 'react';
-import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown, CheckCircle2, Clock3 } from 'lucide-react';
+import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown, CheckCircle2, Clock3, Banknote } from 'lucide-react';
 import { formatAmount, formatDate, getWeekStart } from '../../utils/dateHelpers';
 import MonthSwitcher from '../../components/MonthSwitcher';
 import { useViewMonth } from '../../app/month';
@@ -245,6 +245,7 @@ export default function HistoryTab({
 function HistoryRow({ row, first, theme, rules, settled, onEdit, onDelete }) {
   const k = ENTRY_KINDS[row._kind];
   const incoming = k.sign > 0;
+  const neutral = k.sign === 0;            // cash withdrawn: account → wallet
   const debt = isDebtKind(row._kind);
   const wasted = row._kind === 'expense' && row.wasteAmount > 0;
 
@@ -254,6 +255,8 @@ function HistoryRow({ row, first, theme, rules, settled, onEdit, onDelete }) {
     detail = <span className="hist-cat" style={{ color: categoryColor(cat, theme) }}><CategoryIcon category={cat} size={11} />{categoryMeta(cat).label}</span>;
   } else if (row._kind === 'savings') {
     detail = <span className="hist-cat">{getSavingsType(row.savingsType).label}{row.platform ? ` · ${row.platform}` : ''}</span>;
+  } else if (neutral) {
+    detail = <span className="hist-cat">Account → wallet</span>;
   } else if (row.note) {
     detail = <span className="hist-cat">{row.note}</span>;
   }
@@ -267,12 +270,13 @@ function HistoryRow({ row, first, theme, rules, settled, onEdit, onDelete }) {
       onKeyDown={(e) => { if (e.key === 'Enter') onEdit(); }}
       style={{ borderTop: first ? 'none' : '1px solid var(--border)', borderLeftColor: `var(--${k.tone})` }}>
       <span className="hist-name">{row.name}</span>
-      <span className="hist-amount" style={{ color: incoming ? 'var(--income)' : 'var(--expense)' }}>
-        <EntryAmount entry={row} prefix={incoming ? '+' : '−'} />
+      <span className="hist-amount" style={{ color: neutral ? 'var(--text-secondary)' : incoming ? 'var(--income)' : 'var(--expense)' }}>
+        <EntryAmount entry={row} prefix={neutral ? '' : incoming ? '+' : '−'} />
       </span>
       <span className="hist-meta">
         <span className="hist-kind" style={{ color: `var(--${k.tone})`, background: `var(--${k.tone}-bg)`, borderColor: `var(--${k.tone}-border, var(--border))` }}>{k.label}</span>
         {detail}
+        {row.paidWith === 'cash' && <span className="hist-cat" title="Paid in cash"><Banknote size={11} />Cash</span>}
         {wasted && <span className="hist-cat" style={{ color: 'var(--expense)' }}><Flame size={10} />{formatAmount(row.wasteAmount)} wasted</span>}
         <span className="hist-status" style={{ color: status.color }} title={debt ? (settled ? 'This person’s balance is back to zero' : 'Still to be returned') : 'Recorded'}>
           <status.Icon size={11} />{status.label}

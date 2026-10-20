@@ -8,7 +8,7 @@ import CategoryPicker from '../../components/CategoryPicker';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { inferCategory } from '../../utils/categories';
 import { FREQUENCIES, WEEKDAYS, toKey } from '../../utils/recurring';
-import { SAVINGS_TYPES, getSavingsType } from '../../utils/typeConfig';
+import { savingsChoicesFor, getSavingsType } from '../../utils/typeConfig';
 import CurrencySelect from '../../components/CurrencySelect';
 import { rawOf } from '../../utils/fx';
 import { getDisplayCurrency } from '../../utils/money';
@@ -112,7 +112,7 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Savings type</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {SAVINGS_TYPES.map((st) => (
+              {savingsChoicesFor(init?.savingsType).map((st) => (
                 <button key={st.key} type="button" onClick={() => setSavingsType(st.key)} style={{
                   padding: '5px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
                   border: `1.5px solid ${savingsType === st.key ? st.color : 'var(--border)'}`,

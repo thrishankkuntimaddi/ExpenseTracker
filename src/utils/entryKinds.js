@@ -14,9 +14,11 @@ export const ENTRY_KINDS = {
   lent:      { label: 'Lent',      tone: 'lent',          sign: -1 },
   paid_back: { label: 'Paid back', tone: 'repayment-rec', sign: -1 },
   savings:   { label: 'Savings',   tone: 'savings',       sign: -1 },
+  // Cash taken out of the account: it moves to your wallet — neither in nor out
+  withdrawal: { label: 'Withdrew cash', tone: 'lent',       sign: 0 },
 };
 /* Filter chip order: money in first, then money out */
-export const ENTRY_KIND_ORDER = ['income', 'borrowed', 'got_back', 'billing', 'expense', 'given', 'lent', 'paid_back', 'savings'];
+export const ENTRY_KIND_ORDER = ['income', 'borrowed', 'got_back', 'billing', 'expense', 'given', 'lent', 'paid_back', 'savings', 'withdrawal'];
 
 const PERSON_KIND = { lent: 'lent', repaid: 'paid_back', given_gift: 'given', borrowed: 'borrowed', repayment: 'got_back' };
 
@@ -29,6 +31,7 @@ export function entryKind(entry, source = 'transaction') {
   if (entry?.type === 'person') return PERSON_KIND[entry.direction ?? 'lent'] ?? 'lent';
   if (entry?.type === 'savings') return 'savings';
   if (entry?.type === 'external') return 'billing';
+  if (entry?.type === 'cash') return 'withdrawal';
   return 'expense';
 }
 

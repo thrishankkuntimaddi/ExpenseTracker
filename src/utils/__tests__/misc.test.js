@@ -59,7 +59,7 @@ describe('recordsToCSV', () => {
       transactions: [{ id: 'a', type: 'expense', name: 'Chai, "special"', amount: 20, date: new Date(2026, 9, 3, 12).toISOString() }],
       income: [{ id: 'b', name: 'Salary', amount: 50000, date: new Date(2026, 9, 1, 12).toISOString() }],
     });
-    expect(csv.split('\r\n')[0]).toBe('date,name,amount,type,category,direction,savingsType,platform,wasteAmount,note,id');
+    expect(csv.split('\r\n')[0]).toBe('date,name,amount,type,category,direction,savingsType,platform,wasteAmount,note,id,paidWith');
     const back = csvToRecords(csv);
     expect(back.transactions).toHaveLength(1);
     expect(back.transactions[0]).toMatchObject({ name: 'Chai, "special"', amount: 20, type: 'expense' });

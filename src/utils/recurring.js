@@ -123,7 +123,7 @@ export function entryFromRule(rule, dateKey, paidOnKey = null) {
   if (rule.kind === 'income') return { entry: { ...base, type: 'income' }, target: 'income' };
   if (rule.kind === 'savings') {
     return {
-      entry: { ...base, type: 'savings', savingsType: rule.savingsType ?? 'cash', ...(rule.platform ? { platform: rule.platform } : {}) },
+      entry: { ...base, type: 'savings', savingsType: rule.savingsType ?? 'other', ...(rule.platform ? { platform: rule.platform } : {}) },
       target: 'transaction',
     };
   }

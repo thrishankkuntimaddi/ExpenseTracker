@@ -12,6 +12,7 @@ describe('entryKind', () => {
     expect(entryKind({ type: 'expense' })).toBe('expense');
     expect(entryKind({ type: 'savings' })).toBe('savings');
     expect(entryKind({ type: 'external' })).toBe('billing');
+    expect(entryKind({ type: 'cash' })).toBe('withdrawal');
     expect(entryKind({ type: 'person', direction: 'lent' })).toBe('lent');
     expect(entryKind({ type: 'person' })).toBe('lent');
     expect(entryKind({ type: 'person', direction: 'repaid' })).toBe('paid_back');
@@ -23,6 +24,7 @@ describe('entryKind', () => {
   it('money in is +, money out is −, and every kind has a chip', () => {
     expect(['income', 'borrowed', 'got_back'].every((k) => ENTRY_KINDS[k].sign === 1)).toBe(true);
     expect(['expense', 'given', 'lent', 'paid_back', 'savings'].every((k) => ENTRY_KINDS[k].sign === -1)).toBe(true);
+    expect(ENTRY_KINDS.withdrawal.sign).toBe(0);                     // cash out of the bank: neither in nor out
     expect([...ENTRY_KIND_ORDER].sort()).toEqual(Object.keys(ENTRY_KINDS).sort());
   });
 });
