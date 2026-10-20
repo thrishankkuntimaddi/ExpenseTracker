@@ -8,7 +8,8 @@ describe('normaliseUi', () => {
       expect(ui.tabs).toEqual(DEFAULT_TABS);
       expect(ui.start).toBe('today');
       expect(ui.home.map((s) => s.key)).toEqual(['overview', 'add', 'bills', 'explore', 'recent']);
-      expect(ui.home.every((s) => s.visible)).toBe(true);
+      // phone Home: month card, quick entry, bills, explore — recent activity off until added
+      expect(ui.home.filter((s) => s.visible).map((s) => s.key)).toEqual(['overview', 'add', 'bills', 'explore']);
     }
   });
 
@@ -41,6 +42,14 @@ describe('normaliseUi', () => {
     expect(ui.home.map((s) => s.key)).toEqual(['recent', 'overview', 'bills', 'add', 'explore']);
     expect(ui.home.find((s) => s.key === 'bills').visible).toBe(false);
     expect(normaliseUi({ start: 'plan' }).start).toBe('bills');
+  });
+
+  it('turns recent activity off once for layouts saved before 3.15.1, then respects the choice', () => {
+    const old = normaliseUi({ homeOrder: ['overview', 'add', 'bills', 'explore', 'recent'], homeHidden: [] });
+    expect(old.home.find((s) => s.key === 'recent').visible).toBe(false);
+    const turnedBackOn = serialiseUi({ ...old, home: old.home.map((s) => ({ ...s, visible: true })) });
+    expect(turnedBackOn.v).toBe(2);
+    expect(normaliseUi(turnedBackOn).home.find((s) => s.key === 'recent').visible).toBe(true);
   });
 
   it('rejects an unknown start page', () => {

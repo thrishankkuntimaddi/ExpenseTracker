@@ -407,7 +407,8 @@ export default function TodayTab(props) {
           <div className="home-columns">
             {[['overview', 'add'], ['explore', 'bills', 'recent']].map((keys, i) => (
               <div key={i} className="home-column">
-                {homeSections.filter((s) => s.visible && keys.includes(s.key)).map(({ key }) => <Fragment key={key}>{section(key)}</Fragment>)}
+                {/* recent activity fills the right column here, so wide screens always show it */}
+                {homeSections.filter((s) => (s.visible || s.key === 'recent') && keys.includes(s.key)).map(({ key }) => <Fragment key={key}>{section(key)}</Fragment>)}
               </div>
             ))}
           </div>

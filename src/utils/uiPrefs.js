@@ -23,9 +23,11 @@ export const HOME_SECTIONS = [
   { key: 'add',      label: 'Quick entry',     hint: 'Type “chai 20” and press enter' },
   { key: 'bills',    label: 'Bills due',       hint: 'Shows up only when a payment is due or late' },
   { key: 'explore',  label: 'Explore',         hint: 'Every page that isn’t in your bar', locked: true },
-  { key: 'recent',   label: 'Recent activity', hint: 'Your last seven days' },
+  { key: 'recent',   label: 'Recent activity', hint: 'Your last seven days · off by default on phones' },
 ];
 const HOME_KEYS = HOME_SECTIONS.map((s) => s.key);
+const DEFAULT_HIDDEN = ['recent'];
+const UI_VERSION = 2;
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 
@@ -48,7 +50,11 @@ export function normaliseUi(raw) {
   const start = PAGE_KEYS.includes(startKey) ? startKey : 'today';
 
   const section = (k) => LEGACY_SECTION[k] ?? k;
+  // Home on a phone: month card, quick entry, bills, explore. Recent activity
+  // is off until you add it back — and layouts saved before 3.15.1 (no `v`)
+  // get it turned off once.
   const hidden = new Set(Array.isArray(r.homeHidden) ? r.homeHidden.map(section).filter((k) => HOME_KEYS.includes(k)) : []);
+  if (!(r.v >= UI_VERSION)) DEFAULT_HIDDEN.forEach((k) => hidden.add(k));
   const order = [];
   for (const raw of Array.isArray(r.homeOrder) ? r.homeOrder : []) {
     const k = section(raw);
@@ -72,6 +78,7 @@ export function normaliseUi(raw) {
 /** The normalised prefs → the compact shape saved in settings.ui. */
 export function serialiseUi({ tabs, start, home }) {
   return {
+    v: UI_VERSION,
     tabs: [...tabs],
     start,
     homeOrder: home.map((s) => s.key),

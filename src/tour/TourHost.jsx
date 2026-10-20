@@ -22,6 +22,20 @@ function findTarget(selectors) {
   return null;
 }
 
+/* Bring the target to the middle of the box that scrolls it (the page), never
+   by scrolling the window — in the Android app that shifts the whole screen. */
+function centreInScroller(el) {
+  for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+    const oy = getComputedStyle(n).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight + 1) {
+      const box = n.getBoundingClientRect(), r = el.getBoundingClientRect();
+      const offset = r.top - box.top - (box.height - Math.min(r.height, box.height)) / 2;
+      if (Math.abs(offset) > 4) n.scrollTop += offset;
+      return;
+    }
+  }
+}
+
 export default function TourHost() {
   const tour = useTour();
   if (!tour) return null;
@@ -33,27 +47,39 @@ function TourStep({ tour }) {
   const step = tour.steps[tour.i];
   const [rect, setRect] = useState(null);
   const [ready, setReady] = useState(!step.target);
+  const [quiet, setQuiet] = useState(!!(step.target && step.optional));
   const [cardH, setCardH] = useState(0);
   const cardRef = useRef(null);
   const targetRef = useRef(null);
   useEscape(endTour);
 
-  // Open the step's page, then find its target (pages load lazily: ~2 s)
+  // Open the step's page, then find its target. A page that has to open loads
+  // lazily (allow ~2.5 s); on the page already showing, a missing target is
+  // known at once — an optional step is skipped without a blank pause.
   useEffect(() => {
-    if (step.page && shell && shell.active !== step.page) shell.goTo(step.page);
+    const opening = !!(step.page && shell && shell.active !== step.page);
+    if (opening) shell.goTo(step.page);
     if (!step.target) return undefined;
-    let tries = 0;
+    let tries = 0, follow = 0, frame = 0;
+    const unquiet = setTimeout(() => setQuiet(false), 300);
+    const maxTries = opening ? 30 : 3;
     const timer = setInterval(() => {
       const el = findTarget(step.target);
-      if (el || ++tries > 30) {
-        clearInterval(timer);
-        if (!el && step.optional) { stepTour(tour.dir < 0 ? -1 : 1); return; }
-        targetRef.current = el;
-        el?.scrollIntoView?.({ block: 'center', inline: 'nearest' });
-        setTimeout(() => { setRect(el ? el.getBoundingClientRect() : null); setReady(true); }, el ? 260 : 0);
-      }
+      if (!el && ++tries <= maxTries) return;
+      clearInterval(timer);
+      if (!el && step.optional) { stepTour(tour.dir < 0 ? -1 : 1); return; }
+      setQuiet(false);
+      targetRef.current = el;
+      if (el) centreInScroller(el);
+      // Pages slide in and scrolling settles: keep the light on the target for a moment
+      const started = performance.now();
+      const track = () => {
+        if (targetRef.current?.isConnected) setRect(targetRef.current.getBoundingClientRect());
+        if (performance.now() - started < 900) frame = requestAnimationFrame(track);
+      };
+      follow = setTimeout(() => { setReady(true); track(); }, el ? 60 : 0);
     }, 80);
-    return () => clearInterval(timer);
+    return () => { clearInterval(timer); clearTimeout(follow); clearTimeout(unquiet); cancelAnimationFrame(frame); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Follow the target when the window resizes or the page scrolls
@@ -76,7 +102,10 @@ function TourStep({ tour }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  if (!ready) return <Portal><div className="tour-block" /><div className="tour-dim" /></Portal>;
+  // An optional step stays quiet for a moment (it may be skipped); after that
+  // the card always shows — centred while a page is still opening
+  if (quiet) return <Portal><div className="tour-block" /><div className="tour-dim" /></Portal>;
+  const spot = ready ? rect : null;
 
   const vw = window.innerWidth, vh = window.innerHeight;
   const cardW = Math.min(360, vw - 32);
@@ -85,12 +114,12 @@ function TourStep({ tour }) {
 
   // Card: under the target if it fits, else above, else pinned to the bottom
   let pos;
-  if (!rect) {
+  if (!spot) {
     pos = { left: (vw - cardW) / 2, top: Math.max(16, (vh - cardH) / 2) };
   } else {
-    const left = Math.min(Math.max(16, rect.left + rect.width / 2 - cardW / 2), vw - cardW - 16);
-    const below = rect.bottom + PAD + 12;
-    const above = rect.top - PAD - 12 - cardH;
+    const left = Math.min(Math.max(16, spot.left + spot.width / 2 - cardW / 2), vw - cardW - 16);
+    const below = spot.bottom + PAD + 12;
+    const above = spot.top - PAD - 12 - cardH;
     if (below + cardH <= vh - 16) pos = { left, top: below };
     else if (above >= 16) pos = { left, top: above };
     else pos = { left: (vw - cardW) / 2, top: Math.max(16, vh - cardH - 24) };
@@ -99,8 +128,8 @@ function TourStep({ tour }) {
   return (
     <Portal>
       <div className="tour-block" onClick={(e) => e.stopPropagation()} />
-      {rect
-        ? <div className="tour-spot" style={{ left: rect.left - PAD, top: rect.top - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2 }} />
+      {spot
+        ? <div className="tour-spot" style={{ left: spot.left - PAD, top: spot.top - PAD, width: spot.width + PAD * 2, height: spot.height + PAD * 2 }} />
         : <div className="tour-dim" />}
       <div ref={cardRef} role="dialog" aria-modal="true" aria-labelledby="tour-title" className="tour-card" style={{ width: cardW, ...pos }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>

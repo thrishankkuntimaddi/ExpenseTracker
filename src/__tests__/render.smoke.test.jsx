@@ -100,7 +100,15 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Safe to spend today');
     expect(html).toMatch(/Due · \d+ late/);
     expect(html).toContain('House rent');          // the rent rule is overdue → listed with Pay
-    expect(html).toContain('Food &amp; Dining');
+    // phone Home: month card → quick entry → bills → explore; recent activity off by default
+    const shell = { goTo: noop, barTabs: ['bills', 'stats', 'history'], month: month(iso(0)), setMonth: noop, user: common.user, openProfile: noop, openAdd: noop, toast: noop };
+    const phone = render(<ShellContext.Provider value={shell}><TodayTab {...common} onAdd={noop} /></ShellContext.Provider>);
+    const at = ['id="home-summary"', 'id="home-quick-entry"', 'class="home-bills"', 'class="home-explore"'].map((s) => phone.indexOf(s));
+    expect(at.every((i) => i > 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+    expect(phone).not.toContain('id="recent-entries"');
+    // wide screens keep recent activity (it fills the right column)
+    expect(render(<ShellContext.Provider value={{ ...shell, desktop: true }}><TodayTab {...common} onAdd={noop} onAddIncome={noop} /></ShellContext.Provider>)).toContain('id="recent-entries"');
   });
 
   it('Home: no bills section when nothing is due; Explore in the chosen order', () => {
@@ -139,15 +147,33 @@ describe('screens render with planning features', () => {
   it('History tab shows search, category filter chips and badges', () => {
     const html = render(<HistoryTab {...common} onUpdateTransaction={noop} onDeleteTransaction={noop} onAddTransaction={noop} onAddIncome={noop} />);
     expect(html).toContain('history-search');
-    expect(html).toContain('Fuel');
-    expect(html).toContain('Subscriptions');
+    expect(html).toContain('id="history-kind-expense"');
+    // only the most recent day is open; earlier days are collapsed
+    expect(html).toContain('>Today<');
+    expect(html).toContain('>Yesterday<');
+    expect(html).toContain('Swiggy');
+    expect(html).toContain('Food &amp; Dining');
+    expect(html).not.toContain('Petrol');
+    expect(html).not.toContain('Netflix');
   });
 
   it('History: money in and out in one list — kind, signed amount, status, edit and delete', () => {
-    const html = render(<HistoryTab {...common} onUpdateTransaction={noop} onDeleteTransaction={noop} onUpdateIncome={noop} onDeleteIncome={noop} />);
+    const today = [
+      transactions[0],
+      { id: 'l1', type: 'person', direction: 'lent', name: 'Kiran', amount: 500, date: iso(0, 10), month: month(iso(0)) },
+      { id: 'w1', type: 'cash', name: 'ATM', amount: 2000, date: iso(0, 9), month: month(iso(0)) },
+    ];
+    const inToday = [
+      { id: 's1', name: 'Salary', amount: 50000, date: iso(0, 8), month: month(iso(0)) },
+      { id: 'b1', name: 'Ravi', amount: 2000, isBorrowed: true, date: iso(0, 7), month: month(iso(0)) },
+    ];
+    const html = render(<HistoryTab {...common} transactions={today} income={inToday} onUpdateTransaction={noop} onDeleteTransaction={noop} onUpdateIncome={noop} onDeleteIncome={noop} />);
     expect(html).toContain('class="hist-row"');
-    expect(html).toMatch(/class="hist-kind"[^>]*>Expense</);
-    expect(html).toMatch(/class="hist-kind"[^>]*>(Income|Got back|Borrowed)</);   // money-in entries are listed too
+    expect(html).toMatch(/hist-kind"[^>]*>Expense</);
+    expect(html).toMatch(/hist-kind"[^>]*>Income</);                            // money-in entries are listed too
+    expect(html).toMatch(/hist-kind"[^>]*>Borrowed</);
+    expect(html).toMatch(/hist-kind"[^>]*>Withdrew cash</);
+    expect(html).toContain('class="hist-tile"');
     expect(html).toMatch(/hist-amount[^>]*>\+₹/);                                // money in: +
     expect(html).toMatch(/hist-amount[^>]*>−₹/);                                   // money out: −
     expect(html).toMatch(/hist-status[^>]*>.*?(Done|Open|Settled)/);

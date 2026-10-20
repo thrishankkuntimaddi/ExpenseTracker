@@ -8,8 +8,8 @@
 // person's balance is back to zero, then Settled; everything else is Done.
 // Tap a row (or ✎) to edit it.
 import { useState, useMemo, useCallback } from 'react';
-import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown, CheckCircle2, Clock3, Banknote } from 'lucide-react';
-import { formatAmount, formatDate, getWeekStart } from '../../utils/dateHelpers';
+import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown, CheckCircle2, Clock3, Banknote, Wallet, ArrowDownLeft, ArrowUpRight, Undo2, Receipt, Gift, PiggyBank } from 'lucide-react';
+import { formatAmount } from '../../utils/dateHelpers';
 import MonthSwitcher from '../../components/MonthSwitcher';
 import { useViewMonth } from '../../app/month';
 import { useTransactions } from '../../hooks/useTransactions';
@@ -87,14 +87,12 @@ export default function HistoryTab({
   // Category chips: expenses only
   const periodCats = useMemo(() => categoryTotals(periodTxns.filter((t) => t._kind === 'expense'), categoryRules), [periodTxns, categoryRules]);
 
-  const todayIso = new Date().toISOString();
-  const currentLabel = grouping === 'month' ? new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
-    : grouping === 'week' ? `Week of ${formatDate(getWeekStart(todayIso).toISOString())}`
-    : formatDate(todayIso);
-  const hasCurrent = grouped.some((g) => g.label === currentLabel);
-  // Expand everything while searching/filtering so matches are visible
-  const effectiveExpandAll = (expandAll ?? grouping === 'day') || hasFilter;
-  const isGroupExpanded = (label) => customToggles[label] ?? (effectiveExpandAll || label === currentLabel || (!hasCurrent && grouped[0]?.label === label));
+  // Only the most recent day with entries starts open (today, else the last
+  // day something happened); the rest are collapsed. "Expand all" opens them,
+  // and a search or filter opens everything so the matches show.
+  const latest = grouped[0]?.label;
+  const effectiveExpandAll = (expandAll ?? false) || hasFilter;
+  const isGroupExpanded = (label) => customToggles[label] ?? (effectiveExpandAll || label === latest);
   const toggleGroup = (label) => setCustomToggles((prev) => ({ ...prev, [label]: !isGroupExpanded(label) }));
 
   const removeRow = (row) => (row._src === 'income' ? onDeleteIncome?.(row.id) : onDeleteTransaction?.(row.id));
@@ -216,7 +214,7 @@ export default function HistoryTab({
               <button onClick={() => toggleGroup(group.label)} className="hist-group">
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   {collapsed ? <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} />}
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{group.label}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 750, color: 'var(--text)' }}>{grouping === 'day' ? dayName(group.entries[0].date) : group.label}</span>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>({group.entries.length})</span>
                 </span>
                 <span style={{ display: 'flex', gap: 8, fontSize: 12, fontWeight: 700 }}>
@@ -225,7 +223,7 @@ export default function HistoryTab({
                 </span>
               </button>
               {!collapsed && (
-                <div className="card">
+                <div className="card hist-card">
                   {group.entries.map((row, i) => (
                     <HistoryRow key={`${row._src}-${row.id}`} row={row} first={i === 0} theme={theme} rules={categoryRules}
                       settled={settledByName.get(norm(row.name))}
@@ -241,25 +239,25 @@ export default function HistoryTab({
   );
 }
 
-/* One entry: name and signed amount; kind, category and status under it; edit and delete. */
+/* One entry as a card row: an icon for what it is, what it was for, then the
+   kind and category; on the right the signed amount, its status, edit and delete. */
+const KIND_ICON = { income: Wallet, borrowed: ArrowDownLeft, got_back: Undo2, billing: Receipt, given: Gift, lent: ArrowUpRight, paid_back: Undo2, savings: PiggyBank, withdrawal: Banknote };
+
 function HistoryRow({ row, first, theme, rules, settled, onEdit, onDelete }) {
   const k = ENTRY_KINDS[row._kind];
   const incoming = k.sign > 0;
   const neutral = k.sign === 0;            // cash withdrawn: account → wallet
   const debt = isDebtKind(row._kind);
   const wasted = row._kind === 'expense' && row.wasteAmount > 0;
+  const cat = row._kind === 'expense' ? categoryOf(row, rules) : null;
+  const catColor = cat ? categoryColor(cat, theme) : null;
+  const KindIcon = KIND_ICON[row._kind];
 
   let detail = null;
-  if (row._kind === 'expense') {
-    const cat = categoryOf(row, rules);
-    detail = <span className="hist-cat" style={{ color: categoryColor(cat, theme) }}><CategoryIcon category={cat} size={11} />{categoryMeta(cat).label}</span>;
-  } else if (row._kind === 'savings') {
-    detail = <span className="hist-cat">{getSavingsType(row.savingsType).label}{row.platform ? ` · ${row.platform}` : ''}</span>;
-  } else if (neutral) {
-    detail = <span className="hist-cat">Account → wallet</span>;
-  } else if (row.note) {
-    detail = <span className="hist-cat">{row.note}</span>;
-  }
+  if (cat) detail = <span className="hist-bit" style={{ color: catColor }}>{categoryMeta(cat).label}</span>;
+  else if (row._kind === 'savings') detail = <span className="hist-bit">{getSavingsType(row.savingsType).label}{row.platform ? ` · ${row.platform}` : ''}</span>;
+  else if (neutral) detail = <span className="hist-bit">Account → wallet</span>;
+  else if (row.note) detail = <span className="hist-bit">{row.note}</span>;
 
   const status = debt
     ? (settled ? { label: 'Settled', Icon: CheckCircle2, color: 'var(--income)' } : { label: 'Open', Icon: Clock3, color: 'var(--borrowed)' })
@@ -268,26 +266,43 @@ function HistoryRow({ row, first, theme, rules, settled, onEdit, onDelete }) {
   return (
     <div className="hist-row" role="button" tabIndex={0} onClick={onEdit}
       onKeyDown={(e) => { if (e.key === 'Enter') onEdit(); }}
-      style={{ borderTop: first ? 'none' : '1px solid var(--border)', borderLeftColor: `var(--${k.tone})` }}>
-      <span className="hist-name">{row.name}</span>
-      <span className="hist-amount" style={{ color: neutral ? 'var(--text-secondary)' : incoming ? 'var(--income)' : 'var(--expense)' }}>
-        <EntryAmount entry={row} prefix={neutral ? '' : incoming ? '+' : '−'} />
+      style={{ borderTop: first ? 'none' : '1px solid var(--border)' }}>
+      <span className="hist-tile" aria-hidden
+        style={cat ? { color: catColor, background: `${catColor}1f` } : { color: `var(--${k.tone})`, background: `var(--${k.tone}-bg)` }}>
+        {cat ? <CategoryIcon category={cat} size={17} /> : <KindIcon size={17} />}
       </span>
-      <span className="hist-meta">
-        <span className="hist-kind" style={{ color: `var(--${k.tone})`, background: `var(--${k.tone}-bg)`, borderColor: `var(--${k.tone}-border, var(--border))` }}>{k.label}</span>
-        {detail}
-        {row.paidWith === 'cash' && <span className="hist-cat" title="Paid in cash"><Banknote size={11} />Cash</span>}
-        {wasted && <span className="hist-cat" style={{ color: 'var(--expense)' }}><Flame size={10} />{formatAmount(row.wasteAmount)} wasted</span>}
-        <span className="hist-status" style={{ color: status.color }} title={debt ? (settled ? 'This person’s balance is back to zero' : 'Still to be returned') : 'Recorded'}>
-          <status.Icon size={11} />{status.label}
+      <span className="hist-main">
+        <span className="hist-name">{row.name}</span>
+        <span className="hist-meta">
+          <span className="hist-bit hist-kind" style={{ color: `var(--${k.tone})` }}>{k.label}</span>
+          {detail}
+          {row.paidWith === 'cash' && <span className="hist-bit" title="Paid in cash"><Banknote size={11} /> Cash</span>}
+          {wasted && <span className="hist-bit" style={{ color: 'var(--expense)' }}><Flame size={10} /> {formatAmount(row.wasteAmount)} wasted</span>}
         </span>
       </span>
-      <span className="hist-actions">
-        <button aria-label={`Edit ${row.name}`} title="Edit" className="hist-btn hist-edit" onClick={(e) => { e.stopPropagation(); onEdit(); }}><Pencil size={13} /></button>
-        <button aria-label={`Delete ${row.name}`} title="Delete" className="hist-btn hist-del" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Trash2 size={13} /></button>
+      <span className="hist-side">
+        <span className="hist-amount" style={{ color: neutral ? 'var(--text-secondary)' : incoming ? 'var(--income)' : 'var(--expense)' }}>
+          <EntryAmount entry={row} prefix={neutral ? '' : incoming ? '+' : '−'} />
+        </span>
+        <span className="hist-foot">
+          <span className="hist-status" style={{ color: status.color }} title={debt ? (settled ? 'This person’s balance is back to zero' : 'Still to be returned') : 'Recorded'}>
+            <status.Icon size={11} />{status.label}
+          </span>
+          <button aria-label={`Edit ${row.name}`} title="Edit" className="hist-btn hist-edit" onClick={(e) => { e.stopPropagation(); onEdit(); }}><Pencil size={13} /></button>
+          <button aria-label={`Delete ${row.name}`} title="Delete" className="hist-btn hist-del" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Trash2 size={13} /></button>
+        </span>
       </span>
     </div>
   );
+}
+
+/* "Today", "Yesterday", "Mon, 19 Oct" (with the year when it isn't this one) */
+function dayName(iso) {
+  const d = new Date(iso), today = new Date(), y = new Date();
+  y.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  if (d.toDateString() === y.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', ...(d.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}) });
 }
 
 function IconAction({ id, label, Icon, onClick }) {

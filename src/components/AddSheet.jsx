@@ -74,23 +74,55 @@ export default function AddSheet({ initialKind = 'expense', options = {}, onClos
   useEscape(onClose);
   const saved = (entry) => { onSaved?.(entry); onClose(); };
 
+  // Phone: drag the grip (or the "Add" row) down to close — far enough, or a
+  // quick flick; otherwise the sheet springs back.
+  const sheetRef = useRef(null);
+  const drag = useRef(null);
+  const onGripStart = (e) => {
+    if (e.touches.length !== 1) return;
+    drag.current = { y: e.touches[0].clientY, at: Date.now(), dy: 0 };
+    if (sheetRef.current) sheetRef.current.style.transition = 'none';
+  };
+  const onGripMove = (e) => {
+    const d = drag.current;
+    if (!d || !sheetRef.current) return;
+    d.dy = Math.max(0, e.touches[0].clientY - d.y);
+    sheetRef.current.style.transform = `translateY(${d.dy}px)`;
+  };
+  const onGripEnd = () => {
+    const d = drag.current, el = sheetRef.current;
+    drag.current = null;
+    if (!d || !el) return;
+    const fast = d.dy > 40 && d.dy / Math.max(1, Date.now() - d.at) > 0.6;
+    el.style.transition = 'transform .2s cubic-bezier(0.16,1,0.3,1)';
+    if (d.dy > 110 || fast) {
+      el.style.transform = 'translateY(100%)';
+      setTimeout(onClose, 160);
+    } else {
+      el.style.transform = '';
+    }
+  };
+  const grip = shell?.desktop ? {} : { onTouchStart: onGripStart, onTouchMove: onGripMove, onTouchEnd: onGripEnd, onTouchCancel: onGripEnd };
+
   return (
     <Portal>
       <div data-no-swipe className={`sheet-backdrop${shell?.desktop ? ' sheet-centered' : ''}`}
         onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
         style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(0,0,0,0.42)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'sheetFade .15s ease' }}>
-        <div role="dialog" aria-label="Add an entry" className="add-sheet" style={{
+        <div ref={sheetRef} role="dialog" aria-label="Add an entry" className="add-sheet" style={{
           width: '100%', maxWidth: 560, maxHeight: '92dvh', overflowY: 'auto', background: 'var(--surface)',
           borderRadius: '26px 26px 0 0', padding: '10px 16px calc(18px + env(safe-area-inset-bottom, 0px))',
           animation: 'sheetRise .24s cubic-bezier(0.16,1,0.3,1)',
         }}>
-          <div className="sheet-grip" style={{ width: 36, height: 4, borderRadius: 99, background: 'var(--border-dark)', margin: '0 auto 10px' }} />
+          <div id="add-sheet-handle" {...grip} style={{ touchAction: shell?.desktop ? undefined : 'none', margin: '-10px -16px 0', padding: '10px 16px 0' }}>
+          <div className="sheet-grip" style={{ width: 40, height: 5, borderRadius: 99, background: 'var(--border-dark)', margin: '0 auto 10px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>Add</span>
             {!shell?.desktop && !hasSwiped() && <span id="add-swipe-hint" style={{ flex: 1, textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>← swipe to switch →</span>}
             <button onClick={onClose} aria-label="Close" style={{ width: 30, height: 30, border: 'none', background: 'var(--surface2)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <X size={15} />
             </button>
+          </div>
           </div>
           <AddPanel initialKind={initialKind} options={options} onSaved={saved} swipe={!shell?.desktop} {...rest} />
         </div>
