@@ -10,12 +10,13 @@ import { formatAmount, todayInputValue, dateInputToISO, isoToMonth, localMonthKe
 import { TRANSACTION_TYPES as TYPES, getDirectionMeta } from '../../utils/typeConfig';
 import { useStats } from '../../hooks/useStats';
 import { inferCategory, categoryOf, categoryMeta, EMPTY_RULES } from '../../utils/categories';
-import { parseQuickEntry } from '../../utils/smartInput';
+import { parseQuickEntries } from '../../utils/smartInput';
 import { computeBudgetStatus } from '../../utils/budget';
 import { upcomingBills, dueLabel } from '../../utils/bills';
 import { toKey, fromKey } from '../../utils/recurring';
 import { CategoryBadge } from '../../components/CategoryPicker';
 import ProfileButton from '../../components/ProfileButton';
+import HelpButton from '../../tour/HelpButton';
 import { useShell } from '../../app/shellContext';
 import { PAGE_META, EXPLORE_ORDER } from '../../app/pages';
 import { normaliseUi } from '../../utils/uiPrefs';
@@ -77,17 +78,24 @@ export default function TodayTab(props) {
     return d.toDateString() === today.toDateString() ? 'Today' : d.toDateString() === y.toDateString() ? 'Yesterday' : d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
   };
 
-  /* Quick entry: "chai 20" ⏎ → a categorised expense, dated now. A live
-     preview shows exactly what will be saved before you press Add. */
-  const parsed = parseQuickEntry(quick);
-  const preview = parsed && { name: capitalise(parsed.name), amount: parsed.amount, currency: parsed.currency ?? entryCurrency.get(), category: inferCategory(parsed.name, categoryRules) };
+  /* Quick entry: "chai 20" ⏎ → a categorised expense, dated now. Several in
+     one line — "coffee 250 water 50 tea 150" — become one expense each.
+     A live preview shows exactly what will be saved before you press Add. */
+  const items = useMemo(() => parseQuickEntries(quick).map((p) => ({
+    name: capitalise(p.name), amount: p.amount, currency: p.currency ?? entryCurrency.get(), category: inferCategory(p.name, categoryRules),
+  })), [quick, categoryRules]);
+  const preview = items.length ? items : null;
   function submitQuick(e) {
     e.preventDefault();
     if (!preview) return;
     const isoDate = dateInputToISO(todayInputValue());
-    const entry = { id: generateId(), type: 'expense', name: preview.name, amount: preview.amount, currency: preview.currency, category: preview.category, date: isoDate, month: isoToMonth(isoDate) };
-    onAdd(entry);
-    if (shell?.celebrate) shell.celebrate(entry); else shell?.toast(`Added ${preview.name} · ${formatAmount(preview.amount, preview.currency)}`);
+    const at = { date: isoDate, month: isoToMonth(isoDate) };
+    const entries = items.map((p) => ({ id: generateId(), type: 'expense', name: p.name, amount: p.amount, currency: p.currency, category: p.category, ...at }));
+    entries.forEach((entry) => onAdd(entry));
+    const sameCurrency = new Set(entries.map((x) => x.currency)).size === 1;
+    const summary = entries.length === 1 ? entries[0]
+      : { type: 'expense', name: `${entries.length} expenses`, amount: entries.reduce((s, x) => s + x.amount, 0), currency: entries[0].currency, ...(sameCurrency ? {} : { toast: `Added ${entries.length} expenses` }), ...at };
+    if (shell?.celebrate) shell.celebrate(summary); else shell?.toast(`Added ${summary.name} · ${formatAmount(summary.amount, summary.currency)}`);
     setQuick('');
   }
 
@@ -137,7 +145,7 @@ export default function TodayTab(props) {
         </>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.18)' }}>
-        {isNow ? <Metric label="Today" value={todayExpense} /> : <Metric label="Income" value={stats?.totalIncome ?? 0} />}
+        {isNow ? <Metric label="Today" value={todayExpense} /> : <Metric label="Money in" value={stats?.totalIncome ?? 0} />}
         {isNow && safeToday && safeToday.status !== 'over'
           ? <Metric label="Safe to spend today" value={safeToday.safeToday} />
           : <Metric label="Saved" value={stats?.totalSavings ?? 0} />}
@@ -165,17 +173,28 @@ export default function TodayTab(props) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Zap size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
         <input id="home-quick-entry" value={quick} onChange={(e) => setQuick(e.target.value)} autoComplete="off" enterKeyHint="done"
-          placeholder='Quick entry — type "chai 20"' aria-label="Quick entry: name and amount"
+          placeholder='Quick entry — "chai 20 vada 15"' aria-label="Quick entry: name and amount — several at once is fine"
           style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', boxShadow: 'none', outline: 'none', color: 'var(--text)', fontSize: 15, padding: '8px 0', fontFamily: 'inherit' }} />
         <button type="submit" disabled={!preview} style={{ padding: '8px 14px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', background: preview ? 'var(--accent)' : 'var(--surface2)', color: preview ? '#fff' : 'var(--text-muted)', cursor: preview ? 'pointer' : 'default' }}>
-          Add
+          {items.length > 1 ? `Add ${items.length}` : 'Add'}
         </button>
       </div>
       {quick.trim() && (
         <div id="quick-preview" style={{ fontSize: 12, padding: '2px 0 6px 24px', color: preview ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
-          {preview
-            ? <>Expense · <strong style={{ color: 'var(--text)' }}>{preview.name}</strong> · {formatAmount(preview.amount, preview.currency)} · {categoryMeta(preview.category).label} · today</>
-            : 'Add an amount — e.g. "petrol 500" or "250 swiggy"'}
+          {!preview && 'Add an amount — e.g. "petrol 500", or several: "coffee 250 water 50"'}
+          {items.length === 1 && <>Expense · <strong style={{ color: 'var(--text)' }}>{items[0].name}</strong> · {formatAmount(items[0].amount, items[0].currency)} · {categoryMeta(items[0].category).label} · today</>}
+          {items.length > 1 && (
+            <>
+              <div style={{ marginBottom: 2 }}>{items.length} expenses · today</div>
+              {items.map((p, i) => (
+                <div key={i} className="quick-item" style={{ display: 'flex', gap: 8 }}>
+                  <strong style={{ color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</strong>
+                  <span>{categoryMeta(p.category).label}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text)' }}>{formatAmount(p.amount, p.currency)}</span>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
     </form>
@@ -364,6 +383,7 @@ export default function TodayTab(props) {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <HelpButton page="today" />
             <ProfileButton />
           </div>
         </div>

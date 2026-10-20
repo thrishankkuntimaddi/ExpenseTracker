@@ -82,7 +82,7 @@ export default function IncomeTab({
       {/* Delete confirmation modal */}
       {deletingId && (
         <ConfirmDeleteModal
-          title="Delete income entry?"
+          title="Delete this entry?"
           message="It moves to Recently Deleted (Settings), where you can restore it."
           onConfirm={() => { onDeleteIncome(deletingId); setDeletingId(null); }}
           onCancel={() => setDeletingId(null)}
@@ -98,7 +98,7 @@ export default function IncomeTab({
       )}
 
       {/* Header */}
-      <PageHeader title="Income" subtitle="Everything that came in — salary, family, borrowed, paid back" month
+      <PageHeader title="Money in" subtitle="Everything that reached your account — earned, borrowed, paid back" month
         actions={shell && <HeaderAction id="income-add" Icon={Plus} label="Add" onClick={() => shell.openAdd('income')} />} />
 
       {/* Body */}
@@ -111,7 +111,7 @@ export default function IncomeTab({
               <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.8 }}>Received · {periodLabel}</div>
               <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 2 }}>{formatAmount(totalIncome)}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-                <HeroFigure label="Income" value={formatAmount(kindTotals.income)} />
+                <HeroFigure label="Earned" value={formatAmount(kindTotals.income)} />
                 <HeroFigure label="Borrowed" value={formatAmount(kindTotals.borrowed)} />
                 <HeroFigure label="Paid back to you" value={formatAmount(kindTotals.repayment)} />
               </div>
@@ -188,7 +188,7 @@ export default function IncomeTab({
                                   background: isCarryForward(entry) ? 'var(--accent-bg)' : entry.isRepaymentRec ? '#d1fae5' : entry.isBorrowed ? 'var(--person-bg)' : 'var(--income-bg)',
                                   color: isCarryForward(entry) ? 'var(--accent)' : entry.isRepaymentRec ? '#059669' : entry.isBorrowed ? 'var(--person)' : 'var(--income)',
                                 }}>
-                                  {isCarryForward(entry) ? '↪ Carry forward' : entry.isRepaymentRec ? '⮐ Repayment Rec.' : entry.isBorrowed ? 'Borrowed' : 'Income'}
+                                  {isCarryForward(entry) ? '↪ Carry forward' : entry.isRepaymentRec ? 'Got back' : entry.isBorrowed ? 'Borrowed' : 'Income'}
                                 </span>
                                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
                                   {entry.name}

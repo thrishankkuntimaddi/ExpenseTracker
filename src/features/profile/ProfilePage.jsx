@@ -8,7 +8,7 @@
 //     full screen on phones (Back — or the Android back button — returns)
 import { useMotionPref, setMotionPref } from '../../motion/motion';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Compass, PlayCircle, ChevronRight } from 'lucide-react';
 import Avatar from '../../components/Avatar';
 import { displayNameOf } from '../../app/shellContext';
 import { PAGE_META } from '../../app/pages';
@@ -28,6 +28,7 @@ import { normaliseReminders, REMINDER_TYPES } from '../../utils/reminders';
 import { CURRENCY_NAMES, isCurrency, DEFAULT_CURRENCY } from '../../utils/money';
 import { FREQUENCIES } from '../../services/drive';
 import { timeAgo } from '../../services/sync';
+import { startTour, GUIDE_PAGES } from '../../tour/tour';
 
 const REMINDER_NAMES = { recurring: 'bills', daily: 'log the day', budget: 'budget', report: 'report', goals: 'goals', weekly: 'weekly' };
 
@@ -136,6 +137,13 @@ export default function ProfilePage(props) {
                   <MotionRow />
                 </div>
               </section>
+
+              {/* ── Help: the app tour and a guide per page ── */}
+              <Section title="Help">
+                <Group id="help" title="App tour & guides" Icon={Compass} color="var(--accent)" summary="Walk through the app · a guide for every page">
+                  <HelpCard />
+                </Group>
+              </Section>
 
               {/* ── Sounds: taps, money, rolling totals… ── */}
               <Section title="Sounds">
@@ -371,6 +379,39 @@ function MotionRow() {
             <button key={key} id={`motion-${key}`} role="radio" aria-checked={on} disabled={reduced} onClick={() => setMotionPref(key === 'on')}
               style={{ padding: '7px 13px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: reduced ? 'default' : 'pointer', background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: on ? 'var(--shadow-sm)' : 'none', opacity: reduced ? 0.5 : 1 }}>
               {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ── Help: start the full tour, or the guide of one page ── */
+function HelpCard() {
+  return (
+    <div style={{ padding: '14px 16px 12px' }}>
+      <button id="help-start-tour" onClick={() => startTour('app')}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', border: 'none', borderRadius: 14, background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 750, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
+        <PlayCircle size={18} />
+        <span style={{ flex: 1 }}>Take the app tour</span>
+        <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.85 }}>about a minute</span>
+      </button>
+      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '12px 2px 8px', lineHeight: 1.5 }}>
+        Or a short guide to one page — the same one the <strong>?</strong> at the top of each page opens:
+      </p>
+      <div>
+        {GUIDE_PAGES().map((k, i) => {
+          const { label, description, Icon, tone } = PAGE_META[k];
+          return (
+            <button key={k} id={`help-guide-${k}`} onClick={() => startTour(k)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 2px', border: 'none', borderTop: i ? '1px solid var(--border)' : 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+              <span style={{ width: 28, height: 28, borderRadius: 8, background: `var(--${tone}-bg)`, color: `var(--${tone})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon size={14} /></span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{label}</span>
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{description}</span>
+              </span>
+              <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
             </button>
           );
         })}

@@ -143,6 +143,24 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Subscriptions');
   });
 
+  it('History: money in and out in one list — kind, signed amount, status, edit and delete', () => {
+    const html = render(<HistoryTab {...common} onUpdateTransaction={noop} onDeleteTransaction={noop} onUpdateIncome={noop} onDeleteIncome={noop} />);
+    expect(html).toContain('class="hist-row"');
+    expect(html).toMatch(/class="hist-kind"[^>]*>Expense</);
+    expect(html).toMatch(/class="hist-kind"[^>]*>(Income|Got back|Borrowed)</);   // money-in entries are listed too
+    expect(html).toMatch(/hist-amount[^>]*>\+₹/);                                // money in: +
+    expect(html).toMatch(/hist-amount[^>]*>−₹/);                                   // money out: −
+    expect(html).toMatch(/hist-status[^>]*>.*?(Done|Open|Settled)/);
+    expect(html).toMatch(/aria-label="Edit [^"]+"/);
+    expect(html).toMatch(/aria-label="Delete [^"]+"/);
+    expect(html).toContain('id="history-kinds"');
+  });
+
+  it('Add → Expense: several items in one line become one expense each', async () => {
+    const { parseQuickEntries } = await import('../utils/smartInput');
+    expect(parseQuickEntries('coffee 250 water 50 tea 150')).toHaveLength(3);
+  });
+
   it('Stats: balance, breakdown, calendar, where the money went (by category), then the monthly report', () => {
     const html = render(<StatsTab {...common} />);
     const at = (t) => html.indexOf(t);
@@ -235,7 +253,7 @@ describe('screens render with planning features', () => {
     expect(html).toContain('INR · Indian rupee');           // row summaries say what's set
     expect(html).not.toContain('id="reminder-daily"');       // settings open on tap, not all at once
     expect(html).toContain('class="profile-detail"');        // the panel beside (wide) / instead of (phone) the list
-    expect(html).toContain('Home · Bills · Stats · Income');  // bar summary follows settings.ui (Home fixed first; Plan → Bills)
+    expect(html).toContain('Home · Bills · Stats · Money in');  // bar summary follows settings.ui (Home fixed first; Plan → Bills)
     expect(html.match(/id="theme-(light|dark|system)"/g)).toHaveLength(3);   // one theme picker, not two
   });
 

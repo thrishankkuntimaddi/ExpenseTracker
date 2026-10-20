@@ -96,9 +96,11 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 ## 🧩 Features
 
 ### 💸 Entries
-- Add **Expense** (spent, or *given to someone*), **Income**, **Debt** (lent · borrowed · got back · paid back) and **Savings** (optionally for a goal, and where it's kept) from the **＋** button — every form opens with what it's for first, then the amount
-- **Quick entry**: type `chai 20` or `250 swiggy` and press Enter — the name and amount are split and saved. A currency written with the amount is picked up too: `coffee $4.50`, `taxi 30 AED`, `€12 museum`, `lunch 400rs`
-- **History** for the month on screen with search (this month or all months), type and category filters, wastage and edit
+- Add **Expense** (spent, or *given to someone*), **Income**, **Debt** (lent · borrowed · got back · paid back) and **Savings** (optionally for a goal, and where it's kept) from the **＋** button — every form opens with what it's for first, then the amount. On a phone, **swipe sideways** in that window to switch kinds; what you typed comes along
+- **Quick entry**: type `chai 20` or `250 swiggy` and press Enter — the name and amount are split and saved. **Several at once** works too: `coffee 250 water 50 tea 150` saves three expenses, each with its own category. A currency written with the amount is picked up: `coffee $4.50`, `taxi 30 AED`, `€12 museum`, `lunch 400rs`
+- **History** — every entry of the month, money in *and* out, one compact row each: what it was for, the amount (**+ green** for money in, **− red** for money out), its kind (Income, Expense, Borrowed, Lent, Got back, Paid back, Savings…), category, status (debts stay *Open* until settled) and edit / delete. Search this month or all months; filter by kind or category. History sits at the far right of the phone bar
+- **Money in** (formerly *Income*) — everything that reached your account: what you earned, what you borrowed and what was paid back to you, with *Earned* shown on its own
+- **App tour** — runs once for a new account; start it again any time from Profile → Help. Every page has a **?** at the top with a short guide to that page
 - **Load past data**: paste a month of old entries, one per line (`5 groceries 450`)
 - Every write is optimistic and rolls back with a clear message if the server refuses it
 
@@ -291,6 +293,7 @@ ExpenseTracker/
     │   ├── plan/               # Shared modals and cards: recurring rule, budget editor, goals
     │   ├── profile/            # Profile page
     │   └── settings/           # Settings sections, Reminders, Currency, Google Drive backup
+    ├── tour/                   # App tour + page guides: tour.js (steps), TourHost (spotlight card), HelpButton (?)
     ├── security/               # App lock: pin.js (hash + lockout rules), useAppLock.js (state machine),
     │                           #   LockScreen, SecurityCard (lock, devices, alerts), SecurityBanners,
     │                           #   biometric.js, reauth.js, events.js

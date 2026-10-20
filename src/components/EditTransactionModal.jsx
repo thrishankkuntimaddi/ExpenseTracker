@@ -2,7 +2,7 @@
 // Universal edit modal for expense / person / savings transactions.
 
 import { useState } from 'react';
-import { X, PenLine, Calendar, Check, Trash2 } from 'lucide-react';
+import { X, PenLine, Calendar, Check, Trash2, Flame } from 'lucide-react';
 import CurrencySelect from './CurrencySelect';
 import { rawOf } from '../utils/fx';
 import { currencyOf } from '../utils/money';
@@ -28,6 +28,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
   const [direction, setDirection] = useState(txn.direction ?? 'lent');
   const [savingsType, setSavingsType] = useState(txn.savingsType ?? 'cash');
   const [platform, setPlatform]   = useState(txn.platform ?? '');
+  const [waste, setWaste]         = useState(raw.wasteAmount > 0 ? String(raw.wasteAmount) : '');   // how much of it was wasted
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const sel     = TRANSACTION_TYPES.find(t => t.key === type) ?? TRANSACTION_TYPES[0];
@@ -54,8 +55,11 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
     if (type === 'expense') {
       updated.category = effectiveCategory;
       if (categoryTouched) onLearnCategory?.(updated.name, effectiveCategory);
+      const w = parseFloat(waste);
+      if (w > 0) updated.wasteAmount = Math.min(w, amtNum); else delete updated.wasteAmount;
     } else {
       delete updated.category;
+      delete updated.wasteAmount;
     }
     if (type === 'savings') {
       updated.savingsType = savingsType;
@@ -219,6 +223,24 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
                 onBlur={e => e.target.style.borderColor = 'var(--input-border)'}
               />
             </div>
+
+            {/* Wasted — part or all of an expense you regret */}
+            {type === 'expense' && (
+              <div style={{ position: 'relative', marginBottom: 10 }}>
+                <Flame size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--expense)', pointerEvents: 'none' }} />
+                <input
+                  id="edit-waste" type="text" inputMode="decimal" placeholder="Wasted? How much (optional)" value={waste} aria-label="Wasted amount"
+                  onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setWaste(v); }}
+                  style={{
+                    width: '100%', paddingLeft: 34, paddingRight: 12,
+                    paddingTop: 10, paddingBottom: 10, borderRadius: 10, fontSize: 13,
+                    border: '1.5px solid var(--input-border)',
+                    background: 'var(--input-bg)', color: 'var(--text)',
+                    outline: 'none', fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+            )}
 
             {/* Date */}
             <div style={{ position: 'relative', marginBottom: 16 }}>

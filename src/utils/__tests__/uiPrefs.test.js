@@ -14,7 +14,10 @@ describe('normaliseUi', () => {
 
   it('always yields three unique bar slots, never Home (it is fixed first)', () => {
     // 'plan' (3.5) now lives on the Bills page
-    expect(normaliseUi({ tabs: ['plan', 'plan', 'bogus', 'external'] }).tabs).toEqual(['bills', 'external', 'history']);
+    expect(normaliseUi({ tabs: ['plan', 'plan', 'bogus', 'external'] }).tabs).toEqual(['bills', 'external', 'stats']);
+    // the old default (History right after Home) moves History to the far right
+    expect(normaliseUi({ tabs: ['history', 'bills', 'stats'] }).tabs).toEqual(['bills', 'stats', 'history']);
+    expect(DEFAULT_TABS[DEFAULT_TABS.length - 1]).toBe('history');
     // 3.4.0 saved four tabs including Home
     expect(normaliseUi({ tabs: ['today', 'history', 'income', 'stats'] }).tabs).toEqual(['history', 'income', 'stats']);
     for (const t of [[], ['today'], PAGE_KEYS, ['x', 'y']]) {

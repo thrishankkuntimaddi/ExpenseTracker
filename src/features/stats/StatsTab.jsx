@@ -180,7 +180,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
 
             <Section title="Breakdown">
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginTop: 8 }}>
-                <MetricCard label="Income" value={stats.totalIncome} color="var(--income)" bg="var(--income-bg)" border="var(--income-border)" Icon={TrendingUp} sub={`Earned: ${formatAmount(stats.pureIncome)}`} />
+                <MetricCard label="Money in" value={stats.totalIncome} color="var(--income)" bg="var(--income-bg)" border="var(--income-border)" Icon={TrendingUp} sub={`Earned: ${formatAmount(stats.pureIncome)}`} />
                 <MetricCard label="Spent" value={stats.totalExpense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={TrendingDown} />
                 <MetricCard label="Saved" value={stats.totalSavings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" Icon={PiggyBank} />
                 <MetricCard label="Wasted" value={stats.totalWaste} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={Flame} sub={`${stats.wastePercent}% of spending`} />

@@ -12,7 +12,7 @@ export const PAGE_META = {
   stats:    { label: 'Stats',    title: 'Stats',            Icon: BarChart2,     tone: 'savings',       description: 'Calendar, categories, monthly report' },
   budget:   { label: 'Budget',   title: 'Budget',           Icon: Target,        tone: 'accent',        description: 'Limits and what’s safe to spend' },
   savings:  { label: 'Savings',  title: 'Savings & goals',  Icon: PiggyBank,     tone: 'savings',       description: 'SIPs, funds, deposits, goals' },
-  income:   { label: 'Income',   title: 'Income',           Icon: Wallet,        tone: 'income',        description: 'Salary, family, everything that came in' },
+  income:   { label: 'Money in', title: 'Money in',         Icon: Wallet,        tone: 'income',        description: 'Salary, borrowed, paid back — all that came in' },
   people:   { label: 'Debts',    title: 'Debts',            Icon: ArrowLeftRight, tone: 'lent',         description: 'Lent, borrowed, paid back' },
   trips:    { label: 'Trips',    title: 'Trips & splits',   Icon: Plane,         tone: 'repayment-rec', description: 'Shared spending, settled fairly' },
   external: { label: 'Billings', title: 'Billings',         Icon: HandCoins,     tone: 'external',      description: 'Money spent for others' },
@@ -37,7 +37,8 @@ export const EXPLORE_ORDER = ['income', 'trips', 'external', 'bills', 'budget', 
 
 /* Desktop / web sidebar */
 export const DESKTOP_NAV = [
-  { title: 'Overview', keys: ['today', 'history', 'stats'] },
+  { title: 'Overview', keys: ['today', 'stats'] },
   { title: 'Money',    keys: ['income', 'bills', 'budget', 'savings'] },
   { title: 'With others', keys: ['trips', 'external', 'people'] },
+  { title: 'Records',  keys: ['history'] },
 ];

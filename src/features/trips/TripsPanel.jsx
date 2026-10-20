@@ -21,6 +21,7 @@ import JoinTripModal from './JoinTripModal';
 import TripsList from './components/TripsList';
 import BackButton from '../../components/BackButton';
 import ProfileButton from '../../components/ProfileButton';
+import HelpButton from '../../tour/HelpButton';
 import { pendingInvite, clearPendingInvite, parseInvite } from './invite';
 
 export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction, reportError, headerExtra }) {
@@ -139,6 +140,7 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
               <button id="trip-join" onClick={() => setAskCode(true)} style={headerBtn(false)}><LogIn size={13} /> Join</button>
               <button onClick={() => setNewOpen(true)} style={headerBtn(true)}><Plus size={13} /> New</button>
+              <HelpButton page="trips" />
               <ProfileButton />
             </div>
           )}

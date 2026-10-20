@@ -254,7 +254,7 @@ export default function RecentlyDeletedModal({
             {[
               { id: 'all', label: `All (${recentlyDeleted.length})` },
               { id: 'expense', label: `Expenses (${countExpense})` },
-              { id: 'income', label: `Income (${countIncome})` },
+              { id: 'income', label: `Money in (${countIncome})` },
               { id: 'billing', label: `Billings (${countBilling})` },
             ].map(({ id, label }) => {
               const active = filter === id;
@@ -343,7 +343,7 @@ export default function RecentlyDeletedModal({
                     ? 'var(--external-border)'
                     : 'var(--expense-border)';
                   const badgeLabel = isIncome
-                    ? 'Income'
+                    ? 'Money in'
                     : isBilling
                     ? 'Billing'
                     : 'Expense';

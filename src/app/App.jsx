@@ -57,6 +57,8 @@ import SecurityBanners from '../security/SecurityBanners';
 import { useSecurityEvents } from '../security/events';
 import { pendingInvite } from '../features/trips/invite';
 import { markQuickBoot } from './quickBoot';
+import TourHost from '../tour/TourHost';
+import { startTour, tourSeen, markTourSeen } from '../tour/tour';
 
 /* One app on every screen — the same pages, the same headers:
    • phone: bottom bar Home · page · "+" · page · page (chosen in Profile →
@@ -214,6 +216,17 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   // Opened from a trip invite link: go to Trips, which asks "which one are you?"
   useEffect(() => { if (pendingInvite()) goTo('trips'); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The app tour, once per device: a new account gets the whole tour; an
+  // account that already has entries just hears that the guides exist.
+  useEffect(() => {
+    if (!loaded || tourSeen() || pendingInvite()) return undefined;
+    const t = setTimeout(() => {
+      if (transactions.length + income.length === 0) startTour('app');
+      else { markTourSeen(); setToastMsg({ text: 'New: tap ? at the top of any page for a quick guide' }); }
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Deep links: once the page has rendered, scroll to / focus its target.
   // Pages load lazily, so look for the element for up to ~2 s.
   useEffect(() => {
@@ -294,7 +307,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     const tone = debt ? 'violet' : entry.type === 'income' ? 'green' : entry.type === 'savings' ? 'blue' : 'gold';
     const from = document.activeElement && document.activeElement !== document.body ? document.activeElement : document.querySelector('[id^="btn-save-"]');
     flyCoin({ from, to: ['#home-summary', '#tab-today', '#side-today'], tone });
-    setToastMsg({ text: `Added ${entry.name} · ${formatAmount(entry.amount, entry.currency)}`, sign: tone === 'green' ? 'wallet' : tone === 'blue' ? 'piggy' : 'check' });
+    setToastMsg({ text: entry.toast ?? `Added ${entry.name} · ${formatAmount(entry.amount, entry.currency)}`, sign: tone === 'green' ? 'wallet' : tone === 'blue' ? 'piggy' : 'check' });
   };
   const shell = {
     user, goTo, back: goBack, barTabs, desktop: isDesktop, active: activeTab, celebrate,
@@ -324,8 +337,8 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
         {...commonProps}
         onUpdateTransaction={updateTransaction}
         onDeleteTransaction={deleteTransaction}
-        onAddTransaction={addTransaction}
-        onAddIncome={addIncome}
+        onUpdateIncome={updateIncome}
+        onDeleteIncome={deleteIncome}
       />
     )}
     {activeTab === 'income' && (
@@ -407,6 +420,8 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
         </Suspense>
       )}
 
+      <TourHost />
+
       {toastMsg && (
         <div role="status" className="app-toast" key={toastMsg.text ?? toastMsg} style={{
           position: 'fixed', left: 16, right: 16, bottom: isDesktop ? 28 : 'calc(92px + env(safe-area-inset-bottom, 0px))', zIndex: 950,
@@ -483,7 +498,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
       {overlays}
 
       {/* ── Bottom bar: Home · 2 pages · + · 1 page ── */}
-      <nav style={{ flexShrink: 0, display: 'flex', alignItems: 'center', background: 'var(--nav-bg)', borderTop: '1px solid var(--nav-border)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <nav id="phone-bar" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', background: 'var(--nav-bg)', borderTop: '1px solid var(--nav-border)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         {barItems.map(({ key, label, Icon }) => {
           if (key === 'add') {
             return (

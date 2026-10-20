@@ -294,3 +294,55 @@ nav.desktop-nav button { margin: 0; }
 .profile-list .settings-layout { display: block !important; }
 /* Phone / narrow: the page header already names the open setting */
 .profile-split:not(.two-pane) .settings-panel-head { display: none; }
+
+/* ── History rows (features/transactions/HistoryTab) ──
+   Phone: two lines — name + amount, then kind · category · status + actions.
+   Wide: one line — name · details · amount · actions. */
+.hist-group { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 10px; border: none; background: var(--surface2); cursor: pointer; font-family: inherit; margin-bottom: 6px; }
+.hist-chip { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; font-family: inherit; cursor: pointer; white-space: nowrap; }
+.hist-flow { display: inline-flex; align-items: center; flex-shrink: 0; padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hist-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name amount" "meta actions"; column-gap: 10px; row-gap: 2px; align-items: center; padding: 9px 10px 9px 12px; border-left: 3px solid transparent; cursor: pointer; }
+.hist-row:hover { background: var(--surface2); }
+.hist-name { grid-area: name; min-width: 0; font-size: 13.5px; font-weight: 650; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-amount { grid-area: amount; justify-self: end; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hist-meta { grid-area: meta; min-width: 0; display: flex; align-items: center; gap: 7px; overflow: hidden; font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.hist-kind { flex-shrink: 0; padding: 1px 7px; border-radius: 6px; border: 1px solid; font-size: 10px; font-weight: 750; }
+.hist-cat { display: inline-flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; color: var(--text-secondary); }
+.hist-status { display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0; font-weight: 650; }
+.hist-actions { grid-area: actions; justify-self: end; display: flex; gap: 2px; }
+.hist-btn { width: 28px; height: 26px; border-radius: 7px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.hist-edit:hover { color: var(--accent); background: var(--accent-bg); }
+.hist-del:hover { color: var(--expense); background: var(--expense-bg); }
+.desktop-main .hist-row { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.8fr) auto auto; grid-template-areas: "name meta amount actions"; padding: 10px 12px; }
+
+/* ── App tour & page guides (src/tour) ── */
+.help-button { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; border: 1.5px solid var(--border); background: var(--surface2); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+.help-button:hover { color: var(--accent); border-color: var(--accent-border); background: var(--accent-bg); }
+.tour-block { position: fixed; inset: 0; z-index: 1300; }
+.tour-dim { position: fixed; inset: 0; z-index: 1301; background: rgba(8, 10, 20, 0.62); pointer-events: none; animation: tour-fade .18s ease; }
+.tour-spot { position: fixed; z-index: 1301; border-radius: 14px; pointer-events: none; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 0 0 9999px rgba(8, 10, 20, 0.62); animation: tour-fade .18s ease; }
+.tour-card { position: fixed; z-index: 1302; padding: 14px 16px 14px; border-radius: 18px; background: var(--tooltip-bg, var(--surface)); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); border: 1px solid var(--border); box-shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.5); animation: tour-pop .2s cubic-bezier(0.16, 1, 0.3, 1); }
+.tour-title { font-size: 16px; font-weight: 800; color: var(--text); margin: 0 0 4px; letter-spacing: -0.01em; }
+.tour-text { font-size: 13px; line-height: 1.55; color: var(--text-secondary); margin: 0; }
+.tour-dots { display: flex; gap: 4px; flex-wrap: wrap; }
+.tour-dots span { width: 6px; height: 6px; border-radius: 99px; background: var(--border-dark, var(--border)); transition: width .2s; }
+.tour-dots span.done { background: var(--accent-border, var(--accent)); }
+.tour-dots span.on { width: 16px; background: var(--accent); }
+.tour-x { width: 26px; height: 26px; border-radius: 8px; border: none; background: var(--surface2); color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.tour-btn { padding: 9px 18px; border-radius: 11px; border: none; background: var(--accent); color: #fff; font-size: 13px; font-weight: 750; font-family: inherit; cursor: pointer; }
+.tour-btn-ghost { background: var(--surface2); color: var(--text-secondary); }
+.tour-link { padding: 6px 2px; border: none; background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; }
+@keyframes tour-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tour-pop { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .tour-dim, .tour-spot, .tour-card { animation: none; } }
+
+/* ── Add window: the form under the kind tabs (components/AddSheet) ── */
+.home-fit .home-add-panel .add-form-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.add-slide-left  { animation: add-in-left .22s cubic-bezier(0.16, 1, 0.3, 1); }
+.add-slide-right { animation: add-in-right .22s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes add-in-left  { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes add-in-right { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .add-slide-left, .add-slide-right { animation: none; } }
+.add-many { margin: -2px 0 12px; padding: 8px 12px; border-radius: 12px; background: var(--expense-bg); border: 1px solid var(--expense-border); }
+.add-many-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12.5px; }
+.add-many-row + .add-many-row { border-top: 1px solid var(--expense-border); }

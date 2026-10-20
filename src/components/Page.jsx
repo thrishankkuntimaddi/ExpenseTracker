@@ -4,6 +4,7 @@
 // subtitle, actions, then the profile avatar.
 import BackButton from './BackButton';
 import ProfileButton from './ProfileButton';
+import HelpButton from '../tour/HelpButton';
 import MonthSwitcher from './MonthSwitcher';
 
 /* `month`: show the app-wide month switcher under the title */
@@ -17,6 +18,7 @@ export function PageHeader({ title, subtitle, actions, month = false, children }
           {subtitle && <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '2px 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subtitle}</p>}
         </div>
         {actions}
+        <HelpButton />
         <ProfileButton />
       </div>
       {month && <div className="page-month" style={{ marginTop: 10 }}><MonthSwitcher /></div>}

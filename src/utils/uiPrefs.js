@@ -11,7 +11,9 @@
 export const PAGE_KEYS = ['today', 'history', 'bills', 'stats', 'budget', 'savings', 'income', 'people', 'trips', 'external'];
 export const SLOT_KEYS = PAGE_KEYS.filter((k) => k !== 'today');
 export const BAR_SLOTS = 3;
-export const DEFAULT_TABS = ['history', 'bills', 'stats'];
+export const DEFAULT_TABS = ['bills', 'stats', 'history'];   // History sits at the far right
+/* The default before 3.15 (History right after Home) — moved to the new default */
+const OLD_DEFAULT_TABS = ['history', 'bills', 'stats'];
 /* Pages from earlier versions → where they live now */
 const LEGACY_PAGE = { plan: 'bills' };
 const LEGACY_SECTION = { due: 'bills', actions: 'explore' };
@@ -32,7 +34,8 @@ export function normaliseUi(raw) {
   const r = isObj(raw) ? raw : {};
 
   const tabs = [];
-  for (const raw of Array.isArray(r.tabs) ? r.tabs : []) {
+  const savedTabs = Array.isArray(r.tabs) && r.tabs.join() === OLD_DEFAULT_TABS.join() ? DEFAULT_TABS : r.tabs;
+  for (const raw of Array.isArray(savedTabs) ? savedTabs : []) {
     const k = LEGACY_PAGE[raw] ?? raw;
     if (SLOT_KEYS.includes(k) && !tabs.includes(k) && tabs.length < BAR_SLOTS) tabs.push(k);
   }

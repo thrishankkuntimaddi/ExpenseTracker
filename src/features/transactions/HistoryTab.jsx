@@ -1,162 +1,136 @@
+// ─── History ─────────────────────────────────────────────────────
+// Every entry of the month in one list — money that came in and money that
+// went out. One compact row each:
+//   what it was for                                  +₹250 (green) / −₹80 (red)
+//   [Kind] category · status                                     ✎  🗑
+// Kind is Income, Expense, Borrowed, Lent, Got back, Paid back, Savings,
+// Given or Billing (utils/entryKinds.js). Status: debts are Open until the
+// person's balance is back to zero, then Settled; everything else is Done.
+// Tap a row (or ✎) to edit it.
 import { useState, useMemo, useCallback } from 'react';
-import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
+import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown, CheckCircle2, Clock3 } from 'lucide-react';
 import { formatAmount, formatDate, getWeekStart } from '../../utils/dateHelpers';
 import MonthSwitcher from '../../components/MonthSwitcher';
 import { useViewMonth } from '../../app/month';
-import { useWastage } from '../../hooks/useWastage';
 import { useTransactions } from '../../hooks/useTransactions';
-import { TYPE_META, getDirectionMeta } from '../../utils/typeConfig';
-import { categoryOf, categoryTotals, categoryColor, EMPTY_RULES } from '../../utils/categories';
-import { CategoryBadge, CategoryIcon } from '../../components/CategoryPicker';
+import { getSavingsType } from '../../utils/typeConfig';
+import { categoryOf, categoryTotals, categoryColor, categoryMeta, EMPTY_RULES } from '../../utils/categories';
+import { CategoryIcon } from '../../components/CategoryPicker';
 import { currentTheme } from '../../utils/theme';
+import { isCarryForward } from '../../utils/carryForward';
+import { debtLedger } from '../../utils/debts';
+import { ENTRY_KINDS, ENTRY_KIND_ORDER, entryKind, isDebtKind } from '../../utils/entryKinds';
+import { sumAmounts } from '../../utils/finance';
 import EditTransactionModal from '../../components/EditTransactionModal';
+import EditIncomeModal from '../../components/EditIncomeModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import ProfileButton from '../../components/ProfileButton';
 import BackButton from '../../components/BackButton';
 import EntryAmount from '../../components/EntryAmount';
+import HelpButton from '../../tour/HelpButton';
 
 const ALL_TIME = { type: 'all' };
+const norm = (s) => String(s ?? '').trim().toLowerCase();
 
 export default function HistoryTab({
-  transactions, selectedPeriod,
-  onUpdateTransaction, onDeleteTransaction,
+  transactions = [], income = [], selectedPeriod,
+  onUpdateTransaction, onDeleteTransaction, onUpdateIncome, onDeleteIncome,
   settings, onLearnCategory,
 }) {
   const { period: monthPeriod } = useViewMonth(selectedPeriod);
   const [allMonths, setAllMonths] = useState(false);   // search every month, not just the one on screen
-  const [expandAll, setExpandAll]         = useState(null);   // null = default: open when grouped by day
-  const [search, setSearch]               = useState('');
-  const [catFilter, setCatFilter]         = useState(null);
-  const [typeFilter, setTypeFilter]       = useState(null); // 'expense' | 'savings' | 'person' | null
+  const [expandAll, setExpandAll] = useState(null);    // null = default: open when grouped by day
+  const [search, setSearch]       = useState('');
+  const [catFilter, setCatFilter] = useState(null);
+  const [kindFilter, setKindFilter] = useState(null);  // a key of ENTRY_KINDS
   const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
   const theme = currentTheme();
   const [customToggles, setCustomToggles] = useState({});
-  const [editingTxn, setEditingTxn]     = useState(null);
-  const [deletingId, setDeletingId]     = useState(null);
+  const [editing, setEditing]   = useState(null);      // a row
+  const [deleting, setDeleting] = useState(null);      // a row
 
-  const { editingWaste, wasteInput, wasteInputRef, handleTxnTap, saveWaste, cancelWaste, setWasteInput } = useWastage(onUpdateTransaction);
+  // Both stores, one list. `_src` says where a row lives, `_kind` what it is.
+  const rows = useMemo(() => [
+    ...transactions.map((t) => ({ ...t, _src: 'transaction', _kind: entryKind(t, 'transaction') })),
+    ...income.filter((i) => !isCarryForward(i)).map((i) => ({ ...i, _src: 'income', _kind: entryKind(i, 'income') })),
+  ], [transactions, income]);
+
+  // Debts: is this person's balance back to zero?
+  const settledByName = useMemo(() => {
+    const m = new Map();
+    debtLedger(transactions, income).forEach((p) => m.set(p.key, p.settled));
+    return m;
+  }, [transactions, income]);
 
   /* ─ Filter & group ─ */
   const q = search.trim().toLowerCase();
   const predicate = useCallback((t) => {
-    if (typeFilter && t.type !== typeFilter) return false;
-    if (catFilter && categoryOf(t, categoryRules) !== catFilter) return false;
+    if (kindFilter && t._kind !== kindFilter) return false;
+    if (catFilter && (t._kind !== 'expense' || categoryOf(t, categoryRules) !== catFilter)) return false;
     if (q && !`${t.name ?? ''} ${t.platform ?? ''} ${t.note ?? ''}`.toLowerCase().includes(q) && !String(t.amount).includes(q)) return false;
     return true;
-  }, [typeFilter, catFilter, q, categoryRules]);
-  const hasFilter = !!(q || catFilter || typeFilter);
+  }, [kindFilter, catFilter, q, categoryRules]);
+  const hasFilter = !!(q || catFilter || kindFilter);
   const searchAll = allMonths && hasFilter;
-  const { filtTxns, periodTxns, grouped, grouping } = useTransactions(transactions, searchAll ? ALL_TIME : monthPeriod, hasFilter ? predicate : null);
+  const { filtTxns, periodTxns, grouped, grouping } = useTransactions(rows, searchAll ? ALL_TIME : monthPeriod, hasFilter ? predicate : null);
 
-  // Category chips for this period (from every expense in the period, not the filtered subset)
-  const periodCats = useMemo(() => categoryTotals(periodTxns, categoryRules), [periodTxns, categoryRules]);
-
-  const periodTotals = useMemo(() => ({
-    expense: periodTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
-    savings: periodTxns.filter(t => t.type === 'savings').reduce((s, t) => s + t.amount, 0),
-    person:  periodTxns.filter(t => t.type === 'person').reduce((s, t) => s + t.amount, 0),
-    waste:   periodTxns.filter(t => t.type === 'expense').reduce((s, t) => s + (t.wasteAmount || 0), 0),
+  // Kind chips: only kinds that happened this period, with their totals
+  const kindTotals = useMemo(() => {
+    const m = {};
+    periodTxns.forEach((t) => { m[t._kind] = (m[t._kind] ?? 0) + (Number(t.amount) || 0); });
+    return ENTRY_KIND_ORDER.filter((k) => m[k]).map((k) => ({ key: k, amount: m[k] }));
+  }, [periodTxns]);
+  const flow = useMemo(() => ({
+    in:  sumAmounts(periodTxns.filter((t) => ENTRY_KINDS[t._kind].sign > 0)),
+    out: sumAmounts(periodTxns.filter((t) => ENTRY_KINDS[t._kind].sign < 0)),
   }), [periodTxns]);
+  // Category chips: expenses only
+  const periodCats = useMemo(() => categoryTotals(periodTxns.filter((t) => t._kind === 'expense'), categoryRules), [periodTxns, categoryRules]);
 
-  function isGroupCurrent(groupLabel) {
-    const todayIso = new Date().toISOString();
-    let isCurrent = false;
-
-    if (grouping === 'month') {
-      const currentMonthLabel = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-      isCurrent = groupLabel === currentMonthLabel;
-    } else if (grouping === 'week') {
-      const currentWeekLabel = `Week of ${formatDate(getWeekStart(todayIso).toISOString())}`;
-      isCurrent = groupLabel === currentWeekLabel;
-    } else {
-      const todayLabel = formatDate(todayIso);
-      isCurrent = groupLabel === todayLabel;
-    }
-
-    if (isCurrent) return true;
-
-    // Fallback: If current day/period is not present in grouped list, expand the top/first group
-    const hasCurrentGroupInList = grouped.some(g => {
-      if (grouping === 'month') return g.label === new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-      if (grouping === 'week') return g.label === `Week of ${formatDate(getWeekStart(todayIso).toISOString())}`;
-      return g.label === formatDate(todayIso);
-    });
-
-    if (!hasCurrentGroupInList && grouped.length > 0 && grouped[0].label === groupLabel) {
-      return true;
-    }
-
-    return false;
-  }
-
-  function isGroupExpanded(groupLabel) {
-    if (customToggles[groupLabel] !== undefined) {
-      return customToggles[groupLabel];
-    }
-    if (effectiveExpandAll) {
-      return true;
-    }
-    return isGroupCurrent(groupLabel);
-  }
-
-  function toggleGroup(label) {
-    const currentlyExpanded = isGroupExpanded(label);
-    setCustomToggles(prev => ({
-      ...prev,
-      [label]: !currentlyExpanded,
-    }));
-  }
-
-  function handleToggleExpandAll(checked) {
-    setExpandAll(checked);
-    setCustomToggles({});
-  }
-
-  const groupLabel = grouping === 'month' ? 'Grouped by month'
-    : grouping === 'week' ? 'Grouped by week'
-    : 'Grouped by day';
-
+  const todayIso = new Date().toISOString();
+  const currentLabel = grouping === 'month' ? new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+    : grouping === 'week' ? `Week of ${formatDate(getWeekStart(todayIso).toISOString())}`
+    : formatDate(todayIso);
+  const hasCurrent = grouped.some((g) => g.label === currentLabel);
   // Expand everything while searching/filtering so matches are visible
   const effectiveExpandAll = (expandAll ?? grouping === 'day') || hasFilter;
+  const isGroupExpanded = (label) => customToggles[label] ?? (effectiveExpandAll || label === currentLabel || (!hasCurrent && grouped[0]?.label === label));
+  const toggleGroup = (label) => setCustomToggles((prev) => ({ ...prev, [label]: !isGroupExpanded(label) }));
+
+  const removeRow = (row) => (row._src === 'income' ? onDeleteIncome?.(row.id) : onDeleteTransaction?.(row.id));
 
   return (
     <div className="tab-root">
-      {/* Edit modal */}
-      {editingTxn && (
-        <EditTransactionModal
-          txn={editingTxn}
-          onSave={onUpdateTransaction}
-          onDelete={onDeleteTransaction}
-          onClose={() => setEditingTxn(null)}
-          categoryRules={categoryRules}
-          onLearnCategory={onLearnCategory}
-        />
+      {editing && editing._src === 'transaction' && (
+        <EditTransactionModal txn={editing} onSave={onUpdateTransaction} onDelete={onDeleteTransaction}
+          onClose={() => setEditing(null)} categoryRules={categoryRules} onLearnCategory={onLearnCategory} />
       )}
-
-      {/* Delete confirm modal */}
-      {deletingId && (
+      {editing && editing._src === 'income' && (
+        <EditIncomeModal entry={editing} onSave={onUpdateIncome} onDelete={onDeleteIncome} onClose={() => setEditing(null)} />
+      )}
+      {deleting && (
         <ConfirmDeleteModal
-          title="Delete transaction?"
+          title={`Delete “${deleting.name}”?`}
           message="It moves to Recently Deleted (Settings), where you can restore it."
-          onConfirm={() => { onDeleteTransaction(deletingId); setDeletingId(null); }}
-          onCancel={() => setDeletingId(null)}
+          onConfirm={() => { removeRow(deleting); setDeleting(null); }}
+          onCancel={() => setDeleting(null)}
         />
       )}
 
       {/* Header */}
-      <div className="tab-header">
-        {/* Title row: count + two compact actions */}
+      <div className="tab-header" id="history-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
           <BackButton />
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>History</h1>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '2px 0 0' }}>
-              {filtTxns.length}{hasFilter ? ` of ${periodTxns.length}` : ''} transactions · {groupLabel.replace('Grouped by ', 'by ')}
+              {filtTxns.length}{hasFilter ? ` of ${periodTxns.length}` : ''} entries · money in and out
             </p>
           </div>
           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
             <IconAction id="history-expand-all" label={effectiveExpandAll ? 'Collapse all' : 'Expand all'}
-              Icon={effectiveExpandAll ? ChevronsDownUp : ChevronsUpDown} onClick={() => handleToggleExpandAll(!effectiveExpandAll)} />
+              Icon={effectiveExpandAll ? ChevronsDownUp : ChevronsUpDown} onClick={() => { setExpandAll(!effectiveExpandAll); setCustomToggles({}); }} />
+            <HelpButton page="history" />
             <ProfileButton />
           </div>
         </div>
@@ -166,20 +140,9 @@ export default function HistoryTab({
           {!searchAll && <MonthSwitcher compact />}
           <div style={{ position: 'relative', flex: 1, minWidth: 160 }}>
             <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-            <input
-              id="history-search"
-              type="search"
-              placeholder="Search…"
-              aria-label="Search name, platform or amount"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{
-                width: '100%', paddingLeft: 30, paddingRight: 30, paddingTop: 9, paddingBottom: 9,
-                borderRadius: 10, fontSize: 13, border: '1.5px solid var(--input-border)',
-                background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit',
-                WebkitAppearance: 'none', appearance: 'none',
-              }}
-            />
+            <input id="history-search" type="search" placeholder="Search…" aria-label="Search name, note or amount"
+              value={search} onChange={(e) => setSearch(e.target.value)}
+              style={{ width: '100%', padding: '9px 30px', borderRadius: 10, fontSize: 13, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', WebkitAppearance: 'none', appearance: 'none' }} />
             {search && (
               <button onClick={() => setSearch('')} aria-label="Clear search" style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', width: 24, height: 24, borderRadius: 7, border: 'none', background: 'var(--surface2)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={12} />
@@ -194,244 +157,132 @@ export default function HistoryTab({
           )}
         </div>
 
-        {/* Period Totals Summary — tap to filter by type */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 10, overflowX: 'auto', paddingBottom: 2 }}>
-          <StatPill label="Expense" value={periodTotals.expense} color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" active={typeFilter === 'expense'} onClick={() => setTypeFilter(f => f === 'expense' ? null : 'expense')} />
-          <StatPill label="Savings" value={periodTotals.savings} color="var(--savings)" bg="var(--savings-bg)" border="var(--savings-border)" active={typeFilter === 'savings'} onClick={() => setTypeFilter(f => f === 'savings' ? null : 'savings')} />
-          <StatPill label="Person"  value={periodTotals.person}  color="var(--person)"  bg="var(--person-bg)"  border="var(--person-border)"  active={typeFilter === 'person'}  onClick={() => setTypeFilter(f => f === 'person' ? null : 'person')} />
-          {periodTotals.waste > 0 && (
-            <StatPill label="Waste"   value={periodTotals.waste}   color="var(--expense)" bg="var(--expense-bg)" border="var(--expense-border)" Icon={Flame} />
-          )}
+        {/* In / out for the month, then one chip per kind — tap to filter */}
+        <div id="history-kinds" className="cat-scroll" style={{ display: 'flex', gap: 6, marginTop: 10, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
+          <span className="hist-flow" style={{ color: 'var(--income)', background: 'var(--income-bg)' }}>In +{formatAmount(flow.in)}</span>
+          <span className="hist-flow" style={{ color: 'var(--expense)', background: 'var(--expense-bg)' }}>Out −{formatAmount(flow.out)}</span>
+          {kindTotals.map(({ key, amount }) => {
+            const k = ENTRY_KINDS[key];
+            const on = kindFilter === key;
+            return (
+              <button key={key} id={`history-kind-${key}`} onClick={() => { setKindFilter((f) => (f === key ? null : key)); setCatFilter(null); }} aria-pressed={on}
+                className="hist-chip" style={{ border: `1.5px solid ${on ? `var(--${k.tone})` : 'var(--border)'}`, background: on ? `var(--${k.tone}-bg)` : 'transparent', color: on ? `var(--${k.tone})` : 'var(--text-secondary)' }}>
+                {k.label} <span style={{ opacity: 0.75, fontWeight: 600 }}>{formatAmount(amount)}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Category chips — tap to filter */}
-        {periodCats.length > 1 && (
+        {/* Categories — when looking at expenses */}
+        {(kindFilter === 'expense' || catFilter) && periodCats.length > 1 && (
           <div className="cat-scroll" style={{ display: 'flex', gap: 6, marginTop: 8, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
-            {periodCats.map(c => {
+            {periodCats.map((c) => {
               const color = categoryColor(c.key, theme);
-              const active = catFilter === c.key;
+              const on = catFilter === c.key;
               return (
-                <button key={c.key} onClick={() => setCatFilter(f => f === c.key ? null : c.key)} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
-                  padding: '4px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
-                  border: `1.5px solid ${active ? color : 'var(--border)'}`,
-                  background: active ? color + '22' : 'transparent', color: active ? color : 'var(--text-secondary)',
-                }}>
+                <button key={c.key} onClick={() => setCatFilter((f) => (f === c.key ? null : c.key))} className="hist-chip"
+                  style={{ border: `1.5px solid ${on ? color : 'var(--border)'}`, background: on ? color + '22' : 'transparent', color: on ? color : 'var(--text-secondary)' }}>
                   <CategoryIcon category={c.key} size={10} />
                   {c.label}
                   <span style={{ opacity: 0.75, fontWeight: 600 }}>{formatAmount(c.amount)}</span>
                 </button>
               );
             })}
-            {hasFilter && (
-              <button onClick={() => { setCatFilter(null); setTypeFilter(null); setSearch(''); }} style={{ flexShrink: 0, padding: '4px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: '1.5px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-muted)' }}>
-                Clear filters
-              </button>
-            )}
           </div>
+        )}
+        {hasFilter && (
+          <button onClick={() => { setCatFilter(null); setKindFilter(null); setSearch(''); }} className="hist-chip"
+            style={{ marginTop: 8, border: '1.5px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-muted)' }}>
+            Clear filters
+          </button>
         )}
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 24px' }}>
+      <div id="history-list" style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 24px' }}>
         {grouped.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12 }}>
             <LayoutList size={32} style={{ color: 'var(--text-muted)' }} />
             <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
-              {hasFilter ? 'Nothing matches these filters' : 'No transactions in this period'}
+              {hasFilter ? 'Nothing matches these filters' : 'Nothing in this period yet'}
             </p>
           </div>
-        ) : (
-          grouped.map(group => {
-            const isCollapsed = !isGroupExpanded(group.label);
-            const groupTotal  = group.entries.reduce((s, t) => s + t.amount, 0);
-
-            return (
-              <div key={group.label} style={{ marginBottom: 14 }}>
-                {/* Group header bar */}
-                <button
-                  onClick={() => toggleGroup(group.label)}
-                  style={{
-                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '8px 12px', borderRadius: 10, border: 'none',
-                    background: 'var(--surface2)', cursor: 'pointer',
-                    fontFamily: 'inherit', marginBottom: 6,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {isCollapsed ? <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} />}
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>
-                      {group.label}
-                    </span>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      ({group.entries.length})
-                    </span>
-                  </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>
-                    {formatAmount(groupTotal)}
-                  </span>
-                </button>
-
-                {/* Group items */}
-                {!isCollapsed && (
-                  <div className="card">
-                    {group.entries.map((txn, i) => {
-                      const m = txn.type === 'person'
-                        ? getDirectionMeta(txn.direction)
-                        : (TYPE_META[txn.type] || TYPE_META.expense);
-                      const isWasted  = txn.wasteAmount != null && txn.wasteAmount > 0;
-                      const isEditingWaste = editingWaste === txn.id;
-
-                      // Amount color: repayment entries show as income-colored
-                      const amtColor = txn.type === 'person' && txn.direction === 'repayment'
-                        ? 'var(--repayment-rec)'
-                        : m.color;
-
-                      return (
-                        <div key={txn.id}>
-                          <div
-                            onClick={() => handleTxnTap(txn)}
-                            style={{
-                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                              padding: '12px 14px',
-                              borderBottom: i < group.entries.length - 1 ? '1px solid var(--border)' : 'none',
-                              cursor: 'pointer',
-                              background: isWasted ? m.bg : 'transparent',
-                              borderLeft: isWasted ? `3px solid ${m.color}` : '3px solid transparent',
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                              {txn.type === 'expense' ? (
-                                <CategoryBadge category={categoryOf(txn, categoryRules)} compact theme={theme} />
-                              ) : (
-                                <span style={{
-                                  fontSize: 10, padding: '2px 7px', borderRadius: 6, fontWeight: 700,
-                                  background: m.bg, color: m.color, border: `1px solid ${m.border}`,
-                                  flexShrink: 0,
-                                }}>
-                                  {m.label}
-                                </span>
-                              )}
-                              <div style={{ minWidth: 0 }}>
-                                <span style={{
-                                  fontSize: 13, fontWeight: 600, color: 'var(--text)',
-                                  display: 'block', overflow: 'hidden',
-                                  textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                }}>
-                                  {txn.name}
-                                </span>
-                                {isWasted && (
-                                  <span style={{ fontSize: 11, color: 'var(--expense)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
-                                    <Flame size={10} /> Wasted: {formatAmount(txn.wasteAmount)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                              <span style={{ fontSize: 13, fontWeight: 700, color: amtColor }}>
-                                <EntryAmount entry={txn} prefix={txn.type === 'person' && txn.direction === 'repayment' ? '+' : ''} />
-                              </span>
-                              <button
-                                onClick={e => { e.stopPropagation(); setEditingTxn(txn); }}
-                                style={{
-                                  width: 26, height: 26, borderRadius: 6,
-                                  background: 'transparent', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.15s',
-                                }}
-                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-bg)'; }}
-                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
-                              >
-                                <Pencil size={12} />
-                              </button>
-                              <button
-                                onClick={e => { e.stopPropagation(); setDeletingId(txn.id); }}
-                                style={{
-                                  width: 26, height: 26, borderRadius: 6,
-                                  background: 'transparent', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.15s',
-                                }}
-                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
-                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Waste editor inline row */}
-                          {isEditingWaste && (
-                            <div style={{
-                              display: 'flex', gap: 6, padding: '8px 14px',
-                              background: 'var(--expense-bg)', borderBottom: '1px solid var(--expense-border)',
-                            }}>
-                              <input
-                                ref={wasteInputRef}
-                                type="number"
-                                placeholder="Waste amount"
-                                value={wasteInput}
-                                onChange={e => setWasteInput(e.target.value)}
-                                inputMode="decimal"
-                                style={{
-                                  flex: 1, padding: '6px 10px', borderRadius: 8, fontSize: 12,
-                                  border: '1.5px solid var(--expense)', background: 'var(--input-bg)',
-                                  color: 'var(--text)', outline: 'none', fontFamily: 'inherit',
-                                }}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter')  saveWaste(txn);
-                                  if (e.key === 'Escape') cancelWaste();
-                                }}
-                              />
-                              <button
-                                onClick={() => saveWaste(txn)}
-                                style={{
-                                  padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                                  background: 'var(--expense)', color: '#fff', border: 'none', cursor: 'pointer',
-                                }}
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={cancelWaste}
-                                style={{
-                                  padding: '5px 10px', borderRadius: 8, fontSize: 12,
-                                  background: 'var(--surface2)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                                }}
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
+        ) : grouped.map((group) => {
+          const collapsed = !isGroupExpanded(group.label);
+          const gin  = sumAmounts(group.entries.filter((t) => ENTRY_KINDS[t._kind].sign > 0));
+          const gout = sumAmounts(group.entries.filter((t) => ENTRY_KINDS[t._kind].sign < 0));
+          return (
+            <div key={group.label} style={{ marginBottom: 14 }}>
+              <button onClick={() => toggleGroup(group.label)} className="hist-group">
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {collapsed ? <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} />}
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{group.label}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>({group.entries.length})</span>
+                </span>
+                <span style={{ display: 'flex', gap: 8, fontSize: 12, fontWeight: 700 }}>
+                  {gin > 0 && <span style={{ color: 'var(--income)' }}>+{formatAmount(gin)}</span>}
+                  {gout > 0 && <span style={{ color: 'var(--expense)' }}>−{formatAmount(gout)}</span>}
+                </span>
+              </button>
+              {!collapsed && (
+                <div className="card">
+                  {group.entries.map((row, i) => (
+                    <HistoryRow key={`${row._src}-${row.id}`} row={row} first={i === 0} theme={theme} rules={categoryRules}
+                      settled={settledByName.get(norm(row.name))}
+                      onEdit={() => setEditing(row)} onDelete={() => setDeleting(row)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function StatPill({ label, value, color, bg, border, Icon, active, onClick }) {
-  const Tag = onClick ? 'button' : 'div';
+/* One entry: name and signed amount; kind, category and status under it; edit and delete. */
+function HistoryRow({ row, first, theme, rules, settled, onEdit, onDelete }) {
+  const k = ENTRY_KINDS[row._kind];
+  const incoming = k.sign > 0;
+  const debt = isDebtKind(row._kind);
+  const wasted = row._kind === 'expense' && row.wasteAmount > 0;
+
+  let detail = null;
+  if (row._kind === 'expense') {
+    const cat = categoryOf(row, rules);
+    detail = <span className="hist-cat" style={{ color: categoryColor(cat, theme) }}><CategoryIcon category={cat} size={11} />{categoryMeta(cat).label}</span>;
+  } else if (row._kind === 'savings') {
+    detail = <span className="hist-cat">{getSavingsType(row.savingsType).label}{row.platform ? ` · ${row.platform}` : ''}</span>;
+  } else if (row.note) {
+    detail = <span className="hist-cat">{row.note}</span>;
+  }
+
+  const status = debt
+    ? (settled ? { label: 'Settled', Icon: CheckCircle2, color: 'var(--income)' } : { label: 'Open', Icon: Clock3, color: 'var(--borrowed)' })
+    : { label: 'Done', Icon: CheckCircle2, color: 'var(--text-muted)' };
+
   return (
-    <Tag onClick={onClick} aria-pressed={onClick ? !!active : undefined} style={{
-      padding: '5px 10px', borderRadius: 20,
-      background: bg, border: `${active ? 2 : 1}px solid ${active ? color : border}`,
-      display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
-      cursor: onClick ? 'pointer' : 'default', fontFamily: 'inherit',
-      boxShadow: active ? `0 0 0 2px ${bg}` : 'none',
-    }}>
-      {Icon && <Icon size={11} style={{ color }} />}
-      <span style={{ fontSize: 11, fontWeight: 600, color }}>{label}:</span>
-      <span style={{ fontSize: 11, fontWeight: 800, color }}>{formatAmount(value)}</span>
-    </Tag>
+    <div className="hist-row" role="button" tabIndex={0} onClick={onEdit}
+      onKeyDown={(e) => { if (e.key === 'Enter') onEdit(); }}
+      style={{ borderTop: first ? 'none' : '1px solid var(--border)', borderLeftColor: `var(--${k.tone})` }}>
+      <span className="hist-name">{row.name}</span>
+      <span className="hist-amount" style={{ color: incoming ? 'var(--income)' : 'var(--expense)' }}>
+        <EntryAmount entry={row} prefix={incoming ? '+' : '−'} />
+      </span>
+      <span className="hist-meta">
+        <span className="hist-kind" style={{ color: `var(--${k.tone})`, background: `var(--${k.tone}-bg)`, borderColor: `var(--${k.tone}-border, var(--border))` }}>{k.label}</span>
+        {detail}
+        {wasted && <span className="hist-cat" style={{ color: 'var(--expense)' }}><Flame size={10} />{formatAmount(row.wasteAmount)} wasted</span>}
+        <span className="hist-status" style={{ color: status.color }} title={debt ? (settled ? 'This person’s balance is back to zero' : 'Still to be returned') : 'Recorded'}>
+          <status.Icon size={11} />{status.label}
+        </span>
+      </span>
+      <span className="hist-actions">
+        <button aria-label={`Edit ${row.name}`} title="Edit" className="hist-btn hist-edit" onClick={(e) => { e.stopPropagation(); onEdit(); }}><Pencil size={13} /></button>
+        <button aria-label={`Delete ${row.name}`} title="Delete" className="hist-btn hist-del" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Trash2 size={13} /></button>
+      </span>
+    </div>
   );
 }
 

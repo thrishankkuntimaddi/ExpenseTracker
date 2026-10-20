@@ -10,7 +10,10 @@
 // When you're looking at an earlier month, the date starts on that month.
 // The currency sign on the amount is a picker: abroad, switch it once and
 // this device keeps entering in that currency until you switch back.
-import { createContext, useContext, useMemo, useState } from 'react';
+// On a phone, swiping sideways switches the kind. What you typed (what it
+// was for, the amount) comes along, so picking the wrong kind costs nothing.
+// Expense also takes several items at once: "coffee 250 water 50 tea 150".
+import { createContext, useContext, useMemo, useRef, useState } from 'react';
 import { X, PenLine, Calendar, User, StickyNote, Flag } from 'lucide-react';
 import { ADD_KINDS } from '../app/pages';
 import Portal from './Portal';
@@ -20,8 +23,8 @@ import { useShell } from '../app/shellContext';
 import { generateId } from '../utils/storage';
 import { formatAmount, todayInputValue, dateInputToISO, isoToMonth } from '../utils/dateHelpers';
 import { incomeKindFlags } from '../utils/finance';
-import { inferCategory, EMPTY_RULES } from '../utils/categories';
-import { parseQuickEntry } from '../utils/smartInput';
+import { inferCategory, categoryMeta, EMPTY_RULES } from '../utils/categories';
+import { parseQuickEntry, parseQuickEntries } from '../utils/smartInput';
 import { SAVINGS_TYPES, getSavingsType } from '../utils/typeConfig';
 import { DEBT_MOVES, DEBT_MOVE_KEYS, debtEntryFields, debtLedger } from '../utils/debts';
 import { isGoalOpen } from '../utils/goals';
@@ -31,6 +34,31 @@ import { rateBetween } from '../services/rates';
 /* The currency this device enters in (sticky: set it once when you travel). */
 const EntryCurrency = createContext({ currency: 'INR', setCurrency: () => {} });
 const useEntryCurrency = () => useContext(EntryCurrency);
+
+/* What's been typed so far, shared by the kinds: switching Expense → Income
+   keeps the name and the amount. Cleared after each save. */
+const Draft = createContext(null);
+function useDraft(field, initial = '') {
+  const draft = useContext(Draft);
+  const [value, setValue] = useState(() => draft?.get(field) || initial);
+  const set = (v) => { setValue(v); draft?.set(field, v); };
+  return [value, set];
+}
+
+/* Phone: a sideways swipe on the form switches the kind — but never one that
+   starts in a text field (moving the cursor), on the amount, or in a row
+   that scrolls sideways (sources, people, goals). */
+const SWIPE_MIN = 60, SWIPE_MS = 600;
+function swipeIgnored(target, root) {
+  if (target?.closest?.('input, textarea, select, [data-no-swipe-kind]')) return true;
+  for (let n = target; n && n !== root; n = n.parentElement) {
+    const ox = getComputedStyle(n).overflowX;
+    if ((ox === 'auto' || ox === 'scroll') && n.scrollWidth > n.clientWidth + 1) return true;
+  }
+  return false;
+}
+const SWIPED_KEY = 'et_add_swiped';
+const hasSwiped = () => { try { return localStorage.getItem(SWIPED_KEY) === '1'; } catch { return true; } };
 
 /** Today, or the last day of the month being viewed if that's earlier. */
 function defaultDate(month) {
@@ -58,11 +86,12 @@ export default function AddSheet({ initialKind = 'expense', options = {}, onClos
           <div className="sheet-grip" style={{ width: 36, height: 4, borderRadius: 99, background: 'var(--border-dark)', margin: '0 auto 10px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>Add</span>
+            {!shell?.desktop && !hasSwiped() && <span id="add-swipe-hint" style={{ flex: 1, textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>← swipe to switch →</span>}
             <button onClick={onClose} aria-label="Close" style={{ width: 30, height: 30, border: 'none', background: 'var(--surface2)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <X size={15} />
             </button>
           </div>
-          <AddPanel initialKind={initialKind} options={options} onSaved={saved} {...rest} />
+          <AddPanel initialKind={initialKind} options={options} onSaved={saved} swipe={!shell?.desktop} {...rest} />
         </div>
       </div>
       <style>{`
@@ -78,28 +107,56 @@ export default function AddSheet({ initialKind = 'expense', options = {}, onClos
 const AutoFocus = createContext(true);
 
 /** The kind tabs + the form. `inline`: lives on a page — stays open and clears after each save. */
-export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd, onAddIncome, inline = false, compact = false, ...data }) {
+export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd, onAddIncome, inline = false, compact = false, swipe = false, ...data }) {
   const shell = useShell();
   const [kind, setKindState] = useState(initialKind === 'person' ? 'debt' : initialKind);
   const [round, setRound] = useState(0);              // inline: a fresh form after each save
   const [engaged, setEngaged] = useState(!inline);
-  const setKind = (k) => { setEngaged(true); setKindState(k); };
-  const saved = (entry) => { onSaved?.(entry); if (inline) { setEngaged(true); setRound((r) => r + 1); } };
+  const [slide, setSlide] = useState(null);           // 'left' | 'right': how the new form comes in
+  const draftRef = useRef({});
+  const draft = useMemo(() => ({ get: (f) => draftRef.current[f], set: (f, v) => { draftRef.current[f] = v; } }), []);
+  const setKind = (k, dir = null) => { setEngaged(true); setSlide(dir); setKindState(k); };
+  const saved = (entry) => { draftRef.current = {}; onSaved?.(entry); if (inline) { setEngaged(true); setRound((r) => r + 1); } };
   const common = { onSaved: saved, startDate: defaultDate(shell?.month) };
   const key = `${kind}-${round}`;
   const [currency, setCurrencyState] = useState(entryCurrency.get);
   const setCurrency = (c) => { setCurrencyState(c); entryCurrency.set(c); };
   const cur = useMemo(() => ({ currency, setCurrency }), [currency]);
 
+  // Phone: swipe left → next kind, right → previous
+  const touch = useRef(null);
+  const swipeHandlers = swipe ? {
+    onTouchStart: (e) => {
+      touch.current = null;
+      if (e.touches.length !== 1 || swipeIgnored(e.target, e.currentTarget)) return;
+      touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, at: Date.now() };
+    },
+    onTouchEnd: (e) => {
+      const s = touch.current;
+      touch.current = null;
+      if (!s || Date.now() - s.at > SWIPE_MS) return;
+      const dx = e.changedTouches[0].clientX - s.x, dy = e.changedTouches[0].clientY - s.y;
+      if (Math.abs(dx) < SWIPE_MIN || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      const i = ADD_KINDS.findIndex((k) => k.key === kind);
+      const next = ADD_KINDS[i + (dx < 0 ? 1 : -1)];
+      if (!next) return;
+      try { localStorage.setItem(SWIPED_KEY, '1'); } catch { /* storage unavailable */ }
+      setKind(next.key, dx < 0 ? 'left' : 'right');
+    },
+    onTouchCancel: () => { touch.current = null; },
+  } : {};
+
   return (
     <EntryCurrency.Provider value={cur}>
     <AutoFocus.Provider value={engaged}>
-    <div className={`add-panel${compact ? ' add-compact' : ''}`}>
+    <Draft.Provider value={draft}>
+    <div className={`add-panel${compact ? ' add-compact' : ''}`} {...swipeHandlers}>
       <div role="tablist" aria-label="What are you adding?" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: compact ? 12 : 16 }}>
-        {ADD_KINDS.map(({ key: k, label, Icon, color, bg }) => {
+        {ADD_KINDS.map(({ key: k, label, Icon, color, bg }, i) => {
           const on = kind === k;
+          const at = ADD_KINDS.findIndex((x) => x.key === kind);
           return (
-            <button key={k} id={`add-kind-${k}`} role="tab" aria-selected={on} onClick={() => setKind(k)} className="add-kind"
+            <button key={k} id={`add-kind-${k}`} role="tab" aria-selected={on} onClick={() => setKind(k, i > at ? 'left' : i < at ? 'right' : null)} className="add-kind"
               style={{ padding: compact ? '8px 4px' : '10px 4px 8px', border: `1.5px solid ${on ? color : 'var(--border)'}`, background: on ? bg : 'var(--surface2)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: compact ? 'row' : 'column', alignItems: 'center', justifyContent: 'center', gap: compact ? 7 : 5 }}>
               <Icon size={compact ? 16 : 18} style={{ color: on ? color : 'var(--text-secondary)' }} />
               <span style={{ fontSize: compact ? 12.5 : 11, fontWeight: 700, color: on ? color : 'var(--text-secondary)' }}>{label}</span>
@@ -108,11 +165,14 @@ export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd
         })}
       </div>
 
-      {kind === 'expense' && <ExpenseForm key={key} {...common} {...data} onAdd={onAdd} />}
-      {kind === 'income' && <IncomeForm key={key} {...common} income={data.income} onAddIncome={onAddIncome} />}
-      {kind === 'debt' && <DebtForm key={key} {...common} {...data} onAdd={onAdd} onAddIncome={onAddIncome} initialMove={options.move} initialName={options.name} />}
-      {kind === 'savings' && <SavingsForm key={key} {...common} {...data} onAdd={onAdd} initialGoal={options.goalId} />}
+      <div key={key} className={`add-form-wrap${slide ? ` add-slide-${slide}` : ''}`}>
+        {kind === 'expense' && <ExpenseForm {...common} {...data} onAdd={onAdd} />}
+        {kind === 'income' && <IncomeForm {...common} income={data.income} onAddIncome={onAddIncome} />}
+        {kind === 'debt' && <DebtForm {...common} {...data} onAdd={onAdd} onAddIncome={onAddIncome} initialMove={options.move} initialName={options.name} />}
+        {kind === 'savings' && <SavingsForm {...common} {...data} onAdd={onAdd} initialGoal={options.goalId} />}
+      </div>
     </div>
+    </Draft.Provider>
     </AutoFocus.Provider>
     </EntryCurrency.Provider>
   );
@@ -217,22 +277,34 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
   const rules = settings?.categoryRules ?? EMPTY_RULES;
   const { currency } = useEntryCurrency();
   const [mode, setMode] = useState('spent');
-  const [amount, setAmount] = useState('');
-  const [name, setName] = useState('');
+  const [amount, setAmount] = useDraft('amount');
+  const [name, setName] = useDraft('name');
   const [category, setCategory] = useState(null);
   const [dateInput, setDateInput] = useState(startDate);
   const givenTo = useMemo(() => [...new Set(transactions.filter((t) => t.type === 'person' && t.direction === 'given_gift').map((t) => t.name?.trim()).filter(Boolean))], [transactions]);
 
-  // "chai 20" typed in the name also works
-  const parsed = !amount ? parseQuickEntry(name) : null;
+  // "chai 20" typed in the name also works — and "coffee 250 water 50 tea 150"
+  // adds three expenses, each with its own category
+  const many = !amount && mode === 'spent' ? parseQuickEntries(name) : [];
+  const multi = many.length > 1;
+  const parsed = !amount && !multi ? parseQuickEntry(name) : null;
   const finalName = (parsed?.name ?? name).trim();
   const finalAmount = parsed?.amount ?? Number(amount);
   const finalCurrency = parsed?.currency ?? currency;
   const suggested = mode === 'spent' ? inferCategory(finalName, rules) : null;
-  const can = !!finalName && amountOk(finalAmount);
+  const can = multi || (!!finalName && amountOk(finalAmount));
+  const manyItems = multi ? many.map((m) => ({ ...m, name: m.name.charAt(0).toUpperCase() + m.name.slice(1), currency: m.currency ?? currency, category: inferCategory(m.name, rules) })) : [];
+  const manyCurrency = new Set(manyItems.map((m) => m.currency)).size === 1 ? manyItems[0]?.currency : null;
+  const manyTotal = manyItems.reduce((s, m) => s + m.amount, 0);
 
   function save() {
     if (!can) return;
+    if (multi) {
+      const at = stamp(dateInput);
+      manyItems.forEach((m) => onAdd({ id: generateId(), type: 'expense', name: m.name, amount: m.amount, currency: m.currency, category: m.category, ...at }));
+      onSaved({ type: 'expense', name: `${manyItems.length} expenses`, amount: manyTotal, currency: manyItems[0].currency, ...(manyCurrency ? {} : { toast: `Added ${manyItems.length} expenses` }), ...at });
+      return;
+    }
     const base = { id: generateId(), name: finalName.charAt(0).toUpperCase() + finalName.slice(1), amount: finalAmount, currency: finalCurrency, ...stamp(dateInput) };
     const entry = mode === 'given'
       ? { ...base, type: 'person', direction: 'given_gift' }
@@ -247,11 +319,22 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
       <Choice idPrefix="expense-mode" value={mode} onChange={setMode} tone="expense" columns={2}
         options={[{ key: 'spent', label: 'Spent' }, { key: 'given', label: 'Given to someone', tone: 'given' }]} />
       <TextField id="add-name" first Icon={mode === 'given' ? User : PenLine} value={name} onChange={setName}
-        onEnter={() => (parsed ? save() : document.getElementById('add-amount')?.focus())}
-        placeholder={mode === 'given' ? 'Given to whom? (no return expected)' : 'What for? — e.g. Groceries, Petrol'} list={mode === 'given' ? 'add-given-to' : undefined} />
+        onEnter={() => (parsed || multi ? save() : document.getElementById('add-amount')?.focus())}
+        placeholder={mode === 'given' ? 'Given to whom? (no return expected)' : 'What for? — or “coffee 250 water 50”'} list={mode === 'given' ? 'add-given-to' : undefined} />
       <AmountField value={amount} onChange={setAmount} tone={mode === 'given' ? 'given' : 'expense'} onEnter={save} shown={parsed?.currency} />
       <datalist id="add-given-to">{givenTo.map((n) => <option key={n} value={n} />)}</datalist>
-      {mode === 'spent' && (
+      {multi && (
+        <div id="add-many" className="add-many" aria-live="polite">
+          {manyItems.map((m, i) => (
+            <div key={i} className="add-many-row">
+              <span style={{ flex: 1, minWidth: 0, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{categoryMeta(m.category).label}</span>
+              <span style={{ fontWeight: 800, color: 'var(--expense)', fontVariantNumeric: 'tabular-nums' }}>{formatAmount(m.amount, m.currency)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {mode === 'spent' && !multi && (
         <div style={{ marginBottom: 12 }}>
           <CategoryPicker size="sm" value={category ?? suggested} suggested={suggested} onChange={setCategory} theme={theme} />
         </div>
@@ -264,7 +347,8 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
       <div className="add-foot">
         <DateField value={dateInput} onChange={setDateInput} />
         <SaveButton id="btn-save-entry" disabled={!can} tone={mode === 'given' ? 'given' : 'expense'} onClick={save}>
-          {can ? `Add ${mode === 'given' ? 'gift' : 'expense'} · ${formatAmount(finalAmount, finalCurrency)}` : mode === 'given' ? 'Add what you gave' : 'Add expense'}
+          {multi ? `Add ${manyItems.length} expenses${manyCurrency ? ` · ${formatAmount(manyTotal, manyCurrency)}` : ''}`
+            : can ? `Add ${mode === 'given' ? 'gift' : 'expense'} · ${formatAmount(finalAmount, finalCurrency)}` : mode === 'given' ? 'Add what you gave' : 'Add expense'}
         </SaveButton>
       </div>
     </div>
@@ -276,8 +360,8 @@ const INCOME_SOURCES = ['Salary', 'Parents', 'Freelance', 'Interest', 'Refund', 
 
 function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
   const { currency } = useEntryCurrency();
-  const [amount, setAmount] = useState('');
-  const [name, setName] = useState('');
+  const [amount, setAmount] = useDraft('amount');
+  const [name, setName] = useDraft('name');
   const [dateInput, setDateInput] = useState(startDate);
   // Your usual sources first
   const sources = useMemo(() => {
@@ -320,8 +404,8 @@ function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
 function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved, startDate, initialMove = 'lent', initialName = '' }) {
   const { currency } = useEntryCurrency();
   const [move, setMove] = useState(DEBT_MOVES[initialMove] ? initialMove : 'lent');
-  const [amount, setAmount] = useState('');
-  const [name, setName] = useState(initialName);
+  const [amount, setAmount] = useDraft('amount');
+  const [name, setName] = useDraft('name', initialName);
   const [note, setNote] = useState('');
   const [dateInput, setDateInput] = useState(startDate);
   const ledger = useMemo(() => debtLedger(transactions, income), [transactions, income]);
@@ -378,9 +462,9 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
 function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
   const { currency } = useEntryCurrency();
   const goals = (settings?.goals ?? []).filter(isGoalOpen);
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useDraft('amount');
   const [savingsType, setSavingsType] = useState('cash');
-  const [name, setName] = useState('');
+  const [name, setName] = useDraft('name');
   const [platform, setPlatform] = useState('');
   const [goalId, setGoalId] = useState(goals.some((g) => g.id === initialGoal) ? initialGoal : '');
   const goal = goals.find((g) => g.id === goalId);
