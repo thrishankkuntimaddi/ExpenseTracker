@@ -1,7 +1,9 @@
 // ─── Updates ─────────────────────────────────────────────────────
 // Nobody should have to reinstall to get fixes:
 //   web      the service worker picks up each deploy (checked on open, when
-//            the tab comes back, and every 30 min) and reloads once.
+//            the tab comes back, and every 30 min) and refreshes the offline
+//            copy in the background. The page is never reloaded mid-use; the
+//            new version runs the next time the app is opened.
 //   android  over-the-air: every push to main publishes the app's web bundle
 //            next to the website (/app/update.json + bundle zip). The app
 //            downloads it in the background; it switches when the app is next
