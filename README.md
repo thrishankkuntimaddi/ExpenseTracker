@@ -224,7 +224,7 @@ You install once; after that every platform updates itself.
 
 | Platform | How it works |
 |---|---|
-| **Web** | Every push to `main` deploys the site. The service worker checks on open, when the tab comes back and every 30 minutes, then reloads once onto the new version. |
+| **Web** | Every push to `main` deploys the app to Firebase Hosting. The page always loads its newest code when opened; the service worker checks on open, when the tab comes back and every 30 minutes, and refreshes the offline copy in the background. The page is never reloaded while you use it — the new version runs the next time you open the app. |
 | **Android** | Over the air: each deploy also publishes the app's web bundle (`/app/update.json` + a zip with a SHA-256 checksum) next to the website. The app checks on launch, on return and every 30 minutes, downloads in the background and switches on **Restart**, when it goes to the background, or during the next splash. A bundle that doesn't start is rolled back automatically. When a version needs new *native* code (`expensetracker.minNativeVersion` in `package.json`, now **3.11.0**), older apps stop receiving bundles and say *"install the new app"* once, with a link to the APK. |
 | **Desktop** | Tauri's signed updater reads `latest.json` from the newest GitHub release, downloads in the background and offers **Restart to update**. Updates without a valid minisign signature are refused. |
 
@@ -246,7 +246,7 @@ After an update the app says *"Updated to vX"* once.
 | **Exchange rates** | fawazahmed0/exchange-api (jsDelivr / Cloudflare Pages) + Frankfurter (ECB) |
 | **App lock** | Web Crypto PBKDF2-SHA256, WebAuthn platform authenticators, Android BiometricPrompt |
 | **PWA** | Web App Manifest + a custom service worker (offline cache, push, notification taps) |
-| **Build & deploy** | Vite (`/ExpenseTracker/` for the site, `--mode native` for the apps); GitHub Actions → GitHub Pages (site + Android OTA) and GitHub Releases (APK, DMG, EXE, AppImage, `latest.json`) |
+| **Build & deploy** | Vite (`/` for the web app, `--mode native` for the apps); GitHub Actions → Firebase Hosting (web app), GitHub Pages (product page, privacy policy, Android OTA, desktop update manifest, mirrored installers) and GitHub Releases (APK, DMG, EXE, AppImage, `latest.json`) |
 | **Quality** | ESLint 9 (flat config); Vitest — unit tests for money maths, currencies, PIN rules, categories, budget, recurring, report, debts, goals, dates, import/export, backups, and server-render smoke tests of every screen |
 
 ---
@@ -342,7 +342,7 @@ npm install
 cp .env.example .env     # fill in VITE_FIREBASE_* from Firebase Console → Project settings → Your apps
 ```
 
-For the GitHub Pages deploy, put the same values in the repository's **Settings → Secrets and variables → Actions** (Variables or Secrets). The API key must be **restricted by HTTP referrer** and the project should use **App Check** — see [SECURITY.md](SECURITY.md). The build refuses to publish without a config (`scripts/check-config.mjs`).
+For the CI deploy, put the same values in the repository's **Settings → Secrets and variables → Actions** (Variables or Secrets). The API key must be **restricted by HTTP referrer** and the project should use **App Check** — see [SECURITY.md](SECURITY.md). The build refuses to publish without a config (`scripts/check-config.mjs`).
 
 ### 3. Deploy Firestore rules and indexes
 
@@ -551,7 +551,7 @@ shared_trips/{tripId}               ← { name, currency?, startDate, endDate?, 
 | One PIN, many devices, no server | Salted hash in Firestore, account-wide failure counter, device commands through each device's own document |
 | Old Android WebViews drawing ghost copies of cards | Settings shows the web engine version and links to the WebView update when it's older than Chrome 130 |
 | Dates landing on the wrong day near midnight | Local-calendar date keys instead of slicing UTC ISO strings |
-| Service worker serving stale assets | Cache name stamped with the build ID; `SKIP_WAITING` + `controllerchange` reload |
+| Service worker serving stale assets | Cache name stamped with the build ID; `index.html` loaded network-first, so each open runs the newest code — no forced reloads mid-use |
 
 ---
 
@@ -568,9 +568,9 @@ shared_trips/{tripId}               ← { name, currency?, startDate, endDate?, 
 - [x] **Google Drive backup** and restore (3.11)
 - [x] **Cloud push** for website reminders, pop-up reminders on Android (3.11)
 - [x] **Shared trips** — invite by QR / link / email / friends, per-person editing, wallet balances, full share images (3.12)
-- [ ] 🧪 **Sync only what changed** since the last visit (far fewer Firestore reads) — built, *in review* on branch [`upi-and-playstore`](https://github.com/thrishankkuntimaddi/ExpenseTracker/tree/upi-and-playstore)
-- [ ] 🧪 **Auto-capture UPI and bank payments** on Android, on-device — built, *in review* on the same branch (Android 15+ hides some bank SMS from all apps)
-- [ ] 🧪 **Play Store** — store build (`.aab`) and submission kit on the same branch; listing needs the developer account
+- [ ] **Sync only what changed** since the last visit (far fewer Firestore reads)
+- [ ] **Auto-capture UPI and bank payments** on Android, on-device — Play Store build only (Android 15+ hides some bank SMS from all apps)
+- [ ] **Play Store** release — waits for the developer account and payments setup
 - [ ] Notarised Mac build
 - [ ] Shared budgets for couples and families
 - [ ] Receipt photos and OCR
