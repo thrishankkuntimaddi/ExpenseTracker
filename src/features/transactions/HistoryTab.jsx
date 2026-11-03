@@ -11,7 +11,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown, CheckCircle2, Clock3, Banknote, Wallet, ArrowDownLeft, ArrowUpRight, Undo2, Receipt, Gift, PiggyBank } from 'lucide-react';
 import { formatAmount } from '../../utils/dateHelpers';
 import MonthSwitcher from '../../components/MonthSwitcher';
-import { useViewMonth } from '../../app/month';
+import { useViewMonth, monthName } from '../../app/month';
 import { useTransactions } from '../../hooks/useTransactions';
 import { getSavingsType } from '../../utils/typeConfig';
 import { categoryOf, categoryTotals, categoryColor, categoryMeta, EMPTY_RULES } from '../../utils/categories';
@@ -28,6 +28,8 @@ import ProfileButton from '../../components/ProfileButton';
 import BackButton from '../../components/BackButton';
 import EntryAmount from '../../components/EntryAmount';
 import HelpButton from '../../tour/HelpButton';
+import BigAmount from '../../components/BigAmount';
+import { formatMoneyCompact } from '../../utils/money';
 
 const ALL_TIME = { type: 'all' };
 const norm = (s) => String(s ?? '').trim().toLowerCase();
@@ -37,7 +39,7 @@ export default function HistoryTab({
   onUpdateTransaction, onDeleteTransaction, onUpdateIncome, onDeleteIncome,
   settings, onLearnCategory,
 }) {
-  const { period: monthPeriod } = useViewMonth(selectedPeriod);
+  const { period: monthPeriod, month: viewMonth } = useViewMonth(selectedPeriod);
   const [allMonths, setAllMonths] = useState(false);   // search every month, not just the one on screen
   const [expandAll, setExpandAll] = useState(null);    // null = default: open when grouped by day
   const [search, setSearch]       = useState('');
@@ -157,8 +159,6 @@ export default function HistoryTab({
 
         {/* In / out for the month, then one chip per kind — tap to filter */}
         <div id="history-kinds" className="cat-scroll" style={{ display: 'flex', gap: 6, marginTop: 10, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none' }}>
-          <span className="hist-flow" style={{ color: 'var(--income)', background: 'var(--income-bg)' }}>In +{formatAmount(flow.in)}</span>
-          <span className="hist-flow" style={{ color: 'var(--expense)', background: 'var(--expense-bg)' }}>Out −{formatAmount(flow.out)}</span>
           {kindTotals.map(({ key, amount }) => {
             const k = ENTRY_KINDS[key];
             const on = kindFilter === key;
@@ -198,6 +198,17 @@ export default function HistoryTab({
 
       {/* Body */}
       <div id="history-list" style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 24px' }}>
+        {(flow.in > 0 || flow.out > 0) && (
+          <div className="card hist-summary" id="history-summary">
+            <div className="tl-title">Net · {searchAll ? 'all months' : monthName(viewMonth, { month: 'long', year: 'numeric' })}</div>
+            <BigAmount value={flow.in - flow.out} size={38} color={flow.in - flow.out < 0 ? 'var(--expense)' : undefined} />
+            <div className="hist-summary-strip">
+              <div><div className="tl-fig-value" style={{ color: 'var(--income)' }}>+{formatMoneyCompact(flow.in)}</div><div className="tl-fig-label">Money in</div></div>
+              <div><div className="tl-fig-value">−{formatMoneyCompact(flow.out)}</div><div className="tl-fig-label">Money out</div></div>
+              <div><div className="tl-fig-value">{periodTxns.length}</div><div className="tl-fig-label">Entries</div></div>
+            </div>
+          </div>
+        )}
         {grouped.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12 }}>
             <LayoutList size={32} style={{ color: 'var(--text-muted)' }} />
@@ -212,20 +223,20 @@ export default function HistoryTab({
           return (
             <div key={group.label} style={{ marginBottom: 14 }}>
               <button onClick={() => toggleGroup(group.label)} className="hist-group">
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                   {collapsed ? <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} />}
-                  <span style={{ fontSize: 12.5, fontWeight: 750, color: 'var(--text)' }}>{grouping === 'day' ? dayName(group.entries[0].date) : group.label}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>({group.entries.length})</span>
+                  <span className="hist-group-title">{grouping === 'day' ? dayName(group.entries[0].date) : group.label}</span>
                 </span>
-                <span style={{ display: 'flex', gap: 8, fontSize: 12, fontWeight: 700 }}>
+                <span className="hist-group-side">
                   {gin > 0 && <span style={{ color: 'var(--income)' }}>+{formatAmount(gin)}</span>}
                   {gout > 0 && <span style={{ color: 'var(--expense)' }}>−{formatAmount(gout)}</span>}
+                  <span className="hist-group-count">{group.entries.length} entr{group.entries.length === 1 ? 'y' : 'ies'}</span>
                 </span>
               </button>
               {!collapsed && (
-                <div className="card hist-card">
-                  {group.entries.map((row, i) => (
-                    <HistoryRow key={`${row._src}-${row.id}`} row={row} first={i === 0} theme={theme} rules={categoryRules}
+                <div className="hist-cards">
+                  {group.entries.map((row) => (
+                    <HistoryRow key={`${row._src}-${row.id}`} row={row} theme={theme} rules={categoryRules}
                       settled={settledByName.get(norm(row.name))}
                       onEdit={() => setEditing(row)} onDelete={() => setDeleting(row)} />
                   ))}
@@ -243,7 +254,7 @@ export default function HistoryTab({
    kind and category; on the right the signed amount, its status, edit and delete. */
 const KIND_ICON = { income: Wallet, borrowed: ArrowDownLeft, got_back: Undo2, billing: Receipt, given: Gift, lent: ArrowUpRight, paid_back: Undo2, savings: PiggyBank, withdrawal: Banknote };
 
-function HistoryRow({ row, first, theme, rules, settled, onEdit, onDelete }) {
+function HistoryRow({ row, theme, rules, settled, onEdit, onDelete }) {
   const k = ENTRY_KINDS[row._kind];
   const incoming = k.sign > 0;
   const neutral = k.sign === 0;            // cash withdrawn: account → wallet
@@ -263,10 +274,13 @@ function HistoryRow({ row, first, theme, rules, settled, onEdit, onDelete }) {
     ? (settled ? { label: 'Settled', Icon: CheckCircle2, color: 'var(--income)' } : { label: 'Open', Icon: Clock3, color: 'var(--borrowed)' })
     : { label: 'Done', Icon: CheckCircle2, color: 'var(--text-muted)' };
 
+  // A card per entry: a colour edge for what it is, its icon, what it was
+  // for with kind · category beneath; the signed amount large on the right
+  // with its status, edit and delete
+  const edge = cat ? catColor : `var(--${k.tone})`;
   return (
-    <div className="hist-row" role="button" tabIndex={0} onClick={onEdit}
-      onKeyDown={(e) => { if (e.key === 'Enter') onEdit(); }}
-      style={{ borderTop: first ? 'none' : '1px solid var(--border)' }}>
+    <div className="hist-row" role="button" tabIndex={0} onClick={onEdit} style={{ '--edge': edge }}
+      onKeyDown={(e) => { if (e.key === 'Enter') onEdit(); }}>
       <span className="hist-tile" aria-hidden
         style={cat ? { color: catColor, background: `${catColor}1f` } : { color: `var(--${k.tone})`, background: `var(--${k.tone}-bg)` }}>
         {cat ? <CategoryIcon category={cat} size={17} /> : <KindIcon size={17} />}
@@ -281,7 +295,7 @@ function HistoryRow({ row, first, theme, rules, settled, onEdit, onDelete }) {
         </span>
       </span>
       <span className="hist-side">
-        <span className="hist-amount" style={{ color: neutral ? 'var(--text-secondary)' : incoming ? 'var(--income)' : 'var(--expense)' }}>
+        <span className="hist-amount" style={{ color: neutral ? 'var(--text-secondary)' : incoming ? 'var(--income)' : 'var(--text)' }}>
           <EntryAmount entry={row} prefix={neutral ? '' : incoming ? '+' : '−'} />
         </span>
         <span className="hist-foot">

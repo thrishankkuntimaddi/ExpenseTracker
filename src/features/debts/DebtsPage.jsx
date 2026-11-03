@@ -4,6 +4,7 @@
 // income) closes the debt. Gifts ("given, no return expected") are
 // spending and never listed. Debts aren't monthly: they carry over until
 // settled, and settled people stay in their own list for the record.
+import BigAmount from '../../components/BigAmount';
 import { useMemo, useState } from 'react';
 import { Plus, Search, ChevronRight, ChevronDown, ArrowLeft, Pencil, Trash2, Check, X, ArrowLeftRight } from 'lucide-react';
 import { PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill } from '../../components/Page';
@@ -219,7 +220,7 @@ function PersonDebt({ person, onBack, onAdd, onUpdate, onDelete }) {
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
             {p.settled ? 'All settled' : p.net > 0 ? `${p.name} owes you` : `You owe ${p.name}`}
           </div>
-          <div style={{ fontSize: 30, fontWeight: 800, color: `var(--${tone})`, letterSpacing: '-0.03em', marginTop: 2 }}>{formatAmount(Math.abs(p.net))}</div>
+          <div style={{ marginTop: 8 }}><BigAmount value={Math.abs(p.net)} size={40} color={`var(--${tone})`} /></div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
             <Mini label="Lent" value={p.lent} />
             <Mini label="Got back" value={p.gotBack} />

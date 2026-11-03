@@ -3,6 +3,7 @@
 // you want to clear it. Pay from your salary or from savings (an FD broken),
 // any amount, monthly or by a date. Never listed in Debts: nobody lent it to
 // you. Goals (Savings) are the other half: the future you're saving for.
+import BigAmount from '../../components/BigAmount';
 import { useMemo, useState } from 'react';
 import { Plus, HeartHandshake, ArrowUp, ArrowDown, Pencil, ChevronDown, Check, Trash2, Flag, ChevronRight, RotateCcw, AlertTriangle, PiggyBank, Wallet, Bell } from 'lucide-react';
 import { PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill } from '../../components/Page';
@@ -79,7 +80,7 @@ export default function ResponsibilitiesPage({ transactions = [], settings, onPa
           <>
             <div className="card resp-summary" style={{ padding: 16 }}>
               <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Left to clear</span>
-              <div id="resp-left" style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', color: `var(--${TONE})`, margin: '2px 0 0' }}>{formatAmount(summary.remaining)}</div>
+              <div id="resp-left" style={{ margin: '8px 0 0' }}><BigAmount value={summary.remaining} size={40} color={`var(--${TONE})`} /></div>
               <div style={{ height: 6, borderRadius: 99, background: 'var(--surface2)', marginTop: 10, overflow: 'hidden' }}>
                 <div style={{ width: `${summary.total > 0 ? Math.min(100, (summary.paid / summary.total) * 100) : 0}%`, height: '100%', background: `var(--${TONE})`, borderRadius: 99 }} />
               </div>

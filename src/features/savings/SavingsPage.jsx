@@ -2,6 +2,7 @@
 // Where the money you put away goes: the month on screen vs income (savings
 // rate), all-time by kind (SIP, mutual fund, trading, cash …), six months,
 // your goals (where each one's money is kept), and that month's entries.
+import BigAmount from '../../components/BigAmount';
 import { useMemo, useState } from 'react';
 import { Plus, PiggyBank } from 'lucide-react';
 import { PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill } from '../../components/Page';
@@ -70,7 +71,7 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
         ) : (
           <div className="card" style={{ padding: 16 }}>
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Saved in {monthName(monthKey, { month: 'long' })}</span>
-            <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--savings)', margin: '2px 0 0' }}>{formatAmount(thisMonth)}</div>
+            <div style={{ margin: '8px 0 0' }}><BigAmount value={thisMonth} size={40} color="var(--savings)" /></div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
               <Figure label="Savings rate" value={rate != null ? `${rate}% of income` : '—'} />
               <Figure label={takenOut > 0 ? 'Saved in total (after use)' : 'Saved in total'} value={formatAmount(allTime)} />

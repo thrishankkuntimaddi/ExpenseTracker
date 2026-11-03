@@ -25,19 +25,19 @@ export function Section({ title, children }) {
 function RowHeader({ title, Icon, summary, color, chevron = true, rotate = false }) {
   return (
     <>
-      <div className="settings-icon" style={{ width: 32, height: 32, borderRadius: 9, background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <div className="settings-icon" style={{ width: 36, height: 36, borderRadius: 11, background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <Icon size={16} style={{ color: '#fff' }} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{title}</div>
-        {summary != null && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{summary}</div>}
+        <div style={{ fontSize: 14.5, fontWeight: 750, color: 'var(--text)' }}>{title}</div>
+        {summary != null && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{summary}</div>}
       </div>
       {chevron && <ChevronRight size={15} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: rotate ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />}
     </>
   );
 }
 
-const rowStyle = { width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' };
+const rowStyle = { width: '100%', display: 'flex', alignItems: 'center', gap: 13, padding: '14px 16px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' };
 
 /* One setting. `color` tints its icon tile. */
 export function Group({ id, title, Icon, summary, color = 'var(--accent)', children }) {
