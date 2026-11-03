@@ -31,8 +31,8 @@ export default function BalanceTimeline({ transactions = [], incomeWithCarry = [
   const shown = point ? point.value : today;
   const change = !point && tl.lastMonth != null ? Math.round((today - tl.lastMonth) * 100) / 100 : null;
   const up = (change ?? 0) >= 0;
-  // On the app's own indigo → violet glass card: a white line that glows into mint
-  const line = '#FFFFFF';
+  // On the ink → teal hero card: a mint line
+  const line = '#CCFBF1';
   const last = tl.points[tl.points.length - 1];
 
   return (
@@ -60,13 +60,12 @@ export default function BalanceTimeline({ transactions = [], incomeWithCarry = [
               onMouseMove={(s) => { const i = Number(s?.activeTooltipIndex); setHover(Number.isFinite(i) ? i : null); }}>
               <defs>
                 <linearGradient id={`tl-${gid}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity={dark ? 0.22 : 0.3} />
-                  <stop offset="100%" stopColor="#FFFFFF" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#5EEAD4" stopOpacity={dark ? 0.22 : 0.26} />
+                  <stop offset="100%" stopColor="#5EEAD4" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id={`tls-${gid}`} x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#C4B5FD" />
-                  <stop offset="70%" stopColor="#FFFFFF" />
-                  <stop offset="100%" stopColor="#6EE7B7" />
+                  <stop offset="0%" stopColor="#99F6E4" />
+                  <stop offset="100%" stopColor="#5EEAD4" />
                 </linearGradient>
               </defs>
               <XAxis dataKey="key" hide />
@@ -74,7 +73,7 @@ export default function BalanceTimeline({ transactions = [], incomeWithCarry = [
               <Tooltip content={() => null} cursor={{ stroke: 'rgba(255,255,255,.55)', strokeWidth: 1, strokeDasharray: '3 4' }} />
               <Area type="monotone" dataKey="value" stroke={`url(#tls-${gid})`} strokeWidth={3} className="tl-line" fill={`url(#tl-${gid})`} isAnimationActive={false}
                 activeDot={{ r: 6, fill: line, stroke: 'rgba(255,255,255,.35)', strokeWidth: 6 }} dot={false} />
-              {hover == null && last && <ReferenceDot x={last.key} y={last.value} r={5} fill="#6EE7B7" stroke="rgba(110,231,183,.35)" strokeWidth={7} />}
+              {hover == null && last && <ReferenceDot x={last.key} y={last.value} r={5} fill="#FFFFFF" stroke="rgba(94,234,212,.45)" strokeWidth={7} />}
             </AreaChart>
           </ResponsiveContainer>
         </div>
