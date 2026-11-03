@@ -43,7 +43,7 @@ const COIN = {
   gold: ['#fff6cf', '#ffd45e', '#e6a52a', '#9c6514', '#8a5a10'],
   green: ['#e9fff4', '#7ef0bd', '#26b97d', '#0f6b47', '#0b5236'],
   blue: ['#eef4ff', '#9cc2ff', '#3f7fe8', '#1d4597', '#16336f'],
-  violet: ['#f3eeff', '#c3b2ff', '#7a5cf0', '#41279b', '#311d78'],
+  violet: ['#fff4ec', '#fdc9a5', '#e0702f', '#9a3412', '#7c2d12'],   // debts: rust (the name stays for older callers)
 };
 const rectOf = (x) => (!x ? null : typeof x === 'string' ? document.querySelector(x)?.getBoundingClientRect() : x.getBoundingClientRect ? x.getBoundingClientRect() : x);
 const visible = (r) => r && r.width > 0 && r.bottom > 0 && r.top < window.innerHeight;

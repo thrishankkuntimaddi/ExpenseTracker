@@ -31,8 +31,8 @@ export default function BalanceTimeline({ transactions = [], incomeWithCarry = [
   const shown = point ? point.value : today;
   const change = !point && tl.lastMonth != null ? Math.round((today - tl.lastMonth) * 100) / 100 : null;
   const up = (change ?? 0) >= 0;
-  // On the ink → teal hero card: a mint line
-  const line = '#CCFBF1';
+  // A blue line on the light hero card (lighter blue in the dark theme)
+  const line = dark ? '#60A5FA' : '#2563EB';
   const last = tl.points[tl.points.length - 1];
 
   return (
@@ -42,9 +42,9 @@ export default function BalanceTimeline({ transactions = [], incomeWithCarry = [
           <div className="tl-title">{point ? `Remaining balance · ${fmtDay(point.key)}` : 'Remaining balance · today'}</div>
           <BigAmount value={shown} />
           {point ? (
-            <div className="tl-change" style={{ color: 'rgba(255,255,255,.75)' }}><span className="tl-change-sub" style={{ marginLeft: 0 }}>What was left that day, after everything spent so far that month</span></div>
+            <div className="tl-change" style={{ color: 'var(--hero-muted)' }}><span className="tl-change-sub" style={{ marginLeft: 0 }}>What was left that day, after everything spent so far that month</span></div>
           ) : change != null ? (
-            <div className="tl-change" style={{ color: change === 0 ? 'rgba(255,255,255,.7)' : up ? '#6EE7B7' : '#FECDD3' }}>
+            <div className="tl-change" style={{ color: change === 0 ? 'var(--hero-muted)' : up ? 'var(--hero-up)' : 'var(--hero-down)' }}>
               {change !== 0 && (up ? <ArrowUp size={16} strokeWidth={3} /> : <ArrowDown size={16} strokeWidth={3} />)}
               <span>{formatMoneyCompact(Math.abs(change))}</span>
               <span className="tl-change-sub">{change === 0 ? 'same as' : up ? 'more than' : 'less than'} this day last month ({formatMoneyCompact(tl.lastMonth)})</span>
@@ -60,20 +60,20 @@ export default function BalanceTimeline({ transactions = [], incomeWithCarry = [
               onMouseMove={(s) => { const i = Number(s?.activeTooltipIndex); setHover(Number.isFinite(i) ? i : null); }}>
               <defs>
                 <linearGradient id={`tl-${gid}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#5EEAD4" stopOpacity={dark ? 0.22 : 0.26} />
-                  <stop offset="100%" stopColor="#5EEAD4" stopOpacity={0} />
+                  <stop offset="0%" stopColor={line} stopOpacity={dark ? 0.24 : 0.16} />
+                  <stop offset="100%" stopColor={line} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id={`tls-${gid}`} x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#99F6E4" />
-                  <stop offset="100%" stopColor="#5EEAD4" />
+                  <stop offset="0%" stopColor={dark ? '#93C5FD' : '#60A5FA'} />
+                  <stop offset="100%" stopColor={line} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="key" hide />
               <YAxis hide domain={['dataMin', 'dataMax']} />
-              <Tooltip content={() => null} cursor={{ stroke: 'rgba(255,255,255,.55)', strokeWidth: 1, strokeDasharray: '3 4' }} />
+              <Tooltip content={() => null} cursor={{ stroke: 'var(--hero-muted)', strokeWidth: 1, strokeDasharray: '3 4' }} />
               <Area type="monotone" dataKey="value" stroke={`url(#tls-${gid})`} strokeWidth={3} className="tl-line" fill={`url(#tl-${gid})`} isAnimationActive={false}
-                activeDot={{ r: 6, fill: line, stroke: 'rgba(255,255,255,.35)', strokeWidth: 6 }} dot={false} />
-              {hover == null && last && <ReferenceDot x={last.key} y={last.value} r={5} fill="#FFFFFF" stroke="rgba(94,234,212,.45)" strokeWidth={7} />}
+                activeDot={{ r: 6, fill: line, stroke: 'var(--surface)', strokeWidth: 3 }} dot={false} />
+              {hover == null && last && <ReferenceDot x={last.key} y={last.value} r={5} fill={line} stroke="var(--surface)" strokeWidth={3} />}
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -102,7 +102,7 @@ function Fig({ label, value, signed = false }) {
   const neg = value < 0;
   return (
     <div className="tl-fig">
-      <div className="tl-fig-value" style={signed && neg ? { color: '#FECDD3' } : undefined}>
+      <div className="tl-fig-value" style={signed && neg ? { color: 'var(--hero-down)' } : undefined}>
         {signed && value > 0 ? '+' : ''}{formatMoneyCompact(value)}
       </div>
       <div className="tl-fig-label">{label}</div>

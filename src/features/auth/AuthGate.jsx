@@ -49,7 +49,7 @@ function LoadingScreen() {
         style={{
           width: 52, height: 52, borderRadius: 14,
           objectFit: 'cover',
-          boxShadow: '0 8px 24px rgba(99,102,241,0.3)',
+          boxShadow: '0 8px 24px rgba(37,99,235,0.3)',
         }}
       />
       <div style={{

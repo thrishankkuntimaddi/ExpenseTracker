@@ -132,11 +132,11 @@ export default function TodayTab(props) {
   useTilt(heroRef);
   const overviewSection = (
     <div ref={heroRef} className="home-hero" id="home-summary" role={shell ? 'button' : undefined} tabIndex={shell ? 0 : undefined}
-      onClick={(e) => { if (!e.target.closest('.month-switcher')) shell?.goTo('stats'); }} style={{ marginBottom: 14, padding: '14px 18px 14px', borderRadius: 26, color: '#fff', cursor: shell ? 'pointer' : 'default', position: 'relative', overflow: 'hidden' }}>
+      onClick={(e) => { if (!e.target.closest('.month-switcher')) shell?.goTo('stats'); }} style={{ marginBottom: 14, padding: '14px 18px 14px', borderRadius: 26, color: 'var(--hero-text)', cursor: shell ? 'pointer' : 'default', position: 'relative', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
         {shell ? <MonthSwitcher tone="hero" compact /> : <span style={{ fontSize: 12, fontWeight: 700 }}>{monthName(monthKey)}</span>}
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, opacity: 0.85 }}>
-          {safeToday?.status === 'over' && <Sign kind="warn" size={15} style={{ color: '#FFD0D7' }} />}
+          {safeToday?.status === 'over' && <Sign kind="warn" size={15} style={{ color: 'var(--hero-down)' }} />}
           {safeToday ? (safeToday.status === 'over' ? 'Over budget' : `${Math.round(pct)}% of budget`) : 'Stats'} <ArrowUpRight size={13} />
         </span>
       </div>
@@ -154,7 +154,7 @@ export default function TodayTab(props) {
           </div>
         </>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.18)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--hero-rule)' }}>
         {isNow ? <Metric label="Today" value={todayExpense} /> : <Metric label="Money in" value={stats?.totalIncome ?? 0} />}
         {isNow && safeToday && safeToday.status !== 'over'
           ? <Metric label="Safe to spend today" value={safeToday.safeToday} />

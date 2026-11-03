@@ -27,20 +27,20 @@ const C_LIGHT = {
   expense:      '#E11D48', // --expense
   savings:      '#2563EB', // --savings
   lent:         '#D97706', // --lent
-  borrowed:     '#8B5CF6', // --borrowed
+  borrowed:     '#C2410C', // --borrowed
   repaymentRec: '#0891B2', // --repayment-rec
-  given:        '#7C3AED', // --given
-  external:     '#7C3AED', // --external
+  given:        '#475569', // --given
+  external:     '#0F766E', // --external
 };
 const C_DARK = {
   income:       '#10B981', // --income
   expense:      '#F43F5E', // --expense
   savings:      '#3B82F6', // --savings
   lent:         '#F59E0B', // --lent
-  borrowed:     '#A78BFA', // --borrowed
+  borrowed:     '#F87171', // --borrowed
   repaymentRec: '#22D3EE', // --repayment-rec
-  given:        '#A78BFA', // --given
-  external:     '#8B5CF6', // --external
+  given:        '#CBD5E1', // --given
+  external:     '#2DD4BF', // --external
 };
 
 export function useStats(transactions, rawIncome, selectedPeriod, theme, settings) {
