@@ -209,7 +209,8 @@ export function useFirestoreData(uid, email) {
   /** Merge a partial update into settings (budgets, categoryRules, goals …). */
   const patchSettings = useCallback(async (patch) => {
     const previous = settingsRef.current;
-    const next = { ...previous, ...patch };
+    // A function patch reads the latest settings (for merging into a map)
+    const next = { ...previous, ...(typeof patch === 'function' ? patch(previous ?? {}) : patch) };
     setSettings(next);
     background(fsUpdateSettings(uidRef.current, next), (err) => {
       reportError('save settings', err);

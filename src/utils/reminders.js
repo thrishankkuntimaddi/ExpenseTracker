@@ -15,17 +15,24 @@
 //    (`budgetAt` remembers when each alert was planned, per device)
 //  • weekly: one line on the chosen evening; real numbers only when it's
 //    planned the same day (otherwise they'd be stale by the time it shows)
+//  • insurance (with bills): a heads-up a week before a yearly policy renews
+//  • responsibilities: on each one's reminder day (salary day) while
+//    something is left to clear this month; a dated one also a week before
+//  • borrowed: on a borrowing's check day — and weekly after — while it
+//    still looks unused (see utils/borrowed.js)
 //  • copy is short, original and never guilt-trips
 import { localDateKey, localMonthKey, formatAmount as fullAmount } from './dateHelpers';
 import { occurrencesBetween, toKey } from './recurring';
 import { categoryOf, categoryMeta } from './categories';
 import { computeGoalProgress, isGoalOpen } from './goals';
 import { formatMoneyCompact } from './money';
+import { respProgress, isRespOpen } from './responsibilities';
+import { borrowings } from './borrowed';
 
 /* Notifications are one line: drop “.00” on whole amounts (₹15,000, not ₹15,000.00). */
 const formatAmount = (n) => (Math.round(n * 100) % 100 === 0 ? formatMoneyCompact(n) : fullAmount(n));
 
-export const REMINDER_TYPES = ['recurring', 'daily', 'budget', 'report', 'goals', 'weekly'];
+export const REMINDER_TYPES = ['recurring', 'daily', 'budget', 'report', 'goals', 'weekly', 'responsibilities', 'borrowed'];
 export const TONES = [
   { key: 'friendly', label: 'Friendly' },
   { key: 'brief',    label: 'Brief' },
@@ -33,7 +40,7 @@ export const TONES = [
 ];
 export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 /** The screen a tapped reminder opens. */
-export const REMINDER_ROUTE = { daily: 'today', recurring: 'bills', budget: 'budget', weekly: 'stats', report: 'stats', goals: 'savings' };
+export const REMINDER_ROUTE = { daily: 'today', recurring: 'bills', budget: 'budget', weekly: 'stats', report: 'stats', goals: 'savings', responsibilities: 'responsibilities', borrowed: 'today' };
 
 export const DEFAULT_REMINDERS = {
   tone: 'friendly',
@@ -43,6 +50,8 @@ export const DEFAULT_REMINDERS = {
   weekly:    { enabled: false, time: '19:00', day: 0 },
   report:    { enabled: false, time: '09:00' },
   goals:     { enabled: false, time: '11:00' },
+  responsibilities: { enabled: false, time: '10:30' },
+  borrowed:  { enabled: false, time: '20:00' },
 };
 
 /** Settings as stored (possibly partial / older) → complete config. */
@@ -118,6 +127,32 @@ function goalCopy(tone, goal, p) {
   return { title: `Put ${share} towards ${goal.name}`, body: `${formatAmount(p.saved)} of ${formatAmount(p.target)} so far${kept}.` + (tone === 'coach' ? ' Same day every month keeps it on track.' : '') };
 }
 
+function insuranceCopy(tone, rule, dueKey) {
+  const when = new Date(`${dueKey}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  if (tone === 'brief') return { title: `${rule.name} renews ${when}`, body: `${formatAmount(rule.amount)} premium.` };
+  return { title: `${rule.name} renews on ${when}`, body: `${formatAmount(rule.amount)} premium in a week — keep it ready so the cover doesn’t lapse.` };
+}
+
+function respCopy(tone, rows) {
+  const total = rows.reduce((s, r) => s + r.amount, 0);
+  const first = rows[0];
+  if (rows.length === 1) {
+    const to = first.resp.owedTo ? ` to ${first.resp.owedTo}` : '';
+    if (tone === 'brief') return { title: `${first.resp.title}: ${formatAmount(first.amount)}`, body: `${formatAmount(first.remaining)} left${to}.` };
+    return { title: `${formatAmount(first.amount)} towards ${first.resp.title}`, body: `${formatAmount(first.remaining)} still to clear${to}.` + (tone === 'coach' ? ' Pay it before the month spends it.' : ' Tap to mark it paid.') };
+  }
+  if (tone === 'brief') return { title: `Responsibilities: ${formatAmount(total)}`, body: `${rows.length} to pay this month.` };
+  return { title: `${formatAmount(total)} for your responsibilities`, body: `First up: ${first.resp.title} (${formatAmount(first.amount)}).` + (tone === 'coach' ? ' Clear them in your order.' : '') };
+}
+
+function borrowCopy(tone, b) {
+  if (tone === 'brief') return { title: `${formatAmount(b.outstanding)} borrowed from ${b.name}`, body: 'Still unused? Pay some back.' };
+  return {
+    title: `The ${formatAmount(b.outstanding)} from ${b.name} looks unused`,
+    body: tone === 'coach' ? 'Borrowed money costs trust — pay some back, or note what it’s for.' : 'Pay some back, or note what it was for.',
+  };
+}
+
 function budgetCopy(tone, pct, { monthName, spent, limit, daysLeft }) {
   const left = limit - spent;
   const days = `${daysLeft} day${daysLeft === 1 ? '' : 's'}`;
@@ -188,7 +223,9 @@ function crossingDay(transactions, monthKey, limit, pct) {
  */
 export function buildSchedule(now, cfg, data = {}, horizonDays = 14) {
   const c = normaliseReminders(cfg);
-  const { transactions = [], income = [], recurring = [], budgets = null, categoryRules = {}, budgetAt = {}, goals = [], report = null } = data;
+  const { transactions = [], income = [], recurring = [], budgets = null, categoryRules = {}, budgetAt = {}, goals = [], report = null, responsibilities = [] } = data;
+  const openResp = (responsibilities ?? []).filter(isRespOpen);
+  const borrows = c.borrowed.enabled ? borrowings(transactions, income).filter((b) => b.outstanding > 0 && !b.entry.borrowAck && b.checkDay) : [];
   const reportDay = Math.min(28, Math.max(1, Math.round(Number(report?.day)) || 1));
   const tone = c.tone;
   const today = startOfDay(now);
@@ -218,6 +255,37 @@ export function buildSchedule(now, cfg, data = {}, horizonDays = 14) {
           .filter((r) => occurrencesBetween(r, toKey(addDays(date, -1)), key).includes(key))
           .sort((a, b) => Number(b.amount) - Number(a.amount));
         if (due.length) push('recurring', key, when, recurringCopy(tone, due), REMINDER_ROUTE.recurring);
+        // Insurance renewing in a week (yearly policies)
+        const inWeek = toKey(addDays(date, 7));
+        recurring.filter((r) => r.active !== false && r.category === 'insurance' && r.frequency === 'yearly')
+          .filter((r) => occurrencesBetween(r, toKey(addDays(date, 6)), inWeek).includes(inWeek))
+          .forEach((r) => push('recurring', `ins:${r.id}:${inWeek}`, when, insuranceCopy(tone, r, inWeek), REMINDER_ROUTE.recurring));
+      }
+    }
+
+    // Responsibilities: on their reminder day, while this month still asks for money
+    if (c.responsibilities.enabled && openResp.length) {
+      const when = at(date, c.responsibilities.time);
+      if (when > now) {
+        const rows = openResp.map((r) => {
+          const p = respProgress(r, transactions, key);
+          const rDay = Math.min(Number(r.remindDay) || 1, 28);
+          const weekBeforeDue = r.plan === 'by_date' && r.dueBy && toKey(addDays(date, 7)) === r.dueBy;
+          if (p.remaining <= 0 || (date.getDate() !== rDay && !weekBeforeDue)) return null;
+          const amount = weekBeforeDue ? p.remaining : p.dueThisMonth;
+          // "When I can" ones: a monthly nudge with what's left
+          return amount > 0 || r.plan === 'anytime' ? { resp: r, amount: amount > 0 ? amount : p.remaining, remaining: p.remaining } : null;
+        }).filter(Boolean).sort((a, b) => (a.resp.priority ?? 99) - (b.resp.priority ?? 99));
+        if (rows.length) push('responsibilities', key, when, respCopy(tone, rows), REMINDER_ROUTE.responsibilities);
+      }
+    }
+
+    // Borrowed money still sitting there: on the check day, then once a week
+    if (borrows.length) {
+      const when = at(date, c.borrowed.time);
+      if (when > now) {
+        const b = borrows.find((x) => key >= x.checkDay && Math.round((startOfDay(date) - startOfDay(new Date(`${x.checkDay}T00:00:00`))) / DAY) % 7 === 0);
+        if (b) push('borrowed', key, when, borrowCopy(tone, b), REMINDER_ROUTE.borrowed);
       }
     }
 
@@ -295,6 +363,8 @@ export function previewReminder(type, cfg, data, now = Date.now()) {
     goals:     goalCopy(c.tone, { name: 'Bike', heldWith: 'Pritam' }, { done: false, saved: 40000, target: 100000, monthlyDue: 20000 }),
     budget:    budgetCopy(c.tone, 80, { monthName: new Date(now).toLocaleString('en-IN', { month: 'long' }), spent: 16400, limit: 20000, daysLeft: 9 }),
     weekly:    weeklyCopy(c.tone, { total: 4320, prevTotal: 5100, top: { label: 'Food & Dining', amount: 1850 } }),
+    responsibilities: respCopy(c.tone, [{ resp: { title: 'Mom’s gold loan', owedTo: 'Ramesh uncle' }, amount: 5000, remaining: 45000 }]),
+    borrowed:  borrowCopy(c.tone, { outstanding: 10000, name: 'Ravi' }),
   };
   return { type, example: true, route: REMINDER_ROUTE[type], ...examples[type] };
 }

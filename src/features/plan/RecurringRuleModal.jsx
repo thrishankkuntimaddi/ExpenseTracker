@@ -12,6 +12,7 @@ import { savingsChoicesFor, getSavingsType } from '../../utils/typeConfig';
 import CurrencySelect from '../../components/CurrencySelect';
 import { rawOf } from '../../utils/fx';
 import { getDisplayCurrency } from '../../utils/money';
+import { INSURANCE_TYPES } from '../../utils/bills';
 
 const KINDS = [
   { key: 'expense', label: 'Expense', color: 'var(--expense)' },
@@ -37,10 +38,16 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
   const [endDate, setEndDate] = useState(init?.endDate ?? '');
   const [autoPost, setAutoPost] = useState(init?.autoPost ?? false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Insurance: what it covers, with whom, and for how much
+  const [insuranceType, setInsuranceType] = useState(init?.insuranceType ?? 'health');
+  const [insurer, setInsurer] = useState(init?.insurer ?? '');
+  const [policyNo, setPolicyNo] = useState(init?.policyNo ?? '');
+  const [cover, setCover] = useState(init?.cover != null ? String(init.cover) : '');
 
   const suggested = kind === 'expense' ? inferCategory(name, categoryRules) : null;
   const effectiveCategory = categoryTouched && category ? category : suggested;
   const sel = KINDS.find((k) => k.key === kind);
+  const insurance = kind === 'expense' && effectiveCategory === 'insurance';
   const amt = Number(amount);
   const dom = Number(dayOfMonth);
   const canSave = name.trim() && amt > 0 && startDate && (frequency !== 'monthly' || (dom >= 1 && dom <= 31)) && (!endDate || endDate >= startDate);
@@ -57,6 +64,9 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
       category: kind === 'expense' ? effectiveCategory : undefined,
       savingsType: kind === 'savings' ? savingsType : undefined,
       platform: kind === 'savings' && getSavingsType(savingsType).hasPlatform && platform.trim() ? platform.trim() : undefined,
+      ...(insurance
+        ? { insuranceType, insurer: insurer.trim() || null, policyNo: policyNo.trim() || null, cover: Number(cover) > 0 ? Number(cover) : null }
+        : { insuranceType: null, insurer: null, policyNo: null, cover: null }),
     };
     onSave(next);
     onClose();
@@ -106,6 +116,32 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
 
         {kind === 'expense' && (
           <CategoryPicker size="sm" value={effectiveCategory} suggested={suggested} onChange={(c) => { setCategory(c); setCategoryTouched(true); }} />
+        )}
+
+        {insurance && (
+          <div id="rule-insurance" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {INSURANCE_TYPES.map((t) => (
+                <button key={t.key} type="button" id={`rule-ins-${t.key}`} onClick={() => setInsuranceType(t.key)} style={{
+                  padding: '5px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
+                  border: `1.5px solid ${insuranceType === t.key ? 'var(--expense)' : 'var(--border)'}`,
+                  background: insuranceType === t.key ? 'var(--expense-bg)' : 'transparent', color: insuranceType === t.key ? 'var(--expense)' : 'var(--text-secondary)',
+                }}>{t.label}</button>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <Field label="Insurer">
+                <input id="rule-insurer" type="text" value={insurer} onChange={(e) => setInsurer(e.target.value)} placeholder="Star Health, LIC, Acko…" style={fieldStyle} />
+              </Field>
+              <Field label="Cover (sum insured)">
+                <input id="rule-cover" type="text" inputMode="decimal" value={cover} onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setCover(v); }} placeholder="500000" style={fieldStyle} />
+              </Field>
+            </div>
+            <Field label="Policy number (optional)">
+              <input type="text" value={policyNo} onChange={(e) => setPolicyNo(e.target.value)} placeholder="For claims and renewals" style={fieldStyle} />
+            </Field>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>Set “Starts” to the renewal date. With Bills reminders on, you get a heads-up a week before it renews.</p>
+          </div>
         )}
 
         {kind === 'savings' && (

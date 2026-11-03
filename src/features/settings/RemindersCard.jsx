@@ -3,7 +3,7 @@
 // device delivers them is a per-device switch. Everything is off by default.
 // Shown as tiles: tap one to switch it on (or open its time / days).
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, BellOff, PenLine, CalendarClock, Target, BarChart3, Send, Power, FileText, Flag } from 'lucide-react';
+import { Bell, BellOff, PenLine, CalendarClock, Target, BarChart3, Send, Power, FileText, Flag, HeartHandshake, AlertCircle } from 'lucide-react';
 import {
   normaliseReminders, buildSchedule, previewReminder, anyReminderOn, TONES, ALL_DAYS,
 } from '../../utils/reminders';
@@ -16,12 +16,14 @@ import { autostart, platform } from '../../native';
 import { ordinal, getReportSettings } from '../../utils/report';
 
 const TYPES = [
-  { key: 'recurring', Icon: CalendarClock, tone: 'expense', label: 'Bills due',       sub: '“Have you paid rent?” on the day a bill is due' },
+  { key: 'recurring', Icon: CalendarClock, tone: 'expense', label: 'Bills due',       sub: '“Have you paid rent?” on the day a bill is due · insurance a week before renewal' },
   { key: 'daily',     Icon: PenLine,       tone: 'accent',  label: 'Log the day',     sub: 'An evening nudge — skipped if you already logged' },
   { key: 'budget',    Icon: Target,        tone: 'lent',    label: 'Budget check',    sub: 'Once at 80 % of the month’s budget, once at 100 %' },
   { key: 'report',    Icon: FileText,      tone: 'savings', label: 'Monthly report',  sub: 'On your report day — what changed this month' },
   { key: 'goals',     Icon: Flag,          tone: 'income',  label: 'Goals',           sub: 'Each goal’s day: put this month’s share aside, or collect it' },
   { key: 'weekly',    Icon: BarChart3,     tone: 'given',   label: 'Weekly summary',  sub: 'One line on how the week went' },
+  { key: 'responsibilities', Icon: HeartHandshake, tone: 'given', label: 'Responsibilities', sub: 'On each one’s day: what to pay this month, first one first' },
+  { key: 'borrowed',  Icon: AlertCircle,   tone: 'borrowed', label: 'Borrowed money', sub: 'When borrowed money still looks unused on its check day' },
 ];
 const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -35,8 +37,8 @@ const whenLabel = (ms) => {
 
 export default function RemindersCard({ settings, onPatchSettings, transactions = [], income = [], recurringRules = [], uid }) {
   const cfg = useMemo(() => normaliseReminders(settings?.reminders), [settings?.reminders]);
-  const data = useMemo(() => ({ transactions, income, recurring: recurringRules, budgets: settings?.budgets, categoryRules: settings?.categoryRules, goals: settings?.goals, report: settings?.report }),
-    [transactions, income, recurringRules, settings?.budgets, settings?.categoryRules, settings?.goals, settings?.report]);
+  const data = useMemo(() => ({ transactions, income, recurring: recurringRules, budgets: settings?.budgets, categoryRules: settings?.categoryRules, goals: settings?.goals, report: settings?.report, responsibilities: settings?.responsibilities }),
+    [transactions, income, recurringRules, settings?.budgets, settings?.categoryRules, settings?.goals, settings?.report, settings?.responsibilities]);
 
   const [deviceOn, setDeviceOn] = useState(deviceDelivery.get);
   const [style, setStyle] = useState(reminderStyle.get);

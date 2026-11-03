@@ -41,6 +41,7 @@ const SavingsPage      = lazyPage(() => import('../features/savings/SavingsPage'
 const ExternalTab      = lazyPage(() => import('../features/external/ExternalTab'));
 const ProfilePage      = lazyPage(() => import('../features/profile/ProfilePage'));
 const DebtsPage        = lazyPage(() => import('../features/debts/DebtsPage'));
+const ResponsibilitiesPage = lazyPage(() => import('../features/responsibilities/ResponsibilitiesPage'));
 const AddSheet         = lazyPage(() => import('../components/AddSheet'));
 import UpdateBanner from '../components/UpdateBanner';
 import { ShellContext } from './shellContext';
@@ -276,16 +277,16 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [user.uid, devices.thisId]);
   useEffect(() => {
-    onReminderTap((route) => { if (['today', 'plan', 'bills', 'budget', 'stats', 'history', 'savings'].includes(route)) goTo(route === 'plan' ? 'bills' : route); });
+    onReminderTap((route) => { if (['today', 'plan', 'bills', 'budget', 'stats', 'history', 'savings', 'responsibilities', 'people'].includes(route)) goTo(route === 'plan' ? 'bills' : route); });
   }, [goTo]);
   useEffect(() => {
     if (!loaded) return undefined;
     const t = setTimeout(() => updateReminderInput({
       cfg: settings?.reminders,
-      data: { transactions, income, recurring: recurring.rules, budgets: settings?.budgets, categoryRules: settings?.categoryRules, goals: settings?.goals, report: settings?.report },
+      data: { transactions, income, recurring: recurring.rules, budgets: settings?.budgets, categoryRules: settings?.categoryRules, goals: settings?.goals, report: settings?.report, responsibilities: settings?.responsibilities },
     }), 800);
     return () => clearTimeout(t);
-  }, [loaded, settings?.reminders, settings?.budgets, settings?.categoryRules, settings?.goals, settings?.report, transactions, income, recurring.rules]);
+  }, [loaded, settings?.reminders, settings?.budgets, settings?.categoryRules, settings?.goals, settings?.report, settings?.responsibilities, transactions, income, recurring.rules]);
 
   const swipe = useSwipeNavigation({ order: pageOrder, active: activeTab, onChange: goTo, enabled: !isDesktop && !addKind && pageOrder.includes(activeTab) });
 
@@ -330,7 +331,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   const page = (
     <Suspense fallback={null}>
     {activeTab === 'today' && (
-      <TodayTab {...commonProps} onAdd={smartAddEntry} onAddIncome={addIncome} />
+      <TodayTab {...commonProps} onAdd={smartAddEntry} onAddIncome={addIncome} onUpdateIncome={updateIncome} onUpdateTransaction={updateTransaction} />
     )}
     {activeTab === 'history' && (
       <HistoryTab
@@ -368,6 +369,8 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
         selectedPeriod={selectedPeriod}
         theme={theme}
         reportError={reportError}
+        settings={settings}
+        onPatchSettings={patchSettings}
       />
     )}
     {activeTab === 'people' && (
@@ -385,6 +388,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     {activeTab === 'budget' && <BudgetPage {...commonProps} />}
     {activeTab === 'savings' && <SavingsPage {...commonProps} />}
     {activeTab === 'stats' && <StatsTab {...commonProps} />}
+    {activeTab === 'responsibilities' && <ResponsibilitiesPage {...commonProps} onAddTransaction={addTransaction} onDeleteTransaction={deleteTransaction} />}
     {activeTab === 'profile' && (
       <ProfilePage
         {...commonProps}

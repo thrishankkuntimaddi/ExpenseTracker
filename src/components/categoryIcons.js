@@ -3,10 +3,10 @@
 // (React Fast Refresh requirement).
 import {
   Utensils, ShoppingBasket, Car, Fuel, ShoppingBag, Receipt, Home, HeartPulse,
-  Clapperboard, Repeat, GraduationCap, Plane, Sparkles, Gift, Users, CircleDashed,
+  Clapperboard, Repeat, GraduationCap, Plane, Sparkles, Gift, Users, CircleDashed, ShieldCheck, HeartHandshake,
 } from 'lucide-react';
 
 export const CATEGORY_ICONS = {
   Utensils, ShoppingBasket, Car, Fuel, ShoppingBag, Receipt, Home, HeartPulse,
-  Clapperboard, Repeat, GraduationCap, Plane, Sparkles, Gift, Users, CircleDashed,
+  Clapperboard, Repeat, GraduationCap, Plane, Sparkles, Gift, Users, CircleDashed, ShieldCheck, HeartHandshake,
 };

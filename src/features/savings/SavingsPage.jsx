@@ -28,7 +28,9 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
   const savings = useMemo(() => transactions.filter((t) => t.type === 'savings').sort((a, b) => new Date(b.date) - new Date(a.date)), [transactions]);
   const thisMonth = useMemo(() => sum(savings.filter((t) => localMonthKey(t.date) === monthKey)), [savings, monthKey]);
   const monthIncome = useMemo(() => sum(income.filter((i) => localMonthKey(i.date) === monthKey && !i.isBorrowed)), [income, monthKey]);
-  const allTime = sum(savings);
+  // Paid out of savings (an FD broken for a responsibility, gold sold …)
+  const takenOut = useMemo(() => sum(transactions.filter((t) => t.type === 'expense' && t.paidFrom === 'savings')), [transactions]);
+  const allTime = sum(savings) - takenOut;
   const rate = monthIncome > 0 ? Math.round((thisMonth / monthIncome) * 100) : null;
 
   const byType = useMemo(() => {
@@ -71,8 +73,13 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
             <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--savings)', margin: '2px 0 0' }}>{formatAmount(thisMonth)}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
               <Figure label="Savings rate" value={rate != null ? `${rate}% of income` : '—'} />
-              <Figure label="Saved in total" value={formatAmount(allTime)} />
+              <Figure label={takenOut > 0 ? 'Saved in total (after use)' : 'Saved in total'} value={formatAmount(allTime)} />
             </div>
+            {takenOut > 0 && (
+              <div id="savings-taken-out" style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                {formatAmount(takenOut)} taken out of savings to pay for things (shown in your expenses as “from savings”).
+              </div>
+            )}
           </div>
         )}
 

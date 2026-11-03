@@ -26,13 +26,16 @@ import { debtLedger, debtTotals } from '../../utils/debts';
 import MonthSwitcher from '../../components/MonthSwitcher';
 import { formatMoneyCompact, entryCurrency, formatEntryAmount } from '../../utils/money';
 import EntryAmount from '../../components/EntryAmount';
+import BorrowAlerts from './BorrowAlerts';
+import { borrowAlerts } from '../../utils/borrowed';
+import { respSummary } from '../../utils/responsibilities';
 
 const linkBtn = { padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
 const rupees = (n) => formatMoneyCompact(n);   // compact: no paise
 const capitalise = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 export default function TodayTab(props) {
-  const { transactions = [], income = [], onAdd, onAddIncome, theme, settings, recurring, selectedPeriod } = props;
+  const { transactions = [], income = [], onAdd, onAddIncome, onUpdateIncome, onUpdateTransaction, theme, settings, recurring, selectedPeriod } = props;
   const shell = useShell();
   const ui = useMemo(() => normaliseUi(settings?.ui), [settings?.ui]);
   const homeSections = ui.home;
@@ -106,7 +109,12 @@ export default function TodayTab(props) {
   const debts = debtTotals(debtLedger(transactions, income));
   const cash = cashSummary(transactions, monthKey);
   const savedThisMonth = monthTxns.filter((t) => t.type === 'savings').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const resp = respSummary(settings?.responsibilities ?? [], transactions, todayKey);
+  // Borrowed money the app is asking about (unused, or paid back unexplained)
+  const borrowed = borrowAlerts(transactions, income, todayKey);
+  const patchBorrow = (a, patch) => (a.source === 'income' ? onUpdateIncome : onUpdateTransaction)?.({ ...a.entry, ...patch });
   const exploreLine = {
+    responsibilities: resp.count ? (resp.dueThisMonth > 0 ? `${rupees(resp.dueThisMonth)} due this month` : `${rupees(resp.remaining)} left to clear`) : 'Family loans, promises',
     history: `${monthTxns.length} entr${monthTxns.length === 1 ? 'y' : 'ies'} this month`,
     bills: rules.length ? (lateCount ? `${lateCount} late` : soon.length ? `${soon.length} due this week` : 'Nothing due this week') : 'Add rent, EMIs, SIPs',
     stats: `Calendar & report · ${monthAbbr}`,
@@ -372,11 +380,18 @@ export default function TodayTab(props) {
     </div>
   );
 
+  const borrowSection = shell && borrowed.length > 0 && (
+    <BorrowAlerts alerts={borrowed} onPatch={patchBorrow}
+      onPayBack={(a) => shell.openAdd('debt', { move: 'paid_back', name: a.name })} />
+  );
+  // Borrowed-money questions sit just before the bills (or Explore, if bills are hidden)
+  const attentionAt = homeSections.find((s) => (s.visible || shell?.desktop) && (s.key === 'bills' || s.key === 'explore'))?.key;
+
   function section(key) {
     if (key === 'overview') return overviewSection;
     if (key === 'add') return addSection;
-    if (key === 'bills') return billsSection;
-    if (key === 'explore') return exploreSection;
+    if (key === 'bills') return attentionAt === 'bills' ? <>{borrowSection}{billsSection}</> : billsSection;
+    if (key === 'explore') return attentionAt === 'explore' ? <>{borrowSection}{exploreSection}</> : exploreSection;
     if (key === 'recent') return recentSection;
     return null;
   }

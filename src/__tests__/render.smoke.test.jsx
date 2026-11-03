@@ -187,22 +187,23 @@ describe('screens render with planning features', () => {
     expect(parseQuickEntries('coffee 250 water 50 tea 150')).toHaveLength(3);
   });
 
-  it('Stats: balance, breakdown, calendar, where the money went (by category), then the monthly report', () => {
+  it('Stats: balance, glance, six months, against last month, calendar, where the money went, big picture — report behind a button', () => {
     const html = render(<StatsTab {...common} />);
     const at = (t) => html.indexOf(t);
-    for (const t of ['Remaining balance', 'Breakdown', 'Spending Calendar', 'Where the money went', 'Monthly report']) expect(at(t)).toBeGreaterThan(-1);
-    expect(at('Breakdown')).toBeLessThan(at('Spending Calendar'));
-    expect(at('Spending Calendar')).toBeLessThan(at('Where the money went'));
-    expect(html).not.toContain('Spending by category');      // one card: the donut is split by category
-    const went = html.slice(at('id="money-went"'));
+    for (const t of ['Remaining balance', 'id="stats-glance"', 'id="stats-trend"', 'id="stats-compare"', 'id="stats-calendar"', 'Where the money went', 'The big picture', 'id="stats-top"']) expect(at(t)).toBeGreaterThan(-1);
+    expect(at('id="stats-trend"')).toBeLessThan(at('id="stats-compare"'));
+    expect(at('id="stats-compare"')).toBeLessThan(at('id="stats-calendar"'));
+    expect(at('id="stats-calendar"')).toBeLessThan(at('Where the money went'));
+    const went = html.slice(at('id="money-went"'), at('id="stats-big-picture"'));
     expect(went).toMatch(/Food &amp; Dining|Groceries|Transport|Shopping/);   // categories, not just "Expense"
-    expect(went.slice(0, went.indexOf('Monthly report'))).not.toContain('>Expense<');
-    expect(html).toContain('id="report-day"');
-    expect(html).not.toContain('Last 14 Days');
-    expect(html).not.toContain('Month Trend');
-    expect(html).not.toContain('id="report-banner"');        // report day is the 1st, the clock the 8th: the banner only shows for 3 days
+    expect(went).not.toContain('>Expense<');
+    // The report is no longer on the page: it opens from the header button
+    expect(html).toContain('id="stats-open-report"');
+    expect(html).not.toContain('id="report-day"');
+    expect(html).not.toContain('id="report-banner"');
+    expect(html).not.toContain('A new report is ready');      // report day the 1st, clock the 8th: not fresh
     const fresh = render(<StatsTab {...common} settings={{ ...settings, report: { day: 7 } }} />);
-    expect(fresh).toContain('id="report-banner"');
+    expect(fresh).toContain('A new report is ready');
   });
 
   it('Bills page shows the month timeline, presets and every rule', () => {
@@ -211,7 +212,7 @@ describe('screens render with planning features', () => {
     expect(html).toContain('House rent');
     expect(html).toContain('7 days late');                 // rent was due on the 1st (test clock: the 8th)
     expect(html).toContain('id="preset-electricity"');     // only two bills so far → common payments shown
-    expect(html).toContain('id="preset-term"');
+    expect(html).toContain('id="preset-health"');
     expect(html).toContain('All regular payments');
     expect(html).toContain('Every 3rd · Subscriptions · auto');
   });

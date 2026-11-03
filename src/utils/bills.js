@@ -92,8 +92,34 @@ export const BILL_PRESETS = [
   { key: 'emi',         label: 'Loan EMI',         name: 'Loan EMI',          kind: 'expense', category: 'bills' },
   { key: 'sip',         label: 'SIP',              name: 'Mutual fund SIP',   kind: 'savings', savingsType: 'sip' },
   { key: 'fd',          label: 'FD / RD',          name: 'Recurring deposit', kind: 'savings', savingsType: 'deposit' },
-  { key: 'term',        label: 'Term insurance',   name: 'Term insurance',    kind: 'expense', category: 'health', frequency: 'yearly' },
-  { key: 'health',      label: 'Health insurance', name: 'Health insurance',  kind: 'expense', category: 'health', frequency: 'yearly' },
-  { key: 'policy',      label: 'LIC / policy',     name: 'LIC premium',       kind: 'expense', category: 'bills', frequency: 'yearly' },
+  { key: 'health',      label: 'Health insurance', name: 'Health insurance',  kind: 'expense', category: 'insurance', insuranceType: 'health',  frequency: 'yearly' },
+  { key: 'vehicle',     label: 'Vehicle insurance', name: 'Bike insurance',   kind: 'expense', category: 'insurance', insuranceType: 'vehicle', frequency: 'yearly' },
+  { key: 'term',        label: 'Life / term',      name: 'Term insurance',    kind: 'expense', category: 'insurance', insuranceType: 'life',    frequency: 'yearly' },
+  { key: 'house',       label: 'Home insurance',   name: 'Home insurance',    kind: 'expense', category: 'insurance', insuranceType: 'home',    frequency: 'yearly' },
   { key: 'ott',         label: 'Subscription',     name: 'Netflix',           kind: 'expense', category: 'subscriptions' },
 ];
+
+/* ── Insurance ─────────────────────────────────────────────────
+   An insurance bill is a rule with category 'insurance' and optional
+   insuranceType, insurer, policyNo and cover (the sum insured). */
+export const INSURANCE_TYPES = [
+  { key: 'health',  label: 'Health' },
+  { key: 'life',    label: 'Life / term' },
+  { key: 'vehicle', label: 'Vehicle' },
+  { key: 'home',    label: 'Home' },
+  { key: 'other',   label: 'Other' },
+];
+export const insuranceTypeLabel = (key) => INSURANCE_TYPES.find((t) => t.key === key)?.label ?? 'Insurance';
+export const isInsurance = (rule) => rule?.kind === 'expense' && rule.category === 'insurance';
+
+/** Every active policy with its next premium date (within two years), soonest first. */
+export function insurancePolicies(rules = [], todayKey) {
+  const [y, m, d] = todayKey.split('-').map(Number);
+  const until = toKey(new Date(y + 2, m - 1, d));
+  const before = toKey(new Date(y, m - 1, d - 1));
+  return rules.filter((r) => isInsurance(r) && r.active !== false).map((rule) => {
+    const next = occurrencesBetween(rule, before, until)[0] ?? null;
+    const days = next ? Math.round((fromKey(next) - fromKey(todayKey)) / 86400000) : null;
+    return { rule, next, days };
+  }).sort((a, b) => (a.next ?? '9999').localeCompare(b.next ?? '9999'));
+}

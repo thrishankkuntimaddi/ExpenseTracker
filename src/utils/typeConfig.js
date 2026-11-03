@@ -6,7 +6,7 @@
 import {
   ShoppingCart, Users, PiggyBank,
   TrendingDown, TrendingUp,
-  Coins, LineChart, Banknote, Gift, Landmark,
+  Coins, LineChart, Banknote, Gift, Landmark, Gem, ShieldCheck,
 } from 'lucide-react';
 
 /* ── Per-type meta (expense / savings / income / external) ── */
@@ -56,6 +56,8 @@ export const SAVINGS_TYPES = [
   { key: 'sip',         label: 'SIP',               color: '#7C3AED',        Icon: TrendingUp, hasPlatform: true  },
   { key: 'mutual_fund', label: 'Mutual Fund',       color: '#0891B2',        Icon: LineChart,  hasPlatform: true  },
   { key: 'trading',     label: 'Trading',           color: '#059669',        Icon: Banknote,   hasPlatform: true  },
+  { key: 'gold',        label: 'Gold',              color: '#CA8A04',        Icon: Gem,        hasPlatform: true  },
+  { key: 'pf',          label: 'PPF / EPF / NPS',   color: '#0F766E',        Icon: ShieldCheck, hasPlatform: false },
   { key: 'other',       label: 'Other',             color: '#475569',        Icon: PiggyBank,  hasPlatform: false },
   { key: 'cash',        label: 'Cash kept aside',   color: '#64748B',        Icon: Coins,      hasPlatform: false, legacy: true },
 ];

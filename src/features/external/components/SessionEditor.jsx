@@ -72,6 +72,11 @@ export default function SessionEditor({
               { key: 'person', label: 'From', type: 'pick', placeholder: 'Who paid you?', options: knownPeople.map((n) => ({ value: n, label: n })), onCreate: (n) => n },
               { key: 'amount', label: `Amount ${currencySymbol()}`, type: 'amount', width: '104px', placeholder: '0' },
             ]} />
+          {totalReceived <= 0 && (
+            <p id="bill-paid-by-me" style={{ fontSize: 11, color: 'var(--text-muted)', margin: '8px 4px 0', lineHeight: 1.5 }}>
+              Nobody gave you money for this? Leave it empty — closing adds the whole amount to your own expenses.
+            </p>
+          )}
         </div>
       </div>
 

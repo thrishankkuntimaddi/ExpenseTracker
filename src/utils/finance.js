@@ -82,6 +82,9 @@ export function computeStats(filtTxns, filtInc, personDebts, now = new Date()) {
   const pureIncome        = sumAmounts(filtInc.filter(byKind('income')));
 
   const totalExpense = sumAmounts(filtTxns.filter(byType('expense')));
+  // Paid out of savings (an FD broken, gold sold): still spending, but the
+  // money was already counted as saved — so it doesn't come off the balance again
+  const paidFromSavings = sumAmounts(filtTxns.filter((t) => t.type === 'expense' && t.paidFrom === 'savings'));
   const totalSavings = sumAmounts(filtTxns.filter(byType('savings')));
   const totalIncome  = pureIncome + totalBorrowed + totalRepaymentRec;
 
@@ -99,7 +102,7 @@ export function computeStats(filtTxns, filtInc, personDebts, now = new Date()) {
   // Balance = all cash inflows − all cash outflows
   const balance = Math.round((
     pureIncome + totalBorrowed + totalRepaymentRec + externalProfit
-    - totalExpense - totalSavings - totalLent - totalRepaidThem - totalGivenGift
+    - (totalExpense - paidFromSavings) - totalSavings - totalLent - totalRepaidThem - totalGivenGift
   ) * 100) / 100;
 
   const totalSpend   = totalExpense + totalSavings + totalLent + totalRepaidThem + totalGivenGift;
@@ -118,7 +121,7 @@ export function computeStats(filtTxns, filtInc, personDebts, now = new Date()) {
     totalIncome, pureIncome, totalExpense, totalSavings,
     totalLent, totalRepaidThem, totalBorrowed, totalRepaymentRec, totalGivenGift,
     allTimeNetOwed, allTimeNetLent, allTimeNetPerson, personDebts,
-    totalWaste, externalProfit, balance, wastePercent,
+    totalWaste, externalProfit, balance, wastePercent, paidFromSavings,
     avgDay: spend / days, avgWeek: spend / weeks, avgMonth: spend / months,
   };
 }

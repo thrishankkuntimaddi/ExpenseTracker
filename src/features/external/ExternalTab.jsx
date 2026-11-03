@@ -23,7 +23,7 @@ export default function ExternalTab({
   transactions = [], income = [],
   onAddIncome, onUpdateIncome, onDeleteIncome,
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
-  selectedPeriod, reportError,
+  selectedPeriod, reportError, settings, onPatchSettings,
   initialMode = 'billings',   // a Home tile can open Trips directly
   showModeToggle = true,      // phones show Trips and Billings as separate pages
 }) {
@@ -224,7 +224,8 @@ export default function ExternalTab({
 
   const hasItems    = items.some(i => i.name?.trim() && parseFloat(i.amount) > 0);
   const hasReceived = received.some(r => r.person?.trim() && parseFloat(r.amount) > 0);
-  const canClose    = hasItems && hasReceived;
+  // Nobody gave money for it? It still closes — the whole amount is yours to pay
+  const canClose    = hasItems;
 
 
 
@@ -235,6 +236,8 @@ export default function ExternalTab({
         onAddTransaction={onAddTransaction}
         onDeleteTransaction={onDeleteTransaction}
         reportError={reportError}
+        tripPlans={settings?.tripPlans}
+        onSavePlan={onPatchSettings ? (id, plan) => onPatchSettings((cur) => ({ tripPlans: { ...(cur.tripPlans ?? {}), [id]: plan } })) : null}
         headerExtra={showModeToggle ? <ModeToggle mode={mode} onChange={setMode} /> : null}
       />
     );
@@ -258,6 +261,7 @@ export default function ExternalTab({
           netBalance={netBalance}
           sessionName={sessionName}
           persons={personsLabel}
+          paidByMe={!hasReceived}
           onConfirm={handleConfirmClose}
           onCancel={() => setShowCloseModal(false)}
           loading={closing}

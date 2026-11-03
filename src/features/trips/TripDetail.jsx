@@ -23,6 +23,7 @@ import { categoryMeta } from '../../utils/categories';
 import { generateId } from '../../utils/storage';
 import { toKey } from '../../utils/recurring';
 import { currencySymbol } from '../../utils/money';
+import TripPlan from './TripPlan';
 
 const newRow = (paidBy = '', date) => ({ id: generateId(), title: '', amount: '', paidBy, splitAmong: [], date });
 const isValidRow = (r) => r.paidBy && String(r.title ?? '').trim() && Number(r.amount) > 0;
@@ -30,7 +31,7 @@ const isBlankRow = (r) => !String(r.title ?? '').trim() && (r.amount === '' || r
 const rowKey = (r) => JSON.stringify([String(r.title ?? ''), r.amount === '' || r.amount == null ? null : Number(r.amount), r.paidBy ?? '', r.splitAmong ?? [], r.category ?? null]);
 const label = { fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 };
 
-export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onClose, onReopen, onDelete, onLogMine }) {
+export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onClose, onReopen, onDelete, onLogMine, plan, onSavePlan }) {
   const money = (n) => formatAmount(n, trip?.currency);   // the trip's own currency
   const closed = trip.status === 'closed' || trip.status === 'archived';
   const shared = !!trip.shared;
@@ -412,6 +413,8 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
             })}
           </div>
         )}
+
+        {onSavePlan && <TripPlan tripId={trip.id} plan={plan} spent={s.total} money={money} onSave={onSavePlan} />}
 
         {s.categories.length > 0 && (
           <div className="card" id="trip-report">

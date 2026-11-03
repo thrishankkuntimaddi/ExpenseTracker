@@ -66,7 +66,7 @@ export function reportWindow(reportKey, income = []) {
 
 /* ── Analysis ─────────────────────────────────────────────────────
    Essentials are what you'd pay anyway; lifestyle is what you choose. */
-export const ESSENTIALS = new Set(['groceries', 'rent', 'bills', 'fuel', 'transport', 'health', 'education', 'family']);
+export const ESSENTIALS = new Set(['groceries', 'rent', 'bills', 'fuel', 'transport', 'health', 'education', 'family', 'insurance', 'responsibility']);
 export const LIFESTYLE = new Set(['food', 'shopping', 'entertainment', 'subscriptions', 'travel', 'personal', 'gifts']);
 export const SMALL_SPEND = 100;   // "small spends": under 100 (rupees, dollars …) each
 const SMALL = SMALL_SPEND;

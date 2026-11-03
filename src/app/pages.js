@@ -1,7 +1,7 @@
 // ─── Phone pages ─────────────────────────────────────────────────
 // Names, icons and colours of the pages the bottom bar and Home tiles open.
 import {
-  Home, List, Wallet, BarChart2, ShoppingCart, PiggyBank, CalendarClock, Target, Plane, HandCoins, ArrowLeftRight,
+  Home, List, Wallet, BarChart2, ShoppingCart, PiggyBank, CalendarClock, Target, Plane, HandCoins, ArrowLeftRight, HeartHandshake,
 } from 'lucide-react';
 
 /* `tone` is a colour family from the theme (var(--<tone>), var(--<tone>-bg)) */
@@ -16,12 +16,13 @@ export const PAGE_META = {
   people:   { label: 'Debts',    title: 'Debts',            Icon: ArrowLeftRight, tone: 'lent',         description: 'Lent, borrowed, paid back' },
   trips:    { label: 'Trips',    title: 'Trips & splits',   Icon: Plane,         tone: 'repayment-rec', description: 'Shared spending, settled fairly' },
   external: { label: 'Billings', title: 'Billings',         Icon: HandCoins,     tone: 'external',      description: 'Money spent for others' },
+  responsibilities: { label: 'Responsibilities', title: 'Responsibilities', Icon: HeartHandshake, tone: 'given', description: 'Family loans and promises you’re clearing' },
 };
 
 /* Accent per page (bar highlight) */
 export const PAGE_COLOR = {
-  light: { today: '#4F46E5', history: '#D97706', bills: '#E11D48', stats: '#2563EB', budget: '#4F46E5', savings: '#2563EB', income: '#059669', people: '#C2410C', trips: '#0891B2', external: '#7C3AED', profile: '#6366F1' },
-  dark:  { today: '#A5B4FC', history: '#FBBF24', bills: '#FB7185', stats: '#60A5FA', budget: '#A5B4FC', savings: '#60A5FA', income: '#34D399', people: '#FDBA74', trips: '#22D3EE', external: '#A78BFA', profile: '#A5B4FC' },
+  light: { today: '#4F46E5', history: '#D97706', bills: '#E11D48', stats: '#2563EB', budget: '#4F46E5', savings: '#2563EB', income: '#059669', people: '#C2410C', trips: '#0891B2', external: '#7C3AED', responsibilities: '#7C3AED', profile: '#6366F1' },
+  dark:  { today: '#A5B4FC', history: '#FBBF24', bills: '#FB7185', stats: '#60A5FA', budget: '#A5B4FC', savings: '#60A5FA', income: '#34D399', people: '#FDBA74', trips: '#22D3EE', external: '#A78BFA', responsibilities: '#C4B5FD', profile: '#A5B4FC' },
 };
 
 /* What the "+" sheet can add */
@@ -33,12 +34,12 @@ export const ADD_KINDS = [
 ];
 
 /* Home → Explore: most-used first (pages already in the bar are left out) */
-export const EXPLORE_ORDER = ['income', 'trips', 'external', 'bills', 'budget', 'people', 'savings', 'history', 'stats'];
+export const EXPLORE_ORDER = ['income', 'trips', 'external', 'bills', 'responsibilities', 'budget', 'people', 'savings', 'history', 'stats'];
 
 /* Desktop / web sidebar */
 export const DESKTOP_NAV = [
   { title: 'Overview', keys: ['today', 'stats'] },
-  { title: 'Money',    keys: ['income', 'bills', 'budget', 'savings'] },
+  { title: 'Money',    keys: ['income', 'bills', 'budget', 'savings', 'responsibilities'] },
   { title: 'With others', keys: ['trips', 'external', 'people'] },
   { title: 'Records',  keys: ['history'] },
 ];

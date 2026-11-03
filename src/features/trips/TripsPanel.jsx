@@ -24,7 +24,7 @@ import ProfileButton from '../../components/ProfileButton';
 import HelpButton from '../../tour/HelpButton';
 import { pendingInvite, clearPendingInvite, parseInvite } from './invite';
 
-export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction, reportError, headerExtra }) {
+export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction, reportError, headerExtra, tripPlans, onSavePlan }) {
   const { trips, saveTrip, removeTrip, opsFor, shareTrip, join, linkFriend, friends, me } = useTrips(user, reportError);
   const [activeId, setActiveId] = useState(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -156,6 +156,7 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
             onShare={() => setSharingTrip(active)} onInvite={() => setInvitingId(active.id)}
             onClose={() => setClosingTrip(active)} onReopen={() => setReopening(active)} onDelete={deleteTripById}
             onLogMine={() => setLoggingTrip(active)}
+            plan={tripPlans?.[active.id]} onSavePlan={onSavePlan}
           />
         ) : (
           <TripsList

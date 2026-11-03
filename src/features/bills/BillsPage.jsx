@@ -4,12 +4,12 @@
 // what's late and what's coming. Pay with one tap (even early); add a bill
 // from a preset. Built on the recurring rules.
 import { useMemo, useState } from 'react';
-import { Plus, Check, Zap, Pause, Play, Pencil, CalendarClock, ReceiptText, SkipForward } from 'lucide-react';
+import { Plus, Check, Zap, Pause, Play, Pencil, CalendarClock, ReceiptText, SkipForward, ShieldCheck } from 'lucide-react';
 import { PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill } from '../../components/Page';
 import RecurringRuleModal from '../plan/RecurringRuleModal';
 import DueRecurringCard from '../plan/components/DueRecurringCard';
 import { formatAmount } from '../../utils/dateHelpers';
-import { monthBills, dueLabel, BILL_PRESETS } from '../../utils/bills';
+import { monthBills, dueLabel, BILL_PRESETS, insurancePolicies, insuranceTypeLabel } from '../../utils/bills';
 import { describeSchedule, fromKey, toKey, monthlyEquivalent } from '../../utils/recurring';
 import { EMPTY_RULES, categoryMeta } from '../../utils/categories';
 import { useShell } from '../../app/shellContext';
@@ -50,6 +50,7 @@ export default function BillsPage({ transactions = [], income = [], recurring, s
   const isThisMonth = monthKey === todayKey.slice(0, 7);
   const monthLabel = fromKey(`${monthKey}-01`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
   const paidPct = month.total > 0 ? Math.min(100, (month.paid / month.total) * 100) : 0;
+  const policies = useMemo(() => insurancePolicies(rules, todayKey), [rules, todayKey]);
 
   async function pay(item) {
     const k = `${item.rule.id}|${item.dateKey}`;
@@ -136,6 +137,35 @@ export default function BillsPage({ transactions = [], income = [], recurring, s
               );
             })}
           </div>
+        )}
+
+        {/* ── Insurance: what you're covered for, and when each renews ── */}
+        {policies.length > 0 && (
+          <>
+            <SectionHeading id="bills-insurance" title="Insurance" hint={`${policies.length} polic${policies.length === 1 ? 'y' : 'ies'}`} />
+            <div className="card">
+              {policies.map(({ rule: r, next, days }, i) => (
+                <button key={r.id} onClick={() => setRuleModal({ rule: r })} aria-label={`Edit ${r.name}`}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', border: 'none', borderTop: i ? '1px solid var(--border)' : 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <span style={{ width: 34, height: 34, borderRadius: 11, background: 'var(--income-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <ShieldCheck size={15} style={{ color: 'var(--income)' }} />
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 13, fontWeight: 650, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
+                    <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {[insuranceTypeLabel(r.insuranceType), r.insurer, r.cover ? `cover ${formatAmount(r.cover)}` : null].filter(Boolean).join(' · ')}
+                    </span>
+                  </span>
+                  <span style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <span style={{ display: 'block', fontSize: 13, fontWeight: 750, color: 'var(--text)' }}><EntryAmount entry={r} /></span>
+                    <span style={{ display: 'block', fontSize: 10.5, fontWeight: 650, marginTop: 2, color: days != null && days <= 14 ? 'var(--expense)' : 'var(--text-muted)' }}>
+                      {next ? (days === 0 ? 'Renews today' : days <= 60 ? `Renews in ${days} day${days === 1 ? '' : 's'}` : `Renews ${fromKey(next).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`) : 'Ended'}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
         )}
 
         {/* ── Quick add from presets ── */}

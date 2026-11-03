@@ -33,7 +33,7 @@ export const CATEGORIES = [
     keywords: ['electricity', 'electric bill', 'current bill', 'water bill', 'gas', 'lpg', 'cylinder', 'wifi',
       'broadband', 'internet', 'recharge', 'jio', 'airtel', 'vi ', 'vodafone', 'bsnl', 'postpaid', 'prepaid', 'dth',
       'tata sky', 'tata play', 'bill', 'maintenance', 'society', 'bescom', 'tneb', 'tsspdcl', 'apspdcl', 'act fibernet',
-      'emi', 'loan', 'credit card', 'insurance', 'premium'] },
+      'emi', 'loan', 'credit card'] },
   { key: 'rent',          label: 'Rent & Home',        light: '#7C3AED', dark: '#A78BFA', icon: 'Home',
     keywords: ['rent', 'house rent', 'pg', 'hostel', 'deposit', 'flat', 'maid', 'cook', 'cleaning', 'plumber',
       'electrician', 'repair', 'furniture', 'mattress', 'curtains', 'kitchen', 'utensils', 'home'] },
@@ -67,6 +67,14 @@ export const CATEGORIES = [
   { key: 'family',        label: 'Family',             light: '#D97706', dark: '#FBBF24', icon: 'Users',
     keywords: ['mom', 'dad', 'amma', 'nanna', 'mother', 'father', 'parents', 'sister', 'brother', 'wife', 'husband',
       'kids', 'baby', 'family', 'grandma', 'grandpa', 'son', 'daughter', 'pocket money'] },
+  { key: 'insurance',     label: 'Insurance',          light: '#0F766E', dark: '#5EEAD4', icon: 'ShieldCheck',
+    keywords: ['insurance', 'premium', 'lic', 'policy', 'mediclaim', 'health insurance', 'term insurance', 'life insurance',
+      'bike insurance', 'car insurance', 'vehicle insurance', 'home insurance', 'star health', 'hdfc ergo', 'acko',
+      'digit insurance', 'icici lombard', 'bajaj allianz', 'care health', 'niva bupa', 'policybazaar'] },
+  // Paying off what you took on for someone else (a parent's loan, a promise) —
+  // set by the Responsibilities page, never guessed from a name
+  { key: 'responsibility', label: 'Responsibilities',  light: '#9F1239', dark: '#FDA4AF', icon: 'HeartHandshake',
+    keywords: [] },
   { key: 'other',         label: 'Other',              light: '#64748B', dark: '#94A3B8', icon: 'CircleDashed',
     keywords: [] },
 ];

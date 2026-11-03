@@ -28,6 +28,7 @@ import { parseQuickEntry, parseQuickEntries } from '../utils/smartInput';
 import { SAVINGS_CHOICES, getSavingsType } from '../utils/typeConfig';
 import { cashSummary } from '../utils/cash';
 import { DEBT_MOVES, DEBT_MOVE_KEYS, debtEntryFields, debtLedger } from '../utils/debts';
+import { CHECK_OPTIONS } from '../utils/borrowed';
 import { isGoalOpen } from '../utils/goals';
 import { CURRENCY_GROUPS, CURRENCY_NAMES, currencySymbol, getDisplayCurrency, formatMoney, entryCurrency } from '../utils/money';
 import { rateBetween } from '../services/rates';
@@ -463,6 +464,9 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
   const [name, setName] = useDraft('name', initialName);
   const [note, setNote] = useState('');
   const [dateInput, setDateInput] = useState(startDate);
+  // Borrowed: when the app checks whether it was used (utils/borrowed.js)
+  const [checkOn, setCheckOn] = useState('week');
+  const [checkDate, setCheckDate] = useState('');
   const ledger = useMemo(() => debtLedger(transactions, income), [transactions, income]);
   // Who this move is likely about: people who owe you (got back), people you owe (paid back)
   const open = move === 'got_back' ? ledger.filter((p) => p.net > 0) : move === 'paid_back' ? ledger.filter((p) => p.net < 0) : ledger.filter((p) => !p.settled).concat(ledger.filter((p) => p.settled)).slice(0, 8);
@@ -480,7 +484,8 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
   function save() {
     if (!can) return;
     const { store, fields } = debtEntryFields(move);
-    const entry = { id: generateId(), name: name.trim(), amount: Number(amount), currency, ...fields, ...(note.trim() ? { note: note.trim() } : {}), ...stamp(dateInput) };
+    const check = move !== 'borrowed' ? {} : { checkOn: checkOn === 'date' && checkDate ? checkDate : checkOn === 'month_end' ? 'month_end' : 'week' };
+    const entry = { id: generateId(), name: name.trim(), amount: Number(amount), currency, ...fields, ...(note.trim() ? { note: note.trim() } : {}), ...check, ...stamp(dateInput) };
     if (store === 'income') onAddIncome(entry); else onAdd(entry);
     onSaved(entry);
   }
@@ -504,7 +509,25 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
         </div>
       )}
       <AmountField value={amount} onChange={setAmount} tone={meta.tone} onEnter={save} />
-      <TextField id="debt-note" Icon={StickyNote} value={note} onChange={setNote} onEnter={save} placeholder="Note (optional) — e.g. for the bike repair" />
+      <TextField id="debt-note" Icon={StickyNote} value={note} onChange={setNote} onEnter={save} placeholder={move === 'borrowed' ? 'What’s it for? — e.g. bike repair' : 'Note (optional) — e.g. for the bike repair'} />
+      {move === 'borrowed' && (
+        <div id="debt-check" style={{ margin: '-2px 0 12px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 2px 6px' }}>Check if it’s used</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            {CHECK_OPTIONS.map((o) => (
+              <button key={o.key} type="button" id={`debt-check-${o.key}`} onClick={() => setCheckOn(o.key)} className="add-choice"
+                style={{ padding: '6px 11px', fontSize: 12, fontWeight: 650, fontFamily: 'inherit', cursor: 'pointer', border: `1.5px solid ${checkOn === o.key ? 'var(--borrowed)' : 'var(--border)'}`, background: checkOn === o.key ? 'var(--borrowed-bg)' : 'var(--surface2)', color: checkOn === o.key ? 'var(--borrowed)' : 'var(--text-secondary)' }}>
+                {o.label}
+              </button>
+            ))}
+            {checkOn === 'date' && (
+              <input id="debt-check-date" type="date" value={checkDate} min={dateInput} onChange={(e) => setCheckDate(e.target.value)} aria-label="Check on"
+                style={{ padding: '6px 10px', fontSize: 12, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit' }} />
+            )}
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '6px 2px 0', lineHeight: 1.5 }}>If it’s still sitting unspent by then, Home asks: pay some back, or what’s it for?</p>
+        </div>
+      )}
       <div className="add-foot">
         <DateField value={dateInput} onChange={setDateInput} />
         <SaveButton id="btn-save-debt" disabled={!can} tone={meta.tone} onClick={save}>{can ? `${meta.label} · ${formatAmount(Number(amount), currency)}` : `Add — ${meta.label.toLowerCase()}`}</SaveButton>

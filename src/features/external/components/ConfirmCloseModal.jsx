@@ -4,7 +4,7 @@ import Portal from '../../../components/Portal';
 import { useEscape } from '../../../hooks/useEscape';
 
 /* ─── Confirmation Modal for Closing ─── */
-export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalance, sessionName, persons, onConfirm, onCancel, loading }) {
+export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalance, sessionName, persons, paidByMe, onConfirm, onCancel, loading }) {
   useEscape(onCancel);
   const isProfit = netBalance > 0;
   const isLoss   = netBalance < 0;
@@ -70,7 +70,8 @@ export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalanc
             fontWeight: 600,
           }}>
             {isProfit && `✓ ${formatAmount(netBalance)} will be added to Income (from ${persons})`}
-            {isLoss   && `✓ ${formatAmount(Math.abs(netBalance))} will be added to Expenses (External – ${persons})`}
+            {isLoss && paidByMe && `✓ Nobody gave money for this — the full ${formatAmount(Math.abs(netBalance))} is added to your expenses as “${sessionName}”`}
+            {isLoss && !paidByMe && `✓ ${formatAmount(Math.abs(netBalance))} will be added to Expenses (External – ${persons})`}
             {isEven   && `✓ Perfectly settled. No income or expense entry will be created.`}
           </div>
 

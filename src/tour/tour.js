@@ -117,8 +117,10 @@ const PAGE_GUIDES = {
   ],
   stats: () => [
     { target: HEADER, title: 'Stats', text: 'Where the month’s money went, and how it compares.' },
+    { target: ['#stats-trend'], optional: true, title: 'Six months', text: 'Money in, saved and spent, month by month. Hover or tap a month for the numbers.' },
+    { target: ['#stats-compare'], optional: true, title: 'Against last month', text: 'Which categories went up or down — biggest change first.' },
     { target: ['#stats-calendar'], optional: true, title: 'Calendar', text: 'Spending day by day. Tap a day to see it.' },
-    { target: ['#report-banner'], optional: true, title: 'Monthly report', text: 'On the day you choose, salary to salary: what went up, what went down.' },
+    { target: ['#stats-open-report'], optional: true, title: 'Monthly report', text: 'On the day you choose, salary to salary. Open it when you want it.' },
   ],
   trips: () => [
     { target: HEADER, title: 'Trips & splits', text: 'Shared costs with friends: who paid what, and the fewest payments to settle up.' },
@@ -127,7 +129,11 @@ const PAGE_GUIDES = {
   ],
   external: () => [
     { target: HEADER, title: 'Billings', text: 'Money you spent for other people, and what they paid you back.' },
-    { title: 'Settle up', text: 'When everyone has paid, close the billing — any profit goes to Money in.' },
+    { title: 'Settle up', text: 'Close the billing when it’s done — profit goes to Money in. Nobody gave you money? Close it anyway: the whole amount becomes your expense.' },
+  ],
+  responsibilities: () => [
+    { target: HEADER, title: 'Responsibilities', text: 'Loans and promises you didn’t borrow yourself but are clearing — a parent’s debt, money you promised.' },
+    { target: ['#resp-list'], optional: true, title: 'Your order', text: 'Top is cleared first. Move them up or down, and pay from your salary or savings.' },
   ],
 };
 

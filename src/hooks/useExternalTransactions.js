@@ -156,10 +156,12 @@ export function useExternalTransactions(uid, reportError) {
       const session = sessions.find((s) => s.id === sessionId);
 
       // Build person label (comma-separated if multiple)
-      const persons = received
+      const payers = received
         .filter((r) => r.person?.trim() && r.amount > 0)
-        .map((r) => r.person.trim())
-        .join(', ') || sessionName || 'External';
+        .map((r) => r.person.trim());
+      const persons = payers.join(', ') || sessionName || 'External';
+      // Nobody gave money: it's simply your own spending, named after the billing
+      const paidByMe = payers.length === 0;
 
       const dateForEntry = sessionDate || new Date().toISOString();
       const month = isoToMonth(dateForEntry);
@@ -210,10 +212,12 @@ export function useExternalTransactions(uid, reportError) {
         settlementType = 'expense';
         const expenseData = {
           id: settlementId,
-          name: `External – ${persons}`,
+          name: paidByMe ? (sessionName?.trim() || 'Billing') : `External – ${persons}`,
           amount: Math.abs(netBalance),
           type: 'expense',
-          category: 'External',
+          // paid by me: the category comes from the name ("Briyani" → Food)
+          category: paidByMe ? null : 'External',
+          paidByMe,
           date: dateForEntry,
           month,
           externalSessionId: sessionId,
