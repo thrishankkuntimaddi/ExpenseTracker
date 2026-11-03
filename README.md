@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.15.1** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.16.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
@@ -131,7 +131,12 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 - Rules for **expenses, savings or income** repeating daily / weekly / monthly / yearly (the 31st becomes the 28th in February), each in its own currency
 - **Auto-post** rules log silently on their due date; **ask-me** rules show *Log / Skip* — handy when the amount varies
 - Posted occurrences use a deterministic id (`rec_<rule>_<date>`), so two devices or a retry can never double-log
-- The **Bills & payments** page: the month's timeline with one-tap **Pay**, skip, totals, every regular payment, and common presets (Rent on the 5th, Electricity, Mobile, Internet, Send home, Loan EMI, SIP, FD/RD, insurance, LIC, Subscription)
+- The **Bills & payments** page: the month's timeline with one-tap **Pay**, skip, totals, every regular payment, and common presets (Rent on the 5th, Electricity, Mobile, Internet, Send home, Loan EMI, SIP, FD/RD, health / vehicle / life / home insurance, Subscription)
+- **Insurance**: each policy's type, insurer and cover; an *Insurance* list with when each renews, and a heads-up a week before
+
+### 🤝 Responsibilities
+- Money you didn't borrow but are clearing — a parent's loan, a promise: what it is, for whom, who gets paid, the total, **in your order** (top = clear first)
+- Clear it *when you can*, *every month* or *by a date*; pay from this month's money or **from savings** (an FD broken — it doesn't come off the month's balance twice); a reminder on your salary day. Never listed in Debts
 
 ### 🏁 Savings goals
 - Amount, *needed by* month, a monthly share, **where the money is kept** (cash, a person, a bank) and a reminder day
@@ -153,6 +158,7 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 ### ↔ Debts
 - Per person: **lent**, **got back**, **borrowed**, **paid back** — across transactions and income. Owe you · You owe · Settled
 - *Given (no return expected)* is spending and never appears in Debts
+- **Borrowed money check**: choose when to check (in a week, at month end, a date). If it still looks unused then — or was paid back quickly with nothing spent — Home asks: pay some back, or what was it for?
 - A page per person with one-tap *Got money back* / *Pay back* (pre-filled) and spreadsheet-style quick entry
 
 ### 🧳 Trips & splits
@@ -166,16 +172,17 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
   - either side of a payment taps **Paid**; inside a wallet the app shows who still owes whom (e.g. *Hanudeep owes Muza*, assuming the one who paid most covered the wallet) and that can be marked paid too
   - closed trips stay in everyone's history; friends can **Add to my ledger** to post their own share
   - enforced by the security rules, not just the screen
+- **Plan & estimate**: start from how you travel (bike: petrol, service, tolls…), add food, stay and things to do, tick them off, and see the estimate against what the trip really cost
 - Trips stay personal until you invite — "one person handles it" works as before
 
 ### 🔗 Billings (money spent for others)
-- Buying for a client or a person: goods purchased vs money received, net profit/loss live, a shareable receipt image, close to post the result to your ledger
+- Buying for a client or a person: goods purchased vs money received, net profit/loss live, a shareable receipt image, close to post the result to your ledger — nobody gave you money? Close it anyway: the whole amount is your expense
 
 ### 🗑️ Wastage
 - Tap an expense in History to mark it 100% wasted; double-tap for a partial amount; Stats shows total waste and its share of spending
 
 ### 📊 Stats
-- Balance and breakdown for the month, the **spending calendar**, spending by category, where the money went (donut), and the monthly report
+- Balance and the month at a glance, **six months** of money in / saved / spent, **this vs last month** by category, **the big picture** (savings, goals, responsibilities, debts, cash in hand), where the money went, the biggest spends and the **spending calendar**; the monthly report opens from the *Report* button
 
 ### 🔒 App lock & your devices
 - **One PIN for every device** — only a salted PBKDF2 hash is stored, never the PIN
