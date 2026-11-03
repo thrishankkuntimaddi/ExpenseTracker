@@ -13,13 +13,13 @@ import { FileText, TrendingUp, TrendingDown, Minus, PiggyBank, HeartHandshake, A
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { formatAmount, localMonthKey } from '../../utils/dateHelpers';
 import { categoryTotals, categoryColor, categoryOf, EMPTY_RULES } from '../../utils/categories';
-import RollingNumber from '../../motion/RollingNumber';
 import { latestReportDay, getReportSettings, ordinal } from '../../utils/report';
 import { toKey, fromKey } from '../../utils/recurring';
 import { useStats } from '../../hooks/useStats';
 import { useViewMonth, monthName } from '../../app/month';
 import SpendingCalendar from './components/SpendingCalendar';
 import ReportCard from './components/ReportCard';
+import BalanceTimeline from './components/BalanceTimeline';
 import { PageHeader, HeaderAction } from '../../components/Page';
 import ModalShell from '../../components/ModalShell';
 import { CategoryBadge } from '../../components/CategoryPicker';
@@ -135,7 +135,6 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
   const earned = sumAmounts(income.filter((i) => !i.isCarryForward && !i.isBorrowed && !i.isRepaymentRec && localMonthKey(i.date) === month));
   const carried = stats.totalIncome - earned - stats.totalBorrowed - stats.totalRepaymentRec;
   const savingsRate = earned > 0 ? Math.round((stats.totalSavings / earned) * 100) : null;
-  const positive = stats.balance >= 0;
   const changed = compare.rows.filter((r) => Math.abs(r.change) >= 1).slice(0, 6);
   const maxChange = Math.max(1, ...changed.map((r) => Math.max(r.now, r.prev)));
   const hasTrend = series.some((m) => m.in || m.saved || m.spent);
@@ -151,17 +150,12 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
         )} />
 
       <div className="tab-body">
+        {/* ── Money in hand over time (the month's balance sits in its strip) ── */}
+        <BalanceTimeline transactions={transactions} income={income} monthBalance={stats.balance} dark={dark} />
+
         <div className="stats-layout">
           <div className="stats-left">
-            {/* ── Balance + the month at a glance ── */}
-            <div className={`hero-card ${positive ? 'hero-income' : 'hero-expense'}`} style={{ borderRadius: 16, padding: '18px 20px', marginBottom: 14, background: positive ? 'var(--income)' : 'var(--expense)', boxShadow: 'var(--shadow-md)' }}>
-              <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.75)', margin: '0 0 6px' }}>
-                Remaining balance · {monthName(month, { month: 'short', year: 'numeric' })}
-              </p>
-              <p style={{ fontSize: 30, fontWeight: 800, color: '#fff', lineHeight: 1.1, margin: '0 0 4px' }}><RollingNumber value={stats.balance} /></p>
-              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', margin: 0 }}>Money in − spent − saved − given − lent</p>
-            </div>
-
+            {/* ── The month at a glance ── */}
             <Card id="stats-glance">
               <div className="stats-glance" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
                 <Glance label="Money in" tone="income" value={stats.totalIncome} sub={[`${rupees(earned)} earned`, stats.totalBorrowed > 0 && `${rupees(stats.totalBorrowed)} borrowed`, carried > 0.5 && `${rupees(carried)} carried over`].filter(Boolean).join(' · ')} />
@@ -317,12 +311,10 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
       )}
 
       <style>{`
-        @media (min-width: 1024px) {
-          .stats-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+        @media (min-width: 1180px) {
+          .desktop-main .stats-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
         }
-        @media (max-width: 1023px) {
-          .stats-layout { display: flex; flex-direction: column; }
-        }
+        .stats-layout { display: flex; flex-direction: column; }
         @media (max-width: 420px) {
           .stats-glance { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
         }
