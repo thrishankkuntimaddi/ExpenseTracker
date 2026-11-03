@@ -104,12 +104,12 @@ export default function ProfilePage(props) {
           <div className={`profile-split${twoPane ? ' two-pane' : ''}${phonePanel ? ' panel-open' : ''}`}>
             <div className="profile-list">
               {/* ── Who's signed in ── */}
-              <div className="home-hero profile-hero" style={{ padding: '18px 18px 12px', marginBottom: 18, borderRadius: 26, color: 'var(--hero-text)', position: 'relative', overflow: 'hidden' }}>
+              <div className="card profile-hero" style={{ padding: '16px 16px 12px', marginBottom: 18 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                   <Avatar user={user} size={54} />
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 20, fontWeight: 850, color: 'var(--hero-text)', letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayNameOf(user)}</div>
-                    <div style={{ fontSize: 12, color: 'var(--hero-muted)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</div>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayNameOf(user)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
                       {providers.includes('google.com') && <Pill>Google</Pill>}
                       {providers.includes('password') && <Pill>Email</Pill>}
@@ -117,13 +117,13 @@ export default function ProfilePage(props) {
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--hero-rule)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
                   <Stat value={(transactions.length + income.length).toLocaleString('en-IN')} label="Entries" />
                   <Stat value={months} label={months === 1 ? 'Month' : 'Months'} />
                   <Stat value={deviceCount} label={deviceCount === 1 ? 'Device' : 'Devices'} />
                 </div>
                 {since && !Number.isNaN(since.getTime()) && (
-                  <div style={{ fontSize: 11, color: 'var(--hero-muted)', textAlign: 'center', marginTop: 8 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8 }}>
                     Member since {since.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
                   </div>
                 )}
@@ -310,7 +310,7 @@ function Chip({ id, active, onClick, children }) {
 
 function Pill({ children, tone }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, background: tone ? `var(--${tone}-bg)` : 'var(--hero-soft)', color: tone ? `var(--${tone})` : 'var(--hero-text)' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, background: tone ? `var(--${tone}-bg)` : 'var(--surface2)', color: tone ? `var(--${tone})` : 'var(--text-secondary)' }}>
       {children}
     </span>
   );
@@ -319,8 +319,8 @@ function Pill({ children, tone }) {
 function Stat({ value, label }) {
   return (
     <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 20, fontWeight: 850, color: 'var(--hero-text)', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>{value}</div>
-      <div style={{ fontSize: 10, fontWeight: 750, color: 'var(--hero-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 2 }}>{label}</div>
+      <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>{label}</div>
     </div>
   );
 }

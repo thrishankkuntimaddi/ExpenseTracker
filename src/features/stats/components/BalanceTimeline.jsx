@@ -31,20 +31,20 @@ export default function BalanceTimeline({ transactions = [], incomeWithCarry = [
   const shown = point ? point.value : today;
   const change = !point && tl.lastMonth != null ? Math.round((today - tl.lastMonth) * 100) / 100 : null;
   const up = (change ?? 0) >= 0;
-  // A blue line on the light hero card (lighter blue in the dark theme)
-  const line = dark ? '#60A5FA' : '#2563EB';
+  // The app's indigo, fading into a soft fill under the line
+  const line = dark ? '#A5B4FC' : '#4F46E5';
   const last = tl.points[tl.points.length - 1];
 
   return (
-    <section id="stats-timeline" className="home-hero tl-card tl-hero">
+    <section id="stats-timeline" className="card tl-card">
       <div className="tl-head">
         <div style={{ minWidth: 0 }}>
           <div className="tl-title">{point ? `Remaining balance · ${fmtDay(point.key)}` : 'Remaining balance · today'}</div>
           <BigAmount value={shown} />
           {point ? (
-            <div className="tl-change" style={{ color: 'var(--hero-muted)' }}><span className="tl-change-sub" style={{ marginLeft: 0 }}>What was left that day, after everything spent so far that month</span></div>
+            <div className="tl-change" style={{ color: 'var(--text-muted)' }}><span className="tl-change-sub" style={{ marginLeft: 0 }}>What was left that day, after everything spent so far that month</span></div>
           ) : change != null ? (
-            <div className="tl-change" style={{ color: change === 0 ? 'var(--hero-muted)' : up ? 'var(--hero-up)' : 'var(--hero-down)' }}>
+            <div className="tl-change" style={{ color: change === 0 ? 'var(--text-muted)' : up ? 'var(--income)' : 'var(--expense)' }}>
               {change !== 0 && (up ? <ArrowUp size={16} strokeWidth={3} /> : <ArrowDown size={16} strokeWidth={3} />)}
               <span>{formatMoneyCompact(Math.abs(change))}</span>
               <span className="tl-change-sub">{change === 0 ? 'same as' : up ? 'more than' : 'less than'} this day last month ({formatMoneyCompact(tl.lastMonth)})</span>
@@ -64,13 +64,13 @@ export default function BalanceTimeline({ transactions = [], incomeWithCarry = [
                   <stop offset="100%" stopColor={line} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id={`tls-${gid}`} x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor={dark ? '#93C5FD' : '#60A5FA'} />
+                  <stop offset="0%" stopColor={dark ? '#C4B5FD' : '#818CF8'} />
                   <stop offset="100%" stopColor={line} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="key" hide />
               <YAxis hide domain={['dataMin', 'dataMax']} />
-              <Tooltip content={() => null} cursor={{ stroke: 'var(--hero-muted)', strokeWidth: 1, strokeDasharray: '3 4' }} />
+              <Tooltip content={() => null} cursor={{ stroke: 'var(--text-muted)', strokeWidth: 1, strokeDasharray: '3 4' }} />
               <Area type="monotone" dataKey="value" stroke={`url(#tls-${gid})`} strokeWidth={3} className="tl-line" fill={`url(#tl-${gid})`} isAnimationActive={false}
                 activeDot={{ r: 6, fill: line, stroke: 'var(--surface)', strokeWidth: 3 }} dot={false} />
               {hover == null && last && <ReferenceDot x={last.key} y={last.value} r={5} fill={line} stroke="var(--surface)" strokeWidth={3} />}
@@ -102,7 +102,7 @@ function Fig({ label, value, signed = false }) {
   const neg = value < 0;
   return (
     <div className="tl-fig">
-      <div className="tl-fig-value" style={signed && neg ? { color: 'var(--hero-down)' } : undefined}>
+      <div className="tl-fig-value" style={signed && neg ? { color: 'var(--expense)' } : undefined}>
         {signed && value > 0 ? '+' : ''}{formatMoneyCompact(value)}
       </div>
       <div className="tl-fig-label">{label}</div>

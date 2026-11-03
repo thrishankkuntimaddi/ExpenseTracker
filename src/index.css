@@ -25,10 +25,10 @@
   --text-muted:     #94A3B8;
 
   /* Accent */
-  --accent:       #2563EB;
-  --accent-hover: #1D4ED8;
-  --accent-bg:    #EFF6FF;
-  --accent-border:#BFDBFE;
+  --accent:       #4F46E5;
+  --accent-hover: #4338CA;
+  --accent-bg:    #EEF2FF;
+  --accent-border:#C7D2FE;
 
   /* Category colors — INCOME family */
   --income:         #059669;
@@ -51,9 +51,9 @@
   --lent-border:    #FDE68A;
 
   /* Category colors — PERSON: BORROWED (you took, owe back) */
-  --borrowed:        #C2410C;
-  --borrowed-bg:     #FFF7ED;
-  --borrowed-border: #FED7AA;
+  --borrowed:        #8B5CF6;
+  --borrowed-bg:     #F5F3FF;
+  --borrowed-border: #DDD6FE;
 
   /* Category colors — PERSON: REPAYMENT REC. (money returned to you) */
   --repayment-rec:        #0891B2;
@@ -61,9 +61,9 @@
   --repayment-rec-border: #A5F3FC;
 
   /* Category colors — PERSON: GIVEN / DEBT REPAID / GIFT */
-  --given:        #475569;
-  --given-bg:     #F1F5F9;
-  --given-border: #CBD5E1;
+  --given:        #7C3AED;
+  --given-bg:     #F5F3FF;
+  --given-border: #DDD6FE;
 
   /* Legacy person (neutral — for mixed/unknown direction) */
   --person:         #D97706;
@@ -75,9 +75,9 @@
   --waste-bg: #FFF7ED;
 
   /* External / Proxy */
-  --external:        #0F766E;
-  --external-bg:     #F0FDFA;
-  --external-border: #99F6E4;
+  --external:        #7C3AED;
+  --external-bg:     #F5F3FF;
+  --external-border: #DDD6FE;
 
   /* Navbar */
   --nav-bg:     rgba(255, 255, 255, 0.92);
@@ -119,10 +119,10 @@
   --text-muted:     #64748B;
 
   /* Accent — gold / indigo */
-  --accent:       #60A5FA;
-  --accent-hover: #93C5FD;
-  --accent-bg:    rgba(96, 165, 250, 0.14);
-  --accent-border:rgba(96, 165, 250, 0.32);
+  --accent:       #8B93FF;
+  --accent-hover: #A5ABFF;
+  --accent-bg:    rgba(139, 147, 255, 0.14);
+  --accent-border:rgba(139, 147, 255, 0.32);
 
   /* Category colors — INCOME family */
   --income:         #34D399;
@@ -155,9 +155,9 @@
   --repayment-rec-border: rgba(34, 211, 238, 0.25);
 
   /* Category colors — PERSON: GIVEN / DEBT REPAID / GIFT */
-  --given:        #CBD5E1;
-  --given-bg:     rgba(203, 213, 225, 0.10);
-  --given-border: rgba(203, 213, 225, 0.22);
+  --given:        #A78BFA;
+  --given-bg:     rgba(167, 139, 250, 0.12);
+  --given-border: rgba(167, 139, 250, 0.25);
 
   /* Legacy person (neutral) */
   --person:         #FBBF24;
@@ -169,9 +169,9 @@
   --waste-bg: rgba(255, 87, 34, 0.12);
 
   /* External / Proxy */
-  --external:        #2DD4BF;
-  --external-bg:     rgba(45, 212, 191, 0.12);
-  --external-border: rgba(45, 212, 191, 0.28);
+  --external:        #A78BFA;
+  --external-bg:     rgba(167, 139, 250, 0.12);
+  --external-border: rgba(167, 139, 250, 0.28);
 
   /* Navbar */
   --nav-bg:     rgba(18, 23, 35, 0.9);

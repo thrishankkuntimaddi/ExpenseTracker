@@ -53,7 +53,7 @@ export const PERSON_DIRECTIONS = [
    "Cash kept aside". */
 export const SAVINGS_TYPES = [
   { key: 'deposit',     label: 'Bank / FD / RD',    color: 'var(--savings)', Icon: Landmark,   hasPlatform: true  },
-  { key: 'sip',         label: 'SIP',               color: '#1E40AF',        Icon: TrendingUp, hasPlatform: true  },
+  { key: 'sip',         label: 'SIP',               color: '#7C3AED',        Icon: TrendingUp, hasPlatform: true  },
   { key: 'mutual_fund', label: 'Mutual Fund',       color: '#0891B2',        Icon: LineChart,  hasPlatform: true  },
   { key: 'trading',     label: 'Trading',           color: '#059669',        Icon: Banknote,   hasPlatform: true  },
   { key: 'gold',        label: 'Gold',              color: '#CA8A04',        Icon: Gem,        hasPlatform: true  },

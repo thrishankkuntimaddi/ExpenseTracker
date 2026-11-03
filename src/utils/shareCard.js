@@ -13,7 +13,7 @@
 const W = 720, PAD = 32, SCALE = 2, MAX_ROWS = 40;
 const C = {
   bg: '#0A0C11', card: '#161A23', line: '#262C3A', text: '#E8ECF4', sub: '#A3ABBD', muted: '#6B7385',
-  expense: '#F87171', income: '#4ADE80', accent: '#60A5FA', gold: '#FBBF24',
+  expense: '#F87171', income: '#4ADE80', accent: '#A78BFA', gold: '#FBBF24',
 };
 const FONT = '"Inter", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const tone = (t) => C[t] ?? C.text;

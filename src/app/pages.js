@@ -21,8 +21,8 @@ export const PAGE_META = {
 
 /* Accent per page (bar highlight) */
 export const PAGE_COLOR = {
-  light: { today: '#2563EB', history: '#D97706', bills: '#E11D48', stats: '#2563EB', budget: '#2563EB', savings: '#2563EB', income: '#059669', people: '#C2410C', trips: '#0891B2', external: '#0F766E', responsibilities: '#0F766E', profile: '#2563EB' },
-  dark:  { today: '#93C5FD', history: '#FBBF24', bills: '#FB7185', stats: '#60A5FA', budget: '#93C5FD', savings: '#60A5FA', income: '#34D399', people: '#FDBA74', trips: '#22D3EE', external: '#2DD4BF', responsibilities: '#2DD4BF', profile: '#93C5FD' },
+  light: { today: '#4F46E5', history: '#D97706', bills: '#E11D48', stats: '#2563EB', budget: '#4F46E5', savings: '#2563EB', income: '#059669', people: '#C2410C', trips: '#0891B2', external: '#7C3AED', responsibilities: '#7C3AED', profile: '#6366F1' },
+  dark:  { today: '#A5B4FC', history: '#FBBF24', bills: '#FB7185', stats: '#60A5FA', budget: '#A5B4FC', savings: '#60A5FA', income: '#34D399', people: '#FDBA74', trips: '#22D3EE', external: '#A78BFA', responsibilities: '#C4B5FD', profile: '#A5B4FC' },
 };
 
 /* What the "+" sheet can add */
