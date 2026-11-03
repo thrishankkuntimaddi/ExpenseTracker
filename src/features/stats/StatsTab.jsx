@@ -84,7 +84,7 @@ function Glance({ label, value, sub, tone }) {
 export default function StatsTab({ transactions, income, selectedPeriod, theme, settings, recurring, onPatchSettings }) {
   const shell = useShell();
   const { month, setMonth, period } = useViewMonth(selectedPeriod);
-  const { stats, filtTxns, pieData } = useStats(transactions, income, period, theme, settings);
+  const { stats, filtTxns, pieData, income: incomeWithCarry } = useStats(transactions, income, period, theme, settings);
   const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
   const dark = theme === 'monoflow';
   const [reportOpen, setReportOpen] = useState(false);
@@ -150,8 +150,11 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
         )} />
 
       <div className="tab-body">
-        {/* ── Money in hand over time (the month's balance sits in its strip) ── */}
-        <BalanceTimeline transactions={transactions} income={income} monthBalance={stats.balance} dark={dark} />
+        {/* ── The remaining balance over time — the same Balance as Home ── */}
+        <BalanceTimeline transactions={transactions} incomeWithCarry={incomeWithCarry} monthBalance={month === todayKey.slice(0, 7) ? stats.balance : null} dark={dark}
+          monthIn={stats.totalIncome}
+          monthOut={stats.totalExpense - (stats.paidFromSavings ?? 0) + stats.totalSavings + stats.totalLent + stats.totalRepaidThem + stats.totalGivenGift}
+          savedTotal={big.saved} youOwe={big.debts.youOwe} />
 
         <div className="stats-layout">
           <div className="stats-left">

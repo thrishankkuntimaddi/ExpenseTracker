@@ -1,19 +1,19 @@
-// ─── Balance timeline ────────────────────────────────────────────
-// The money in your hand over time: a big number (the rupees large, the
-// paise small), how it moved over the range, one smooth line you can scrub
-// — the number follows your finger — and 1M · 3M · 6M · 1Y · All below.
-// Under it, the four figures that matter: this month, this year, in hand,
-// saved.
+// ─── Remaining balance timeline ──────────────────────────────────
+// The remaining balance — the same "Balance" as Home — day by day: each
+// month starts with what came in (and last month's carry-forward, when on)
+// and goes down as money goes out, so spent money never looks present.
+// A big number (rupees large, paise small), against the same day last
+// month, one smooth line you can scrub (the number follows), 1M · 3M · 6M ·
+// 1Y · All, and this month's in / out, saved in total and what you owe.
 import { useId, useMemo, useState } from 'react';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, Tooltip, XAxis, YAxis, ReferenceDot } from 'recharts';
-import { balanceTimeline, netBetween, RANGES } from '../../../utils/timeline';
+import { remainingTimeline, RANGES } from '../../../utils/timeline';
 import { currencySymbol, formatMoneyCompact } from '../../../utils/money';
 import { toKey } from '../../../utils/recurring';
 
 const RANGE_KEY = 'et_timeline_range';
 const fmtDay = (key) => new Date(`${key}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-const spanLabel = (r) => ({ '1M': 'Last 30 days', '3M': 'Last 3 months', '6M': 'Last 6 months', '1Y': 'Last 12 months', ALL: 'Since you started' }[r]);
 
 /** ₹5,809.74 → big "5,809" + small ".74" */
 function BigMoney({ value }) {
@@ -31,25 +31,20 @@ function BigMoney({ value }) {
   );
 }
 
-export default function BalanceTimeline({ transactions = [], income = [], monthBalance = 0, dark = false }) {
+export default function BalanceTimeline({ transactions = [], incomeWithCarry = [], monthBalance = null, monthIn = 0, monthOut = 0, savedTotal = 0, youOwe = 0, dark = false }) {
   const gid = useId().replace(/:/g, '');
   const [range, setRange] = useState(() => { try { return localStorage.getItem(RANGE_KEY) || '3M'; } catch { return '3M'; } });
-  const [withSavings, setWithSavings] = useState(false);
   const [hover, setHover] = useState(null);
   const todayKey = toKey(new Date());
-  const tl = useMemo(() => balanceTimeline(transactions, income, { range, withSavings, todayKey }), [transactions, income, range, withSavings, todayKey]);
-  const strip = useMemo(() => {
-    const inHand = balanceTimeline(transactions, income, { range: '1M', todayKey }).end;
-    const withSaved = balanceTimeline(transactions, income, { range: '1M', withSavings: true, todayKey }).end;
-    return { inHand, saved: withSaved - inHand, year: netBetween(transactions, income, `${todayKey.slice(0, 4)}-01-01`, todayKey) };
-  }, [transactions, income, todayKey]);
+  const tl = useMemo(() => remainingTimeline(transactions, incomeWithCarry, { range, todayKey }), [transactions, incomeWithCarry, range, todayKey]);
 
   const pick = (k) => { setRange(k); setHover(null); try { localStorage.setItem(RANGE_KEY, k); } catch { /* storage unavailable */ } };
   const point = hover != null ? tl.points[hover] : null;
-  const shown = point ? point.value : tl.end;
-  const change = point ? Math.round((point.value - tl.start) * 100) / 100 : tl.change;
-  const pct = Math.abs(tl.start) >= 1 ? Math.round((change / Math.abs(tl.start)) * 1000) / 10 : null;
-  const up = change >= 0;
+  // Today: the app's own balance (several currencies are valued at today's rates there)
+  const today = monthBalance ?? tl.end;   // another month on screen: still today's balance here
+  const shown = point ? point.value : today;
+  const change = !point && tl.lastMonth != null ? Math.round((today - tl.lastMonth) * 100) / 100 : null;
+  const up = (change ?? 0) >= 0;
   const line = dark ? '#A5B4FC' : '#1E2A5A';
   const last = tl.points[tl.points.length - 1];
 
@@ -57,16 +52,17 @@ export default function BalanceTimeline({ transactions = [], income = [], monthB
     <section id="stats-timeline" className="card tl-card">
       <div className="tl-head">
         <div style={{ minWidth: 0 }}>
-          <div className="tl-label">
-            <button type="button" className={!withSavings ? 'on' : ''} onClick={() => setWithSavings(false)} aria-pressed={!withSavings}>In hand</button>
-            <button type="button" className={withSavings ? 'on' : ''} onClick={() => setWithSavings(true)} aria-pressed={withSavings}>With savings</button>
-          </div>
+          <div className="tl-title">{point ? `Remaining balance · ${fmtDay(point.key)}` : 'Remaining balance · today'}</div>
           <BigMoney value={shown} />
-          <div className="tl-change" style={{ color: change === 0 ? 'var(--text-muted)' : up ? 'var(--income)' : 'var(--expense)' }}>
-            {change !== 0 && (up ? <ArrowUp size={16} strokeWidth={3} /> : <ArrowDown size={16} strokeWidth={3} />)}
-            <span>{pct != null ? `${Math.abs(pct)}%` : formatMoneyCompact(Math.abs(change))}</span>
-            <span className="tl-change-sub">{pct != null && `${up ? '+' : '−'}${formatMoneyCompact(Math.abs(change))} · `}{point ? fmtDay(point.key) : spanLabel(range)}</span>
-          </div>
+          {point ? (
+            <div className="tl-change" style={{ color: 'var(--text-muted)' }}><span className="tl-change-sub" style={{ marginLeft: 0 }}>What was left that day, after everything spent so far that month</span></div>
+          ) : change != null ? (
+            <div className="tl-change" style={{ color: change === 0 ? 'var(--text-muted)' : up ? 'var(--income)' : 'var(--expense)' }}>
+              {change !== 0 && (up ? <ArrowUp size={16} strokeWidth={3} /> : <ArrowDown size={16} strokeWidth={3} />)}
+              <span>{formatMoneyCompact(Math.abs(change))}</span>
+              <span className="tl-change-sub">{change === 0 ? 'same as' : up ? 'more than' : 'less than'} this day last month ({formatMoneyCompact(tl.lastMonth)})</span>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -101,11 +97,11 @@ export default function BalanceTimeline({ transactions = [], income = [], monthB
       </div>
 
       <div className="tl-strip">
-        <Fig label="Left this month" value={monthBalance} signed />
-        <Fig label="This year" value={strip.year} signed />
+        <Fig label="In this month" value={monthIn} />
+        <Fig label="Out this month" value={monthOut} />
         <span className="tl-divider" aria-hidden />
-        <Fig label="In hand" value={strip.inHand} />
-        <Fig label="Saved" value={strip.saved} />
+        <Fig label="Saved in total" value={savedTotal} />
+        <Fig label="You owe" value={youOwe} />
       </div>
     </section>
   );

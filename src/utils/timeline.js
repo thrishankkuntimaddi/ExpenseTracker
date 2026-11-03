@@ -87,3 +87,50 @@ export function netBetween(transactions, income, fromKey_, toKey_) {
   dailyChanges(transactions, income).forEach((d, k) => { if (k >= fromKey_ && k <= toKey_) p += d.cash; });
   return p / 100;
 }
+
+/**
+ * The remaining balance, day by day — exactly the app's "Balance": each
+ * month starts from zero plus what came in that month (carry-forward lines
+ * included, when that's on) minus what went out, so money already spent is
+ * never shown as still there. Pass income WITH the carry-forward lines
+ * (useStats' `income`).
+ * @returns {{ points: Array<{ key, value }>, end, from, to, lastMonth: number|null }}
+ *   lastMonth — the balance on the same day of the previous month (to compare)
+ */
+export function remainingTimeline(transactions = [], incomeWithCarry = [], { range = '3M', todayKey = toKey(new Date()) } = {}) {
+  const days = new Map();
+  const bump = (key, p) => days.set(key, (days.get(key) ?? 0) + p);
+  dailyChanges(transactions, []).forEach((d, k) => { if (d.cash) bump(k, d.cash); });
+  incomeWithCarry.forEach((i) => { const k = localDateKey(i.date); if (k) bump(k, paise(i.amount)); });
+  const keys = [...days.keys()].sort();
+  if (!keys.length) return { points: [], end: 0, from: todayKey, to: todayKey, lastMonth: null };
+  const r = RANGES.find((x) => x.key === range) ?? RANGES[1];
+  // Start on the first of a month, so every month's line starts where the app's does
+  let from = r.days ? addDays(todayKey, -(r.days - 1)) : keys[0];
+  if (from < keys[0]) from = keys[0];
+  const monthStart = `${from.slice(0, 7)}-01`;
+  const to = todayKey;
+  const values = new Map();
+  let k = monthStart, run = 0;
+  while (k <= to) {
+    if (k.endsWith('-01')) run = 0;   // a new month: its balance starts afresh
+    run += days.get(k) ?? 0;
+    values.set(k, run / 100);
+    k = addDays(k, 1);
+  }
+  const all = [...values.entries()].filter(([key]) => key >= from).map(([key, value]) => ({ key, value }));
+  const step = all.length > 400 ? 7 : 1;
+  const points = all.filter((p, i) => i % step === 0 || i === all.length - 1);
+  // Same day last month (or its last day, if shorter)
+  const [y, m, d] = todayKey.split('-').map(Number);
+  const prevLast = new Date(y, m - 1, 0).getDate();
+  const prevKey = toKey(new Date(y, m - 2, Math.min(d, prevLast)));
+  let lastMonth = values.get(prevKey);
+  if (lastMonth == null) {
+    // outside the range: work it out from that month's own entries
+    let p = 0;
+    days.forEach((v, key) => { if (key.slice(0, 7) === prevKey.slice(0, 7) && key <= prevKey) p += v; });
+    lastMonth = keys[0] <= prevKey ? p / 100 : null;
+  }
+  return { points, end: values.get(to) ?? 0, from, to, lastMonth };
+}

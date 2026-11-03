@@ -44,3 +44,32 @@ describe('balance timeline', () => {
     expect(dailyChanges(txns, income).get('2026-10-12')).toBeUndefined();
   });
 });
+
+import { remainingTimeline } from '../timeline';
+import { computeStats } from '../finance';
+
+describe('remaining balance timeline', () => {
+  const t2 = [
+    { id: 'a', type: 'expense', name: 'Rent', amount: 10000, date: iso('2026-10-05') },
+    { id: 'b', type: 'expense', name: 'Food', amount: 2000, date: iso('2026-11-02') },
+    { id: 'c', type: 'savings', name: 'SIP', amount: 1000, date: iso('2026-11-02') },
+  ];
+  const inc = [
+    { id: 'i1', name: 'Salary', amount: 30000, date: iso('2026-10-01') },
+    { id: 'i2', name: 'Salary', amount: 30000, date: iso('2026-11-01') },
+  ];
+  it('starts afresh each month and ends on the app’s own balance', () => {
+    const t = remainingTimeline(t2, inc, { range: '3M', todayKey: '2026-11-03' });
+    const nov = computeStats(t2.filter((x) => x.date >= '2026-11'), inc.filter((x) => x.date >= '2026-11'), {});
+    expect(t.end).toBe(nov.balance);          // 27,000 — not 47,000 counting October's leftover
+    expect(t.end).toBe(27000);
+    const oct31 = t.points.find((p) => p.key === '2026-10-31');
+    expect(oct31.value).toBe(20000);
+    expect(t.points.find((p) => p.key === '2026-11-01').value).toBe(30000);
+    expect(t.lastMonth).toBe(30000);           // 3 Oct: salary in, rent (5 Oct) not yet paid
+  });
+  it('carry-forward lines (when that setting is on) are part of the balance', () => {
+    const carry = { id: 'cf', name: 'Carried forward', amount: 20000, date: iso('2026-11-01'), isCarryForward: true };
+    expect(remainingTimeline(t2, [...inc, carry], { range: '1M', todayKey: '2026-11-03' }).end).toBe(47000);
+  });
+});

@@ -64,10 +64,11 @@ export default function SpendingCalendar({ transactions = [], initialMonth, mont
         <MonthSwitcher month={monthKey} onChange={changeMonth} compact />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
+      {/* Square day cells, but never huge: on a wide screen the month stays a compact, centred block */}
+      <div className="cal-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
         {DOW.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'var(--text-muted)' }}>{d}</div>)}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+      <div className="cal-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
         {cells.map((k, i) => {
           if (!k) return <div key={`e${i}`} />;
           const v = totals[k] ?? 0;

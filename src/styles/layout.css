@@ -368,6 +368,7 @@ nav.desktop-nav button { margin: 0; }
    you can scrub, range pills, and four figures underneath. */
 .tl-card { padding: 20px 0 0 !important; margin-bottom: 14px; overflow: hidden; }
 .tl-head { padding: 0 22px; }
+.tl-title { font-size: 11px; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
 .tl-label { display: inline-flex; gap: 2px; padding: 3px; border-radius: 99px; background: var(--surface2); margin-bottom: 10px; }
 .tl-label button { border: none; background: transparent; padding: 5px 12px; border-radius: 99px !important; font: inherit; font-size: 11.5px; font-weight: 700; color: var(--text-muted); cursor: pointer; }
 .tl-label button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
@@ -410,3 +411,5 @@ nav.desktop-nav button { margin: 0; }
 }
 /* One column of Home beside the sidebar: Explore keeps three tiles a row */
 @media (max-width: 1179px) { .desktop-main .home-explore > div { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } }
+/* Spending calendar: at most ~60px a day, centred — never a wall of huge circles */
+.cal-grid { max-width: 460px; margin-left: auto; margin-right: auto; }

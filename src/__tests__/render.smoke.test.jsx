@@ -190,7 +190,7 @@ describe('screens render with planning features', () => {
   it('Stats: balance, glance, six months, against last month, calendar, where the money went, big picture — report behind a button', () => {
     const html = render(<StatsTab {...common} />);
     const at = (t) => html.indexOf(t);
-    for (const t of ['id="stats-timeline"', 'Left this month', 'id="stats-glance"', 'id="stats-trend"', 'id="stats-compare"', 'id="stats-calendar"', 'Where the money went', 'The big picture', 'id="stats-top"']) expect(at(t)).toBeGreaterThan(-1);
+    for (const t of ['id="stats-timeline"', 'Remaining balance', 'Out this month', 'id="stats-glance"', 'id="stats-trend"', 'id="stats-compare"', 'id="stats-calendar"', 'Where the money went', 'The big picture', 'id="stats-top"']) expect(at(t)).toBeGreaterThan(-1);
     expect(at('id="stats-timeline"')).toBeLessThan(at('id="stats-glance"'));
     expect(at('id="stats-trend"')).toBeLessThan(at('id="stats-compare"'));
     expect(at('id="stats-compare"')).toBeLessThan(at('id="stats-calendar"'));
