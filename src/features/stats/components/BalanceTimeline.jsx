@@ -12,7 +12,8 @@ import { remainingTimeline, RANGES } from '../../../utils/timeline';
 import { currencySymbol, formatMoneyCompact } from '../../../utils/money';
 import { toKey } from '../../../utils/recurring';
 
-const RANGE_KEY = 'et_timeline_range';
+// The range you last picked (this device). Opens on 1M — one month — until you pick another.
+const RANGE_KEY = 'et_timeline_range_v2';
 const fmtDay = (key) => new Date(`${key}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
 /** ₹5,809.74 → big "5,809" + small ".74" */
@@ -33,7 +34,7 @@ function BigMoney({ value }) {
 
 export default function BalanceTimeline({ transactions = [], incomeWithCarry = [], monthBalance = null, monthIn = 0, monthOut = 0, savedTotal = 0, youOwe = 0, dark = false }) {
   const gid = useId().replace(/:/g, '');
-  const [range, setRange] = useState(() => { try { return localStorage.getItem(RANGE_KEY) || '3M'; } catch { return '3M'; } });
+  const [range, setRange] = useState(() => { try { return localStorage.getItem(RANGE_KEY) || '1M'; } catch { return '1M'; } });
   const [hover, setHover] = useState(null);
   const todayKey = toKey(new Date());
   const tl = useMemo(() => remainingTimeline(transactions, incomeWithCarry, { range, todayKey }), [transactions, incomeWithCarry, range, todayKey]);

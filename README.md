@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.17.1** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.17.2** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
@@ -182,7 +182,7 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 - Tap an expense in History to mark it 100% wasted; double-tap for a partial amount; Stats shows total waste and its share of spending
 
 ### 📊 Stats
-- A **timeline** of your remaining balance (the same Balance as Home — each month starts afresh, so spent money never looks present): one big number, against this day last month, a smooth line you can scrub, 1M · 3M · 6M · 1Y · All, and this month in / out, saved in total and what you owe beneath
+- A **timeline** of your remaining balance (the same Balance as Home — each month starts afresh, so spent money never looks present): one big number, against this day last month, a smooth line you can scrub, 1M (the default) · 3M · 6M · 1Y · All, and this month in / out, saved in total and what you owe beneath
 - The month at a glance, **six months** of money in / saved / spent, **this vs last month** by category, **the big picture** (savings, goals, responsibilities, debts, cash in hand), where the money went, the biggest spends and the **spending calendar**; the monthly report opens from the *Report* button
 
 ### 🔒 App lock & your devices

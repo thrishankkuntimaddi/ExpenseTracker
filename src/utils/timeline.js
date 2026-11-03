@@ -97,7 +97,7 @@ export function netBetween(transactions, income, fromKey_, toKey_) {
  * @returns {{ points: Array<{ key, value }>, end, from, to, lastMonth: number|null }}
  *   lastMonth — the balance on the same day of the previous month (to compare)
  */
-export function remainingTimeline(transactions = [], incomeWithCarry = [], { range = '3M', todayKey = toKey(new Date()) } = {}) {
+export function remainingTimeline(transactions = [], incomeWithCarry = [], { range = '1M', todayKey = toKey(new Date()) } = {}) {
   const days = new Map();
   const bump = (key, p) => days.set(key, (days.get(key) ?? 0) + p);
   dailyChanges(transactions, []).forEach((d, k) => { if (d.cash) bump(k, d.cash); });
