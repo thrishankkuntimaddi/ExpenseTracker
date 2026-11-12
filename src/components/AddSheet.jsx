@@ -32,6 +32,7 @@ import { CHECK_OPTIONS } from '../utils/borrowed';
 import { isGoalOpen } from '../utils/goals';
 import { CURRENCY_GROUPS, CURRENCY_NAMES, currencySymbol, getDisplayCurrency, formatMoney, entryCurrency } from '../utils/money';
 import { rateBetween } from '../services/rates';
+import ScanButton from './ScanButton';
 
 /* The currency this device enters in (sticky: set it once when you travel). */
 const EntryCurrency = createContext({ currency: 'INR', setCurrency: () => {} });
@@ -147,11 +148,12 @@ export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd
   const [round, setRound] = useState(0);              // inline: a fresh form after each save
   const [engaged, setEngaged] = useState(!inline);
   const [slide, setSlide] = useState(null);           // 'left' | 'right': how the new form comes in
-  const draftRef = useRef({});
+  // A shared payment / scan arrives as options.prefill = { name, amount, date }
+  const draftRef = useRef(options.prefill ? { name: options.prefill.name ?? '', amount: options.prefill.amount ? String(options.prefill.amount) : '' } : {});
   const draft = useMemo(() => ({ get: (f) => draftRef.current[f], set: (f, v) => { draftRef.current[f] = v; } }), []);
   const setKind = (k, dir = null) => { setEngaged(true); setSlide(dir); setKindState(k); };
   const saved = (entry) => { draftRef.current = {}; onSaved?.(entry); if (inline) { setEngaged(true); setRound((r) => r + 1); } };
-  const common = { onSaved: saved, startDate: defaultDate(shell?.month) };
+  const common = { onSaved: saved, startDate: options.prefill?.date ?? defaultDate(shell?.month) };
   const key = `${kind}-${round}`;
   const [currency, setCurrencyState] = useState(entryCurrency.get);
   const setCurrency = (c) => { setCurrencyState(c); entryCurrency.set(c); };
@@ -316,6 +318,7 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
   const [category, setCategory] = useState(null);
   const [paidCash, setPaidCash] = useState(false);    // UPI / card (default) or cash
   const [dateInput, setDateInput] = useState(startDate);
+  const onScan = (r) => { if (r.name) setName(r.name); if (r.amount) setAmount(String(r.amount)); if (r.date) setDateInput(r.date); };
   const givenTo = useMemo(() => [...new Set(transactions.filter((t) => t.type === 'person' && t.direction === 'given_gift').map((t) => t.name?.trim()).filter(Boolean))], [transactions]);
   const cash = useMemo(() => cashSummary(transactions), [transactions]);
   const withdraw = mode === 'withdraw';
@@ -357,6 +360,7 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
     <div className="add-form add-form-expense">
       <Choice idPrefix="expense-mode" value={mode} onChange={setMode} tone="expense" columns={3}
         options={[{ key: 'spent', label: 'Spent' }, { key: 'given', label: 'Gave someone', tone: 'given' }, { key: 'withdraw', label: 'Withdrew cash', tone: 'lent' }]} />
+      {mode === 'spent' && <ScanButton onResult={onScan} />}
       <TextField id="add-name" first Icon={mode === 'given' ? User : withdraw ? Banknote : PenLine} value={name} onChange={setName}
         onEnter={() => (parsed || multi ? save() : document.getElementById('add-amount')?.focus())}
         placeholder={mode === 'given' ? 'Given to whom? (no return expected)' : withdraw ? 'From where? — ATM, bank (optional)' : 'What for? — or “coffee 250 water 50”'} list={mode === 'given' ? 'add-given-to' : undefined} />

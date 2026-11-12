@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.27.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.28.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
@@ -213,6 +213,12 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 
 ### 🧾 Net worth (Savings)
 - What you own (money in hand, savings by type, money owed to you, anything you add — a house, gold, PF) minus what you owe (people, responsibilities, loans you add)
+
+### 📱 Android: widgets, share, scan (app 3.28+, one-time install from the download page)
+- **Home-screen widgets**: *Quick add* (Expense · Money in · Savings · Bills), *This month* (safe to spend / left / spent, today, a seven-day chart, a + button) and *Bills due* (the next three) — choose what they show in Profile → Customize → Home-screen widgets
+- **Share to Expense Tracker** from GPay, PhonePe, Paytm or any app: a payment message or a screenshot opens Add with the name, amount and date filled in
+- **Scan a receipt or UPI screenshot** in Add → Expense; pictures are read on the phone (ML Kit), never uploaded
+- Older installs keep updating over the air; these appear once the new app is installed
 
 ### 📲 Settle by UPI & share
 - Every *who pays whom* in a trip, and every person in Debts, has **UPI**: open your UPI app with their UPI ID, the amount and a note filled in (on a phone), show a **QR** to scan (on a computer), or **send the pay link** to whoever owes. UPI IDs are remembered per person; the UPI app asks for the PIN — nothing is paid from here

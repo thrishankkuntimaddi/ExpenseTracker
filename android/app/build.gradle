@@ -59,6 +59,8 @@ dependencies {
     // App lock (fingerprint / face / screen lock) and Google Drive backups
     implementation "androidx.biometric:biometric:1.1.0"
     implementation "com.google.android.gms:play-services-auth:$playServicesAuthVersion"
+    // Reading receipts / payment screenshots on the phone (bundled model, works offline)
+    implementation "com.google.mlkit:text-recognition:16.0.1"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

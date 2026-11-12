@@ -4,4 +4,10 @@
     <string name="title_activity_main">Expense Tracker</string>
     <string name="package_name">com.thrishank.expensetracker</string>
     <string name="custom_url_scheme">com.thrishank.expensetracker</string>
+    <string name="widget_quick_desc">Add an expense, money in or savings in one tap</string>
+    <string name="widget_summary_desc">This month: safe to spend, today and the last seven days</string>
+    <string name="widget_bills_desc">Your next bills and EMIs</string>
+    <string name="widget_quick_label">Quick add</string>
+    <string name="widget_summary_label">This month</string>
+    <string name="widget_bills_label">Bills due</string>
 </resources>

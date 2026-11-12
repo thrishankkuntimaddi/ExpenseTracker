@@ -8,6 +8,10 @@ import { useActivity } from '../hooks/useActivity';
 import { useDemoData } from '../hooks/useDemoData';
 import { isDemoUser } from '../demo/demo';
 import { getLang, setLang, onLang } from '../i18n';
+import { onShared, onWidgetAction, pushWidgets } from '../native/intake';
+import { parsePayment } from '../utils/receiptParse';
+import { widgetData } from '../utils/widgetData';
+import { formatMoneyCompact } from '../utils/money';
 import { DemoBanner, DemoLocked, DemoProfile } from '../demo/DemoBits';
 import { useSyncStatus, clearSyncError } from '../services/sync';
 import { setStatusBarTheme, onBackButton } from '../native';
@@ -307,6 +311,22 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     }), 800);
     return () => clearTimeout(t);
   }, [loaded, settings?.reminders, settings?.budgets, settings?.categoryRules, settings?.goals, settings?.report, settings?.responsibilities, transactions, income, recurring.rules]);
+
+  // Android: a payment shared to the app, or a widget tap
+  useEffect(() => onShared(({ text, image, error }) => {
+    const r = parsePayment(text, { image });
+    if (r) setAddKind({ kind: 'expense', prefill: { name: r.name ?? '', amount: r.amount, date: r.date } });
+    else setToastMsg(error ?? (image ? 'Couldn’t find an amount in that picture' : 'Couldn’t find an amount in that message'));
+  }), []);
+  useEffect(() => onWidgetAction(({ kind, target }) => {
+    if (kind === 'add' && ['expense', 'income', 'savings', 'debt'].includes(target)) setAddKind({ kind: target });
+    else if (kind === 'page') goTo(target === 'today' ? 'today' : target);
+  }), [goTo]);
+  // Home-screen widgets follow the data
+  useEffect(() => {
+    if (!loaded || isDemo) return;
+    pushWidgets(widgetData({ transactions, income, settings, rules: recurring.rules, money: formatMoneyCompact }));
+  }, [loaded, isDemo, transactions, income, settings, recurring.rules]);
 
   const swipe = useSwipeNavigation({ order: pageOrder, active: activeTab, onChange: goTo, enabled: !isDesktop && !addKind && pageOrder.includes(activeTab) });
 

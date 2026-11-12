@@ -32,6 +32,9 @@ import { startTour, GUIDE_PAGES } from '../../tour/tour';
 import { isAdmin } from '../../config/admin';
 import { t, LANGS, getLang, setLang } from '../../i18n';
 import InviteFriendCard from '../settings/InviteFriendCard';
+import WidgetsCard from '../settings/WidgetsCard';
+import { widgetsAvailable } from '../../native/intake';
+import { platform } from '../../native';
 
 // The owner's read-only list of users: loaded only for that account, only when opened
 const AdminCard = lazy(() => import('../admin/AdminCard'));
@@ -188,6 +191,11 @@ export default function ProfilePage(props) {
 
               {/* ── Customize ── */}
               <Section title="Customize">
+                {platform === 'android' && (
+                  <Group id="widgets" title="Home-screen widgets" Icon={LayoutGrid} color="var(--accent)" summary={widgetsAvailable() ? 'Quick add · This month · Bills due' : 'Needs the newest Android app'}>
+                    <WidgetsCard settings={settings} onPatchSettings={onPatchSettings} />
+                  </Group>
+                )}
                 {!desktop && (
                   <Group id="custom-bar" title="Bottom bar" Icon={LayoutGrid} color="var(--savings)"
                     summary={['Home', ...ui.tabs.map((k) => PAGE_META[k].label)].join(' · ')}>

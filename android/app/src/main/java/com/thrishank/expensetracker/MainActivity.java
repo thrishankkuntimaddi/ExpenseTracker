@@ -11,6 +11,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SystemThemePlugin.class);
         registerPlugin(BiometricPlugin.class);
         registerPlugin(GoogleDrivePlugin.class);
+        registerPlugin(IntakePlugin.class);
+        registerPlugin(WidgetsPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
