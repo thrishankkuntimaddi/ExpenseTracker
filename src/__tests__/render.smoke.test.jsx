@@ -31,6 +31,7 @@ const { default: ProfilePage } = await import('../features/profile/ProfilePage')
 const { default: AddSheet } = await import('../components/AddSheet');
 const { default: BillsPage } = await import('../features/bills/BillsPage');
 const { default: BudgetPage } = await import('../features/budget/BudgetPage');
+const { default: PlannerPage } = await import('../features/planner/PlannerPage');
 const { default: SavingsPage } = await import('../features/savings/SavingsPage');
 const { default: EditTransactionModal } = await import('../components/EditTransactionModal');
 const { default: RecurringRuleModal } = await import('../features/plan/RecurringRuleModal');
@@ -230,6 +231,27 @@ describe('screens render with planning features', () => {
     const none = render(<BudgetPage {...common} settings={{}} />);
     expect(none).toContain('Your budget, ready to go');
     expect(none).toContain('budget-use-suggestion');
+  });
+
+  it('Budget page: the money plan health check', () => {
+    const html = render(<BudgetPage {...common} />);
+    expect(html).toContain('id="money-plan"');
+    expect(html).toMatch(/Money plan · October/);
+    expect(html).toMatch(/\d of 4 healthy/);
+    expect(html).toContain('Essentials');
+    expect(html).toContain('EMIs &amp; loans');
+    expect(html).toContain('Investments');
+    expect(html).toContain('Emergency fund');
+  });
+
+  it('Planner: every calculator renders a result', () => {
+    for (const tab of ['retirement', 'fire', 'education', 'sip']) {
+      const html = render(<PlannerPage {...common} settings={{ ...common.settings, planner: { tab } }} />);
+      expect(html).toContain('planner-tabs');
+      expect(html).toContain('planner-big');
+      expect(html).not.toMatch(/NaN|Infinity|undefined/);
+    }
+    expect(render(<PlannerPage {...common} />)).toContain('You’ll need at 60');
   });
 
   it('Savings page shows rate, where it goes and goals', () => {

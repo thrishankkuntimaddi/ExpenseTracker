@@ -11,6 +11,7 @@ import { PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill, Link
 import { BudgetBar } from '../plan/components/BudgetStatusCard';
 import { CategoryIcon } from '../../components/CategoryPicker';
 import BudgetEditorModal from '../plan/BudgetEditorModal';
+import MoneyPlanCard from './MoneyPlanCard';
 import { computeBudgetStatus, suggestBudget, monthPlan, DEDUCTION_PRESETS } from '../../utils/budget';
 import { categoryTotals, categoryColor, EMPTY_RULES } from '../../utils/categories';
 import { formatAmount, localMonthKey } from '../../utils/dateHelpers';
@@ -75,6 +76,9 @@ export default function BudgetPage({ transactions = [], income = [], settings, o
 
       <div className="tab-body">
         <PlanCard plan={plan} monthKey={monthKey} budgets={budgets} onSave={saveBudgets} />
+        <div style={{ marginTop: 12 }}>
+          <MoneyPlanCard transactions={transactions} income={income} monthKey={monthKey} rules={rules} incomeBase={plan.incomeBase} />
+        </div>
 
         <SectionHeading title="Spending budget" hint={monthName(monthKey, { month: 'long' })} />
         {!status.hasBudget ? (

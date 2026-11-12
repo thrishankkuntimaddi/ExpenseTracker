@@ -83,6 +83,23 @@ export function formatMoneyCompact(n, code = display) {
   return formatter(isCurrency(code) ? code : display, { maximumFractionDigits: 0 }).format(Math.round(Number(n) || 0));
 }
 
+/**
+ * Big sums short: "₹5.51 Cr", "₹17.88 L" in rupees (Indian lakh/crore),
+ * "$1.2M" style in other currencies; small sums as usual.
+ */
+export function formatBig(n, code = display) {
+  const v = Number(n) || 0, a = Math.abs(v), sign = v < 0 ? '−' : '';
+  const c = isCurrency(code) ? code : display;
+  if (c === 'INR') {
+    const sym = currencySymbol(c);
+    if (a >= 1e7) return `${sign}${sym}${(a / 1e7).toFixed(2)} Cr`;
+    if (a >= 1e5) return `${sign}${sym}${(a / 1e5).toFixed(2)} L`;
+    return formatMoneyCompact(v, c);
+  }
+  if (a < 1e5) return formatMoneyCompact(v, c);
+  return formatter(c, { notation: 'compact', maximumFractionDigits: 2 }).format(v);
+}
+
 /** "₹", "$", "€", "AED" … as printed by formatMoney. */
 export function currencySymbol(code = display) {
   if (!isCurrency(code)) code = display;

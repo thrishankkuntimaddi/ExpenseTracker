@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.20.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.21.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
@@ -126,6 +126,14 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 - **Taken from salary**: deductions (TDS, PF, professional tax …) to see gross pay; shown, never subtracted twice
 - A total cap and/or per-category caps; with none set, a ready-made budget from your last three months
 - Pace markers, **safe to spend today**, projected month end, an envelope per category, six months against the budget
+- **Money plan** — a health check built from your real entries: essentials (keep under 40% of income), lifestyle (under 20%), EMIs & loans (under 30%), investments (aim for 20%+) and what's left over, each with a plain verdict; plus how many months your savings would carry you (an emergency fund of six months). The monthly report carries the same check
+
+### 🧮 Planner
+- **Retirement**: what you'll need at retirement for today's lifestyle (inflation-adjusted, paid out monthly until your plan-until age), and the monthly SIP to get there
+- **FIRE**: your FIRE number (25× — the 4% rule — and a safer 30×), what you'd have by then with a rising salary, the earliest age you could stop, and how long the money lasts
+- **A child's education**: the cost on the day it's needed, as a monthly SIP, a yearly amount or one lump sum — and a check of your own step-up plan
+- **Step-up SIP**: a SIP that rises every year by a % or a fixed amount, then held for more years; against a flat SIP
+- Starts from what you actually spend, earn and have saved; remembers your inputs; **Make it a goal** turns an answer into a Savings goal
 
 ### 🧾 Bills & recurring entries
 - Rules for **expenses, savings or income** repeating daily / weekly / monthly / yearly (the 31st becomes the 28th in February), each in its own currency
@@ -225,7 +233,7 @@ At most one per type per day. On Android they **pop up with a sound** (or arrive
 - **Liquid-glass** surfaces; a deep ink-blue **Midnight** dark mode; light, dark or follow the device — per device, applied before the first paint
 - Motion you can switch off: a coin that flies into the month card, rolling numbers, a liquid budget gauge, self-drawing signs (respects *reduce motion*)
 - **Phone**: bottom bar *Home · two pages · ＋ · one page* (choose them in Profile → Customize), Explore tiles on Home for every other page, swipe between bar pages
-- **Desktop, web and tablets** (≥768 px wide and ≥600 px tall): the same pages with a sidebar — Overview (Home, History, Stats) · Money (Income, Bills, Budget, Savings) · With others (Trips, Billings, Debts) — and the full Add form open on Home; Home fits the window without page scrolling
+- **Desktop, web and tablets** (≥768 px wide and ≥600 px tall): the same pages with a sidebar — Overview (Home, History, Stats) · Money (Income, Bills, Budget, Savings, Planner) · With others (Trips, Billings, Debts) — and the full Add form open on Home; Home fits the window without page scrolling
 - Tap your **avatar** for **Profile**: account, theme, animations, Security, Google Drive backup, Currency, Reminders, Customize, then Money · Sync · Your data · App · Account
 
 ---

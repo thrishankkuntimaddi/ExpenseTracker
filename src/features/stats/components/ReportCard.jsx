@@ -10,6 +10,7 @@ import { EMPTY_RULES } from '../../../utils/categories';
 import { motionOn, useMotion } from '../../../motion/motion';
 import { formatMoneyCompact, currencySymbol } from '../../../utils/money';
 import { SMALL_SPEND } from '../../../utils/report';
+import { computeMoneyPlan } from '../../../utils/moneyPlan';
 
 /* ── F · Report unveil: each report arrives sealed, once per device ── */
 const OPENED_KEY = 'et_reports_opened';
@@ -28,6 +29,7 @@ export default function ReportCard({ transactions = [], income = [], settings, r
     transactions, income, rules: settings?.categoryRules ?? EMPTY_RULES, recurring: recurringRules,
     budgets: settings?.budgets, reportKey, day, todayKey,
   });
+  const plan = computeMoneyPlan({ transactions, income, window: { start: r.start, end: r.end }, rules: settings?.categoryRules ?? EMPTY_RULES });
   const nextOn = fromKey(shiftReportDay(latest, day, 1)).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
 
   // Sealed until opened (the latest report only, the first time on this device)
@@ -97,7 +99,7 @@ export default function ReportCard({ transactions = [], income = [], settings, r
             <Fig label="Left" value={rupees(r.left)} tone={r.left < 0 ? 'expense' : 'text'} />
           </div>
           <p id="report-headline" style={{ margin: 0, padding: '0 16px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.45, minHeight: '1.45em' }}>{typed ?? r.headline}</p>
-          {r.spent > 0 && <Analysis a={r.analysis} spent={r.spent} />}
+          {r.spent > 0 && <Analysis a={r.analysis} spent={r.spent} plan={plan} />}
 
           <Group Icon={TrendingUp} tone="expense" title="Went up" empty="Nothing went up." rows={r.up}
             render={(c) => <>{c.label}<Amt>{c.change === 'new' ? `new · ${rupees(c.now)}` : `+${rupees(c.diff)} · ${rupees(c.now)}`}</Amt></>} />
@@ -139,14 +141,16 @@ export default function ReportCard({ transactions = [], income = [], settings, r
 }
 
 /* Essentials vs lifestyle, week by week, and a few patterns */
-function Analysis({ a, spent }) {
+function Analysis({ a, spent, plan }) {
   const parts = [
     { key: 'essentials', label: 'Essentials', color: 'var(--income)' },
     { key: 'lifestyle', label: 'Lifestyle', color: 'var(--expense)' },
     { key: 'other', label: 'Unsorted', color: 'var(--text-muted)' },
   ].filter((p) => a.split[p.key] > 0);
   const maxWeek = Math.max(1, ...a.weeks.map((w) => w.amount));
+  const weak = plan?.hasIncome ? plan.rows.filter((p) => p.key !== 'leftover' && !p.ok) : [];
   const lines = [
+    plan?.hasIncome && <>Money plan: <strong>{plan.score} of {plan.scoreOf}</strong> healthy — {plan.rows.filter((p) => p.key !== 'leftover').map((p) => `${p.label.toLowerCase()} ${Math.round(p.pct)}%`).join(' · ')}{weak.length ? <>. {weak[0].text}.</> : '.'}</>,
     a.top.length > 1 && <>Top {a.top.length} categories took <strong>{a.topShare}%</strong> of spending — {a.top.map((c) => `${c.label} ${c.share}%`).join(', ')}</>,
     a.weekend > 0 && a.weekday > 0 && Math.abs(a.weekend - a.weekday) / Math.max(a.weekend, a.weekday) >= 0.2 && (
       a.weekend > a.weekday

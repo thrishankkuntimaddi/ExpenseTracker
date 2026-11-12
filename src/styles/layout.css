@@ -427,3 +427,6 @@ nav.desktop-nav button { margin: 0; }
 /* The timeline line: a soft indigo glow beneath it */
 .tl-line { filter: drop-shadow(0 6px 10px rgba(79, 70, 229, .22)); }
 [data-theme="monoflow"] .tl-line { filter: drop-shadow(0 6px 12px rgba(165, 180, 252, .25)); }
+
+/* Planner: the calculator switch sits in the page, not in a card */
+.planner-tabs { margin: 0 0 12px; }
