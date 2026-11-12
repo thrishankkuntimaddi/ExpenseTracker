@@ -41,6 +41,19 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+        // Google Play build (bundlePlay → .aab): the release app plus auto-capture
+        // payments (src/play/AndroidManifest.xml — notification access + bank SMS).
+        // The website APK never declares these: Play Protect blocks sideloaded
+        // apps that read notifications or SMS.
+        play {
+            initWith release
+            matchingFallbacks = ['release']
+            if (!keystorePath) {
+                // A local test build: debug key, and adb test notifications allowed
+                signingConfig signingConfigs.debug
+                debuggable true
+            }
+        }
     }
 }
 

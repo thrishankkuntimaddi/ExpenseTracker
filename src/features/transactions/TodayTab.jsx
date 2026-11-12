@@ -31,6 +31,8 @@ import { borrowAlerts } from '../../utils/borrowed';
 import { respSummary } from '../../utils/responsibilities';
 import { streak as logStreak, milestoneReached } from '../../utils/engagement';
 import { t } from '../../i18n';
+import { usePaymentCapture } from '../../hooks/usePaymentCapture';
+import CapturedPaymentsCard from '../capture/CapturedPaymentsCard';
 
 import { t as tr } from '../../i18n';
 const linkBtn = { padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
@@ -45,6 +47,7 @@ export default function TodayTab(props) {
   const { month: monthKey, isNow, period } = useViewMonth(selectedPeriod);
   const { stats } = useStats(transactions, income, period, theme, settings);
   const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
+  const capture = usePaymentCapture({ transactions, income, onAddExpense: onAdd, onAddIncome, rules: categoryRules });   // Play build: UPI / bank SMS payments waiting for a tap
   const [quick, setQuick] = useState('');
 
   const budgetStatus = useMemo(
@@ -438,6 +441,7 @@ export default function TodayTab(props) {
       </div>
 
       <div className={`home-body${shell?.desktop ? ' home-fit' : ''}`} style={{ flex: 1, overflow: 'auto', padding: '14px 16px 20px' }}>
+        <CapturedPaymentsCard capture={capture} rules={categoryRules} />
         {shell?.desktop ? (
           // Wide screens, one screen, no scrolling: what you do (overview, entry)
           // beside where to go (explore, bills, recent — which fills the rest)

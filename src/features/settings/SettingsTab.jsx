@@ -383,7 +383,7 @@ export default function SettingsTab({
                 {update.kind === 'ready' && (platform === 'desktop' || platform === 'android') ? (
                   <button id="btn-restart-update" onClick={restartToUpdate} style={smallAccentBtn}>{tr("Restart")}</button>
                 ) : update.kind === 'native-needed' ? (
-                  <button onClick={() => window.open(APK_URL, '_blank')} style={smallAccentBtn}>{tr("Install")}</button>
+                  <button onClick={() => window.open(update.installUrl ?? APK_URL, '_blank')} style={smallAccentBtn}>{tr("Install")}</button>
                 ) : (
                   <button id="btn-check-updates" onClick={() => checkForUpdates()} disabled={update.kind === 'checking' || update.kind === 'downloading'} style={{ ...smallAccentBtn, background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }}>
                     {update.kind === 'checking' ? tr("Checking…") : tr("Check")}

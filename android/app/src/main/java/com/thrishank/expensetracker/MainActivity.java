@@ -13,6 +13,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(GoogleDrivePlugin.class);
         registerPlugin(IntakePlugin.class);
         registerPlugin(WidgetsPlugin.class);
+        registerPlugin(PaymentCapturePlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

@@ -70,8 +70,11 @@ jobs:
         run: |
           chmod +x gradlew
           if [ -n "$ANDROID_KEYSTORE_PATH" ]; then
-            ./gradlew assembleRelease --no-daemon
+            ./gradlew assembleRelease bundlePlay --no-daemon
             mv app/build/outputs/apk/release/app-release.apk ../ExpenseTracker-Android.apk
+            # Google Play upload (auto-capture payments: notification access + bank SMS).
+            # Never on the website — only the APK above is mirrored there.
+            mv app/build/outputs/bundle/play/app-play.aab ../ExpenseTracker-Play.aab
           else
             ./gradlew assembleDebug --no-daemon
             mv app/build/outputs/apk/debug/app-debug.apk ../ExpenseTracker-Android.apk
@@ -79,7 +82,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ExpenseTracker-Android
-          path: ExpenseTracker-Android.apk
+          path: |
+            ExpenseTracker-Android.apk
+            ExpenseTracker-Play.aab
+          if-no-files-found: warn
 
   desktop:
     name: Desktop (${{ matrix.name }})
@@ -182,6 +188,7 @@ jobs:
           body_path: .github/release-notes.md
           files: |
             out/*.apk
+            out/*.aab
             out/*.dmg
             out/*.exe
             out/*.AppImage

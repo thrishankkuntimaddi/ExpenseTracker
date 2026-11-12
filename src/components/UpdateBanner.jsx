@@ -32,7 +32,7 @@ export default function UpdateBanner() {
   const action = u.kind === 'ready' && (platform === 'desktop' || platform === 'android')
     ? { label: tr("Restart"), Icon: RotateCcw, onClick: restartToUpdate }
     : u.kind === 'native-needed'
-      ? { label: tr("Install"), Icon: Download, onClick: () => window.open(APK_URL, '_blank') }
+      ? { label: tr("Install"), Icon: Download, onClick: () => window.open(u.installUrl ?? APK_URL, '_blank') }
       : null;
   return (
     <div role="status" id="update-banner" style={{

@@ -39,6 +39,17 @@
     <p>If you turn on Drive backup, the app saves copies of your data to a folder named “Expense Tracker backups” in <em>your own</em> Google Drive. It asks only for the <code>drive.file</code> permission, which lets it see the files it creates and nothing else in your Drive. The app talks to Drive directly from your device; no copy of your backups or your Google access is kept on any server of ours. You can delete the backups from Google Drive at any time.</p>
     <p>Expense Tracker’s use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
 
+    <h2>Auto-capture payments (Android app from Google Play)</h2>
+    <p>This is off until you turn it on in Profile → Auto-capture payments, and each source needs your permission in Android:</p>
+    <ul>
+      <li><strong>UPI app notifications</strong> (Android “Notification access”): the app looks only at notifications from payment apps (Google Pay, PhonePe, Paytm, BHIM, CRED, Amazon Pay, MobiKwik, WhatsApp) and SMS apps. Other apps’ notifications are ignored.</li>
+      <li><strong>Bank SMS</strong> (Android’s SMS permission, <code>RECEIVE_SMS</code>): the app looks only at new messages from business senders (like “AD-HDFCBK”) that mention an amount. Messages from people (phone numbers) are ignored, and your SMS inbox is never read.</li>
+    </ul>
+    <p>Messages that look like a completed payment are kept <em>on your phone only</em>, for up to 30 days, and shown on Home as “Add this payment?”. OTPs, requests and reminders are skipped. Nothing is uploaded or saved to your account unless you tap Add — then only the entry (amount, name, date), not the message. Turning the feature off deletes everything it kept. The app from the website does not include this feature.</p>
+
+    <h2>Bank statements</h2>
+    <p>When you import a statement (History → import), the file is read on your device. It is never uploaded; only the entries you choose to add are saved to your account.</p>
+
     <h2>Emails</h2>
     <p>If app lock is on, you may get an email at your account address about security events on your account (for example, repeated wrong PINs). There is no marketing email.</p>
 

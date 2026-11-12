@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.30.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.31.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
@@ -205,6 +205,12 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 
 ### 🗣️ Languages
 - **English, हिन्दी, తెలుగు, தமிழ்** (Profile → Appearance → Language, synced to every device): every screen — about 1,100 labels, buttons, hints and sentences per language; a few numbers-and-words fragments stay in English (`src/i18n`, keyed by the English text; native-speaker review welcome)
+
+### 📲 Auto-capture payments (Google Play app)
+- **UPI app notifications and bank SMS** — Google Pay, PhonePe, Paytm, BHIM, CRED and your banks' debit/credit messages show up on Home as “Add this payment?” with the name, category and account filled in
+- One switch, then each source with its own Android permission; only business senders are read (never messages from people, never the SMS inbox), OTPs and requests skipped, kept on the phone until you tap Add
+- **One ledger, no doubles**: the same payment from the UPI app and the bank SMS shows once, and anything you already typed or imported is not offered again
+- Only in the Play Store build (`ExpenseTracker-Play.aab` on each release); the website APK stays without it so Play Protect never blocks it — see [docs/play-store.md](docs/play-store.md)
 
 ### 🏦 Import a bank statement (History → ⬆)
 - **CSV, Excel (.xls/.xlsx) or PDF** from any Indian bank — password-protected PDFs too (enter the password the bank sent). Read on the device; the file is never uploaded

@@ -18,6 +18,7 @@ import { platform } from './index';
 import { App as CapApp } from '@capacitor/app';
 import { useSyncExternalStore } from 'react';
 import { markQuickBoot } from '../app/quickBoot';
+import { installedFromPlay, PLAY_URL } from './paymentCapture';
 
 const PAGES = 'https://thrishankkuntimaddi.github.io/ExpenseTracker';
 export const OTA_MANIFEST = import.meta.env.VITE_OTA_MANIFEST || `${PAGES}/app/update.json`;   // overridable for tests
@@ -89,7 +90,11 @@ async function checkAndroid() {
   const decision = otaDecision(manifest, { build: THIS_BUILD, nativeBuild });
   if (decision === 'current' || decision === 'invalid') return set({ kind: 'current' });
   if (decision === 'native-needed') {
-    return set({ kind: 'native-needed', version: manifest.version, message: `Expense Tracker ${manifest.version} needs the new app — install it once, then updates arrive on their own again.` });
+    // Installed from Google Play: the new app comes from there, not the website APK
+    const play = await installedFromPlay();
+    return set({ kind: 'native-needed', version: manifest.version, installUrl: play ? PLAY_URL : APK_URL, store: play,
+      message: play ? `Expense Tracker ${manifest.version} is waiting in the Play Store — update it there, then updates arrive on their own again.`
+        : `Expense Tracker ${manifest.version} needs the new app — install it once, then updates arrive on their own again.` });
   }
   const { u } = await updater();
   const id = `${manifest.version}-${manifest.build}`;

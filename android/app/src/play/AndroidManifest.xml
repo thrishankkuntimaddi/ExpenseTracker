@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Google Play build only (bundlePlay → .aab), merged into the main manifest.
+     Auto-capture payments, both off until the user turns them on in the app:
+       • UPI-app notifications — needs "Notification access" in Android settings
+       • Bank SMS — needs the SMS permission (Play: SMS-based money management)
+     The website APK never has these: Play Protect blocks sideloaded apps that
+     read notifications or SMS. See docs/play-store.md for the declarations. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+
+    <application>
+        <service
+            android:name="com.thrishank.expensetracker.PaymentListenerService"
+            android:label="@string/app_name"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- Only Android itself can deliver SMS here (BROADCAST_SMS) -->
+        <receiver
+            android:name="com.thrishank.expensetracker.BankSmsReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

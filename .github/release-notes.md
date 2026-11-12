@@ -9,6 +9,8 @@
 | 🐧 **Linux** | **`ExpenseTracker-Linux.AppImage`** |
 | 🍎 **iPhone / iPad** | No download — open the [web app](https://thrishankkuntimaddi.github.io/ExpenseTracker/) in Safari → Share → **Add to Home Screen** |
 
+`ExpenseTracker-Play.aab` is not for installing — it is the file uploaded to the Google Play Store.
+
 Not sure which Mac you have? → Apple menu → **About This Mac**. "Chip: Apple M…" means Apple chip; "Processor: Intel" means Intel.
 
 *"Source code" zips, the `.app.tar.gz` files and `latest.json` are for GitHub and the apps' automatic updates — you don't need them.*

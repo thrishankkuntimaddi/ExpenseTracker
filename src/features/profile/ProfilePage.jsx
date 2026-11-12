@@ -8,7 +8,7 @@
 //     full screen on phones (Back — or the Android back button — returns)
 import { useMotionPref, setMotionPref } from '../../motion/motion';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Compass, PlayCircle, ChevronRight, Eye, Gift } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Compass, PlayCircle, ChevronRight, Eye, Gift, ScanLine } from 'lucide-react';
 import Avatar from '../../components/Avatar';
 import { displayNameOf } from '../../app/shellContext';
 import { PAGE_META } from '../../app/pages';
@@ -35,6 +35,9 @@ import InviteFriendCard from '../settings/InviteFriendCard';
 import WidgetsCard from '../settings/WidgetsCard';
 import { widgetsAvailable } from '../../native/intake';
 import { platform } from '../../native';
+import CaptureCard from '../settings/CaptureCard';
+import { useCaptureStatus, captureSummary } from '../settings/captureStatus';
+import { captureUsable } from '../../native/paymentCapture';
 
 import { t as tr } from '../../i18n';
 // The owner's read-only list of users: loaded only for that account, only when opened
@@ -89,6 +92,7 @@ export default function ProfilePage(props) {
   const remOn = REMINDER_TYPES.filter((t) => rem[t]?.enabled);
   const remSummary = remOn.length ? `${remOn.length} on · ${remOn.map((t) => REMINDER_NAMES[t]).join(', ')}` : 'Off';
   const sounds = useSoundPrefs();
+  const [capture, setCapture] = useCaptureStatus();
   const currency = isCurrency(settings?.currency) ? settings.currency : DEFAULT_CURRENCY;
   const driveSummary = drive?.cfg?.enabled
     ? `On · ${(FREQUENCIES.find((f) => f.key === drive.cfg.frequency)?.label ?? 'Every week').toLowerCase()}${drive.state?.lastAt ? ` · last ${timeAgo(drive.state.lastAt)}` : ''}`
@@ -188,6 +192,11 @@ export default function ProfilePage(props) {
                 <Group id="reminders" title={tr("Reminders")} Icon={Bell} color="var(--accent)" summary={remSummary}>
                   <RemindersCard uid={user?.uid} settings={settings} onPatchSettings={onPatchSettings} transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} />
                 </Group>
+                {platform === 'android' && captureUsable(capture) && (
+                  <Group id="capture" title={tr("Auto-capture payments")} Icon={ScanLine} color="var(--accent)" summary={captureSummary(capture)}>
+                    <CaptureCard bare status={capture} onStatus={setCapture} />
+                  </Group>
+                )}
               </Section>
 
               {/* ── Customize ── */}
