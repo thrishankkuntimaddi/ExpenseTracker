@@ -3,7 +3,7 @@
 // utils/report.js): totals, what went up / down / stayed steady, bills you
 // missed, categories over budget. Browse earlier reports with ‹ ›.
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus, AlertCircle, Target, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus, AlertCircle, Target, FileText, Share2 } from 'lucide-react';
 import { buildReport, latestReportDay, shiftReportDay, windowLabel, getReportSettings, ordinal } from '../../../utils/report';
 import { toKey, fromKey } from '../../../utils/recurring';
 import { EMPTY_RULES } from '../../../utils/categories';
@@ -11,6 +11,7 @@ import { motionOn, useMotion } from '../../../motion/motion';
 import { formatMoneyCompact, currencySymbol } from '../../../utils/money';
 import { SMALL_SPEND } from '../../../utils/report';
 import { computeMoneyPlan } from '../../../utils/moneyPlan';
+import WrappedModal from './WrappedModal';
 
 /* ── F · Report unveil: each report arrives sealed, once per device ── */
 const OPENED_KEY = 'et_reports_opened';
@@ -24,6 +25,7 @@ export default function ReportCard({ transactions = [], income = [], settings, r
   const todayKey = toKey(new Date());
   const latest = latestReportDay(day, todayKey);
   const [back, setBack] = useState(0);   // how many reports before the latest
+  const [wrapOpen, setWrapOpen] = useState(false);
   const reportKey = shiftReportDay(latest, day, -back);
   const r = buildReport({
     transactions, income, rules: settings?.categoryRules ?? EMPTY_RULES, recurring: recurringRules,
@@ -117,6 +119,11 @@ export default function ReportCard({ transactions = [], income = [], settings, r
               render={(c) => <>{c.label}<Amt>{rupees(c.spent)} of {rupees(c.limit)}</Amt></>} />
           )}
 
+          <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
+            <button id="report-wrapped" onClick={() => setWrapOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+              <Share2 size={14} /> Share as a picture — this month or your year, wrapped
+            </button>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--surface2)' }}>
             <Fig label="Per day" value={rupees(r.avgPerDay)} />
             <Fig label="No-spend days" value={r.noSpendDays} />
@@ -125,6 +132,10 @@ export default function ReportCard({ transactions = [], income = [], settings, r
         </>
       )}
 
+      {wrapOpen && (
+        <WrappedModal transactions={transactions} income={income} rules={settings?.categoryRules ?? EMPTY_RULES} todayKey={todayKey}
+          monthWin={{ start: r.start, last: r.last, label: windowLabel(r.start, r.last) }} onClose={() => setWrapOpen(false)} />
+      )}
       <div style={{ padding: '10px 16px 12px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-secondary)' }}>
         <span>A new report on the</span>
         <select id="report-day" value={day} aria-label="Report day" onChange={(e) => onPatchSettings?.({ report: { ...(settings?.report ?? {}), day: Number(e.target.value) } })}

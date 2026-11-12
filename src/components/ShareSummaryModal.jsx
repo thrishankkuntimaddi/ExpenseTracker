@@ -7,7 +7,7 @@ import { Copy, Check, Download, Send, Image as ImageIcon, Loader2 } from 'lucide
 import ModalShell from './ModalShell';
 import { copyImageToClipboard, downloadImageBlob } from '../features/external/shareHelpers';
 
-export default function ShareSummaryModal({ title, subtitle, text, makeImage, filename = 'summary', onClose }) {
+export default function ShareSummaryModal({ title, subtitle, text, makeImage, filename = 'summary', onClose, extra = null }) {
   const [blob, setBlob] = useState(null);
   const [url, setUrl] = useState('');
   const [failed, setFailed] = useState(false);
@@ -53,6 +53,7 @@ export default function ShareSummaryModal({ title, subtitle, text, makeImage, fi
         {canShare && <Btn onClick={share} Icon={Send} primary>Share…</Btn>}
       </div>}
     >
+      {extra}
       {note && <div role="status" style={{ padding: '8px 12px', borderRadius: 10, background: 'var(--accent-bg)', color: 'var(--accent)', fontSize: 12, fontWeight: 700, textAlign: 'center' }}>{note}</div>}
       <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)', background: '#0A0C11', minHeight: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {url ? <img src={url} alt={`${title} as an image`} style={{ width: '100%', display: 'block' }} />

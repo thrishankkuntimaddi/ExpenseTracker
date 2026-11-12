@@ -14,6 +14,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trash2, Check, ArrowRight, Users, Share2, Lock, Unlock, CheckCircle2, UserPlus, X, PieChart, BookPlus, Crown } from 'lucide-react';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import Sheet from '../../components/Sheet';
+import UpiSheet from '../../components/UpiSheet';
+import { getDisplayCurrency } from '../../utils/money';
 import Avatar from '../../components/Avatar';
 import RollingNumber from '../../motion/RollingNumber';
 import { flyCoin, burstCoins, pop } from '../../motion/motion';
@@ -38,6 +40,7 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
   const isOwner = !shared || !!trip.isOwner;
   const members = useMemo(() => trip.members ?? [], [trip.members]);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [upi, setUpi] = useState(null);   // a transfer being settled by UPI
   const [editingMember, setEditingMember] = useState(null);   // member id whose editor is open
 
   /* ── Who may touch what ── */
@@ -345,6 +348,11 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
                   {mine && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--external)', marginLeft: 6 }}>{t.to === s.meUnit ? 'to you' : 'you pay'}</span>}
                 </div>
                 <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--expense)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{money(t.amount)}</span>
+                {canSettle(t.from, t.to) && getDisplayCurrency() === 'INR' && (
+                  <button id={`trip-upi-${i}`} onClick={() => setUpi(t)} title="Pay or ask by UPI" style={{ height: 28, padding: '0 9px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 800, letterSpacing: '0.02em', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                    UPI
+                  </button>
+                )}
                 {canSettle(t.from, t.to) && (
                   <button onClick={(e) => markPaid(t, e)} title="Mark as paid — either of you can" style={{ height: 28, padding: '0 10px', border: 'none', background: 'var(--income)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                     <Check size={12} /> Paid
@@ -438,6 +446,10 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
           </div>
         )}
       </div>
+      {upi && (
+        <UpiSheet fromName={upi.fromName} toName={upi.toName} amount={upi.amount} note={trip.name}
+          fromIsMe={!!s.meUnit && upi.from === s.meUnit} toIsMe={!!s.meUnit && upi.to === s.meUnit} onClose={() => setUpi(null)} />
+      )}
     </div>
   );
 }

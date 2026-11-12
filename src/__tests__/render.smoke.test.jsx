@@ -245,6 +245,18 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Emergency fund');
   });
 
+  it('UPI sheet and Wrapped render', async () => {
+    const { default: UpiSheet } = await import('../components/UpiSheet');
+    const { default: WrappedModal } = await import('../features/stats/components/WrappedModal');
+    const upi = render(<UpiSheet fromName="Kiran" toName="Ravi" amount={1800} note="Goa" onClose={() => {}} />);
+    expect(upi).toContain('Settle by UPI');
+    expect(upi).toContain('Ravi’s UPI ID');
+    const w = render(<WrappedModal transactions={transactions} income={income} rules={{}} todayKey="2026-10-08" monthWin={{ start: '2026-09-08', last: '2026-10-07', label: '8 Sep – 7 Oct' }} onClose={() => {}} />);
+    expect(w).toContain('Your money, wrapped');
+    expect(w).toContain('id="wrapped-amounts"');
+    expect(w).toContain('My money, wrapped — 8 Sep – 7 Oct');
+  });
+
   it('Stats: Ask, Heads-up and Habits', () => {
     const html = render(<StatsTab {...common} />);
     expect(html).toContain('id="stats-ask"');

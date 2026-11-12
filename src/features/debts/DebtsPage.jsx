@@ -15,7 +15,8 @@ import Sheet from '../../components/Sheet';
 import Sign from '../../motion/Sign';
 import { generateId } from '../../utils/storage';
 import { formatAmount, isoToDateInput, dateInputToISO, isoToMonth, todayInputValue } from '../../utils/dateHelpers';
-import { currencySymbol } from '../../utils/money';
+import { currencySymbol, getDisplayCurrency } from '../../utils/money';
+import UpiSheet from '../../components/UpiSheet';
 import EntryAmount from '../../components/EntryAmount';
 
 const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -188,6 +189,7 @@ function List({ id, title, hint, people, onOpen, bare }) {
 function PersonDebt({ person, onBack, onAdd, onUpdate, onDelete }) {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [upiOpen, setUpiOpen] = useState(false);
   const p = person;
   const tone = p.settled ? 'income' : p.net > 0 ? 'lent' : 'borrowed';
   const actions = p.settled
@@ -198,6 +200,10 @@ function PersonDebt({ person, onBack, onAdd, onUpdate, onDelete }) {
 
   return (
     <div className="tab-root debts-person">
+      {upiOpen && (
+        <UpiSheet amount={Math.abs(p.net)} note="Settling up" onClose={() => setUpiOpen(false)} recordWith={p.net < 0 ? 'Pay back' : 'Got money back'}
+          {...(p.net < 0 ? { fromIsMe: true, fromName: 'You', toName: p.name } : { toIsMe: true, fromName: p.name, toName: 'you' })} />
+      )}
       {deleting && (
         <ConfirmDeleteModal title="Delete this entry?" message="It moves to Recently Deleted (Profile → Your data), where you can restore it."
           onConfirm={() => { onDelete(deleting); setDeleting(null); }} onCancel={() => setDeleting(null)} />
@@ -227,6 +233,12 @@ function PersonDebt({ person, onBack, onAdd, onUpdate, onDelete }) {
             <Mini label="Borrowed" value={p.borrowed} />
             <Mini label="Paid back" value={p.paidBack} />
           </div>
+          {!p.settled && getDisplayCurrency() === 'INR' && (
+            <button id="debt-upi" onClick={() => setUpiOpen(true)}
+              style={{ width: '100%', marginTop: 14, padding: '10px 14px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+              {p.net < 0 ? `Pay ${p.name} by UPI` : `Ask ${p.name} to pay by UPI`}
+            </button>
+          )}
           <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
             {actions.map((a) => (
               <button key={a.move} id={`debt-action-${a.move}`} onClick={() => onAdd({ move: a.move, name: p.name })}

@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.23.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.24.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
@@ -199,6 +199,11 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 ### 👁️ Admin sees (the owner's account only)
 - A **read-only** list of who uses the app — name, email, when they last opened it and last added an entry, how many entries, which app and version — with filters (today, this week, adding entries, opens but adds nothing, no entries, new, going quiet, stopped), search and sorting
 - Each app writes only a small activity record about its own account (`user_activity/{uid}`); `firestore.rules` lets only the owner's verified account read them and no one write anyone else's. It never includes amounts or entries, and it's deleted with the account
+
+### 📲 Settle by UPI & share
+- Every *who pays whom* in a trip, and every person in Debts, has **UPI**: open your UPI app with their UPI ID, the amount and a note filled in (on a phone), show a **QR** to scan (on a computer), or **send the pay link** to whoever owes. UPI IDs are remembered per person; the UPI app asks for the PIN — nothing is paid from here
+- **Your money, wrapped**: the monthly report (or your year so far) as a picture to post — shares, regulars, streaks and no-spend days; amounts only if you switch them on
+- Trips work for **households and couples** too: leave the end date empty and keep a shared split open
 
 ### 🔒 App lock & your devices
 - **One PIN for every device** — only a salted PBKDF2 hash is stored, never the PIN

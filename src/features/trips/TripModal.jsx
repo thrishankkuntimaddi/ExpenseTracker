@@ -82,9 +82,16 @@ export default function TripModal({ trip, onSave, onDelete, onClose }) {
           <PrimaryButton onClick={save} disabled={!canSave} color="var(--external)"><Check size={14} /> {trip ? 'Save changes' : 'Create trip'}</PrimaryButton>
         </>}
       >
-        <Field label="Trip name">
+        <Field label="Trip name" hint={!trip ? 'Not just trips: flatmates, a couple’s shared spending, office lunches — leave “To” empty and keep it open.' : undefined}>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Goa road trip" style={fieldStyle} autoFocus />
         </Field>
+        {!trip && !name.trim() && (
+          <div id="trip-name-ideas" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '-4px 0 10px' }}>
+            {['Flat — monthly', 'Us two', 'Office lunches', 'Goa trip'].map((n) => (
+              <button key={n} type="button" onClick={() => setName(n)} style={{ padding: '5px 10px', fontSize: 11.5, fontWeight: 650, fontFamily: 'inherit', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-secondary)' }}>{n}</button>
+            ))}
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <Field label="From"><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={fieldStyle} /></Field>
           <Field label="To (optional)"><input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} style={fieldStyle} /></Field>
