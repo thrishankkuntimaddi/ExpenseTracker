@@ -10,6 +10,7 @@ import { computeGoalProgress, isGoalOpen, moveGoal, endGoal, reopenGoal, GOAL_ST
 import { toKey } from '../../../utils/recurring';
 import { formatMoneyCompact } from '../../../utils/money';
 
+import { t as tr } from '../../../i18n';
 const monthLabel = (key) => new Date(key).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 
 export default function GoalsCard({ goals = [], transactions = [], onAdd, onEdit, onUpdate, onContribute, compact = false }) {
@@ -24,12 +25,12 @@ export default function GoalsCard({ goals = [], transactions = [], onAdd, onEdit
           <Flag size={17} style={{ color: 'var(--savings)' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>No goals yet</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, lineHeight: 1.5 }}>{formatMoneyCompact(100000)} by April? Put a share aside each month — with a friend, in cash or a bank — and see where it stands.</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{tr("No goals yet")}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, lineHeight: 1.5 }}>{formatMoneyCompact(100000)} {tr("by April? Put a share aside each month — with a friend, in cash or a bank — and see where it stands.")}</div>
         </div>
         {onAdd && (
           <button id="goal-add-empty" onClick={onAdd} style={{ padding: '8px 12px', fontSize: 12, fontWeight: 700, background: 'var(--savings)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Plus size={13} /> Goal
+            <Plus size={13} /> {tr("Goal")}
           </button>
         )}
       </div>
@@ -39,18 +40,18 @@ export default function GoalsCard({ goals = [], transactions = [], onAdd, onEdit
   return (
     <div className="goals">
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '0 4px 8px' }}>
-        <span className="section-label" style={{ margin: 0 }}>Goals · {open.length}</span>
-        {onAdd && <button id="goal-add" onClick={onAdd} style={{ padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Plus size={13} /> New goal</button>}
+        <span className="section-label" style={{ margin: 0 }}>{tr("Goals ·")} {open.length}</span>
+        {onAdd && <button id="goal-add" onClick={onAdd} style={{ padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Plus size={13} /> {tr("New goal")}</button>}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {open.map((g) => <GoalItem key={g.id} goal={g} transactions={transactions} onEdit={onEdit} onUpdate={onUpdate} onContribute={onContribute} />)}
-        {!open.length && <div className="card" style={{ padding: 14, fontSize: 12, color: 'var(--text-muted)' }}>No goals in progress.</div>}
+        {!open.length && <div className="card" style={{ padding: 14, fontSize: 12, color: 'var(--text-muted)' }}>{tr("No goals in progress.")}</div>}
       </div>
 
       {done.length > 0 && (
         <>
           <button id="goals-finished-toggle" onClick={() => setShowDone((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '16px 4px 8px', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit' }}>
-            <span className="section-label" style={{ margin: 0 }}>Finished · {done.length}</span>
+            <span className="section-label" style={{ margin: 0 }}>{tr("Finished ·")} {done.length}</span>
             <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: showDone ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
           </button>
           {showDone && (
@@ -62,10 +63,10 @@ export default function GoalsCard({ goals = [], transactions = [], onAdd, onEdit
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{g.name}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                        {GOAL_STATUS[g.status]?.label}{g.endedOn ? ` · ${new Date(g.endedOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''} · {formatAmount(p.saved)} of {formatAmount(p.target)}{g.endNote ? ` · ${g.endNote}` : ''}
+                        {GOAL_STATUS[g.status]?.label}{g.endedOn ? ` · ${new Date(g.endedOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''} · {formatAmount(p.saved)} {tr("of")} {formatAmount(p.target)}{g.endNote ? ` · ${g.endNote}` : ''}
                       </div>
                     </div>
-                    {onUpdate && <button aria-label={`Reopen ${g.name}`} title="Reopen" onClick={() => onUpdate(reopenGoal(g))} style={iconBtn}><RotateCcw size={13} /></button>}
+                    {onUpdate && <button aria-label={`Reopen ${g.name}`} title={tr("Reopen")} onClick={() => onUpdate(reopenGoal(g))} style={iconBtn}><RotateCcw size={13} /></button>}
                   </div>
                 );
               })}
@@ -100,7 +101,7 @@ function GoalItem({ goal: g, transactions, onEdit, onUpdate, onContribute }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 750, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-            {g.heldWith ? <>Kept with <strong style={{ color: 'var(--text-secondary)' }}>{g.heldWith}</strong></> : 'Where it’s kept: not set'}
+            {g.heldWith ? <>{tr("Kept with")} <strong style={{ color: 'var(--text-secondary)' }}>{g.heldWith}</strong></> : tr("Where it’s kept: not set")}
             {lastMove ? ` · was with ${lastMove.from || '—'} until ${new Date(lastMove.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}
           </div>
         </div>
@@ -112,10 +113,10 @@ function GoalItem({ goal: g, transactions, onEdit, onUpdate, onContribute }) {
         <div style={{ height: '100%', width: `${p.pct}%`, background: color, borderRadius: 99, transition: 'width .5s cubic-bezier(0.16,1,0.3,1)' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 6, fontSize: 12, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-        <span><strong style={{ color: 'var(--text)' }}>{formatAmount(p.saved)}</strong> of {formatAmount(p.target)}</span>
+        <span><strong style={{ color: 'var(--text)' }}>{formatAmount(p.saved)}</strong> {tr("of")} {formatAmount(p.target)}</span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          {p.done ? <><Trophy size={12} style={{ color: 'var(--income)' }} /> Reached</>
-            : p.overdue ? <><AlertTriangle size={11} style={{ color: 'var(--expense)' }} /> Past {monthLabel(g.deadline)} · {formatAmount(p.remaining)} short</>
+          {p.done ? <><Trophy size={12} style={{ color: 'var(--income)' }} /> {tr("Reached")}</>
+            : p.overdue ? <><AlertTriangle size={11} style={{ color: 'var(--expense)' }} /> {tr("Past")} {monthLabel(g.deadline)} · {formatAmount(p.remaining)} {tr("short")}</>
             : g.deadline ? `by ${monthLabel(g.deadline)}${p.onTrack === false ? ' · behind' : p.onTrack ? ' · on track' : ''}`
             : `${formatAmount(p.remaining)} to go`}
         </span>
@@ -130,22 +131,22 @@ function GoalItem({ goal: g, transactions, onEdit, onUpdate, onContribute }) {
       {p.done ? (
         <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--income-bg)', borderRadius: 12 }}>
           <CheckCircle2 size={18} style={{ color: 'var(--income)', flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>Goal reached — collect {formatAmount(p.saved)}{g.heldWith ? ` from ${g.heldWith}` : ''} when you need it.</span>
-          {onUpdate && <button id={`goal-collect-${g.id}`} onClick={() => onUpdate(endGoal(g, 'collected', today))} style={{ padding: '7px 12px', border: 'none', background: 'var(--income)', color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Collected</button>}
+          <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>{tr("Goal reached — collect")} {formatAmount(p.saved)}{g.heldWith ? ` from ${g.heldWith}` : ''} {tr("when you need it.")}</span>
+          {onUpdate && <button id={`goal-collect-${g.id}`} onClick={() => onUpdate(endGoal(g, 'collected', today))} style={{ padding: '7px 12px', border: 'none', background: 'var(--income)', color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{tr("Collected")}</button>}
         </div>
       ) : mode ? (
         <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
           <input autoFocus value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') confirm(); if (e.key === 'Escape') setMode(null); }}
-            placeholder={mode === 'move' ? 'Now kept with — a person, cash, a bank…' : 'What was it used for? (optional)'}
+            placeholder={mode === 'move' ? tr("Now kept with — a person, cash, a bank…") : tr("What was it used for? (optional)")}
             style={{ flex: 1, minWidth: 0, padding: '9px 12px', fontSize: 13, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit', outline: 'none' }} />
-          <button onClick={confirm} disabled={mode === 'move' && !text.trim()} style={{ padding: '0 12px', border: 'none', background: mode === 'used' ? 'var(--expense)' : 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{mode === 'move' ? 'Move' : 'End goal'}</button>
-          <button onClick={() => setMode(null)} style={{ padding: '0 10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' }}>Cancel</button>
+          <button onClick={confirm} disabled={mode === 'move' && !text.trim()} style={{ padding: '0 12px', border: 'none', background: mode === 'used' ? 'var(--expense)' : 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{mode === 'move' ? tr("Move") : tr("End goal")}</button>
+          <button onClick={() => setMode(null)} style={{ padding: '0 10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' }}>{tr("Cancel")}</button>
         </div>
       ) : (onContribute || onUpdate) && (
         <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-          {onContribute && <button id={`goal-contribute-${g.id}`} onClick={() => onContribute(g)} style={{ ...actBtn, border: 'none', background: 'var(--savings)', color: '#fff' }}><Plus size={13} /> Add money</button>}
-          {onUpdate && <button id={`goal-move-${g.id}`} onClick={() => { setMode('move'); setText(''); }} style={actBtn}><ArrowRightLeft size={12} /> Moved it</button>}
-          {onUpdate && <button id={`goal-used-${g.id}`} onClick={() => { setMode('used'); setText(''); }} style={actBtn}>Used it</button>}
+          {onContribute && <button id={`goal-contribute-${g.id}`} onClick={() => onContribute(g)} style={{ ...actBtn, border: 'none', background: 'var(--savings)', color: '#fff' }}><Plus size={13} /> {tr("Add money")}</button>}
+          {onUpdate && <button id={`goal-move-${g.id}`} onClick={() => { setMode('move'); setText(''); }} style={actBtn}><ArrowRightLeft size={12} /> {tr("Moved it")}</button>}
+          {onUpdate && <button id={`goal-used-${g.id}`} onClick={() => { setMode('used'); setText(''); }} style={actBtn}>{tr("Used it")}</button>}
         </div>
       )}
     </div>

@@ -14,6 +14,7 @@ import CategoryPicker from './CategoryPicker';
 import Portal from './Portal';
 import { useEscape } from '../hooks/useEscape';
 
+import { t as tr } from '../i18n';
 export default function EditTransactionModal({ txn, onSave, onDelete, onClose, categoryRules = {}, onLearnCategory }) {
   useEscape(onClose);
   const [name, setName]           = useState(txn.name ?? '');
@@ -79,7 +80,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
       <>
         {showDeleteConfirm && (
           <ConfirmDeleteModal
-            title="Delete transaction?"
+            title={tr("Delete transaction?")}
             message="It moves to Recently Deleted (Settings), where you can restore it."
             onConfirm={() => { onDelete(txn.id); onClose(); }}
             onCancel={() => setShowDeleteConfirm(false)}
@@ -103,8 +104,8 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{isWithdrawal ? 'Edit cash withdrawal' : 'Edit Transaction'}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>Changes persist immediately</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{isWithdrawal ? tr("Edit cash withdrawal") : tr("Edit Transaction")}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{tr("Changes persist immediately")}</div>
               </div>
               <button onClick={onClose} style={{
                 width: 30, height: 30, borderRadius: 9, border: 'none', background: 'var(--surface2)',
@@ -155,7 +156,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
             {/* Savings type */}
             {type === 'savings' && (
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>Savings Type</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>{tr("Savings Type")}</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {savingsChoicesFor(txn.savingsType).map(st => (
                     <button key={st.key} onClick={() => setSavingsType(st.key)} style={{
@@ -171,7 +172,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
                 </div>
                 {getSavingsType(savingsType).hasPlatform && (
                   <input
-                    type="text" placeholder="Platform (e.g. Angel One, Zerodha)"
+                    type="text" placeholder={tr("Platform (e.g. Angel One, Zerodha)")}
                     value={platform} onChange={e => setPlatform(e.target.value)}
                     style={{
                       width: '100%', marginTop: 8, padding: '9px 12px',
@@ -189,7 +190,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
             <div style={{ position: 'relative', marginBottom: 10 }}>
               <PenLine size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
               <input
-                type="text" placeholder="Description" value={name}
+                type="text" placeholder={tr("Description")} value={name}
                 onChange={e => setName(e.target.value)}
                 style={{
                   width: '100%', paddingLeft: 34, paddingRight: 12,
@@ -233,7 +234,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
               <div style={{ position: 'relative', marginBottom: 10 }}>
                 <Flame size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--expense)', pointerEvents: 'none' }} />
                 <input
-                  id="edit-waste" type="text" inputMode="decimal" placeholder="Wasted? How much (optional)" value={waste} aria-label="Wasted amount"
+                  id="edit-waste" type="text" inputMode="decimal" placeholder={tr("Wasted? How much (optional)")} value={waste} aria-label={tr("Wasted amount")}
                   onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setWaste(v); }}
                   style={{
                     width: '100%', paddingLeft: 34, paddingRight: 12,
@@ -248,8 +249,8 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
 
             {/* Paid with — cash spent in shops comes out of "cash in hand" */}
             {canPayCash && (
-              <div role="radiogroup" aria-label="Paid with" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginRight: 2 }}>Paid with</span>
+              <div role="radiogroup" aria-label={tr("Paid with")} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginRight: 2 }}>{tr("Paid with")}</span>
                 {[[false, 'UPI / card'], [true, 'Cash']].map(([cash, label]) => (
                   <button key={label} type="button" role="radio" aria-checked={paidCash === cash} id={`edit-paid-${cash ? 'cash' : 'account'}`} onClick={() => setPaidCash(cash)}
                     style={{ padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1.5px solid ${paidCash === cash ? 'var(--accent)' : 'var(--border)'}`, background: paidCash === cash ? 'var(--accent-bg)' : 'transparent', color: paidCash === cash ? 'var(--accent)' : 'var(--text-secondary)' }}>
@@ -298,7 +299,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
                   border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
-                Cancel
+                {tr("Cancel")}
               </button>
               <button
                 onClick={handleSave}
@@ -313,7 +314,7 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
                 }}
               >
                 <Check size={14} />
-                Save Changes
+                {tr("Save Changes")}
               </button>
             </div>
           </div>

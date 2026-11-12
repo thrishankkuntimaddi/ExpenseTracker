@@ -6,6 +6,7 @@ import { answer, ASK_EXAMPLES } from '../../../utils/ask';
 import { formatMoneyCompact } from '../../../utils/money';
 import { fieldStyle } from '../../../components/formTokens';
 
+import { t as tr } from '../../../i18n';
 const money = (n) => formatMoneyCompact(n);
 
 export default function AskModal({ transactions, income, rules, todayKey, onClose, initial = '' }) {
@@ -15,17 +16,17 @@ export default function AskModal({ transactions, income, rules, todayKey, onClos
   const ask = (text) => { setQ(text); setAsked(text); };
 
   return (
-    <ModalShell title="Ask" subtitle="About your money — answered on this device, nothing is sent anywhere" onClose={onClose} maxWidth={560}>
+    <ModalShell title={tr("Ask")} subtitle={tr("About your money — answered on this device, nothing is sent anywhere")} onClose={onClose} maxWidth={560}>
       <form onSubmit={(e) => { e.preventDefault(); setAsked(q); }} style={{ position: 'relative' }}>
         <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
         <input id="ask-input" autoFocus value={q} onChange={(e) => setQ(e.target.value)} enterKeyHint="search" autoComplete="off"
-          placeholder="How much on Swiggy this month?" aria-label="Your question"
+          placeholder={tr("How much on Swiggy this month?")} aria-label={tr("Your question")}
           style={{ ...fieldStyle, padding: '12px 12px 12px 34px', fontSize: 15 }} />
       </form>
 
       {!a && (
         <div style={{ marginTop: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Try</div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>{tr("Try")}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {ASK_EXAMPLES.map((ex, i) => (
               <button key={ex} id={`ask-example-${i}`} onClick={() => ask(ex)} style={{ padding: '7px 11px', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)' }}>{ex}</button>
@@ -69,9 +70,9 @@ export default function AskModal({ transactions, income, rules, todayKey, onClos
             </div>
           )}
           {a.value === 0 && !a.entries?.length && !a.rows?.length && (
-            <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>Nothing matched. Try a shop or category name, or a month — “petrol in October”.</div>
+            <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>{tr("Nothing matched. Try a shop or category name, or a month — “petrol in October”.")}</div>
           )}
-          <button onClick={() => { setQ(''); setAsked(''); }} style={{ marginTop: 12, padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Ask something else</button>
+          <button onClick={() => { setQ(''); setAsked(''); }} style={{ marginTop: 12, padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{tr("Ask something else")}</button>
         </div>
       )}
     </ModalShell>

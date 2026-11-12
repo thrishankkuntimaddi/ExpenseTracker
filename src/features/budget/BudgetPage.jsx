@@ -25,6 +25,7 @@ import { generateId } from '../../utils/storage';
 import { toKey } from '../../utils/recurring';
 import { currencySymbol } from '../../utils/money';
 
+import { t as tr } from '../../i18n';
 const STATUS_COLOR = { ok: 'var(--income)', pace: 'var(--lent)', warn: 'var(--waste)', over: 'var(--expense)', none: 'var(--text-muted)' };
 const STATUS_TEXT = { ok: 'On track', pace: 'Spending too fast', warn: 'Nearly spent', over: 'Over budget' };
 const round = (n) => formatAmount(Math.round(n));
@@ -72,8 +73,8 @@ export default function BudgetPage({ transactions = [], income = [], settings, o
 
   return (
     <div className="tab-root budget-page">
-      <PageHeader title="Budget" subtitle={status.hasBudget && isNow ? `${status.daysLeft} day${status.daysLeft === 1 ? '' : 's'} left in the month` : 'Your month: income, fixed payments, spending'} month
-        actions={status.hasBudget && <HeaderAction id="budget-edit" Icon={Pencil} label="Edit" onClick={() => setEditing(true)} />} />
+      <PageHeader title={tr("Budget")} subtitle={status.hasBudget && isNow ? `${status.daysLeft} day${status.daysLeft === 1 ? '' : 's'} left in the month` : tr("Your month: income, fixed payments, spending")} month
+        actions={status.hasBudget && <HeaderAction id="budget-edit" Icon={Pencil} label={tr("Edit")} onClick={() => setEditing(true)} />} />
 
       <div className="tab-body">
         <PlanCard plan={plan} monthKey={monthKey} budgets={budgets} onSave={saveBudgets} />
@@ -81,33 +82,33 @@ export default function BudgetPage({ transactions = [], income = [], settings, o
           <MoneyPlanCard transactions={transactions} income={income} monthKey={monthKey} rules={rules} incomeBase={plan.incomeBase} />
         </div>
 
-        <SectionHeading title="Spending budget" hint={monthName(monthKey, { month: 'long' })} />
+        <SectionHeading title={tr("Spending budget")} hint={monthName(monthKey, { month: 'long' })} />
         {!status.hasBudget ? (
           suggestion.hasData ? (
             <div className="card budget-setup" style={{ padding: '18px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ width: 40, height: 40, borderRadius: 13, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Wand2 size={18} style={{ color: 'var(--accent)' }} /></span>
                 <div>
-                  <div style={{ fontSize: 15, fontWeight: 750, color: 'var(--text)' }}>Your budget, ready to go</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>From what you spent in the last {suggestion.months === 1 ? 'month' : `${suggestion.months} months`}</div>
+                  <div style={{ fontSize: 15, fontWeight: 750, color: 'var(--text)' }}>{tr("Your budget, ready to go")}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{tr("From what you spent in the last")} {suggestion.months === 1 ? 'month' : `${suggestion.months} months`}</div>
                 </div>
               </div>
-              <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em', margin: '14px 0 2px' }}>{formatAmount(suggestion.all)}<span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}> / month</span></div>
+              <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em', margin: '14px 0 2px' }}>{formatAmount(suggestion.all)}<span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}> {tr("/ month")}</span></div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                Biggest: {suggestion.top.map((c) => `${c.label} ${round(c.monthly)}`).join(' · ')}
+                {tr("Biggest:")} {suggestion.top.map((c) => `${c.label} ${round(c.monthly)}`).join(' · ')}
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-                <PrimaryPill id="budget-use-suggestion" Icon={Target} onClick={applySuggestion}>Use this budget</PrimaryPill>
-                <button onClick={() => setEditing(true)} style={{ padding: '10px 16px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 650, fontFamily: 'inherit', cursor: 'pointer' }}>Set my own</button>
+                <PrimaryPill id="budget-use-suggestion" Icon={Target} onClick={applySuggestion}>{tr("Use this budget")}</PrimaryPill>
+                <button onClick={() => setEditing(true)} style={{ padding: '10px 16px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 650, fontFamily: 'inherit', cursor: 'pointer' }}>{tr("Set my own")}</button>
               </div>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, margin: '12px 0 0' }}>
-                You'll see what's safe to spend each day, a warning when a category runs fast, and an evening reminder if you turn it on.
+                {tr("You'll see what's safe to spend each day, a warning when a category runs fast, and an evening reminder if you turn it on.")}
               </p>
             </div>
           ) : (
-            <EmptyState Icon={Target} title="Set a monthly budget"
-              text="Pick a monthly limit — and limits per category if you like. You'll see what's safe to spend each day."
-              action={<PrimaryPill id="budget-set" Icon={Target} onClick={() => setEditing(true)}>Set a budget</PrimaryPill>} />
+            <EmptyState Icon={Target} title={tr("Set a monthly budget")}
+              text={tr("Pick a monthly limit — and limits per category if you like. You'll see what's safe to spend each day.")}
+              action={<PrimaryPill id="budget-set" Icon={Target} onClick={() => setEditing(true)}>{tr("Set a budget")}</PrimaryPill>} />
           )
         ) : (
           <div className="card" style={{ padding: '16px' }}>
@@ -119,26 +120,26 @@ export default function BudgetPage({ transactions = [], income = [], settings, o
                     label={`${Math.round(t.pct)}% of the budget used`} />
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{t.remaining >= 0 ? 'Left to spend' : 'Over by'}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{t.remaining >= 0 ? tr("Left to spend") : tr("Over by")}</span>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: STATUS_COLOR[t.status] }}>
-                        {t.status === 'over' && <Sign kind="warn" size={16} />}{STATUS_TEXT[t.status]}
+                        {t.status === 'over' && <Sign kind="warn" size={16} />}{tr(STATUS_TEXT[t.status])}
                       </span>
                     </div>
                     <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', color: t.remaining >= 0 ? 'var(--text)' : 'var(--expense)', margin: '2px 0 4px' }}><RollingNumber value={Math.abs(t.remaining)} /></div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10 }}><strong style={{ color: 'var(--text)' }}>{Math.round(t.pct)}%</strong> used · {formatAmount(t.spent)} of {formatAmount(t.limit)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10 }}><strong style={{ color: 'var(--text)' }}>{Math.round(t.pct)}%</strong> {tr("used ·")} {formatAmount(t.spent)} {tr("of")} {formatAmount(t.limit)}</div>
                     <BudgetBar pct={t.pct} pacePct={status.pacePct} color={STATUS_COLOR[t.status]} height={6} />
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>The line marks where the month is today</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>{tr("The line marks where the month is today")}</div>
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                  <Figure label="Safe today" value={t.safeToday != null ? round(t.safeToday) : '—'} color="var(--income)" />
-                  <Figure label="Month ends at" value={round(t.projected)} color={t.projected > t.limit ? 'var(--expense)' : 'var(--text)'} />
-                  <Figure label="Days left" value={status.daysLeft} />
+                  <Figure label={tr("Safe today")} value={t.safeToday != null ? round(t.safeToday) : '—'} color="var(--income)" />
+                  <Figure label={tr("Month ends at")} value={round(t.projected)} color={t.projected > t.limit ? 'var(--expense)' : 'var(--text)'} />
+                  <Figure label={tr("Days left")} value={status.daysLeft} />
                 </div>
               </>
             ) : (
               <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                Category limits only. <LinkButton onClick={() => setEditing(true)}>Add a monthly total</LinkButton> to see what's safe to spend each day.
+                {tr("Category limits only.")} <LinkButton onClick={() => setEditing(true)}>{tr("Add a monthly total")}</LinkButton> {tr("to see what's safe to spend each day.")}
               </div>
             )}
           </div>
@@ -147,7 +148,7 @@ export default function BudgetPage({ transactions = [], income = [], settings, o
         {/* ── Envelopes ── */}
         {envelopes.length > 0 && (
           <>
-            <SectionHeading id="budget-categories" title="By category" hint={monthName(monthKey, { month: 'long' })} action={<LinkButton onClick={() => setEditing(true)}>Set limits</LinkButton>} />
+            <SectionHeading id="budget-categories" title={tr("By category")} hint={monthName(monthKey, { month: 'long' })} action={<LinkButton onClick={() => setEditing(true)}>{tr("Set limits")}</LinkButton>} />
             <div className="card">
               {envelopes.map((c, i) => {
                 const color = categoryColor(c.key, theme);
@@ -174,11 +175,11 @@ export default function BudgetPage({ transactions = [], income = [], settings, o
         )}
 
         {/* ── Festivals & occasions ── */}
-        <SectionHeading id="budget-events-heading" title="Festivals & occasions" hint="a limit for a few days" />
+        <SectionHeading id="budget-events-heading" title={tr("Festivals & occasions")} hint={tr("a limit for a few days")} />
         <EventsCard transactions={transactions} rules={rules} settings={settings} onPatchSettings={onPatchSettings} />
 
         {/* ── Six months ── */}
-        <SectionHeading title="Last 6 months" hint="total spend" />
+        <SectionHeading title={tr("Last 6 months")} hint={tr("total spend")} />
         <div className="card" style={{ padding: '16px 14px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 110 }}>
             {history.map((h) => {
@@ -194,7 +195,7 @@ export default function BudgetPage({ transactions = [], income = [], settings, o
           </div>
           {t.limit && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
-              <TrendingUp size={12} /> Red months went over the {formatAmount(t.limit)} budget
+              <TrendingUp size={12} /> {tr("Red months went over the")} {formatAmount(t.limit)} {tr("budget")}
             </div>
           )}
         </div>
@@ -231,16 +232,16 @@ function PlanCard({ plan, monthKey, budgets, onSave }) {
   return (
     <div className="card budget-plan" id="budget-plan" style={{ padding: '14px 16px' }}>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>
-        {monthName(monthKey, { month: 'long' })} plan
+        {monthName(monthKey, { month: 'long' })} {tr("plan")}
       </div>
       {row(plan.useExpected ? 'Income (expected)' : 'Income received', round(plan.incomeBase), { color: 'var(--income)' })}
       <button id="budget-fixed-toggle" onClick={() => setShowFixed((v) => !v)} style={{ width: '100%', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-        {row(<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>− Fixed payments · {plan.fixedItems.length}<ChevronRight size={13} style={{ transform: showFixed ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} /></span>, round(plan.fixed), { color: 'var(--expense)' })}
+        {row(<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{tr("− Fixed payments ·")} {plan.fixedItems.length}<ChevronRight size={13} style={{ transform: showFixed ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} /></span>, round(plan.fixed), { color: 'var(--expense)' })}
       </button>
       {showFixed && (
         <div style={{ margin: '0 0 6px 12px', paddingLeft: 10, borderLeft: '2px solid var(--border)' }}>
           {plan.fixedItems.length === 0
-            ? <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '4px 0' }}>No rent, EMIs, insurance or SIPs added yet.</div>
+            ? <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '4px 0' }}>{tr("No rent, EMIs, insurance or SIPs added yet.")}</div>
             : plan.fixedItems.map((i) => (
               <div key={`${i.rule.id}|${i.dateKey}`} style={{ display: 'flex', gap: 8, fontSize: 12, padding: '3px 0', color: 'var(--text-secondary)' }}>
                 <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{i.rule.name}{i.rule.kind === 'savings' ? ' · saving' : ''}</span>
@@ -248,23 +249,23 @@ function PlanCard({ plan, monthKey, budgets, onSave }) {
                 <span style={{ fontWeight: 700, color: 'var(--text)' }}>{round(i.amount)}</span>
               </div>
             ))}
-          {shell && <button onClick={() => shell.goTo('bills')} style={{ padding: '4px 0', border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>Manage in Bills & payments</button>}
+          {shell && <button onClick={() => shell.goTo('bills')} style={{ padding: '4px 0', border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{tr("Manage in Bills & payments")}</button>}
         </div>
       )}
       {row('− Spending budget', plan.spendBudget != null ? round(plan.spendBudget) : 'not set', { color: plan.spendBudget != null ? 'var(--text)' : 'var(--text-muted)' })}
       {row(plan.free >= 0 ? 'Left to save or spare' : 'Short by', round(Math.abs(plan.free)), { top: true, big: true, color: plan.free >= 0 ? 'var(--income)' : 'var(--expense)' })}
-      {plan.incomeBase === 0 && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Add this month’s income (or a recurring salary in Bills) to see the plan.</div>}
+      {plan.incomeBase === 0 && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{tr("Add this month’s income (or a recurring salary in Bills) to see the plan.")}</div>}
 
       {/* Salary deductions — taken before the money reaches you */}
       <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>Taken from salary{plan.deductionTotal ? ` · ${round(plan.deductionTotal)}` : ''}</span>
-          <button id="budget-deductions-edit" onClick={() => setEditDed((v) => !v)} style={{ padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{editDed ? 'Done' : plan.deductions.length ? 'Edit' : 'Add tax, PF…'}</button>
+          <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>{tr("Taken from salary")}{plan.deductionTotal ? ` · ${round(plan.deductionTotal)}` : ''}</span>
+          <button id="budget-deductions-edit" onClick={() => setEditDed((v) => !v)} style={{ padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{editDed ? tr("Done") : plan.deductions.length ? tr("Edit") : tr("Add tax, PF…")}</button>
         </div>
         {!editDed && plan.deductions.length > 0 && (
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.6 }}>
             {plan.deductions.map((d) => `${d.name} ${round(d.amount)}`).join(' · ')}
-            {plan.incomeBase > 0 && <> · gross pay about <strong style={{ color: 'var(--text-secondary)' }}>{round(plan.gross)}</strong></>}
+            {plan.incomeBase > 0 && <> {tr("· gross pay about")} <strong style={{ color: 'var(--text-secondary)' }}>{round(plan.gross)}</strong></>}
           </div>
         )}
         {editDed && <DeductionsEditor list={budgets?.deductions ?? []} onChange={(deductions) => onSave({ deductions })} />}
@@ -294,9 +295,9 @@ function DeductionsEditor({ list, onChange }) {
         ))}
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
-        <input id="deduction-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Deduction" style={{ ...input, flex: 1 }} />
+        <input id="deduction-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={tr("Deduction")} style={{ ...input, flex: 1 }} />
         <input id="deduction-amount" value={amount} inputMode="decimal" onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} placeholder={`${currencySymbol()} / month`} style={{ ...input, width: 100 }} />
-        <button aria-label="Add deduction" onClick={add} disabled={!can} style={{ width: 36, border: 'none', background: can ? 'var(--accent)' : 'var(--surface2)', color: can ? '#fff' : 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: can ? 'pointer' : 'default' }}>{can ? <Check size={14} /> : <Plus size={14} />}</button>
+        <button aria-label={tr("Add deduction")} onClick={add} disabled={!can} style={{ width: 36, border: 'none', background: can ? 'var(--accent)' : 'var(--surface2)', color: can ? '#fff' : 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: can ? 'pointer' : 'default' }}>{can ? <Check size={14} /> : <Plus size={14} />}</button>
       </div>
     </div>
   );

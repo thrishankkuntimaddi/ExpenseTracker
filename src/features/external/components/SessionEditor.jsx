@@ -6,6 +6,7 @@ import RollingNumber from '../../../motion/RollingNumber';
 import { newItemRow, newReceivedRow } from './billingHelpers';
 import { currencySymbol } from '../../../utils/money';
 
+import { t as tr } from '../../../i18n';
 export default function SessionEditor({
   sessionName, sessionDate, onNameChange, onDateChange,
   items, received, totalSpent, totalReceived, netBalance,
@@ -25,7 +26,7 @@ export default function SessionEditor({
       }}>
         <div>
           <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-            Session Name
+            {tr("Session Name")}
           </label>
           <input
             type="text"
@@ -40,7 +41,7 @@ export default function SessionEditor({
         </div>
         <div>
           <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-            Transaction Date
+            {tr("Transaction Date")}
           </label>
           <input
             type="date"
@@ -58,23 +59,23 @@ export default function SessionEditor({
       <div className="external-grid">
         {/* Goods purchased · money received — two sheets, Enter moves on, paste from Excel */}
         <div>
-          <SheetTitle Icon={ShoppingBag} tone="expense" title="Goods purchased" total={totalSpent} />
+          <SheetTitle Icon={ShoppingBag} tone="expense" title={tr("Goods purchased")} total={totalSpent} />
           <Sheet id="bill-items" tone="expense" rows={items} onChange={onItemsChange} makeRow={newItemRow} rowLabel={(r) => r.name}
             columns={[
-              { key: 'name', label: 'Item', type: 'text', placeholder: 'Cement bags, wire…' },
+              { key: 'name', label: tr("Item"), type: 'text', placeholder: tr("Cement bags, wire…") },
               { key: 'amount', label: `Amount ${currencySymbol()}`, type: 'amount', width: '104px', placeholder: '0' },
             ]} />
         </div>
         <div>
-          <SheetTitle Icon={User} tone="income" title="Money received" total={totalReceived} />
+          <SheetTitle Icon={User} tone="income" title={tr("Money received")} total={totalReceived} />
           <Sheet id="bill-received" tone="income" rows={received} onChange={onReceivedChange} makeRow={newReceivedRow} rowLabel={(r) => r.person}
             columns={[
-              { key: 'person', label: 'From', type: 'pick', placeholder: 'Who paid you?', options: knownPeople.map((n) => ({ value: n, label: n })), onCreate: (n) => n },
+              { key: 'person', label: tr("From"), type: 'pick', placeholder: tr("Who paid you?"), options: knownPeople.map((n) => ({ value: n, label: n })), onCreate: (n) => n },
               { key: 'amount', label: `Amount ${currencySymbol()}`, type: 'amount', width: '104px', placeholder: '0' },
             ]} />
           {totalReceived <= 0 && (
             <p id="bill-paid-by-me" style={{ fontSize: 11, color: 'var(--text-muted)', margin: '8px 4px 0', lineHeight: 1.5 }}>
-              Nobody gave you money for this? Leave it empty — closing adds the whole amount to your own expenses.
+              {tr("Nobody gave you money for this? Leave it empty — closing adds the whole amount to your own expenses.")}
             </p>
           )}
         </div>
@@ -90,15 +91,15 @@ export default function SessionEditor({
       }}>
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 3 }}>Received</div>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 3 }}>{tr("Received")}</div>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--income)' }}><RollingNumber value={totalReceived} /></div>
           </div>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 3 }}>Spent</div>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 3 }}>{tr("Spent")}</div>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--expense)' }}><RollingNumber value={totalSpent} /></div>
           </div>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 3 }}>Net Balance</div>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 3 }}>{tr("Net Balance")}</div>
             <div style={{ fontSize: 22, fontWeight: 900, color: isProfit ? 'var(--income)' : isLoss ? 'var(--expense)' : 'var(--text-muted)' }}>
               {netBalance >= 0 ? '+' : ''}<RollingNumber value={netBalance} />
             </div>
@@ -112,21 +113,21 @@ export default function SessionEditor({
             background: 'var(--surface2)', color: 'var(--expense)', border: '1px solid var(--border)',
             cursor: 'pointer', fontFamily: 'inherit',
           }}>
-            Discard
+            {tr("Discard")}
           </button>
           <button onClick={onShare} style={{
             padding: '9px 14px', borderRadius: 11, fontSize: 12, fontWeight: 700,
             background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)',
             cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5,
           }}>
-            <Share2 size={13} /> Share
+            <Share2 size={13} /> {tr("Share")}
           </button>
           <button onClick={onSaveDraft} style={{
             padding: '9px 14px', borderRadius: 11, fontSize: 12, fontWeight: 700,
             background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)',
             cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5,
           }}>
-            <Save size={13} /> Save Draft
+            <Save size={13} /> {tr("Save Draft")}
           </button>
           <button
             onClick={onRequestClose}
@@ -140,7 +141,7 @@ export default function SessionEditor({
               fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
             }}
           >
-            <CheckCircle2 size={15} /> Close Billing
+            <CheckCircle2 size={15} /> {tr("Close Billing")}
           </button>
         </div>
       </div>

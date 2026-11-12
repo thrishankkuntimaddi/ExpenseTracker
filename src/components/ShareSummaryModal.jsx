@@ -7,6 +7,7 @@ import { Copy, Check, Download, Send, Image as ImageIcon, Loader2 } from 'lucide
 import ModalShell from './ModalShell';
 import { copyImageToClipboard, downloadImageBlob } from '../features/external/shareHelpers';
 
+import { t as tr } from '../i18n';
 export default function ShareSummaryModal({ title, subtitle, text, makeImage, filename = 'summary', onClose, extra = null }) {
   const [blob, setBlob] = useState(null);
   const [url, setUrl] = useState('');
@@ -47,20 +48,20 @@ export default function ShareSummaryModal({ title, subtitle, text, makeImage, fi
   return (
     <ModalShell title={title} subtitle={subtitle} onClose={onClose} maxWidth={540}
       footer={<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8, width: '100%' }}>
-        <Btn onClick={copyText} Icon={done === 'text' ? Check : Copy}>Copy text</Btn>
-        <Btn onClick={copyImage} Icon={done === 'image' ? Check : ImageIcon} disabled={!blob}>Copy image</Btn>
-        <Btn onClick={save} Icon={done === 'save' ? Check : Download} disabled={!blob}>Save image</Btn>
-        {canShare && <Btn onClick={share} Icon={Send} primary>Share…</Btn>}
+        <Btn onClick={copyText} Icon={done === 'text' ? Check : Copy}>{tr("Copy text")}</Btn>
+        <Btn onClick={copyImage} Icon={done === 'image' ? Check : ImageIcon} disabled={!blob}>{tr("Copy image")}</Btn>
+        <Btn onClick={save} Icon={done === 'save' ? Check : Download} disabled={!blob}>{tr("Save image")}</Btn>
+        {canShare && <Btn onClick={share} Icon={Send} primary>{tr("Share…")}</Btn>}
       </div>}
     >
       {extra}
       {note && <div role="status" style={{ padding: '8px 12px', borderRadius: 10, background: 'var(--accent-bg)', color: 'var(--accent)', fontSize: 12, fontWeight: 700, textAlign: 'center' }}>{note}</div>}
       <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)', background: '#0A0C11', minHeight: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {url ? <img src={url} alt={`${title} as an image`} style={{ width: '100%', display: 'block' }} />
-          : failed ? <span style={{ color: '#F87171', fontSize: 12, padding: 20 }}>Couldn’t draw the image — the text below has everything.</span>
-          : <span style={{ color: '#A3ABBD', fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}><Loader2 size={16} className="spin" /> Drawing the image…</span>}
+          : failed ? <span style={{ color: '#F87171', fontSize: 12, padding: 20 }}>{tr("Couldn’t draw the image — the text below has everything.")}</span>
+          : <span style={{ color: '#A3ABBD', fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}><Loader2 size={16} className="spin" /> {tr("Drawing the image…")}</span>}
       </div>
-      <textarea readOnly value={text} rows={8} aria-label="Text summary"
+      <textarea readOnly value={text} rows={8} aria-label={tr("Text summary")}
         style={{ width: '100%', padding: 12, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontFamily: 'inherit', fontSize: 12, lineHeight: 1.5, resize: 'vertical' }} />
     </ModalShell>
   );

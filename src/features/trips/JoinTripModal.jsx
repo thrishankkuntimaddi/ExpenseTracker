@@ -9,6 +9,7 @@ import { fieldStyle } from '../../components/formTokens';
 import { getSharedTrip } from '../../services/sharedTrips';
 import { formatDateShort } from '../../utils/dateHelpers';
 
+import { t as tr } from '../../i18n';
 export default function JoinTripModal({ tripId, me, onJoin, onOpen, onClose }) {
   const [state, setState] = useState({ loading: true });
   const [pick, setPick] = useState('');
@@ -49,30 +50,30 @@ export default function JoinTripModal({ tripId, me, onJoin, onOpen, onClose }) {
   }
 
   return (
-    <ModalShell title={trip ? `Join “${trip.name}”` : 'Join a trip'} subtitle={trip ? 'Add what you spend; everyone sees who owes whom.' : undefined} onClose={onClose}
+    <ModalShell title={trip ? `Join “${trip.name}”` : tr("Join a trip")} subtitle={trip ? tr("Add what you spend; everyone sees who owes whom.") : undefined} onClose={onClose}
       footer={trip && !already && trip.status === 'open' ? <>
-        <GhostButton onClick={onClose}>Not now</GhostButton>
+        <GhostButton onClick={onClose}>{tr("Not now")}</GhostButton>
         <PrimaryButton onClick={join} disabled={busy || !pick || (pick === 'new' && !newName.trim())} color="var(--external)">
-          {busy ? <Loader2 size={14} className="spin" /> : <LogIn size={14} />} Join trip
+          {busy ? <Loader2 size={14} className="spin" /> : <LogIn size={14} />} {tr("Join trip")}
         </PrimaryButton>
-      </> : trip && already ? <PrimaryButton onClick={() => onOpen(tripId)} color="var(--external)">Open the trip</PrimaryButton> : null}
+      </> : trip && already ? <PrimaryButton onClick={() => onOpen(tripId)} color="var(--external)">{tr("Open the trip")}</PrimaryButton> : null}
     >
-      {state.loading && <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-muted)' }}><Loader2 size={14} className="spin" /> Loading the trip…</div>}
+      {state.loading && <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-muted)' }}><Loader2 size={14} className="spin" /> {tr("Loading the trip…")}</div>}
       {state.error && <div style={{ fontSize: 13, color: 'var(--expense)' }}>{state.error}</div>}
-      {!state.loading && !state.error && !trip && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>This trip no longer exists — its creator may have deleted it.</div>}
+      {!state.loading && !state.error && !trip && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{tr("This trip no longer exists — its creator may have deleted it.")}</div>}
       {trip && (
         <>
           <div style={{ padding: '10px 12px', borderRadius: 12, background: 'var(--external-bg)', border: '1px solid var(--external-border)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: 'var(--text)' }}><Crown size={12} style={{ color: 'var(--external)' }} /> {trip.ownerName || 'A friend'} invited you</div>
-            {trip.startDate ? `${formatDateShort(trip.startDate)}${trip.endDate ? ` – ${formatDateShort(trip.endDate)}` : ''} · ` : ''}{(trip.members ?? []).length} people
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: 'var(--text)' }}><Crown size={12} style={{ color: 'var(--external)' }} /> {trip.ownerName || tr("A friend")} {tr("invited you")}</div>
+            {trip.startDate ? `${formatDateShort(trip.startDate)}${trip.endDate ? ` – ${formatDateShort(trip.endDate)}` : ''} · ` : ''}{(trip.members ?? []).length} {tr("people")}
           </div>
           {already ? (
-            <div style={{ fontSize: 13, color: 'var(--text)' }}>You’re already on this trip.</div>
+            <div style={{ fontSize: 13, color: 'var(--text)' }}>{tr("You’re already on this trip.")}</div>
           ) : trip.status !== 'open' ? (
-            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>This trip is closed. Ask {trip.ownerName || 'its creator'} to reopen it if you need to join.</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{tr("This trip is closed. Ask")} {trip.ownerName || 'its creator'} {tr("to reopen it if you need to join.")}</div>
           ) : (
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Which one are you?</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{tr("Which one are you?")}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {open.map((m) => (
                   <button key={m.id} type="button" onClick={() => setPick(m.id)} className="trip-chip"
@@ -82,11 +83,11 @@ export default function JoinTripModal({ tripId, me, onJoin, onOpen, onClose }) {
                 ))}
                 <button type="button" onClick={() => setPick('new')} className="trip-chip"
                   style={{ padding: '7px 13px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1.5px dashed ${pick === 'new' ? 'var(--external)' : 'var(--border)'}`, background: pick === 'new' ? 'var(--external-bg)' : 'transparent', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                  <UserPlus size={13} /> I’m not listed
+                  <UserPlus size={13} /> {tr("I’m not listed")}
                 </button>
               </div>
               {pick === 'new' && (
-                <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Your name on the trip" aria-label="Your name on the trip" style={{ ...fieldStyle, marginTop: 8 }} />
+                <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={tr("Your name on the trip")} aria-label={tr("Your name on the trip")} style={{ ...fieldStyle, marginTop: 8 }} />
               )}
             </div>
           )}

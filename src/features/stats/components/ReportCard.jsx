@@ -13,6 +13,7 @@ import { SMALL_SPEND } from '../../../utils/report';
 import { computeMoneyPlan } from '../../../utils/moneyPlan';
 import WrappedModal from './WrappedModal';
 
+import { t as tr } from '../../../i18n';
 /* ── F · Report unveil: each report arrives sealed, once per device ── */
 const OPENED_KEY = 'et_reports_opened';
 const openedReports = () => { try { return JSON.parse(localStorage.getItem(OPENED_KEY) ?? '[]'); } catch { return []; } };
@@ -71,63 +72,63 @@ export default function ReportCard({ transactions = [], income = [], settings, r
   return (
     <div ref={card} className={`card report-card${moving ? ' report-grow' : ''}`} key={`${reportKey}-${grow}`} id="stats-report" style={{ padding: 0, overflow: 'hidden', scrollMarginTop: 12, position: 'relative' }}>
       {sealed && (
-        <button ref={cover} type="button" className="report-seal-cover" id="report-unseal" onClick={unseal} aria-label="Open your new report">
+        <button ref={cover} type="button" className="report-seal-cover" id="report-unseal" onClick={unseal} aria-label={tr("Open your new report")}>
           <span className="env">
             <span className="env-back" /><span className="env-paper"><i style={{ top: 12, width: '60%' }} /><i style={{ top: 26, width: '78%' }} /><i style={{ top: 40, width: '48%' }} /></span>
             <span className="env-front" /><span className="env-flap" /><span className="env-seal">{currencySymbol()}</span>
           </span>
-          <span className="cover-title">Your new report is here</span>
-          <span className="cover-hint">{windowLabel(r.start, r.last)} · tap to open</span>
+          <span className="cover-title">{tr("Your new report is here")}</span>
+          <span className="cover-hint">{windowLabel(r.start, r.last)} {tr("· tap to open")}</span>
         </button>
       )}
       <div style={{ padding: '14px 16px 12px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)' }}>
         <span style={{ width: 34, height: 34, borderRadius: 11, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><FileText size={16} style={{ color: 'var(--accent)' }} /></span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 750, color: 'var(--text)' }}>{back === 0 ? 'Latest report' : 'Earlier report'}</div>
-          <div id="report-window" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{windowLabel(r.start, r.last)} · {r.days} days</div>
+          <div style={{ fontSize: 14, fontWeight: 750, color: 'var(--text)' }}>{back === 0 ? tr("Latest report") : tr("Earlier report")}</div>
+          <div id="report-window" style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{windowLabel(r.start, r.last)} · {r.days} {tr("days")}</div>
         </div>
-        <button aria-label="Earlier report" id="report-prev" onClick={() => setBack((b) => b + 1)} style={nav}><ChevronLeft size={15} /></button>
-        <button aria-label="Later report" id="report-next" onClick={() => setBack((b) => Math.max(0, b - 1))} disabled={back === 0} style={{ ...nav, opacity: back === 0 ? 0.35 : 1 }}><ChevronRight size={15} /></button>
+        <button aria-label={tr("Earlier report")} id="report-prev" onClick={() => setBack((b) => b + 1)} style={nav}><ChevronLeft size={15} /></button>
+        <button aria-label={tr("Later report")} id="report-next" onClick={() => setBack((b) => Math.max(0, b - 1))} disabled={back === 0} style={{ ...nav, opacity: back === 0 ? 0.35 : 1 }}><ChevronRight size={15} /></button>
       </div>
 
       {r.empty ? (
-        <div style={{ padding: '18px 16px', fontSize: 13, color: 'var(--text-muted)' }}>Nothing was logged in these days.</div>
+        <div style={{ padding: '18px 16px', fontSize: 13, color: 'var(--text-muted)' }}>{tr("Nothing was logged in these days.")}</div>
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, padding: '12px 16px' }}>
-            <Fig label="Income" value={rupees(r.income)} tone="income" />
-            <Fig label="Spent" value={rupees(r.spent)} tone="expense" sub={r.spentChange != null ? `${r.spentChange > 0 ? '+' : ''}${r.spentChange}% vs before` : null} />
-            <Fig label="Saved" value={rupees(r.saved)} tone="savings" sub={r.savingsRate != null ? `${r.savingsRate}% of income` : null} />
-            <Fig label="Left" value={rupees(r.left)} tone={r.left < 0 ? 'expense' : 'text'} />
+            <Fig label={tr("Income")} value={rupees(r.income)} tone="income" />
+            <Fig label={tr("Spent")} value={rupees(r.spent)} tone="expense" sub={r.spentChange != null ? `${r.spentChange > 0 ? '+' : ''}${r.spentChange}% vs before` : null} />
+            <Fig label={tr("Saved")} value={rupees(r.saved)} tone="savings" sub={r.savingsRate != null ? `${r.savingsRate}% of income` : null} />
+            <Fig label={tr("Left")} value={rupees(r.left)} tone={r.left < 0 ? 'expense' : 'text'} />
           </div>
           <p id="report-headline" style={{ margin: 0, padding: '0 16px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.45, minHeight: '1.45em' }}>{typed ?? r.headline}</p>
           {r.spent > 0 && <Analysis a={r.analysis} spent={r.spent} plan={plan} />}
 
-          <Group Icon={TrendingUp} tone="expense" title="Went up" empty="Nothing went up." rows={r.up}
+          <Group Icon={TrendingUp} tone="expense" title={tr("Went up")} empty="Nothing went up." rows={r.up}
             render={(c) => <>{c.label}<Amt>{c.change === 'new' ? `new · ${rupees(c.now)}` : `+${rupees(c.diff)} · ${rupees(c.now)}`}</Amt></>} />
-          <Group Icon={TrendingDown} tone="income" title="Went down" empty="Nothing went down." rows={r.down}
+          <Group Icon={TrendingDown} tone="income" title={tr("Went down")} empty="Nothing went down." rows={r.down}
             render={(c) => <>{c.label}<Amt>{c.change === 'stopped' ? `none this time (was ${rupees(c.before)})` : `−${rupees(-c.diff)} · ${rupees(c.now)}`}</Amt></>} />
           {r.steady.length > 0 && (
-            <Group Icon={Minus} tone="text-muted" title="About the same" rows={r.steady} render={(c) => <>{c.label}<Amt>{rupees(c.now)}</Amt></>} />
+            <Group Icon={Minus} tone="text-muted" title={tr("About the same")} rows={r.steady} render={(c) => <>{c.label}<Amt>{rupees(c.now)}</Amt></>} />
           )}
           {r.missed.length > 0 && (
-            <Group Icon={AlertCircle} tone="lent" title="Missed or skipped" rows={r.missed}
+            <Group Icon={AlertCircle} tone="lent" title={tr("Missed or skipped")} rows={r.missed}
               render={(m) => <>{m.name} · {fromKey(m.dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}<Amt>{m.skipped ? 'skipped' : 'not paid'} · {rupees(m.amount)}</Amt></>} />
           )}
           {(r.over.length > 0 || r.overTotal) && (
-            <Group Icon={Target} tone="expense" title="Over budget" rows={[...(r.overTotal ? [{ key: '_total', label: 'Whole budget', spent: r.overTotal.spent, limit: r.overTotal.limit }] : []), ...r.over]}
-              render={(c) => <>{c.label}<Amt>{rupees(c.spent)} of {rupees(c.limit)}</Amt></>} />
+            <Group Icon={Target} tone="expense" title={tr("Over budget")} rows={[...(r.overTotal ? [{ key: '_total', label: tr("Whole budget"), spent: r.overTotal.spent, limit: r.overTotal.limit }] : []), ...r.over]}
+              render={(c) => <>{c.label}<Amt>{rupees(c.spent)} {tr("of")} {rupees(c.limit)}</Amt></>} />
           )}
 
           <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
             <button id="report-wrapped" onClick={() => setWrapOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-              <Share2 size={14} /> Share as a picture — this month or your year, wrapped
+              <Share2 size={14} /> {tr("Share as a picture — this month or your year, wrapped")}
             </button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--surface2)' }}>
-            <Fig label="Per day" value={rupees(r.avgPerDay)} />
-            <Fig label="No-spend days" value={r.noSpendDays} />
-            <Fig label="Biggest" value={r.biggest ? rupees(r.biggest.amount) : '—'} sub={r.biggest?.name} />
+            <Fig label={tr("Per day")} value={rupees(r.avgPerDay)} />
+            <Fig label={tr("No-spend days")} value={r.noSpendDays} />
+            <Fig label={tr("Biggest")} value={r.biggest ? rupees(r.biggest.amount) : '—'} sub={r.biggest?.name} />
           </div>
         </>
       )}
@@ -137,14 +138,14 @@ export default function ReportCard({ transactions = [], income = [], settings, r
           monthWin={{ start: r.start, last: r.last, label: windowLabel(r.start, r.last) }} onClose={() => setWrapOpen(false)} />
       )}
       <div style={{ padding: '10px 16px 12px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-secondary)' }}>
-        <span>A new report on the</span>
-        <select id="report-day" value={day} aria-label="Report day" onChange={(e) => onPatchSettings?.({ report: { ...(settings?.report ?? {}), day: Number(e.target.value) } })}
+        <span>{tr("A new report on the")}</span>
+        <select id="report-day" value={day} aria-label={tr("Report day")} onChange={(e) => onPatchSettings?.({ report: { ...(settings?.report ?? {}), day: Number(e.target.value) } })}
           style={{ padding: '5px 8px', fontSize: 12, fontWeight: 700, border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit' }}>
           {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{ordinal(d)}</option>)}
         </select>
-        <span>of every month · next on {nextOn}</span>
+        <span>{tr("of every month · next on")} {nextOn}</span>
         <span style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-          It starts on the day your main income arrived the month before, so each report runs salary to salary.
+          {tr("It starts on the day your main income arrived the month before, so each report runs salary to salary.")}
         </span>
       </div>
     </div>
@@ -154,21 +155,21 @@ export default function ReportCard({ transactions = [], income = [], settings, r
 /* Essentials vs lifestyle, week by week, and a few patterns */
 function Analysis({ a, spent, plan }) {
   const parts = [
-    { key: 'essentials', label: 'Essentials', color: 'var(--income)' },
-    { key: 'lifestyle', label: 'Lifestyle', color: 'var(--expense)' },
-    { key: 'other', label: 'Unsorted', color: 'var(--text-muted)' },
+    { key: 'essentials', label: tr("Essentials"), color: 'var(--income)' },
+    { key: 'lifestyle', label: tr("Lifestyle"), color: 'var(--expense)' },
+    { key: 'other', label: tr("Unsorted"), color: 'var(--text-muted)' },
   ].filter((p) => a.split[p.key] > 0);
   const maxWeek = Math.max(1, ...a.weeks.map((w) => w.amount));
   const weak = plan?.hasIncome ? plan.rows.filter((p) => p.key !== 'leftover' && !p.ok) : [];
   const lines = [
-    plan?.hasIncome && <>Money plan: <strong>{plan.score} of {plan.scoreOf}</strong> healthy — {plan.rows.filter((p) => p.key !== 'leftover').map((p) => `${p.label.toLowerCase()} ${Math.round(p.pct)}%`).join(' · ')}{weak.length ? <>. {weak[0].text}.</> : '.'}</>,
-    a.top.length > 1 && <>Top {a.top.length} categories took <strong>{a.topShare}%</strong> of spending — {a.top.map((c) => `${c.label} ${c.share}%`).join(', ')}</>,
+    plan?.hasIncome && <>{tr("Money plan:")} <strong>{plan.score} {tr("of")} {plan.scoreOf}</strong> {tr("healthy —")} {plan.rows.filter((p) => p.key !== 'leftover').map((p) => `${p.label.toLowerCase()} ${Math.round(p.pct)}%`).join(' · ')}{weak.length ? <>. {weak[0].text}.</> : '.'}</>,
+    a.top.length > 1 && <>{tr("Top")} {a.top.length} {tr("categories took")} <strong>{a.topShare}%</strong> {tr("of spending —")} {a.top.map((c) => `${c.label} ${c.share}%`).join(', ')}</>,
     a.weekend > 0 && a.weekday > 0 && Math.abs(a.weekend - a.weekday) / Math.max(a.weekend, a.weekday) >= 0.2 && (
       a.weekend > a.weekday
-        ? <>Weekends cost more: <strong>{rupees(a.weekend)}</strong> a day vs {rupees(a.weekday)} on weekdays</>
-        : <>Weekdays cost more: <strong>{rupees(a.weekday)}</strong> a day vs {rupees(a.weekend)} on weekends</>),
-    a.frequent && <>Most often: <strong>{a.frequent.name}</strong> — {a.frequent.count} times, {rupees(a.frequent.amount)} in all</>,
-    a.small.count >= 5 && <>{a.small.count} small spends under {formatMoneyCompact(SMALL_SPEND)} added up to <strong>{rupees(a.small.amount)}</strong></>,
+        ? <>{tr("Weekends cost more:")} <strong>{rupees(a.weekend)}</strong> {tr("a day vs")} {rupees(a.weekday)} {tr("on weekdays")}</>
+        : <>{tr("Weekdays cost more:")} <strong>{rupees(a.weekday)}</strong> {tr("a day vs")} {rupees(a.weekend)} {tr("on weekends")}</>),
+    a.frequent && <>{tr("Most often:")} <strong>{a.frequent.name}</strong> — {a.frequent.count} {tr("times,")} {rupees(a.frequent.amount)} {tr("in all")}</>,
+    a.small.count >= 5 && <>{a.small.count} {tr("small spends under")} {formatMoneyCompact(SMALL_SPEND)} {tr("added up to")} <strong>{rupees(a.small.amount)}</strong></>,
   ].filter(Boolean);
   return (
     <div id="report-analysis" style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>
@@ -186,7 +187,7 @@ function Analysis({ a, spent, plan }) {
         </div>
       </div>
       <div>
-        <div style={{ fontSize: 11, fontWeight: 750, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>Week by week</div>
+        <div style={{ fontSize: 11, fontWeight: 750, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>{tr("Week by week")}</div>
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${a.weeks.length}, minmax(0, 1fr))`, gap: 8, alignItems: 'end' }}>
           {a.weeks.map((w) => (
             <div key={w.week} title={`Week ${w.week} · from ${fromKey(w.from).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 0 }}>

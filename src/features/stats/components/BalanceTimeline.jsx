@@ -13,6 +13,7 @@ import { formatMoneyCompact } from '../../../utils/money';
 import BigAmount from '../../../components/BigAmount';
 import { toKey } from '../../../utils/recurring';
 
+import { t as tr } from '../../../i18n';
 // The range you last picked (this device). Opens on 1M — one month — until you pick another.
 const RANGE_KEY = 'et_timeline_range_v2';
 const fmtDay = (key) => new Date(`${key}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -39,15 +40,15 @@ export default function BalanceTimeline({ transactions = [], incomeWithCarry = [
     <section id="stats-timeline" className="card tl-card">
       <div className="tl-head">
         <div style={{ minWidth: 0 }}>
-          <div className="tl-title">{point ? `Remaining balance · ${fmtDay(point.key)}` : 'Remaining balance · today'}</div>
+          <div className="tl-title">{point ? `Remaining balance · ${fmtDay(point.key)}` : tr("Remaining balance · today")}</div>
           <BigAmount value={shown} />
           {point ? (
-            <div className="tl-change" style={{ color: 'var(--text-muted)' }}><span className="tl-change-sub" style={{ marginLeft: 0 }}>What was left that day, after everything spent so far that month</span></div>
+            <div className="tl-change" style={{ color: 'var(--text-muted)' }}><span className="tl-change-sub" style={{ marginLeft: 0 }}>{tr("What was left that day, after everything spent so far that month")}</span></div>
           ) : change != null ? (
             <div className="tl-change" style={{ color: change === 0 ? 'var(--text-muted)' : up ? 'var(--income)' : 'var(--expense)' }}>
               {change !== 0 && (up ? <ArrowUp size={16} strokeWidth={3} /> : <ArrowDown size={16} strokeWidth={3} />)}
               <span>{formatMoneyCompact(Math.abs(change))}</span>
-              <span className="tl-change-sub">{change === 0 ? 'same as' : up ? 'more than' : 'less than'} this day last month ({formatMoneyCompact(tl.lastMonth)})</span>
+              <span className="tl-change-sub">{change === 0 ? 'same as' : up ? 'more than' : 'less than'} {tr("this day last month (")}{formatMoneyCompact(tl.lastMonth)})</span>
             </div>
           ) : null}
         </div>
@@ -78,21 +79,21 @@ export default function BalanceTimeline({ transactions = [], incomeWithCarry = [
           </ResponsiveContainer>
         </div>
       ) : (
-        <div className="tl-chart tl-empty">Your timeline starts with your first entry.</div>
+        <div className="tl-chart tl-empty">{tr("Your timeline starts with your first entry.")}</div>
       )}
 
-      <div className="tl-ranges" role="tablist" aria-label="Time range">
+      <div className="tl-ranges" role="tablist" aria-label={tr("Time range")}>
         {RANGES.map((r) => (
           <button key={r.key} id={`tl-range-${r.key}`} role="tab" aria-selected={range === r.key} className={range === r.key ? 'on' : ''} onClick={() => pick(r.key)}>{r.label}</button>
         ))}
       </div>
 
       <div className="tl-strip">
-        <Fig label="In this month" value={monthIn} />
-        <Fig label="Out this month" value={monthOut} />
+        <Fig label={tr("In this month")} value={monthIn} />
+        <Fig label={tr("Out this month")} value={monthOut} />
         <span className="tl-divider" aria-hidden />
-        <Fig label="Saved in total" value={savedTotal} />
-        <Fig label="You owe" value={youOwe} />
+        <Fig label={tr("Saved in total")} value={savedTotal} />
+        <Fig label={tr("You owe")} value={youOwe} />
       </div>
     </section>
   );

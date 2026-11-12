@@ -93,9 +93,9 @@ export default function PlannerPage({ transactions = [], income = [], settings, 
 
   return (
     <div className="tab-root planner-page">
-      <PageHeader title="Planner" subtitle="Retirement, FIRE, education, SIPs, loans, tax" />
+      <PageHeader title={tr("Planner")} subtitle={tr("Retirement, FIRE, education, SIPs, loans, tax")} />
       <div className="tab-body">
-        <div className="tl-ranges planner-tabs" role="tablist" aria-label="Calculator">
+        <div className="tl-ranges planner-tabs" role="tablist" aria-label={tr("Calculator")}>
           {TABS.map((tb) => (
             <button key={tb.key} id={`planner-tab-${tb.key}`} role="tab" aria-selected={tab === tb.key} className={tab === tb.key ? 'on' : ''} onClick={() => setTab(tb.key)}>{tr(tb.label)}</button>
           ))}
@@ -108,7 +108,7 @@ export default function PlannerPage({ transactions = [], income = [], settings, 
         {tab === 'tax' && <Tax v={inputs.tax} set={set('tax')} transactions={transactions} recurringRules={recurring?.rules ?? []} rules={rules} />}
         <p style={{ display: 'flex', gap: 6, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, margin: '14px 2px 0' }}>
           <Info size={13} style={{ flexShrink: 0, marginTop: 1 }} />
-          Estimates, not advice. Returns and inflation are assumptions — change them to see how the picture moves.
+          {tr("Estimates, not advice. Returns and inflation are assumptions — change them to see how the picture moves.")}
         </p>
       </div>
     </div>
@@ -195,7 +195,7 @@ function Table({ id, head, rows }) {
   return (
     <div style={{ marginTop: 12 }}>
       <button id={id} onClick={() => setOpen((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-        Year by year <ChevronRight size={13} style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
+        {tr("Year by year")} <ChevronRight size={13} style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
       </button>
       {open && (
         <div style={{ marginTop: 8, maxHeight: 320, overflow: 'auto', border: '1px solid var(--border)' }}>
@@ -218,7 +218,7 @@ function Table({ id, head, rows }) {
 }
 
 const GoalButton = ({ id, onClick }) => (
-  <div style={{ marginTop: 14 }}><PrimaryPill id={id} Icon={Target} onClick={onClick}>Make it a goal</PrimaryPill></div>
+  <div style={{ marginTop: 14 }}><PrimaryPill id={id} Icon={Target} onClick={onClick}>{tr("Make it a goal")}</PrimaryPill></div>
 );
 
 /* ── Retirement ─────────────────────────────────────────────────── */
@@ -228,26 +228,26 @@ function Retirement({ v, set, onGoal }) {
   return (
     <>
       <Inputs>
-        <Num id="ret-age" label="Your age" kind="age" value={v.age} onChange={(n) => set('age', n)} />
-        <Num id="ret-retire" label="Retire at" kind="age" value={v.retireAge} onChange={(n) => set('retireAge', n)} />
-        <Num id="ret-life" label="Plan until age" kind="age" value={v.lifeAge} onChange={(n) => set('lifeAge', n)} />
-        <Num id="ret-expense" label="Monthly expenses today" value={v.monthlyExpense} onChange={(n) => set('monthlyExpense', n)} />
-        <Num id="ret-saved" label="Saved for it already" value={v.saved} onChange={(n) => set('saved', n)} />
-        <Num id="ret-infl" label="Inflation till then" kind="pct" value={v.inflation} onChange={(n) => set('inflation', n)} />
-        <Num id="ret-pre" label="Return while working" kind="pct" value={v.preReturn} onChange={(n) => set('preReturn', n)} />
-        <Num id="ret-post" label="Return after retiring" kind="pct" value={v.postReturn} onChange={(n) => set('postReturn', n)} />
-        <Num id="ret-postinfl" label="Inflation after retiring" kind="pct" value={v.postInflation} onChange={(n) => set('postInflation', n)} />
+        <Num id="ret-age" label={tr("Your age")} kind="age" value={v.age} onChange={(n) => set('age', n)} />
+        <Num id="ret-retire" label={tr("Retire at")} kind="age" value={v.retireAge} onChange={(n) => set('retireAge', n)} />
+        <Num id="ret-life" label={tr("Plan until age")} kind="age" value={v.lifeAge} onChange={(n) => set('lifeAge', n)} />
+        <Num id="ret-expense" label={tr("Monthly expenses today")} value={v.monthlyExpense} onChange={(n) => set('monthlyExpense', n)} />
+        <Num id="ret-saved" label={tr("Saved for it already")} value={v.saved} onChange={(n) => set('saved', n)} />
+        <Num id="ret-infl" label={tr("Inflation till then")} kind="pct" value={v.inflation} onChange={(n) => set('inflation', n)} />
+        <Num id="ret-pre" label={tr("Return while working")} kind="pct" value={v.preReturn} onChange={(n) => set('preReturn', n)} />
+        <Num id="ret-post" label={tr("Return after retiring")} kind="pct" value={v.postReturn} onChange={(n) => set('postReturn', n)} />
+        <Num id="ret-postinfl" label={tr("Inflation after retiring")} kind="pct" value={v.postInflation} onChange={(n) => set('postInflation', n)} />
       </Inputs>
-      {!valid ? <Verdict ok={false}>Retire after your age, and plan until after you retire.</Verdict> : (
+      {!valid ? <Verdict ok={false}>{tr("Retire after your age, and plan until after you retire.")}</Verdict> : (
         <Result label={`You’ll need at ${v.retireAge}`} value={big(r.corpus)}
-          sub={<>To spend <strong>{money(r.expenseAtRetirement)}</strong> a month then — what {money(v.monthlyExpense)} buys today — until {v.lifeAge}.</>}>
+          sub={<>{tr("To spend")} <strong>{money(r.expenseAtRetirement)}</strong> {tr("a month then — what")} {money(v.monthlyExpense)} {tr("buys today — until")} {v.lifeAge}.</>}>
           <Figures items={[
-            { label: 'Invest every month', value: money(r.sip), color: 'var(--accent)', sub: `for ${r.years} years` },
-            { label: 'Your savings grow to', value: big(r.savedGrows) },
-            { label: 'Still to build', value: big(r.gap), color: r.gap > 0 ? 'var(--expense)' : 'var(--income)' },
+            { label: tr("Invest every month"), value: money(r.sip), color: 'var(--accent)', sub: `for ${r.years} years` },
+            { label: tr("Your savings grow to"), value: big(r.savedGrows) },
+            { label: tr("Still to build"), value: big(r.gap), color: r.gap > 0 ? 'var(--expense)' : 'var(--income)' },
           ]} />
           <Bars values={r.drawdown.map((d) => d.start)} labels={r.drawdown.map((d) => `Age ${d.age}`)} highlightLast={false} />
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>The money after you retire, year by year — it runs out right at {v.lifeAge}.</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{tr("The money after you retire, year by year — it runs out right at")} {v.lifeAge}.</div>
           <Table id="ret-table" head={['Age', 'Start', 'Spent', 'End']} rows={r.drawdown.map((d) => [d.age, big(d.start), big(d.expense), big(d.end)])} />
           <GoalButton id="ret-make-goal" onClick={() => onGoal({ name: 'Retirement', target: r.corpus, years: r.years, monthly: r.sip })} />
         </Result>
@@ -263,23 +263,23 @@ function Fire({ v, set, onGoal }) {
   return (
     <>
       <Inputs>
-        <Num id="fire-age" label="Your age" kind="age" value={v.age} onChange={(n) => set('age', n)} />
-        <Num id="fire-at" label="Stop working at" kind="age" value={v.fireAge} onChange={(n) => set('fireAge', n)} />
-        <Num id="fire-income" label="Yearly income" value={v.annualIncome} onChange={(n) => set('annualIncome', n)} />
-        <Num id="fire-expense" label="Yearly expenses" value={v.annualExpense} onChange={(n) => set('annualExpense', n)} />
-        <Num id="fire-invested" label="Invested today" value={v.invested} onChange={(n) => set('invested', n)} />
-        <Num id="fire-growth" label="Salary rise a year" kind="pct" value={v.salaryGrowth} onChange={(n) => set('salaryGrowth', n)} />
-        <Num id="fire-infl" label="Inflation" kind="pct" value={v.inflation} onChange={(n) => set('inflation', n)} />
-        <Num id="fire-return" label="Return while investing" kind="pct" value={v.preReturn} onChange={(n) => set('preReturn', n)} />
-        <Num id="fire-post" label="Return after you stop" kind="pct" value={v.postReturn} onChange={(n) => set('postReturn', n)} />
+        <Num id="fire-age" label={tr("Your age")} kind="age" value={v.age} onChange={(n) => set('age', n)} />
+        <Num id="fire-at" label={tr("Stop working at")} kind="age" value={v.fireAge} onChange={(n) => set('fireAge', n)} />
+        <Num id="fire-income" label={tr("Yearly income")} value={v.annualIncome} onChange={(n) => set('annualIncome', n)} />
+        <Num id="fire-expense" label={tr("Yearly expenses")} value={v.annualExpense} onChange={(n) => set('annualExpense', n)} />
+        <Num id="fire-invested" label={tr("Invested today")} value={v.invested} onChange={(n) => set('invested', n)} />
+        <Num id="fire-growth" label={tr("Salary rise a year")} kind="pct" value={v.salaryGrowth} onChange={(n) => set('salaryGrowth', n)} />
+        <Num id="fire-infl" label={tr("Inflation")} kind="pct" value={v.inflation} onChange={(n) => set('inflation', n)} />
+        <Num id="fire-return" label={tr("Return while investing")} kind="pct" value={v.preReturn} onChange={(n) => set('preReturn', n)} />
+        <Num id="fire-post" label={tr("Return after you stop")} kind="pct" value={v.postReturn} onChange={(n) => set('postReturn', n)} />
       </Inputs>
-      {!valid ? <Verdict ok={false}>Pick an age from today onwards.</Verdict> : (
+      {!valid ? <Verdict ok={false}>{tr("Pick an age from today onwards.")}</Verdict> : (
         <Result label={`Your FIRE number at ${v.fireAge}`} value={big(f.fireNumber)} tone={f.achieved ? 'income' : 'accent'}
-          sub={<>25 years of your expenses then ({money(f.expenseAtFire)} a year) — the 4% rule. Safer, 30×: {big(f.fireNumber30)}.</>}>
+          sub={<>{tr("25 years of your expenses then (")}{money(f.expenseAtFire)} {tr("a year) — the 4% rule. Safer, 30×:")} {big(f.fireNumber30)}.</>}>
           <Figures items={[
             { label: `You’d have at ${v.fireAge}`, value: big(f.corpus), color: f.achieved ? 'var(--income)' : 'var(--text)' },
-            { label: 'Earliest you could stop', value: f.earliest ? `Age ${f.earliest}` : 'After 70', color: 'var(--accent)' },
-            { label: 'Money lasts until', value: f.forever ? '100+' : `Age ${f.lastsUntil}` },
+            { label: tr("Earliest you could stop"), value: f.earliest ? `Age ${f.earliest}` : 'After 70', color: 'var(--accent)' },
+            { label: tr("Money lasts until"), value: f.forever ? '100+' : `Age ${f.lastsUntil}` },
           ]} />
           <Verdict ok={f.achieved}>
             {f.achieved
@@ -302,22 +302,22 @@ function Education({ v, set, onGoal }) {
   return (
     <>
       <Inputs>
-        <Num id="edu-child" label="Child’s age" kind="age" value={v.childAge} onChange={(n) => set('childAge', n)} />
-        <Num id="edu-goal" label="Needed at age" kind="age" value={v.goalAge} onChange={(n) => set('goalAge', n)} />
-        <Num id="edu-cost" label="What it costs today" value={v.cost} onChange={(n) => set('cost', n)} />
-        <Num id="edu-infl" label="Education inflation" kind="pct" value={v.inflation} onChange={(n) => set('inflation', n)} />
-        <Num id="edu-return" label="Expected return" kind="pct" value={v.expectedReturn} onChange={(n) => set('expectedReturn', n)} />
-        <Num id="edu-lump" label="Put in today (optional)" value={v.lumpSum} onChange={(n) => set('lumpSum', n)} />
-        <Num id="edu-plan" label="You plan per month" value={v.plannedMonthly} onChange={(n) => set('plannedMonthly', n)} hint="Optional — we’ll check it" />
-        <Num id="edu-step" label="Raised every year by" kind="pct" value={v.stepUp} onChange={(n) => set('stepUp', n)} />
+        <Num id="edu-child" label={tr("Child’s age")} kind="age" value={v.childAge} onChange={(n) => set('childAge', n)} />
+        <Num id="edu-goal" label={tr("Needed at age")} kind="age" value={v.goalAge} onChange={(n) => set('goalAge', n)} />
+        <Num id="edu-cost" label={tr("What it costs today")} value={v.cost} onChange={(n) => set('cost', n)} />
+        <Num id="edu-infl" label={tr("Education inflation")} kind="pct" value={v.inflation} onChange={(n) => set('inflation', n)} />
+        <Num id="edu-return" label={tr("Expected return")} kind="pct" value={v.expectedReturn} onChange={(n) => set('expectedReturn', n)} />
+        <Num id="edu-lump" label={tr("Put in today (optional)")} value={v.lumpSum} onChange={(n) => set('lumpSum', n)} />
+        <Num id="edu-plan" label={tr("You plan per month")} value={v.plannedMonthly} onChange={(n) => set('plannedMonthly', n)} hint={tr("Optional — we’ll check it")} />
+        <Num id="edu-step" label={tr("Raised every year by")} kind="pct" value={v.stepUp} onChange={(n) => set('stepUp', n)} />
       </Inputs>
-      {!valid ? <Verdict ok={false}>The goal age has to be after the child’s age.</Verdict> : (
+      {!valid ? <Verdict ok={false}>{tr("The goal age has to be after the child’s age.")}</Verdict> : (
         <Result label={`Needed in ${e.years} years`} value={big(e.corpus)}
-          sub={<>What {big(v.cost)} costs today, after {Math.round(v.inflation * 100)}% inflation a year.</>}>
+          sub={<>{tr("What")} {big(v.cost)} {tr("costs today, after")} {Math.round(v.inflation * 100)}{tr("% inflation a year.")}</>}>
           <Figures items={[
-            { label: 'Every month', value: money(e.monthly), color: 'var(--accent)' },
-            { label: 'Or every year', value: big(e.yearly) },
-            { label: 'Or once, today', value: big(e.lumpSumNeeded) },
+            { label: tr("Every month"), value: money(e.monthly), color: 'var(--accent)' },
+            { label: tr("Or every year"), value: big(e.yearly) },
+            { label: tr("Or once, today"), value: big(e.lumpSumNeeded) },
           ]} />
           {e.planned && (
             <Verdict ok={e.planned.enough}>
@@ -340,19 +340,19 @@ function Sip({ v, set }) {
   return (
     <>
       <Inputs>
-        <Num id="sip-monthly" label="Monthly SIP to start" value={v.monthly} onChange={(n) => set('monthly', n)} />
-        <Num id="sip-years" label="For" kind="years" value={v.years} onChange={(n) => set('years', n)} />
-        <Num id="sip-return" label="Expected return" kind="pct" value={v.expectedReturn} onChange={(n) => set('expectedReturn', n)} />
-        <Num id="sip-step" label="Raise every year by" kind="pct" value={v.stepPct} onChange={(n) => set('stepPct', n)} hint={byAmount ? 'Using the fixed amount instead' : null} />
-        <Num id="sip-step-amt" label="…or by a fixed amount" value={v.stepAmount} onChange={(n) => set('stepAmount', n)} hint="Leave 0 to use the %" />
-        <Num id="sip-hold" label="Then leave it for" kind="years" value={v.holding} onChange={(n) => set('holding', n)} hint="Nothing added" />
+        <Num id="sip-monthly" label={tr("Monthly SIP to start")} value={v.monthly} onChange={(n) => set('monthly', n)} />
+        <Num id="sip-years" label={tr("For")} kind="years" value={v.years} onChange={(n) => set('years', n)} />
+        <Num id="sip-return" label={tr("Expected return")} kind="pct" value={v.expectedReturn} onChange={(n) => set('expectedReturn', n)} />
+        <Num id="sip-step" label={tr("Raise every year by")} kind="pct" value={v.stepPct} onChange={(n) => set('stepPct', n)} hint={byAmount ? tr("Using the fixed amount instead") : null} />
+        <Num id="sip-step-amt" label={tr("…or by a fixed amount")} value={v.stepAmount} onChange={(n) => set('stepAmount', n)} hint={tr("Leave 0 to use the %")} />
+        <Num id="sip-hold" label={tr("Then leave it for")} kind="years" value={v.holding} onChange={(n) => set('holding', n)} hint={tr("Nothing added")} />
       </Inputs>
       <Result label={`In ${s.rows.length} years`} value={big(s.value)} tone="income"
-        sub={<>You put in {big(s.invested)} — the rest, <strong>{big(s.gain)}</strong>, is growth.</>}>
+        sub={<>{tr("You put in")} {big(s.invested)} {tr("— the rest,")} <strong>{big(s.gain)}</strong>{tr(", is growth.")}</>}>
         <Figures items={[
-          { label: 'Without the raise', value: big(s.flatValue) },
-          { label: 'The raise adds', value: big(s.value - s.flatValue), color: 'var(--income)' },
-          { label: 'Last monthly SIP', value: money(s.rows.filter((r) => r.monthly > 0).at(-1)?.monthly ?? 0) },
+          { label: tr("Without the raise"), value: big(s.flatValue) },
+          { label: tr("The raise adds"), value: big(s.value - s.flatValue), color: 'var(--income)' },
+          { label: tr("Last monthly SIP"), value: money(s.rows.filter((r) => r.monthly > 0).at(-1)?.monthly ?? 0) },
         ]} />
         <Bars values={s.rows.map((x) => x.end)} labels={s.rows.map((x) => `Year ${x.year}`)} />
         <Table id="sip-table" head={['Year', 'Monthly', 'Value']} rows={s.rows.map((x) => [x.year, money(x.monthly), big(x.end)])} />
@@ -368,24 +368,24 @@ function Loan({ v, set }) {
   return (
     <>
       <Inputs>
-        <Num id="loan-amount" label="Loan amount" value={v.principal} onChange={(n) => set('principal', n)} />
-        <Num id="loan-rate" label="Interest a year" kind="pct" value={v.rate} onChange={(n) => set('rate', n)} />
-        <Num id="loan-years" label="For" kind="years" value={v.years} onChange={(n) => set('years', n)} />
-        <Num id="loan-extra" label="Pay extra each month" value={v.extra} onChange={(n) => set('extra', n)} hint="Optional — see what it saves" />
+        <Num id="loan-amount" label={tr("Loan amount")} value={v.principal} onChange={(n) => set('principal', n)} />
+        <Num id="loan-rate" label={tr("Interest a year")} kind="pct" value={v.rate} onChange={(n) => set('rate', n)} />
+        <Num id="loan-years" label={tr("For")} kind="years" value={v.years} onChange={(n) => set('years', n)} />
+        <Num id="loan-extra" label={tr("Pay extra each month")} value={v.extra} onChange={(n) => set('extra', n)} hint={tr("Optional — see what it saves")} />
       </Inputs>
-      <Result label="Your EMI" value={money(l.emi)} sub={<>For {ym(l.months)} — you pay back <strong>{big(l.totalPaid)}</strong>, of which <strong>{big(l.totalInterest)}</strong> is interest.</>}>
+      <Result label={tr("Your EMI")} value={money(l.emi)} sub={<>{tr("For")} {ym(l.months)} {tr("— you pay back")} <strong>{big(l.totalPaid)}</strong>{tr(", of which")} <strong>{big(l.totalInterest)}</strong> {tr("is interest.")}</>}>
         <Figures items={[
-          { label: 'Interest', value: big(l.totalInterest), color: 'var(--expense)' },
-          { label: 'Interest share', value: `${Math.round((l.totalInterest / Math.max(1, l.totalPaid)) * 100)}%` },
-          { label: 'Paid back in all', value: big(l.totalPaid) },
+          { label: tr("Interest"), value: big(l.totalInterest), color: 'var(--expense)' },
+          { label: tr("Interest share"), value: `${Math.round((l.totalInterest / Math.max(1, l.totalPaid)) * 100)}%` },
+          { label: tr("Paid back in all"), value: big(l.totalPaid) },
         ]} />
         {l.prepay && (
           <Verdict ok>
-            Paying {money(v.extra)} more a month saves <strong>{big(l.prepay.interestSaved)}</strong> in interest and closes the loan {ym(l.prepay.monthsSaved)} early.
+            {tr("Paying")} {money(v.extra)} {tr("more a month saves")} <strong>{big(l.prepay.interestSaved)}</strong> {tr("in interest and closes the loan")} {ym(l.prepay.monthsSaved)} {tr("early.")}
           </Verdict>
         )}
         <Bars values={(l.prepay?.schedule ?? l.schedule).map((y) => y.end)} labels={(l.prepay?.schedule ?? l.schedule).map((y) => `Year ${y.year}`)} highlightLast={false} />
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>What’s still owed at the end of each year</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{tr("What’s still owed at the end of each year")}</div>
         <Table id="loan-table" head={['Year', 'Interest', 'Principal', 'Still owed']} rows={(l.prepay?.schedule ?? l.schedule).map((y) => [y.year, big(y.interest), big(y.principal), big(y.end)])} />
       </Result>
     </>
@@ -401,9 +401,9 @@ function Tax({ v, set, transactions, recurringRules, rules }) {
   return (
     <>
       <Result label={`Tax saving · ${t.fy.label}`} value={big(t.deductible)} tone="income"
-        sub={<>Found in your entries so far · about <strong>{money(taxSaved(t.deductible, v.slab))}</strong> less tax at the {Math.round(v.slab * 100)}% slab · {t.daysLeft} days left in the year.</>}>
-        <div role="radiogroup" aria-label="Your tax slab" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>
-          Your slab:
+        sub={<>{tr("Found in your entries so far · about")} <strong>{money(taxSaved(t.deductible, v.slab))}</strong> {tr("less tax at the")} {Math.round(v.slab * 100)}{tr("% slab ·")} {t.daysLeft} {tr("days left in the year.")}</>}>
+        <div role="radiogroup" aria-label={tr("Your tax slab")} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>
+          {tr("Your slab:")}
           {SLABS.map((sl) => (
             <button key={sl} id={`tax-slab-${Math.round(sl * 100)}`} role="radio" aria-checked={v.slab === sl} onClick={() => set('slab', sl)}
               style={{ padding: '4px 10px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1px solid ${v.slab === sl ? 'var(--income)' : 'var(--border)'}`, background: v.slab === sl ? 'var(--income-bg)' : 'transparent', color: v.slab === sl ? 'var(--income)' : 'var(--text-secondary)' }}>
@@ -415,10 +415,10 @@ function Tax({ v, set, transactions, recurringRules, rules }) {
           {t.sections.map((sec) => <TaxRow key={sec.key} sec={sec} />)}
         </div>
         {c80 && c80.left > 0 && (
-          <Verdict ok={false}>{money(c80.left)} of 80C room left — PPF, ELSS or a tax-saver FD before 31 March would use it.</Verdict>
+          <Verdict ok={false}>{money(c80.left)} {tr("of 80C room left — PPF, ELSS or a tax-saver FD before 31 March would use it.")}</Verdict>
         )}
         <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, margin: '12px 0 0' }}>
-          Only the old tax regime allows these deductions. Entries are matched by name (PPF, ELSS, NPS, LIC, health insurance, tuition, rent); EPF taken from salary isn’t here unless you log it.
+          {tr("Only the old tax regime allows these deductions. Entries are matched by name (PPF, ELSS, NPS, LIC, health insurance, tuition, rent); EPF taken from salary isn’t here unless you log it.")}
         </p>
       </Result>
     </>

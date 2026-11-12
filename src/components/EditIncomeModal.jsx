@@ -11,6 +11,7 @@ import ConfirmDeleteModal from './ConfirmDeleteModal';
 import Portal from './Portal';
 import { useEscape } from '../hooks/useEscape';
 
+import { t as tr } from '../i18n';
 export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
   useEscape(onClose);
   const [name, setName]           = useState(entry.name ?? '');
@@ -37,7 +38,7 @@ export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
       <>
         {showDeleteConfirm && (
           <ConfirmDeleteModal
-            title="Delete income entry?"
+            title={tr("Delete income entry?")}
             message="It moves to Recently Deleted (Settings), where you can restore it."
             onConfirm={() => { onDelete(entry.id); onClose(); }}
             onCancel={() => setShowDeleteConfirm(false)}
@@ -59,8 +60,8 @@ export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>Edit Income</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>Update income entry</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{tr("Edit Income")}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{tr("Update income entry")}</div>
               </div>
               <button onClick={onClose} style={{
                 width: 30, height: 30, borderRadius: 9, border: 'none', background: 'var(--surface2)',
@@ -74,7 +75,7 @@ export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
             {/* Name */}
             <div style={{ position: 'relative', marginBottom: 10 }}>
               <PenLine size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-              <input type="text" placeholder="Source (Salary, Freelance…)" value={name}
+              <input type="text" placeholder={tr("Source (Salary, Freelance…)")} value={name}
                 onChange={e => setName(e.target.value)}
                 style={{
                   width: '100%', paddingLeft: 34, paddingRight: 12,
@@ -133,7 +134,7 @@ export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
                 background: 'var(--surface2)', color: 'var(--text-secondary)',
                 border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit',
               }}>
-                Cancel
+                {tr("Cancel")}
               </button>
               <button onClick={handleSave} disabled={!canSave} style={{
                 flex: 2, padding: '11px', borderRadius: 11, fontSize: 13, fontWeight: 700,
@@ -142,7 +143,7 @@ export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
                 border: 'none', cursor: canSave ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.15s',
               }}>
-                <Check size={14} />Save Changes
+                <Check size={14} />{tr("Save Changes")}
               </button>
             </div>
           </div>

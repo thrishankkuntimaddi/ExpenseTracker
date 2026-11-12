@@ -7,6 +7,7 @@ import { useUpdateState, dismissUpdateNote, restartToUpdate, APK_URL } from '../
 import { platform } from '../native';
 import { play } from '../sound/sound';
 
+import { t as tr } from '../i18n';
 // Closed once, a note stays closed for that version (Settings → App still
 // has Restart / Install); it comes back only for a newer one
 const CLOSED_KEY = 'et_update_note_closed';
@@ -29,9 +30,9 @@ export default function UpdateBanner() {
   }, [u.kind]);
   if (!show) return null;
   const action = u.kind === 'ready' && (platform === 'desktop' || platform === 'android')
-    ? { label: 'Restart', Icon: RotateCcw, onClick: restartToUpdate }
+    ? { label: tr("Restart"), Icon: RotateCcw, onClick: restartToUpdate }
     : u.kind === 'native-needed'
-      ? { label: 'Install', Icon: Download, onClick: () => window.open(APK_URL, '_blank') }
+      ? { label: tr("Install"), Icon: Download, onClick: () => window.open(APK_URL, '_blank') }
       : null;
   return (
     <div role="status" id="update-banner" style={{
@@ -47,7 +48,7 @@ export default function UpdateBanner() {
           <action.Icon size={13} /> {action.label}
         </button>
       )}
-      <button onClick={close} aria-label="Dismiss" style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 2 }}>
+      <button onClick={close} aria-label={tr("Dismiss")} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 2 }}>
         <X size={14} />
       </button>
     </div>

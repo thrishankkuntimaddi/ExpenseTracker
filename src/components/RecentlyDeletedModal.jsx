@@ -8,6 +8,7 @@ import { formatAmount, formatDateShort } from '../utils/dateHelpers';
 import Portal from './Portal';
 import { useEscape } from '../hooks/useEscape';
 
+import { t as tr } from '../i18n';
 function formatDate(dateStr) {
   if (!dateStr) return 'N/A';
   try {
@@ -155,7 +156,7 @@ export default function RecentlyDeletedModal({
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>
-                    Recently Deleted
+                    {tr("Recently Deleted")}
                   </h2>
                   <span
                     style={{
@@ -172,7 +173,7 @@ export default function RecentlyDeletedModal({
                   </span>
                 </div>
                 <p style={{ margin: '2px 0 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
-                  Items can be restored to active ledger or deleted permanently.
+                  {tr("Items can be restored to active ledger or deleted permanently.")}
                 </p>
               </div>
             </div>
@@ -197,7 +198,7 @@ export default function RecentlyDeletedModal({
                   }}
                 >
                   <Trash2 size={14} />
-                  <span>Empty Trash</span>
+                  <span>{tr("Empty Trash")}</span>
                 </button>
               )}
 
@@ -312,12 +313,12 @@ export default function RecentlyDeletedModal({
                 </div>
                 <div style={{ maxWidth: 320 }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
-                    {recentlyDeleted.length === 0 ? 'Trash is Empty' : 'No matching items'}
+                    {recentlyDeleted.length === 0 ? tr("Trash is Empty") : tr("No matching items")}
                   </p>
                   <p style={{ margin: '4px 0 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
                     {recentlyDeleted.length === 0
-                      ? 'Deleted expenses, income, or billing sessions will show up here so you can revert them.'
-                      : 'Try selecting a different filter above.'}
+                      ? tr("Deleted expenses, income, or billing sessions will show up here so you can revert them.")
+                      : tr("Try selecting a different filter above.")}
                   </p>
                 </div>
               </div>
@@ -425,7 +426,7 @@ export default function RecentlyDeletedModal({
                               color: 'var(--text-secondary)',
                             }}
                           >
-                            <span>Date: {formatDate(item.date)}</span>
+                            <span>{tr("Date:")} {formatDate(item.date)}</span>
                             {item.deletedAt && (
                               <>
                                 <span>•</span>
@@ -454,7 +455,7 @@ export default function RecentlyDeletedModal({
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <button
                             onClick={() => handleRestore(item)}
-                            title="Restore / Revert to active ledger"
+                            title={tr("Restore / Revert to active ledger")}
                             style={{
                               padding: '8px 12px',
                               borderRadius: 10,
@@ -471,12 +472,12 @@ export default function RecentlyDeletedModal({
                             }}
                           >
                             <RotateCcw size={14} />
-                            <span>Revert</span>
+                            <span>{tr("Revert")}</span>
                           </button>
 
                           <button
                             onClick={() => setPermDeleteId(item.id)}
-                            title="Delete Permanently"
+                            title={tr("Delete Permanently")}
                             style={{
                               width: 32,
                               height: 32,
@@ -506,7 +507,7 @@ export default function RecentlyDeletedModal({
         {/* Single Item Permanent Delete Modal */}
         {permDeleteId && (
           <ConfirmDeleteModal
-            title="Delete permanently?"
+            title={tr("Delete permanently?")}
             message="This action cannot be undone. The item will be permanently removed from trash."
             confirmLabel="Delete Permanently"
             onConfirm={handleConfirmPermDelete}
@@ -517,7 +518,7 @@ export default function RecentlyDeletedModal({
         {/* Empty Trash Confirmation Modal */}
         {showEmptyConfirm && (
           <ConfirmDeleteModal
-            title="Empty entire trash?"
+            title={tr("Empty entire trash?")}
             message={`Are you sure you want to permanently delete all ${recentlyDeleted.length} items from trash? This cannot be undone.`}
             confirmLabel="Empty Trash"
             onConfirm={handleConfirmEmptyTrash}

@@ -34,6 +34,7 @@ import { CURRENCY_GROUPS, CURRENCY_NAMES, currencySymbol, getDisplayCurrency, fo
 import { rateBetween } from '../services/rates';
 import ScanButton from './ScanButton';
 
+import { t as tr } from '../i18n';
 /* The currency this device enters in (sticky: set it once when you travel). */
 const EntryCurrency = createContext({ currency: 'INR', setCurrency: () => {} });
 const useEntryCurrency = () => useContext(EntryCurrency);
@@ -111,7 +112,7 @@ export default function AddSheet({ initialKind = 'expense', options = {}, onClos
       <div data-no-swipe className={`sheet-backdrop${shell?.desktop ? ' sheet-centered' : ''}`}
         onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
         style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(0,0,0,0.42)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'sheetFade .15s ease' }}>
-        <div ref={sheetRef} role="dialog" aria-label="Add an entry" className="add-sheet" style={{
+        <div ref={sheetRef} role="dialog" aria-label={tr("Add an entry")} className="add-sheet" style={{
           width: '100%', maxWidth: 560, maxHeight: '92dvh', overflowY: 'auto', background: 'var(--surface)',
           borderRadius: '26px 26px 0 0', padding: '10px 16px calc(18px + env(safe-area-inset-bottom, 0px))',
           animation: 'sheetRise .24s cubic-bezier(0.16,1,0.3,1)',
@@ -119,9 +120,9 @@ export default function AddSheet({ initialKind = 'expense', options = {}, onClos
           <div id="add-sheet-handle" {...grip} style={{ touchAction: shell?.desktop ? undefined : 'none', margin: '-10px -16px 0', padding: '10px 16px 0' }}>
           <div className="sheet-grip" style={{ width: 40, height: 5, borderRadius: 99, background: 'var(--border-dark)', margin: '0 auto 10px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>Add</span>
-            {!shell?.desktop && !hasSwiped() && <span id="add-swipe-hint" style={{ flex: 1, textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>← swipe to switch →</span>}
-            <button onClick={onClose} aria-label="Close" style={{ width: 30, height: 30, border: 'none', background: 'var(--surface2)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>{tr("Add")}</span>
+            {!shell?.desktop && !hasSwiped() && <span id="add-swipe-hint" style={{ flex: 1, textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>{tr("← swipe to switch →")}</span>}
+            <button onClick={onClose} aria-label={tr("Close")} style={{ width: 30, height: 30, border: 'none', background: 'var(--surface2)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <X size={15} />
             </button>
           </div>
@@ -187,7 +188,7 @@ export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd
     <AutoFocus.Provider value={engaged}>
     <Draft.Provider value={draft}>
     <div className={`add-panel${compact ? ' add-compact' : ''}`} {...swipeHandlers}>
-      <div role="tablist" aria-label="What are you adding?" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: compact ? 12 : 16 }}>
+      <div role="tablist" aria-label={tr("What are you adding?")} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: compact ? 12 : 16 }}>
         {ADD_KINDS.map(({ key: k, label, Icon, color, bg }, i) => {
           const on = kind === k;
           const at = ADD_KINDS.findIndex((x) => x.key === kind);
@@ -229,10 +230,10 @@ function AmountField({ value, onChange, tone, onEnter, id = 'add-amount', shown 
   return (
     <>
     <div className="add-amount" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 16px', marginBottom: foreign ? 4 : 12, border: `1.5px solid var(--${tone}-border, var(--border))`, background: `var(--${tone}-bg)` }}>
-      <label title="Currency" style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer', color: `var(--${tone})` }}>
+      <label title={tr("Currency")} style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer', color: `var(--${tone})` }}>
         <span style={{ fontSize: currencySymbol(code).length > 2 ? 15 : 24, fontWeight: 800, minWidth: 18, textAlign: 'center' }}>{currencySymbol(code)}</span>
         <span aria-hidden style={{ fontSize: 9, opacity: 0.7 }}>▾</span>
-        <select id={`${id}-currency`} aria-label="Currency" value={code} onChange={(e) => setCurrency(e.target.value)}
+        <select id={`${id}-currency`} aria-label={tr("Currency")} value={code} onChange={(e) => setCurrency(e.target.value)}
           style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%' }}>
           {CURRENCY_GROUPS.map((g) => (
             <optgroup key={g.title} label={g.title}>
@@ -241,7 +242,7 @@ function AmountField({ value, onChange, tone, onEnter, id = 'add-amount', shown 
           ))}
         </select>
       </label>
-      <input id={id} value={value} inputMode="decimal" autoComplete="off" enterKeyHint="done" placeholder="0" aria-label="Amount"
+      <input id={id} value={value} inputMode="decimal" autoComplete="off" enterKeyHint="done" placeholder="0" aria-label={tr("Amount")}
         onChange={(e) => { const v = e.target.value.replace(/,/g, ''); if (v === '' || /^\d*\.?\d{0,3}$/.test(v)) onChange(v); }}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onEnter?.(); } }}
         style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', boxShadow: 'none', outline: 'none', fontSize: 32, fontWeight: 800, color: `var(--${tone})`, fontFamily: 'inherit', padding: '6px 0', letterSpacing: '-0.02em' }} />
@@ -250,7 +251,7 @@ function AmountField({ value, onChange, tone, onEnter, id = 'add-amount', shown 
     {foreign && (
       <p id={`${id}-fx`} style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 2px 12px' }}>
         {n > 0 ? `≈ ${formatMoney(n * (rateBetween(code, display) ?? 1), display)} today · ` : ''}1 {code} = {formatMoney(rateBetween(code, display) ?? 0, display)}
-        {' · '}<button type="button" onClick={() => setCurrency(display)} style={{ border: 'none', background: 'none', padding: 0, color: 'var(--accent)', fontWeight: 700, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Use {display}</button>
+        {' · '}<button type="button" onClick={() => setCurrency(display)} style={{ border: 'none', background: 'none', padding: 0, color: 'var(--accent)', fontWeight: 700, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>{tr("Use")} {display}</button>
       </p>
     )}
     </>
@@ -273,7 +274,7 @@ function DateField({ value, onChange }) {
   return (
     <div style={{ position: 'relative', marginBottom: 14 }}>
       <Calendar size={15} style={iconAt} />
-      <input type="date" aria-label="Date" value={value} max={todayInputValue()} onChange={(e) => e.target.value && onChange(e.target.value)} style={{ ...field, fontSize: 13 }} />
+      <input type="date" aria-label={tr("Date")} value={value} max={todayInputValue()} onChange={(e) => e.target.value && onChange(e.target.value)} style={{ ...field, fontSize: 13 }} />
     </div>
   );
 }
@@ -359,11 +360,11 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
   return (
     <div className="add-form add-form-expense">
       <Choice idPrefix="expense-mode" value={mode} onChange={setMode} tone="expense" columns={3}
-        options={[{ key: 'spent', label: 'Spent' }, { key: 'given', label: 'Gave someone', tone: 'given' }, { key: 'withdraw', label: 'Withdrew cash', tone: 'lent' }]} />
+        options={[{ key: 'spent', label: tr("Spent") }, { key: 'given', label: tr("Gave someone"), tone: 'given' }, { key: 'withdraw', label: tr("Withdrew cash"), tone: 'lent' }]} />
       {mode === 'spent' && <ScanButton onResult={onScan} />}
       <TextField id="add-name" first Icon={mode === 'given' ? User : withdraw ? Banknote : PenLine} value={name} onChange={setName}
         onEnter={() => (parsed || multi ? save() : document.getElementById('add-amount')?.focus())}
-        placeholder={mode === 'given' ? 'Given to whom? (no return expected)' : withdraw ? 'From where? — ATM, bank (optional)' : 'What for? — or “coffee 250 water 50”'} list={mode === 'given' ? 'add-given-to' : undefined} />
+        placeholder={mode === 'given' ? tr("Given to whom? (no return expected)") : withdraw ? tr("From where? — ATM, bank (optional)") : tr("What for? — or “coffee 250 water 50”")} list={mode === 'given' ? 'add-given-to' : undefined} />
       <AmountField value={amount} onChange={setAmount} tone={tone} onEnter={save} shown={parsed?.currency} />
       <datalist id="add-given-to">{givenTo.map((n) => <option key={n} value={n} />)}</datalist>
       {multi && (
@@ -383,32 +384,32 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
         </div>
       )}
       {!withdraw && (
-        <div role="radiogroup" aria-label="Paid with" className="add-paid">
-          <span className="add-paid-label">Paid with</span>
+        <div role="radiogroup" aria-label={tr("Paid with")} className="add-paid">
+          <span className="add-paid-label">{tr("Paid with")}</span>
           {[[false, 'UPI / card'], [true, 'Cash']].map(([c, label]) => (
             <button key={label} type="button" role="radio" aria-checked={paidCash === c} id={`paid-${c ? 'cash' : 'account'}`} onClick={() => setPaidCash(c)}
               className={`add-paid-opt${paidCash === c ? ' on' : ''}`}>{c && <Banknote size={12} />}{label}</button>
           ))}
-          {paidCash && cash.used && <span id="paid-cash-left" className="add-paid-left">{formatAmount(cash.inHand)} in hand</span>}
+          {paidCash && cash.used && <span id="paid-cash-left" className="add-paid-left">{formatAmount(cash.inHand)} {tr("in hand")}</span>}
         </div>
       )}
       {mode === 'given' && (
         <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-4px 2px 12px', lineHeight: 1.5 }}>
-          Counted as spending. It isn’t a debt, so it won’t appear in Debts — use <strong>Debt → Lent</strong> if you expect it back.
+          {tr("Counted as spending. It isn’t a debt, so it won’t appear in Debts — use")} <strong>{tr("Debt → Lent")}</strong> {tr("if you expect it back.")}
         </p>
       )}
       {withdraw && (
         <p id="withdraw-hint" style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-2px 2px 12px', lineHeight: 1.5 }}>
-          Not spending, not saving — the money just moves from your account to your wallet. When you spend it, add the expense with <strong>Paid with: Cash</strong>.
-          {cash.used && <> Cash in hand now: <strong>{formatAmount(cash.inHand)}</strong>.</>}
+          {tr("Not spending, not saving — the money just moves from your account to your wallet. When you spend it, add the expense with")} <strong>{tr("Paid with: Cash")}</strong>.
+          {cash.used && <> {tr("Cash in hand now:")} <strong>{formatAmount(cash.inHand)}</strong>.</>}
         </p>
       )}
       <div className="add-foot">
         <DateField value={dateInput} onChange={setDateInput} />
         <SaveButton id="btn-save-entry" disabled={!can} tone={tone} onClick={save}>
           {multi ? `Add ${manyItems.length} expenses${manyCurrency ? ` · ${formatAmount(manyTotal, manyCurrency)}` : ''}`
-            : withdraw ? (can ? `Withdrew ${formatAmount(finalAmount, finalCurrency)}` : 'Add cash withdrawal')
-            : can ? `Add ${mode === 'given' ? 'gift' : 'expense'} · ${formatAmount(finalAmount, finalCurrency)}` : mode === 'given' ? 'Add what you gave' : 'Add expense'}
+            : withdraw ? (can ? `Withdrew ${formatAmount(finalAmount, finalCurrency)}` : tr("Add cash withdrawal"))
+            : can ? `Add ${mode === 'given' ? 'gift' : 'expense'} · ${formatAmount(finalAmount, finalCurrency)}` : mode === 'given' ? tr("Add what you gave") : tr("Add expense")}
         </SaveButton>
       </div>
     </div>
@@ -441,7 +442,7 @@ function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
 
   return (
     <div className="add-form add-form-income">
-      <TextField id="income-name" first value={name} onChange={setName} onEnter={() => document.getElementById('add-amount')?.focus()} placeholder="From — Salary, Parents, Freelance…" />
+      <TextField id="income-name" first value={name} onChange={setName} onEnter={() => document.getElementById('add-amount')?.focus()} placeholder={tr("From — Salary, Parents, Freelance…")} />
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '-2px 0 12px' }}>
         {sources.map((s) => (
           <button key={s} type="button" onClick={() => { setName(s); document.getElementById('add-amount')?.focus(); }} className="add-choice"
@@ -451,10 +452,10 @@ function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
         ))}
       </div>
       <AmountField value={amount} onChange={setAmount} tone="income" onEnter={save} />
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-2px 2px 12px', lineHeight: 1.5 }}>Borrowed money, or money paid back to you? Use <strong>Debt</strong> — it’s counted as money in and tracked per person.</p>
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-2px 2px 12px', lineHeight: 1.5 }}>{tr("Borrowed money, or money paid back to you? Use")} <strong>{tr("Debt")}</strong> {tr("— it’s counted as money in and tracked per person.")}</p>
       <div className="add-foot">
         <DateField value={dateInput} onChange={setDateInput} />
-        <SaveButton id="btn-save-income" disabled={!can} tone="income" onClick={save}>{can ? `Add income · ${formatAmount(Number(amount), currency)}` : 'Add income'}</SaveButton>
+        <SaveButton id="btn-save-income" disabled={!can} tone="income" onClick={save}>{can ? `Add income · ${formatAmount(Number(amount), currency)}` : tr("Add income")}</SaveButton>
       </div>
     </div>
   );
@@ -500,7 +501,7 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
         options={DEBT_MOVE_KEYS.map((k) => ({ key: k, label: DEBT_MOVES[k].label, tone: DEBT_MOVES[k].tone }))} />
       <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '-4px 2px 10px' }}>{meta.hint}</p>
       <TextField id="debt-name" first Icon={User} value={name} onChange={setName} onEnter={() => document.getElementById('add-amount')?.focus()} list="debt-people"
-        placeholder={move === 'lent' ? 'Lent to whom?' : move === 'borrowed' ? 'Borrowed from whom?' : move === 'got_back' ? 'Who paid you back?' : 'Paid back to whom?'} />
+        placeholder={move === 'lent' ? tr("Lent to whom?") : move === 'borrowed' ? tr("Borrowed from whom?") : move === 'got_back' ? tr("Who paid you back?") : tr("Paid back to whom?")} />
       <datalist id="debt-people">{ledger.map((p) => <option key={p.key} value={p.name} />)}</datalist>
       {open.length > 0 && (
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', margin: '-2px 0 12px', paddingBottom: 2, scrollbarWidth: 'none' }}>
@@ -513,10 +514,10 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
         </div>
       )}
       <AmountField value={amount} onChange={setAmount} tone={meta.tone} onEnter={save} />
-      <TextField id="debt-note" Icon={StickyNote} value={note} onChange={setNote} onEnter={save} placeholder={move === 'borrowed' ? 'What’s it for? — e.g. bike repair' : 'Note (optional) — e.g. for the bike repair'} />
+      <TextField id="debt-note" Icon={StickyNote} value={note} onChange={setNote} onEnter={save} placeholder={move === 'borrowed' ? tr("What’s it for? — e.g. bike repair") : tr("Note (optional) — e.g. for the bike repair")} />
       {move === 'borrowed' && (
         <div id="debt-check" style={{ margin: '-2px 0 12px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 2px 6px' }}>Check if it’s used</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 2px 6px' }}>{tr("Check if it’s used")}</div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             {CHECK_OPTIONS.map((o) => (
               <button key={o.key} type="button" id={`debt-check-${o.key}`} onClick={() => setCheckOn(o.key)} className="add-choice"
@@ -525,11 +526,11 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
               </button>
             ))}
             {checkOn === 'date' && (
-              <input id="debt-check-date" type="date" value={checkDate} min={dateInput} onChange={(e) => setCheckDate(e.target.value)} aria-label="Check on"
+              <input id="debt-check-date" type="date" value={checkDate} min={dateInput} onChange={(e) => setCheckDate(e.target.value)} aria-label={tr("Check on")}
                 style={{ padding: '6px 10px', fontSize: 12, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit' }} />
             )}
           </div>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '6px 2px 0', lineHeight: 1.5 }}>If it’s still sitting unspent by then, Home asks: pay some back, or what’s it for?</p>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '6px 2px 0', lineHeight: 1.5 }}>{tr("If it’s still sitting unspent by then, Home asks: pay some back, or what’s it for?")}</p>
         </div>
       )}
       <div className="add-foot">
@@ -577,16 +578,16 @@ function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
 
   return (
     <div className="add-form add-form-savings">
-      <TextField id="savings-name" first value={name} onChange={setName} onEnter={() => document.getElementById('add-amount')?.focus()} placeholder={goal ? `${goal.name} (optional name)` : 'What for? (optional) — e.g. Nifty 50 SIP'} />
+      <TextField id="savings-name" first value={name} onChange={setName} onEnter={() => document.getElementById('add-amount')?.focus()} placeholder={goal ? `${goal.name} (optional name)` : tr("What for? (optional) — e.g. Nifty 50 SIP")} />
       <AmountField value={amount} onChange={setAmount} tone="savings" onEnter={save} />
       <Choice idPrefix="savings-type" value={savingsType} onChange={setSavingsType} tone="savings"
         options={SAVINGS_CHOICES.map((s) => ({ key: s.key, label: s.label }))} />
       <p id="savings-cash-hint" style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-4px 2px 12px', lineHeight: 1.5 }}>
-        Took cash out to spend? That isn’t saving — use <strong>Expense → Withdrew cash</strong>.
+        {tr("Took cash out to spend? That isn’t saving — use")} <strong>{tr("Expense → Withdrew cash")}</strong>.
       </p>
       {goals.length > 0 && (
         <>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 2px 6px' }}>For a goal?</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 2px 6px' }}>{tr("For a goal?")}</div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
             {goals.map((g) => (
               <button key={g.id} type="button" id={`savings-goal-${g.id}`} onClick={() => chooseGoal(g.id)} className="add-choice"
@@ -598,12 +599,12 @@ function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
         </>
       )}
       <div className={st.hasPlatform ? 'add-pair' : undefined}>
-        {st.hasPlatform && <TextField id="savings-platform" value={platform} onChange={setPlatform} onEnter={save} placeholder="Platform — e.g. Angel One" />}
-        <TextField id="savings-held" Icon={User} value={heldWith} onChange={setHeldWith} onEnter={save} placeholder="Kept with — cash, a person, a bank…" />
+        {st.hasPlatform && <TextField id="savings-platform" value={platform} onChange={setPlatform} onEnter={save} placeholder={tr("Platform — e.g. Angel One")} />}
+        <TextField id="savings-held" Icon={User} value={heldWith} onChange={setHeldWith} onEnter={save} placeholder={tr("Kept with — cash, a person, a bank…")} />
       </div>
       <div className="add-foot">
         <DateField value={dateInput} onChange={setDateInput} />
-        <SaveButton id="btn-save-savings" disabled={!can} tone="savings" onClick={save}>{can ? `Save ${formatAmount(Number(amount), currency)}${goal ? ` for ${goal.name}` : ''}` : 'Add savings'}</SaveButton>
+        <SaveButton id="btn-save-savings" disabled={!can} tone="savings" onClick={save}>{can ? `Save ${formatAmount(Number(amount), currency)}${goal ? ` for ${goal.name}` : ''}` : tr("Add savings")}</SaveButton>
       </div>
     </div>
   );

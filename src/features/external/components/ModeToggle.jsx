@@ -1,13 +1,14 @@
 // ─── Billings ⇄ Trips segmented switch ────────────────────────────
 import { ReceiptText, Map } from 'lucide-react';
 
+import { t as tr } from '../../../i18n';
 export default function ModeToggle({ mode, onChange }) {
   const opts = [
-    { key: 'billings', label: 'Billings', Icon: ReceiptText, hint: 'paid on behalf of someone' },
-    { key: 'trips',    label: 'Trips & Splits', Icon: Map, hint: 'shared spending, settle fairly' },
+    { key: 'billings', label: tr("Billings"), Icon: ReceiptText, hint: 'paid on behalf of someone' },
+    { key: 'trips',    label: tr("Trips & Splits"), Icon: Map, hint: 'shared spending, settle fairly' },
   ];
   return (
-    <div role="tablist" aria-label="Billings mode" style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 12, padding: 3, border: '1px solid var(--border)' }}>
+    <div role="tablist" aria-label={tr("Billings mode")} style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 12, padding: 3, border: '1px solid var(--border)' }}>
       {opts.map((o) => {
         const active = mode === o.key;
         return (

@@ -72,6 +72,7 @@ import { markQuickBoot } from './quickBoot';
 import TourHost from '../tour/TourHost';
 import { startTour, tourSeen, markTourSeen } from '../tour/tour';
 
+import { t as tr } from '../i18n';
 /* One app on every screen — the same pages, the same headers:
    • phone: bottom bar Home · page · "+" · page · page (chosen in Profile →
      Customize); every other page is a card in Home → Explore and opens with
@@ -174,7 +175,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
       fontSize: 12, fontWeight: 600, boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
     }}>
       <span style={{ flex: 1 }}>{bannerMessage}</span>
-      <button onClick={dismissBanner} aria-label="Dismiss"
+      <button onClick={dismissBanner} aria-label={tr("Dismiss")}
         style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 16, cursor: 'pointer' }}>×</button>
     </div>
   );
@@ -246,7 +247,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     if (!loaded || tourSeen() || pendingInvite()) return undefined;
     const t = setTimeout(() => {
       if (transactions.length + income.length === 0) startTour('app');
-      else { markTourSeen(); setToastMsg({ text: 'New: tap ? at the top of any page for a quick guide' }); }
+      else { markTourSeen(); setToastMsg({ text: tr("New: tap ? at the top of any page for a quick guide") }); }
     }, 1200);
     return () => clearTimeout(t);
   }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -488,10 +489,10 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     return (
       <ShellContext.Provider value={shell}>
       <div className="desktop-shell" style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--bg)' }}>
-        <aside className="desktop-sidebar" aria-label="Pages">
+        <aside className="desktop-sidebar" aria-label={tr("Pages")}>
           <div className="desktop-brand">
             <img src={import.meta.env.BASE_URL + 'icon-192.png'} alt="" width={30} height={30} />
-            <span>Expense Tracker</span>
+            <span>{tr("Expense Tracker")}</span>
           </div>
           <nav className="desktop-nav">
             {DESKTOP_NAV.map((group) => (
@@ -516,7 +517,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
             <Avatar user={user} size={32} />
             <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
               <span className="desktop-profile-name">{displayNameOf(user)}</span>
-              <span className="desktop-profile-sub">Profile & settings</span>
+              <span className="desktop-profile-sub">{tr("Profile & settings")}</span>
             </span>
             <Settings2 size={15} />
             {shell.attention && <span className="desktop-attention" aria-hidden />}
@@ -551,7 +552,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
         {barItems.map(({ key, label, Icon }) => {
           if (key === 'add') {
             return (
-              <button key="add" id="tab-add" className="nav-add" aria-label="Add an entry" onClick={() => setAddKind({ kind: 'expense' })}
+              <button key="add" id="tab-add" className="nav-add" aria-label={tr("Add an entry")} onClick={() => setAddKind({ kind: 'expense' })}
                 style={{ flex: '0 0 auto', width: 50, height: 50, margin: '0 6px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'var(--accent)' }}>
                 <Plus size={24} strokeWidth={2.4} />
               </button>

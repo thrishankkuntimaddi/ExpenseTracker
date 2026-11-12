@@ -7,6 +7,7 @@ import { CategoryIcon } from '../../../components/CategoryPicker';
 import { currentTheme } from '../../../utils/theme';
 import { categoryColor } from '../../../utils/categories';
 
+import { t as tr } from '../../../i18n';
 const STATUS_COLOR = {
   ok:   'var(--income)',
   pace: 'var(--lent)',
@@ -29,7 +30,7 @@ export function BudgetBar({ pct, pacePct, color, height = 8 }) {
         background: color, transition: 'width 0.5s cubic-bezier(0.16,1,0.3,1)',
       }} />
       {pacePct != null && pacePct > 0 && pacePct < 100 && (
-        <div title="Where the month is today" style={{
+        <div title={tr("Where the month is today")} style={{
           position: 'absolute', top: -3, bottom: -3, left: `${pacePct}%`,
           width: 2, background: 'var(--text-muted)', borderRadius: 2, opacity: 0.8,
         }} />
@@ -47,12 +48,12 @@ export default function BudgetStatusCard({ status, onEdit, compact = false, titl
           <Target size={17} style={{ color: 'var(--accent)' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>No budget set</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Set a monthly cap to see “safe to spend today” and pace alerts.</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{tr("No budget set")}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{tr("Set a monthly cap to see “safe to spend today” and pace alerts.")}</div>
         </div>
         {onEdit && (
           <button onClick={onEdit} style={{ padding: '7px 12px', borderRadius: 9, fontSize: 11, fontWeight: 700, background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-            Set budget
+            {tr("Set budget")}
           </button>
         )}
       </div>
@@ -73,10 +74,10 @@ export default function BudgetStatusCard({ status, onEdit, compact = false, titl
           {t.limit ? (
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
               <span style={{ fontSize: compact ? 18 : 22, fontWeight: 800, color: 'var(--text)' }}>{formatAmount(t.spent)}</span>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>of {formatAmount(t.limit)}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>{tr("of")} {formatAmount(t.limit)}</span>
             </div>
           ) : (
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Category budgets only</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{tr("Category budgets only")}</div>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -87,7 +88,7 @@ export default function BudgetStatusCard({ status, onEdit, compact = false, titl
             </span>
           )}
           {onEdit && (
-            <button onClick={onEdit} aria-label="Edit budget" style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button onClick={onEdit} aria-label={tr("Edit budget")} style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Pencil size={11} />
             </button>
           )}
@@ -98,7 +99,7 @@ export default function BudgetStatusCard({ status, onEdit, compact = false, titl
         <>
           <BudgetBar pct={t.pct} pacePct={status.isCurrent ? status.pacePct : null} color={color} />
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--text-muted)' }}>
-            <span>{Math.round(t.pct)}% used · {Math.round(status.pacePct)}% of month gone</span>
+            <span>{Math.round(t.pct)}{tr("% used ·")} {Math.round(status.pacePct)}{tr("% of month gone")}</span>
             <span style={{ fontWeight: 700, color: t.remaining >= 0 ? 'var(--text-secondary)' : 'var(--expense)' }}>
               {t.remaining >= 0 ? `${formatAmount(t.remaining)} left` : `${formatAmount(-t.remaining)} over`}
             </span>
@@ -111,7 +112,7 @@ export default function BudgetStatusCard({ status, onEdit, compact = false, titl
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
             }}>
               <span style={{ fontSize: 11, fontWeight: 600, color: t.status === 'over' ? 'var(--expense)' : 'var(--income)' }}>
-                {t.status === 'over' ? 'Budget exhausted for this month' : 'Safe to spend today'}
+                {t.status === 'over' ? tr("Budget exhausted for this month") : tr("Safe to spend today")}
               </span>
               {t.status !== 'over' && (
                 <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--income)' }}>{formatAmount(t.safeToday)}</span>
@@ -120,8 +121,8 @@ export default function BudgetStatusCard({ status, onEdit, compact = false, titl
           )}
           {!compact && status.isCurrent && t.projected > 0 && (
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
-              Projected month end: <strong style={{ color: t.projected > t.limit ? 'var(--expense)' : 'var(--text-secondary)' }}>{formatAmount(t.projected)}</strong>
-              {' '}· {status.daysLeft} day{status.daysLeft === 1 ? '' : 's'} left
+              {tr("Projected month end:")} <strong style={{ color: t.projected > t.limit ? 'var(--expense)' : 'var(--text-secondary)' }}>{formatAmount(t.projected)}</strong>
+              {' '}· {status.daysLeft} {tr("day")}{status.daysLeft === 1 ? '' : 's'} {tr("left")}
             </div>
           )}
         </>

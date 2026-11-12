@@ -5,6 +5,7 @@
 import { CURRENCY_GROUPS, CURRENCY_NAMES, currencySymbol } from '../utils/money';
 import { fieldStyle } from './formTokens';
 
+import { t as tr } from '../i18n';
 export default function CurrencySelect({ value, onChange, compact = false, id, style, title = 'Currency', recent = [] }) {
   const recents = recent.filter((c, i) => CURRENCY_NAMES[c] && recent.indexOf(c) === i).slice(0, 4);
   const label = (c) => (compact ? c : `${c} · ${CURRENCY_NAMES[c]} (${currencySymbol(c)})`);
@@ -14,7 +15,7 @@ export default function CurrencySelect({ value, onChange, compact = false, id, s
         ? { ...fieldStyle, width: 'auto', padding: '0 6px', fontSize: 12, fontWeight: 700, flex: '0 0 auto', ...style }
         : { ...fieldStyle, ...style }}>
       {recents.length > 0 && (
-        <optgroup label="Recent">
+        <optgroup label={tr("Recent")}>
           {recents.map((c) => <option key={`r-${c}`} value={c}>{label(c)}</option>)}
         </optgroup>
       )}

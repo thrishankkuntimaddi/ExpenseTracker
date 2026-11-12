@@ -5,6 +5,7 @@ import { formatAmount } from '../../../utils/dateHelpers';
 import { categoryColor } from '../../../utils/categories';
 import { CategoryIcon } from '../../../components/CategoryPicker';
 
+import { t as tr } from '../../../i18n';
 export default function CategoryBreakdown({ totals = [], theme, compact = false, onSelect, selected, max = 8 }) {
   if (!totals.length) return null;
   const top = totals[0]?.amount || 1;
@@ -17,7 +18,7 @@ export default function CategoryBreakdown({ totals = [], theme, compact = false,
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <PieIcon size={13} style={{ color: 'var(--text-muted)' }} />
-          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>By Category</span>
+          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>{tr("By Category")}</span>
         </div>
         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>{formatAmount(sum)}</span>
       </div>
@@ -48,7 +49,7 @@ export default function CategoryBreakdown({ totals = [], theme, compact = false,
           );
         })}
         {rest.length > 0 && (
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'right' }}>+{rest.length} more · {formatAmount(restAmt)}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'right' }}>+{rest.length} {tr("more ·")} {formatAmount(restAmt)}</div>
         )}
       </div>
     </div>

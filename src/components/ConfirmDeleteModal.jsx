@@ -5,6 +5,7 @@ import { AlertTriangle, Trash2, X } from 'lucide-react';
 import Portal from './Portal';
 import { useEscape } from '../hooks/useEscape';
 
+import { t as tr } from '../i18n';
 export default function ConfirmDeleteModal({
   title = 'Delete this item?',
   message = 'Are you sure?',
@@ -89,7 +90,7 @@ export default function ConfirmDeleteModal({
               onMouseEnter={e => e.currentTarget.style.background = 'var(--surface3)'}
               onMouseLeave={e => e.currentTarget.style.background = 'var(--surface2)'}
             >
-              Cancel
+              {tr("Cancel")}
             </button>
             <button
               onClick={onConfirm}

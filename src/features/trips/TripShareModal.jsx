@@ -7,8 +7,9 @@ import { tripSummaryText } from '../../utils/split';
 import { formatAmount } from '../../utils/dateHelpers';
 import { tripImageBlob } from './tripCard';
 
+import { t as tr } from '../../i18n';
 export default function TripShareModal({ trip, onClose }) {
   const text = tripSummaryText(trip, (n) => formatAmount(n, trip.currency));
   const makeImage = useCallback(() => tripImageBlob(trip), [trip]);
-  return <ShareSummaryModal title={`Share “${trip.name}”`} subtitle="Send the picture or the text to the group." text={text} makeImage={makeImage} filename={`${trip.name}_trip`} onClose={onClose} />;
+  return <ShareSummaryModal title={`Share “${trip.name}”`} subtitle={tr("Send the picture or the text to the group.")} text={text} makeImage={makeImage} filename={`${trip.name}_trip`} onClose={onClose} />;
 }

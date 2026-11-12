@@ -12,6 +12,7 @@ import { categoryOf, categoryColor } from '../../../utils/categories';
 import { CategoryIcon } from '../../../components/CategoryPicker';
 import EntryAmount from '../../../components/EntryAmount';
 
+import { t as tr } from '../../../i18n';
 const pad2 = (n) => String(n).padStart(2, '0');
 const DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -59,7 +60,7 @@ export default function SpendingCalendar({ transactions = [], initialMonth, mont
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <CalendarDays size={13} style={{ color: 'var(--text-muted)' }} />
-          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Spending Calendar</span>
+          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>{tr("Spending Calendar")}</span>
         </div>
         <MonthSwitcher month={monthKey} onChange={changeMonth} compact />
       </div>
@@ -79,7 +80,7 @@ export default function SpendingCalendar({ transactions = [], initialMonth, mont
           const alpha = v > 0 ? 0.18 + intensity * 0.72 : 0;
           return (
             <button key={k} type="button" onClick={() => setSelected(isSel ? null : k)} disabled={isFuture}
-              title={v > 0 ? `${formatAmount(v)} · ${byDay[k].length} entr${byDay[k].length === 1 ? 'y' : 'ies'}` : isFuture ? '' : 'No spend'}
+              title={v > 0 ? `${formatAmount(v)} · ${byDay[k].length} entr${byDay[k].length === 1 ? 'y' : 'ies'}` : isFuture ? '' : tr("No spend")}
               style={{
                 aspectRatio: '1', borderRadius: 8, position: 'relative', fontFamily: 'inherit', cursor: isFuture ? 'default' : 'pointer',
                 border: `1.5px solid ${isSel ? 'var(--accent)' : isToday ? 'var(--text-muted)' : 'transparent'}`,
@@ -95,9 +96,9 @@ export default function SpendingCalendar({ transactions = [], initialMonth, mont
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 10, fontSize: 11, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-        <span><strong style={{ color: 'var(--text-secondary)' }}>{formatAmount(monthTotal)}</strong> spent</span>
-        {elapsed > 0 && <span><strong style={{ color: 'var(--income)' }}>{Math.max(0, elapsed - spentDays)}</strong> no-spend day{elapsed - spentDays === 1 ? '' : 's'} · {spentDays} spend day{spentDays === 1 ? '' : 's'}</span>}
-        {max > 0 && <span>peak <strong style={{ color: 'var(--expense)' }}>{formatAmount(max)}</strong></span>}
+        <span><strong style={{ color: 'var(--text-secondary)' }}>{formatAmount(monthTotal)}</strong> {tr("spent")}</span>
+        {elapsed > 0 && <span><strong style={{ color: 'var(--income)' }}>{Math.max(0, elapsed - spentDays)}</strong> {tr("no-spend day")}{elapsed - spentDays === 1 ? '' : 's'} · {spentDays} {tr("spend day")}{spentDays === 1 ? '' : 's'}</span>}
+        {max > 0 && <span>{tr("peak")} <strong style={{ color: 'var(--expense)' }}>{formatAmount(max)}</strong></span>}
       </div>
 
       {selected && (
@@ -109,7 +110,7 @@ export default function SpendingCalendar({ transactions = [], initialMonth, mont
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--expense)' }}>{formatAmount(totals[selected] ?? 0)}</span>
           </div>
           {selEntries.length === 0 ? (
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>No expenses logged — a no-spend day.</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tr("No expenses logged — a no-spend day.")}</div>
           ) : selEntries.map((t) => {
             const c = categoryOf(t, rules);
             return (

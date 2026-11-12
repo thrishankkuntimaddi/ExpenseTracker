@@ -6,6 +6,7 @@ import { ScanLine, Loader2 } from 'lucide-react';
 import { intakeAvailable, readPicture } from '../native/intake';
 import { parsePayment } from '../utils/receiptParse';
 
+import { t as tr } from '../i18n';
 export default function ScanButton({ onResult }) {
   const input = useRef(null);
   const [busy, setBusy] = useState(false);
@@ -35,7 +36,7 @@ export default function ScanButton({ onResult }) {
       <input ref={input} type="file" accept="image/*" capture="environment" onChange={pick} hidden />
       <button type="button" id="add-scan" onClick={() => input.current?.click()} disabled={busy}
         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px dashed var(--border-dark)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-        {busy ? <Loader2 size={14} className="spin" /> : <ScanLine size={14} />} {busy ? 'Reading…' : 'Scan a receipt or UPI screenshot'}
+        {busy ? <Loader2 size={14} className="spin" /> : <ScanLine size={14} />} {busy ? tr("Reading…") : tr("Scan a receipt or UPI screenshot")}
       </button>
       {note && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4 }}>{note}</div>}
     </div>

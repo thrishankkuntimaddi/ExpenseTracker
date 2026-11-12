@@ -13,6 +13,7 @@ import { pinProblem, PIN_MAX, PIN_MIN, waitLabel, ALERT_AT } from './pin';
 import { reauthMethods, reauthWithGoogle, reauthWithPassword } from './reauth';
 import { markAppReady } from '../app/ready';
 
+import { t as tr } from '../i18n';
 export default function LockScreen({ lock, user, onSignOut }) {
   const [chosen, setMode] = useState('pin');   // pin | forgot | newpin
   useEffect(() => { markAppReady(); }, []);
@@ -20,7 +21,7 @@ export default function LockScreen({ lock, user, onSignOut }) {
   const mode = lock.reason === 'reset' ? 'newpin' : lock.needsSignIn && chosen === 'pin' ? 'forgot' : chosen;
 
   return (
-    <div className="lock-root" role="dialog" aria-label="Expense Tracker is locked"
+    <div className="lock-root" role="dialog" aria-label={tr("Expense Tracker is locked")}
       style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 'max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom))' }}>
       <div className="card" style={{ width: '100%', maxWidth: 360, padding: '24px 20px 18px', textAlign: 'center' }}>
         <img src={import.meta.env.BASE_URL + 'icon-192.png'} alt="" width={48} height={48} style={{ borderRadius: 14, boxShadow: '0 8px 24px rgba(99,102,241,0.3)' }} />
@@ -28,7 +29,7 @@ export default function LockScreen({ lock, user, onSignOut }) {
         {mode === 'forgot' && <Forgot lock={lock} user={user} onBack={lock.needsSignIn ? null : () => setMode('pin')} onDone={() => { lock.afterReauth(); setMode('newpin'); }} />}
         {mode === 'newpin' && <NewPin lock={lock} />}
         <button id="lock-signout" onClick={() => onSignOut?.()} style={{ ...linkBtn, marginTop: 16, color: 'var(--text-muted)' }}>
-          <LogOut size={13} /> Sign out instead
+          <LogOut size={13} /> {tr("Sign out instead")}
         </button>
       </div>
     </div>
@@ -92,7 +93,7 @@ function PinEntry({ lock, user, onForgot }) {
   return (
     <>
       <h1 style={{ fontSize: 19, fontWeight: 800, color: 'var(--text)', margin: '14px 0 2px' }}>
-        {lock.reason === 'remote' ? 'Locked from another device' : 'Enter your PIN'}
+        {lock.reason === 'remote' ? tr("Locked from another device") : tr("Enter your PIN")}
       </h1>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>{user?.email}</p>
 
@@ -102,18 +103,18 @@ function PinEntry({ lock, user, onForgot }) {
         ))}
       </div>
       <div id="lock-msg" role="alert" style={{ minHeight: 34, fontSize: 12, lineHeight: 1.4, color: waiting || msg ? 'var(--expense)' : 'var(--text-muted)' }}>
-        {waiting ? <><ShieldAlert size={12} style={{ verticalAlign: -2 }} /> Too many wrong PINs. Try again in {waitLabel(lock.wait)}.</> : busy ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : msg}
+        {waiting ? <><ShieldAlert size={12} style={{ verticalAlign: -2 }} /> {tr("Too many wrong PINs. Try again in")} {waitLabel(lock.wait)}.</> : busy ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : msg}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, maxWidth: 260, margin: '0 auto' }}>
         {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => <Key key={d} id={`lock-key-${d}`} onClick={() => press(d)} disabled={waiting}>{d}</Key>)}
         {bio?.available ? <Key id="lock-bio" onClick={tryBio} label={bio.label}><Fingerprint size={22} /></Key> : <span />}
         <Key id="lock-key-0" onClick={() => press('0')} disabled={waiting}>0</Key>
-        <Key id="lock-back" onClick={back} label="Delete"><Delete size={20} /></Key>
+        <Key id="lock-back" onClick={back} label={tr("Delete")}><Delete size={20} /></Key>
       </div>
 
       <RemoteUnlock lock={lock} />
-      <div><button id="lock-forgot" onClick={onForgot} style={{ ...linkBtn, marginTop: 12 }}><KeyRound size={13} /> Forgot PIN?</button></div>
+      <div><button id="lock-forgot" onClick={onForgot} style={{ ...linkBtn, marginTop: 12 }}><KeyRound size={13} /> {tr("Forgot PIN?")}</button></div>
     </>
   );
 }
@@ -133,18 +134,18 @@ function RemoteUnlock({ lock }) {
   if (!r) {
     return (
       <button id="lock-remote" onClick={lock.requestUnlock} style={{ ...linkBtn, marginTop: 16 }}>
-        <Smartphone size={13} /> Unlock from another device
+        <Smartphone size={13} /> {tr("Unlock from another device")}
       </button>
     );
   }
   return (
     <div id="lock-remote-status" style={{ marginTop: 14, padding: '10px 12px', borderRadius: 12, background: 'var(--surface2)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-      {r.status === 'waiting' && <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite', verticalAlign: -2 }} /> Open Expense Tracker on your phone or computer and tap <strong>Approve</strong>.</>}
-      {r.status === 'denied' && 'The request was declined on your other device.'}
-      {r.status === 'expired' && 'No answer — make sure the app is open and unlocked on your other device.'}
+      {r.status === 'waiting' && <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite', verticalAlign: -2 }} /> {tr("Open Expense Tracker on your phone or computer and tap")} <strong>{tr("Approve")}</strong>.</>}
+      {r.status === 'denied' && tr("The request was declined on your other device.")}
+      {r.status === 'expired' && tr("No answer — make sure the app is open and unlocked on your other device.")}
       <div style={{ marginTop: 6, display: 'flex', justifyContent: 'center', gap: 14 }}>
-        {r.status !== 'waiting' && <button onClick={lock.requestUnlock} style={linkBtn}>Ask again</button>}
-        <button onClick={lock.cancelRequest} style={{ ...linkBtn, color: 'var(--text-muted)' }}>Cancel</button>
+        {r.status !== 'waiting' && <button onClick={lock.requestUnlock} style={linkBtn}>{tr("Ask again")}</button>}
+        <button onClick={lock.cancelRequest} style={{ ...linkBtn, color: 'var(--text-muted)' }}>{tr("Cancel")}</button>
       </div>
     </div>
   );
@@ -162,22 +163,22 @@ function Forgot({ lock, user, onBack, onDone }) {
   };
   return (
     <div style={{ textAlign: 'left' }}>
-      {onBack && <button onClick={onBack} style={{ ...linkBtn, marginTop: 12 }}><ArrowLeft size={13} /> Back</button>}
+      {onBack && <button onClick={onBack} style={{ ...linkBtn, marginTop: 12 }}><ArrowLeft size={13} /> {tr("Back")}</button>}
       <h1 style={{ fontSize: 19, fontWeight: 800, color: 'var(--text)', margin: '12px 0 4px', textAlign: 'center' }}>
-        {lock.needsSignIn ? 'Sign in again to unlock' : 'Forgot your PIN?'}
+        {lock.needsSignIn ? tr("Sign in again to unlock") : tr("Forgot your PIN?")}
       </h1>
       <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', margin: '0 0 14px', lineHeight: 1.55, textAlign: 'center' }}>
-        {lock.needsSignIn ? 'Too many wrong PINs. ' : ''}Prove it’s you with your account, then choose a new PIN. Your data stays exactly as it is.
+        {lock.needsSignIn ? tr("Too many wrong PINs. ") : ''}{tr("Prove it’s you with your account, then choose a new PIN. Your data stays exactly as it is.")}
       </p>
       {err && <div role="alert" style={{ padding: '9px 12px', borderRadius: 10, marginBottom: 10, background: 'var(--expense-bg)', color: 'var(--expense)', fontSize: 12 }}>{err}</div>}
       {methods.google && (
-        <button id="lock-reauth-google" disabled={busy} onClick={() => run(reauthWithGoogle)} style={btn(true)}>Continue with Google</button>
+        <button id="lock-reauth-google" disabled={busy} onClick={() => run(reauthWithGoogle)} style={btn(true)}>{tr("Continue with Google")}</button>
       )}
       {methods.password && (
         <form onSubmit={(e) => { e.preventDefault(); if (password) run(() => reauthWithPassword(password)); }} style={{ marginTop: methods.google ? 12 : 0 }}>
           <input id="lock-reauth-password" type="password" autoComplete="current-password" placeholder={`Password for ${user?.email}`} value={password} onChange={(e) => setPassword(e.target.value)}
             style={{ width: '100%', padding: '11px 12px', borderRadius: 10, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', marginBottom: 8 }} />
-          <button type="submit" disabled={busy || !password} style={btn(!methods.google)}>Verify password</button>
+          <button type="submit" disabled={busy || !password} style={btn(!methods.google)}>{tr("Verify password")}</button>
         </form>
       )}
       {busy && <div style={{ textAlign: 'center', marginTop: 10 }}><Loader2 size={16} style={{ animation: 'spin 1s linear infinite', color: 'var(--text-muted)' }} /></div>}
@@ -201,12 +202,12 @@ function NewPin({ lock }) {
   };
   return (
     <form onSubmit={save} style={{ textAlign: 'left' }}>
-      <h1 style={{ fontSize: 19, fontWeight: 800, color: 'var(--text)', margin: '14px 0 4px', textAlign: 'center' }}><CheckCircle2 size={17} style={{ color: 'var(--income)', verticalAlign: -2 }} /> It’s you</h1>
-      <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', margin: '0 0 14px', textAlign: 'center' }}>Choose a new PIN. It works on all your devices.</p>
+      <h1 style={{ fontSize: 19, fontWeight: 800, color: 'var(--text)', margin: '14px 0 4px', textAlign: 'center' }}><CheckCircle2 size={17} style={{ color: 'var(--income)', verticalAlign: -2 }} /> {tr("It’s you")}</h1>
+      <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', margin: '0 0 14px', textAlign: 'center' }}>{tr("Choose a new PIN. It works on all your devices.")}</p>
       <PinInput id="lock-new-pin" value={a} onChange={setA} placeholder={`New PIN (${PIN_MIN}–${PIN_MAX} digits)`} autoFocus />
-      <PinInput id="lock-new-pin2" value={b} onChange={setB} placeholder="Type it again" />
+      <PinInput id="lock-new-pin2" value={b} onChange={setB} placeholder={tr("Type it again")} />
       {err && <div role="alert" style={{ fontSize: 12, color: 'var(--expense)', margin: '2px 0 8px' }}>{err}</div>}
-      <button id="lock-new-save" type="submit" disabled={busy || !a || !b} style={btn(true)}>Save PIN and unlock</button>
+      <button id="lock-new-save" type="submit" disabled={busy || !a || !b} style={btn(true)}>{tr("Save PIN and unlock")}</button>
     </form>
   );
 }

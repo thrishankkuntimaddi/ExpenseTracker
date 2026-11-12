@@ -8,6 +8,7 @@ import Avatar from '../../components/Avatar';
 import { formatDateShort } from '../../utils/dateHelpers';
 import { t } from '../../i18n';
 
+import { t as tr } from '../../i18n';
 /* One screen for every signed-out state:
    'login' | 'signup' | 'reset' (forgot password).
    Wide screens show a brand panel beside the card; phones show the card. */
@@ -78,9 +79,9 @@ export default function AuthScreen({
         <div style={{ maxWidth: 460 }}>
           <Brand size={44} />
           <h1 style={{ fontSize: 40, lineHeight: 1.12, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text)', margin: '36px 0 28px' }}>
-            Know where your money goes.<br />
+            {tr("Know where your money goes.")}<br />
             <span style={{ background: 'linear-gradient(90deg, var(--accent), var(--savings), var(--income))', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-              Every rupee — or dollar — accounted for.
+              {tr("Every rupee — or dollar — accounted for.")}
             </span>
           </h1>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -95,7 +96,7 @@ export default function AuthScreen({
               </li>
             ))}
           </ul>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 32 }}>Private to you · Works offline · Syncs across your devices</p>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 32 }}>{tr("Private to you · Works offline · Syncs across your devices")}</p>
         </div>
       </aside>
 
@@ -108,10 +109,10 @@ export default function AuthScreen({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: mode === 'reset' ? 'flex-start' : 'flex-end', marginBottom: 18, minHeight: 36 }}>
             {mode === 'reset' ? (
               <button type="button" id="btn-auth-back" onClick={() => go('login')} style={linkBtn}>
-                <ArrowLeft size={14} /> Back to log in
+                <ArrowLeft size={14} /> {tr("Back to log in")}
               </button>
             ) : (
-              <div role="tablist" aria-label="Account" style={{ display: 'flex', padding: 3, borderRadius: 99, background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+              <div role="tablist" aria-label={tr("Account")} style={{ display: 'flex', padding: 3, borderRadius: 99, background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                 {[['login', 'Log in'], ['signup', 'Create account']].map(([key, label]) => (
                   <button key={key} id={`auth-tab-${key}`} type="button" role="tab" aria-selected={mode === key} onClick={() => mode !== key && go(key)}
                     style={{ padding: '7px 14px', border: 'none', borderRadius: 99, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
@@ -136,7 +137,7 @@ export default function AuthScreen({
                     <div id="auth-invite-trip" style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.name}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 10px', fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 2 }}>
                       {trip.startDate && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CalendarDays size={11} />{formatDateShort(trip.startDate)}{trip.endDate ? ` – ${formatDateShort(trip.endDate)}` : ''}</span>}
-                      {trip.people > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Users size={11} />{trip.people} people</span>}
+                      {trip.people > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Users size={11} />{trip.people} {tr("people")}</span>}
                     </div>
                   </div>
                 </div>
@@ -144,9 +145,9 @@ export default function AuthScreen({
               <div style={{ padding: trip ? '10px 14px 12px' : '12px 14px', borderTop: trip ? '1px solid var(--external-border)' : 'none', fontSize: 13, lineHeight: 1.5, display: 'flex', gap: 10, alignItems: 'center' }}>
                 {trip?.ownerName && <Avatar user={{ displayName: trip.ownerName, photoURL: trip.ownerPhoto }} size={28} />}
                 <span>
-                  <strong>{trip?.ownerName ? `${trip.ownerName} opened this trip` : 'You’ve been invited to a trip'}</strong>{trip?.ownerName ? ' and invited you to join.' : '.'}
-                  {trip?.status && trip.status !== 'open' ? ' It’s closed right now — ask them to reopen it.' : ` ${mode === 'signup' ? 'Create a free account' : 'Sign in'} — then pick your name on the trip.`}
-                  {' '}<button type="button" id="auth-invite-switch" onClick={() => go(mode === 'signup' ? 'login' : 'signup')} style={{ border: 'none', background: 'none', padding: 0, color: 'var(--external)', font: 'inherit', fontWeight: 700, cursor: 'pointer' }}>{mode === 'signup' ? 'I already have an account' : 'I’m new — create one'}</button>
+                  <strong>{trip?.ownerName ? `${trip.ownerName} opened this trip` : tr("You’ve been invited to a trip")}</strong>{trip?.ownerName ? ' and invited you to join.' : '.'}
+                  {trip?.status && trip.status !== 'open' ? tr(" It’s closed right now — ask them to reopen it.") : ` ${mode === 'signup' ? 'Create a free account' : 'Sign in'} — then pick your name on the trip.`}
+                  {' '}<button type="button" id="auth-invite-switch" onClick={() => go(mode === 'signup' ? 'login' : 'signup')} style={{ border: 'none', background: 'none', padding: 0, color: 'var(--external)', font: 'inherit', fontWeight: 700, cursor: 'pointer' }}>{mode === 'signup' ? tr("I already have an account") : tr("I’m new — create one")}</button>
                 </span>
               </div>
             </div>
@@ -161,7 +162,7 @@ export default function AuthScreen({
           {mode === 'reset' && resetSentTo ? (
             <div role="status" style={{ display: 'flex', gap: 10, padding: '14px', borderRadius: 12, background: 'var(--income-bg)', border: '1px solid var(--income-border)', color: 'var(--text)', fontSize: 13, lineHeight: 1.55 }}>
               <CheckCircle2 size={18} style={{ color: 'var(--income)', flexShrink: 0, marginTop: 1 }} />
-              <span>If an account exists for <strong>{resetSentTo}</strong>, a reset link is on its way. Check your spam folder too — the link works once and expires in an hour.</span>
+              <span>{tr("If an account exists for")} <strong>{resetSentTo}</strong>{tr(", a reset link is on its way. Check your spam folder too — the link works once and expires in an hour.")}</span>
             </div>
           ) : (
             <>
@@ -171,39 +172,39 @@ export default function AuthScreen({
                   <button type="button" id="btn-google" onClick={onGoogle} disabled={loading}
                     style={{ width: '100%', padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: loading ? 'not-allowed' : 'pointer',
                       background: 'var(--surface)', color: 'var(--text)', border: '1.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                    <GoogleMark /> Continue with Google
+                    <GoogleMark /> {tr("Continue with Google")}
                   </button>
                   ) : (
                     <div id="google-unavailable" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12, background: 'var(--surface2)', border: '1px solid var(--border)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
                       <GoogleMark />
-                      <span>Google sign-in isn’t set up in this app yet. Use your email and password here, or Continue with Google on the website.</span>
+                      <span>{tr("Google sign-in isn’t set up in this app yet. Use your email and password here, or Continue with Google on the website.")}</span>
                     </div>
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
                     <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>or with email</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{tr("or with email")}</span>
                     <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                   </div>
                 </>
               )}
 
               <form onSubmit={handleSubmit} noValidate>
-                <Field label="Email" htmlFor="auth-email">
+                <Field label={tr("Email")} htmlFor="auth-email">
                   <InputIcon Icon={Mail} />
                   <input id="auth-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com" autoComplete="email" inputMode="email" required style={inputStyle(false)} />
+                    placeholder={tr("you@example.com")} autoComplete="email" inputMode="email" required style={inputStyle(false)} />
                 </Field>
 
                 {mode !== 'reset' && (
-                  <Field label="Password" htmlFor="auth-password"
+                  <Field label={tr("Password")} htmlFor="auth-password"
                     aside={mode === 'login' && (
-                      <button type="button" id="btn-forgot" onClick={() => go('reset')} style={{ ...linkBtn, fontSize: 12 }}>Forgot password?</button>
+                      <button type="button" id="btn-forgot" onClick={() => go('reset')} style={{ ...linkBtn, fontSize: 12 }}>{tr("Forgot password?")}</button>
                     )}>
                     <InputIcon Icon={Lock} />
                     <input id="auth-password" type={showPw ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
-                      placeholder={mode === 'signup' ? 'At least 6 characters' : '••••••••'}
+                      placeholder={mode === 'signup' ? tr("At least 6 characters") : '••••••••'}
                       autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} required style={inputStyle(true)} />
-                    <button type="button" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? 'Hide password' : 'Show password'}
+                    <button type="button" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? tr("Hide password") : tr("Show password")}
                       style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 6, display: 'flex' }}>
                       {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -212,10 +213,10 @@ export default function AuthScreen({
 
                 {mode === 'signup' && (
                   <>
-                    <Field label="Confirm password" htmlFor="auth-confirm">
+                    <Field label={tr("Confirm password")} htmlFor="auth-confirm">
                       <InputIcon Icon={Lock} />
                       <input id="auth-confirm" type={showPw ? 'text' : 'password'} value={confirm} onChange={(e) => setConfirm(e.target.value)}
-                        placeholder="Re-enter password" autoComplete="new-password" required style={inputStyle(false)} />
+                        placeholder={tr("Re-enter password")} autoComplete="new-password" required style={inputStyle(false)} />
                     </Field>
                     <PasswordHint password={password} confirm={confirm} />
                   </>
@@ -233,7 +234,7 @@ export default function AuthScreen({
 
           {mode === 'signup' && (
             <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '14px 0 0', lineHeight: 1.5, textAlign: 'center' }}>
-              We’ll send a link to verify your email. You can start using the app right away.
+              {tr("We’ll send a link to verify your email. You can start using the app right away.")}
             </p>
           )}
         </div>
@@ -244,13 +245,13 @@ export default function AuthScreen({
           </button>
         )}
         <p id="auth-privacy" style={{ maxWidth: 380, marginTop: 14, fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.5, textAlign: 'center' }}>
-          No ads. We never sell or share your data, and never ask for bank access. Only you can read your entries.{' '}
-          <a href="https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 600 }}>Privacy</a>
+          {tr("No ads. We never sell or share your data, and never ask for bank access. Only you can read your entries.")}{' '}
+          <a href="https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 600 }}>{tr("Privacy")}</a>
         </p>
         {appsLink && (
           <a href={appsLink} target="_blank" rel="noreferrer" id="link-get-apps"
             style={{ marginTop: 16, fontSize: 12, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none' }}>
-            Get the Android, Mac, Windows & Linux apps →
+            {tr("Get the Android, Mac, Windows & Linux apps →")}
           </a>
         )}
       </main>
@@ -272,8 +273,8 @@ function Brand({ size }) {
       <img src={import.meta.env.BASE_URL + 'icon-192.png'} alt="" width={size} height={size}
         style={{ width: size, height: size, borderRadius: size * 0.28, objectFit: 'cover', boxShadow: '0 8px 24px rgba(99,102,241,0.3)' }} />
       <div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>Expense Tracker</div>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Financial Command Center</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>{tr("Expense Tracker")}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{tr("Financial Command Center")}</div>
       </div>
     </div>
   );
@@ -321,7 +322,7 @@ function PasswordHint({ password, confirm }) {
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginTop: 5, color: 'var(--text-muted)' }}>
         <span style={{ color: colors[strength], fontWeight: 600 }}>{labels[strength]}</span>
-        {confirm && <span style={{ color: confirm === password ? 'var(--income)' : 'var(--expense)' }}>{confirm === password ? 'Passwords match' : 'Passwords don’t match'}</span>}
+        {confirm && <span style={{ color: confirm === password ? 'var(--income)' : 'var(--expense)' }}>{confirm === password ? tr("Passwords match") : tr("Passwords don’t match")}</span>}
       </div>
     </div>
   );

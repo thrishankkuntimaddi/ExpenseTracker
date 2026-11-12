@@ -19,6 +19,7 @@ import { useShell } from '../../app/shellContext';
 import { useViewMonth, monthName } from '../../app/month';
 import EntryAmount from '../../components/EntryAmount';
 
+import { t as tr } from '../../i18n';
 const sum = (list) => list.reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
 export default function SavingsPage({ transactions = [], income = [], settings, onPatchSettings, selectedPeriod }) {
@@ -61,25 +62,25 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
 
   return (
     <div className="tab-root savings-page">
-      <PageHeader title="Savings & goals" subtitle="SIPs, funds, cash — and what they're for" month
-        actions={<HeaderAction id="savings-add" Icon={Plus} label="Save" onClick={() => shell?.openAdd('savings')} />} />
+      <PageHeader title={tr("Savings & goals")} subtitle={tr("SIPs, funds, cash — and what they're for")} month
+        actions={<HeaderAction id="savings-add" Icon={Plus} label={tr("Save")} onClick={() => shell?.openAdd('savings')} />} />
 
       <div className="tab-body">
         {savings.length === 0 ? (
-          <EmptyState Icon={PiggySign} tone="savings" title="Start tracking your savings"
-            text="Log SIPs, mutual funds, trading and cash savings. See your savings rate, where it goes, and how close your goals are."
-            action={<PrimaryPill id="savings-empty-add" Icon={Plus} tone="savings" onClick={() => shell?.openAdd('savings')}>Add savings</PrimaryPill>} />
+          <EmptyState Icon={PiggySign} tone="savings" title={tr("Start tracking your savings")}
+            text={tr("Log SIPs, mutual funds, trading and cash savings. See your savings rate, where it goes, and how close your goals are.")}
+            action={<PrimaryPill id="savings-empty-add" Icon={Plus} tone="savings" onClick={() => shell?.openAdd('savings')}>{tr("Add savings")}</PrimaryPill>} />
         ) : (
           <div className="card" style={{ padding: 16 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Saved in {monthName(monthKey, { month: 'long' })}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{tr("Saved in")} {monthName(monthKey, { month: 'long' })}</span>
             <div style={{ margin: '8px 0 0' }}><BigAmount value={thisMonth} size={40} color="var(--savings)" /></div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-              <Figure label="Savings rate" value={rate != null ? `${rate}% of income` : '—'} />
-              <Figure label={takenOut > 0 ? 'Saved in total (after use)' : 'Saved in total'} value={formatAmount(allTime)} />
+              <Figure label={tr("Savings rate")} value={rate != null ? `${rate}% of income` : '—'} />
+              <Figure label={takenOut > 0 ? tr("Saved in total (after use)") : tr("Saved in total")} value={formatAmount(allTime)} />
             </div>
             {takenOut > 0 && (
               <div id="savings-taken-out" style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
-                {formatAmount(takenOut)} taken out of savings to pay for things (shown in your expenses as “from savings”).
+                {formatAmount(takenOut)} {tr("taken out of savings to pay for things (shown in your expenses as “from savings”).")}
               </div>
             )}
           </div>
@@ -91,7 +92,7 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
 
         {byType.length > 0 && (
           <>
-            <SectionHeading title="Where it goes" hint="all time" />
+            <SectionHeading title={tr("Where it goes")} hint={tr("all time")} />
             <div className="card" style={{ padding: '6px 14px' }}>
               {byType.map((st, i) => (
                 <div key={st.key} style={{ padding: '10px 0', borderTop: i ? '1px solid var(--border)' : 'none' }}>
@@ -107,7 +108,7 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
               ))}
             </div>
 
-            <SectionHeading title="Last 6 months" />
+            <SectionHeading title={tr("Last 6 months")} />
             <div className="card" style={{ padding: '16px 14px 12px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 100 }}>
                 {months.map((m) => (

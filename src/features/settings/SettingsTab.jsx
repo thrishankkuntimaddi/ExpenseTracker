@@ -24,6 +24,7 @@ import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import PWAInstallModal from '../../components/PWAInstallModal';
 import { Section, Group } from './SettingsGroup';
 
+import { t as tr } from '../../i18n';
 export default function SettingsTab({
   themePref = 'system', onThemePrefChange, onSignOut,
   settings, theme, user,
@@ -191,8 +192,8 @@ export default function SettingsTab({
     <div className={embedded ? 'settings-embedded' : 'tab-root'}>
       {!embedded && (
         <div className="tab-header">
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>Settings</h1>
-          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Preferences, data & account</p>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>{tr("Settings")}</h1>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{tr("Preferences, data & account")}</p>
         </div>
       )}
 
@@ -208,52 +209,52 @@ export default function SettingsTab({
               </div>
             )}
 
-            <Section title="Money">
+            <Section title={tr("Money")}>
             {moneyExtra}
             {/* ── Theme (per device) ── */}
-            {!embedded && <Group id="appearance" color="var(--accent)" title="Appearance" Icon={Palette} summary={themePref === 'system' ? `System (${isMonoflow ? 'dark' : 'light'} now)` : isMonoflow ? 'Dark' : 'Light'}>
+            {!embedded && <Group id="appearance" color="var(--accent)" title={tr("Appearance")} Icon={Palette} summary={themePref === 'system' ? `System (${isMonoflow ? 'dark' : 'light'} now)` : isMonoflow ? tr("Dark") : tr("Light")}>
               <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: isMonoflow ? 'var(--accent-bg)' : 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {isMonoflow ? <Moon size={16} style={{ color: 'var(--accent)' }} /> : <Sun size={16} style={{ color: 'var(--person)' }} />}
                 </div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Theme</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{tr("Theme")}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                    {themePref === 'system' ? `Following your device (${isMonoflow ? 'dark' : 'light'} now)` : isMonoflow ? 'Dark (MonoFlow)' : 'Light'} · this device only
+                    {themePref === 'system' ? `Following your device (${isMonoflow ? 'dark' : 'light'} now)` : isMonoflow ? tr("Dark (MonoFlow)") : tr("Light")} {tr("· this device only")}
                   </div>
                 </div>
               </div>
-              <div role="radiogroup" aria-label="Theme" style={{ padding: '8px 16px 14px', display: 'flex', gap: 6, flexWrap: 'wrap', borderTop: '1px solid var(--border)' }}>
-                <ThemeChip id="theme-light"  Icon={Sun}     label="Light"  active={themePref === 'light'}  onClick={() => onThemePrefChange('light')} />
-                <ThemeChip id="theme-dark"   Icon={Moon}    label="Dark"   active={themePref === 'dark'}   onClick={() => onThemePrefChange('dark')} />
-                <ThemeChip id="theme-system" Icon={Monitor} label="System" active={themePref === 'system'} onClick={() => onThemePrefChange('system')} />
+              <div role="radiogroup" aria-label={tr("Theme")} style={{ padding: '8px 16px 14px', display: 'flex', gap: 6, flexWrap: 'wrap', borderTop: '1px solid var(--border)' }}>
+                <ThemeChip id="theme-light"  Icon={Sun}     label={tr("Light")}  active={themePref === 'light'}  onClick={() => onThemePrefChange('light')} />
+                <ThemeChip id="theme-dark"   Icon={Moon}    label={tr("Dark")}   active={themePref === 'dark'}   onClick={() => onThemePrefChange('dark')} />
+                <ThemeChip id="theme-system" Icon={Monitor} label={tr("System")} active={themePref === 'system'} onClick={() => onThemePrefChange('system')} />
               </div>
             </Group>}
 
             {/* ── Carry forward ── */}
-            <Group id="month-carry-forward" color="var(--repayment-rec)" title="Month Carry Forward" Icon={ArrowRightLeft} summary={carry.enabled ? 'On' : 'Off'}>
+            <Group id="month-carry-forward" color="var(--repayment-rec)" title={tr("Month Carry Forward")} Icon={ArrowRightLeft} summary={carry.enabled ? tr("On") : tr("Off")}>
               <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <ArrowRightLeft size={16} style={{ color: 'var(--accent)' }} />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Roll leftover into next month</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{tr("Roll leftover into next month")}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
                       {carry.enabled
                         ? `From ${formatMonthLabel(carry.startMonth)}: each month's remaining balance appears as income in the next`
-                        : 'Off — every month starts from zero'}
+                        : tr("Off — every month starts from zero")}
                     </div>
                   </div>
                 </div>
-                <button className={`toggle-track ${carry.enabled ? 'on' : ''}`} onClick={() => setCarry({ enabled: !carry.enabled })} aria-label="Toggle carry forward">
+                <button className={`toggle-track ${carry.enabled ? 'on' : ''}`} onClick={() => setCarry({ enabled: !carry.enabled })} aria-label={tr("Toggle carry forward")}>
                   <span className="toggle-thumb" />
                 </button>
               </div>
               {carry.enabled && (
                 <div style={{ padding: '10px 16px 14px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>
-                    <span>First month that receives a carry</span>
+                    <span>{tr("First month that receives a carry")}</span>
                     <input
                       id="settings-carry-start"
                       type="month"
@@ -263,11 +264,11 @@ export default function SettingsTab({
                     />
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer' }}>
-                    <span>Also carry a deficit (negative leftover)</span>
+                    <span>{tr("Also carry a deficit (negative leftover)")}</span>
                     <input type="checkbox" checked={!!carry.includeNegative} onChange={e => setCarry({ includeNegative: e.target.checked })} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
                   </label>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.55 }}>
-                    The carried amount is computed live from the previous month, so a late edit to {formatMonthLabel(carry.startMonth === '2026-11' ? '2026-10' : carry.startMonth)} updates it automatically. It is shown as an <strong>auto</strong> line on the Income tab and counted in that month's income and balance.
+                    {tr("The carried amount is computed live from the previous month, so a late edit to")} {formatMonthLabel(carry.startMonth === '2026-11' ? '2026-10' : carry.startMonth)} {tr("updates it automatically. It is shown as an")} <strong>{tr("auto")}</strong> {tr("line on the Income tab and counted in that month's income and balance.")}
                   </div>
                 </div>
               )}
@@ -275,9 +276,9 @@ export default function SettingsTab({
             </Section>
 
             {/* ── Sync & devices ── */}
-            <Section title="Backup & sync">
+            <Section title={tr("Backup & sync")}>
             {dataExtra}
-            <Group id="sync" color="var(--savings)" title="Sync" Icon={Cloud} summary={`${syncLine.label} · ${devices?.devices?.length ?? 0} device${(devices?.devices?.length ?? 0) === 1 ? '' : 's'}`}>
+            <Group id="sync" color="var(--savings)" title={tr("Sync")} Icon={Cloud} summary={`${syncLine.label} · ${devices?.devices?.length ?? 0} device${(devices?.devices?.length ?? 0) === 1 ? '' : 's'}`}>
               <div id="sync-status" data-tone={syncLine.tone} style={{ padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, borderBottom: '1px solid var(--border)' }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `var(--${SYNC_TONE[syncLine.tone]}-bg)` }}>
                   {syncLine.tone === 'offline' ? <CloudOff size={16} style={{ color: 'var(--text-muted)' }} />
@@ -291,23 +292,23 @@ export default function SettingsTab({
                 </div>
               </div>
               <div style={{ padding: '10px 16px 14px', fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                Your devices — which are live right now, and locking or signing them out — are under <strong>Security → Your devices</strong>.
+                {tr("Your devices — which are live right now, and locking or signing them out — are under")} <strong>{tr("Security → Your devices")}</strong>.
               </div>
             </Group>
 
             {/* ── Data Management ── */}
-            <Group id="data-management" color="var(--income)" title="Data Management" Icon={Database} summary={'Backup, import, export, trash'}>
-              <ActionRow id="btn-recently-deleted" Icon={RotateCcw} label="Recently Deleted" sub={`${recentlyDeleted.length} ${recentlyDeleted.length === 1 ? 'item' : 'items'} in trash — view or revert`} iconColor="var(--expense)" onClick={() => setShowTrashModal(true)} />
-              <ActionRow id="btn-export" Icon={Download} label={exporting ? 'Preparing backup…' : 'Export Backup (JSON)'} sub="Everything: transactions, income, billings, trips, recurring, trash, settings" iconColor="var(--savings)" onClick={() => !exporting && handleExport()} />
-              <ActionRow id="btn-export-csv" Icon={FileSpreadsheet} label="Export Spreadsheet (CSV)" sub="With categories — opens in Excel / Google Sheets; re-importable" iconColor="var(--income)" onClick={handleExportCSV} />
-              <ActionRow id="btn-load-past-data" Icon={Upload} label="Load past data" sub="Paste a month of old entries — “5 groceries 450” per line" iconColor="var(--lent)" onClick={() => setShowLoadPast(true)} />
-              <ActionRow id="btn-import" Icon={Upload}   label={importing ? 'Importing…' : 'Import Data'}   sub="Restore a JSON backup — safe to re-run, never duplicates"          iconColor="var(--accent)"  onClick={() => !importing && fileInputRef.current?.click()} />
-              <ActionRow id="btn-csv"    Icon={FileSpreadsheet} label={importing ? 'Importing…' : 'Import CSV'}  sub="Import .csv file (date,name,amount,type) → cloud"    iconColor="var(--income)"  onClick={() => !importing && csvInputRef.current?.click()} lastRow />
+            <Group id="data-management" color="var(--income)" title={tr("Data Management")} Icon={Database} summary={'Backup, import, export, trash'}>
+              <ActionRow id="btn-recently-deleted" Icon={RotateCcw} label={tr("Recently Deleted")} sub={`${recentlyDeleted.length} ${recentlyDeleted.length === 1 ? 'item' : 'items'} in trash — view or revert`} iconColor="var(--expense)" onClick={() => setShowTrashModal(true)} />
+              <ActionRow id="btn-export" Icon={Download} label={exporting ? tr("Preparing backup…") : tr("Export Backup (JSON)")} sub="Everything: transactions, income, billings, trips, recurring, trash, settings" iconColor="var(--savings)" onClick={() => !exporting && handleExport()} />
+              <ActionRow id="btn-export-csv" Icon={FileSpreadsheet} label={tr("Export Spreadsheet (CSV)")} sub="With categories — opens in Excel / Google Sheets; re-importable" iconColor="var(--income)" onClick={handleExportCSV} />
+              <ActionRow id="btn-load-past-data" Icon={Upload} label={tr("Load past data")} sub="Paste a month of old entries — “5 groceries 450” per line" iconColor="var(--lent)" onClick={() => setShowLoadPast(true)} />
+              <ActionRow id="btn-import" Icon={Upload}   label={importing ? tr("Importing…") : tr("Import Data")}   sub="Restore a JSON backup — safe to re-run, never duplicates"          iconColor="var(--accent)"  onClick={() => !importing && fileInputRef.current?.click()} />
+              <ActionRow id="btn-csv"    Icon={FileSpreadsheet} label={importing ? tr("Importing…") : tr("Import CSV")}  sub="Import .csv file (date,name,amount,type) → cloud"    iconColor="var(--income)"  onClick={() => !importing && csvInputRef.current?.click()} lastRow />
               <input ref={fileInputRef} type="file" accept=".json"     style={{ display: 'none' }} onChange={handleImport}    />
               <input ref={csvInputRef}  type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={handleCSVImport} />
             <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', margin: '4px 16px 14px', fontSize: 11, color: 'var(--accent)', lineHeight: 1.6 }}>
-              <strong>CSV format:</strong> date,name,amount,type<br />
-              Types: <code>expense</code> / <code>income</code> / <code>savings</code> / <code>person</code>
+              <strong>{tr("CSV format:")}</strong> {tr("date,name,amount,type")}<br />
+              {tr("Types:")} <code>expense</code> / <code>income</code> / <code>savings</code> / <code>person</code>
             </div>
             </Group>
             </Section>
@@ -318,10 +319,10 @@ export default function SettingsTab({
           <div style={{ flex: 1, minWidth: 0 }}>
 
             {/* ── Get the app (website only) ── */}
-            <Section title="App">
+            <Section title={tr("App")}>
             {!isNative && (
               <>
-                <Group id="get-the-app" color="var(--accent)" title="Get the app" Icon={Smartphone} summary={download ? `Download the ${download.label}` : 'Downloads and install'}>
+                <Group id="get-the-app" color="var(--accent)" title={tr("Get the app")} Icon={Smartphone} summary={download ? `Download the ${download.label}` : tr("Downloads and install")}>
                   {download && (
                     <a id="btn-download-app" href={downloadUrl(download.file)} className="settings-row"
                       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', borderBottom: '1px solid var(--border)', textDecoration: 'none' }}>
@@ -329,9 +330,9 @@ export default function SettingsTab({
                         <Download size={16} style={{ color: 'var(--income)' }} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Download the {download.label}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{tr("Download the")} {download.label}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                          {download.unsure ? 'For Macs with an Apple chip — Intel Macs: see all downloads below' : 'Same account, synced with this website'}
+                          {download.unsure ? tr("For Macs with an Apple chip — Intel Macs: see all downloads below") : tr("Same account, synced with this website")}
                         </div>
                       </div>
                       <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
@@ -343,13 +344,13 @@ export default function SettingsTab({
                       <Laptop size={16} style={{ color: 'var(--text-secondary)' }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>All downloads</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Android · Mac · Windows · Linux, with install steps</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{tr("All downloads")}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{tr("Android · Mac · Windows · Linux, with install steps")}</div>
                     </div>
                     <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                   </a>
                   {!isStandalone && (
-                    <ActionRow id="btn-install-app" Icon={Smartphone} label="Add to home screen"
+                    <ActionRow id="btn-install-app" Icon={Smartphone} label={tr("Add to home screen")}
                       sub={download ? 'Or install this website as a lightweight app' : 'On iPhone and iPad the website is the app — works offline'}
                       iconColor="var(--accent)" onClick={handleInstallClick} lastRow />
                   )}
@@ -365,27 +366,27 @@ export default function SettingsTab({
                 style={{ width: 38, height: 38, borderRadius: 10, objectFit: 'cover' }}
               />
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Expense Tracker v{import.meta.env.VITE_APP_VERSION}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{SHELL_LABEL[platform] ?? 'App'} · build {new Date(THIS_BUILD * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {import.meta.env.VITE_APP_COMMIT}</div>
-                {engineVersion && <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>Web engine: Chrome {engineVersion}</div>}
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{tr("Expense Tracker v")}{import.meta.env.VITE_APP_VERSION}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{SHELL_LABEL[platform] ?? tr("App")} {tr("· build")} {new Date(THIS_BUILD * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {import.meta.env.VITE_APP_COMMIT}</div>
+                {engineVersion && <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>{tr("Web engine: Chrome")} {engineVersion}</div>}
                 {webviewOutdated && (
                   <a href={WEBVIEW_PLAY_URL} target="_blank" rel="noreferrer" id="webview-outdated"
                     style={{ display: 'block', fontSize: 11, color: 'var(--lent)', marginTop: 3, lineHeight: 1.45 }}>
-                    Your phone’s web engine is out of date, which can make the app slow or leave drawing glitches. Update “Android System WebView” in the Play Store →
+                    {tr("Your phone’s web engine is out of date, which can make the app slow or leave drawing glitches. Update “Android System WebView” in the Play Store →")}
                   </a>
                 )}
                 <div id="update-status" style={{ fontSize: 11, color: update.kind === 'error' || update.kind === 'native-needed' ? 'var(--lent)' : 'var(--text-muted)', marginTop: 3 }}>
-                  {UPDATE_LABEL[update.kind]?.(update) ?? 'Updates install automatically.'}
+                  {UPDATE_LABEL[update.kind]?.(update) ?? tr("Updates install automatically.")}
                 </div>
               </div>
               <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
                 {update.kind === 'ready' && (platform === 'desktop' || platform === 'android') ? (
-                  <button id="btn-restart-update" onClick={restartToUpdate} style={smallAccentBtn}>Restart</button>
+                  <button id="btn-restart-update" onClick={restartToUpdate} style={smallAccentBtn}>{tr("Restart")}</button>
                 ) : update.kind === 'native-needed' ? (
-                  <button onClick={() => window.open(APK_URL, '_blank')} style={smallAccentBtn}>Install</button>
+                  <button onClick={() => window.open(APK_URL, '_blank')} style={smallAccentBtn}>{tr("Install")}</button>
                 ) : (
                   <button id="btn-check-updates" onClick={() => checkForUpdates()} disabled={update.kind === 'checking' || update.kind === 'downloading'} style={{ ...smallAccentBtn, background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }}>
-                    {update.kind === 'checking' ? 'Checking…' : 'Check'}
+                    {update.kind === 'checking' ? tr("Checking…") : tr("Check")}
                   </button>
                 )}
               </div>
@@ -393,22 +394,22 @@ export default function SettingsTab({
             </Section>
 
             {/* ── Account ── */}
-            <Section title="Account">
-            <Group id="account" color="var(--given)" title="Account" Icon={LogOut} summary={user?.email ?? 'Signed in'}>
+            <Section title={tr("Account")}>
+            <Group id="account" color="var(--given)" title={tr("Account")} Icon={LogOut} summary={user?.email ?? tr("Signed in")}>
               <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{user?.email || 'Signed in'}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{user?.email || tr("Signed in")}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                  {signInMethods(user)} · {hasPassword && !user?.emailVerified ? 'Email not verified yet' : 'Data synced to cloud'}
+                  {signInMethods(user)} · {hasPassword && !user?.emailVerified ? tr("Email not verified yet") : tr("Data synced to cloud")}
                 </div>
               </div>
               {hasPassword && !user?.emailVerified && onResendVerification && (
-                <ActionRow id="btn-resend-verification" Icon={MailCheck} label="Verify your email" sub="Resend the verification link"
+                <ActionRow id="btn-resend-verification" Icon={MailCheck} label={tr("Verify your email")} sub="Resend the verification link"
                   iconColor="var(--savings)" onClick={() => onResendVerification()
                     .then(() => showFeedback(`Verification link sent to ${user.email}.`))
                     .catch((err) => showFeedback(`Couldn't send it: ${err.message}`, true))} />
               )}
               {hasPassword && onResetPassword && (
-                <ActionRow id="btn-change-password" Icon={KeyRound} label="Change password" sub="We'll email you a secure link"
+                <ActionRow id="btn-change-password" Icon={KeyRound} label={tr("Change password")} sub="We'll email you a secure link"
                   iconColor="var(--accent)" onClick={() => onResetPassword(user.email)
                     .then(() => showFeedback(`Password link sent to ${user.email}. Check spam too.`))
                     .catch(() => showFeedback("Couldn't send the link. Check your connection and try again.", true))} />
@@ -416,7 +417,7 @@ export default function SettingsTab({
               <ActionRow
                 id="btn-sign-out"
                 Icon={LogOut}
-                label="Sign Out"
+                label={tr("Sign Out")}
                 sub="You will need to sign in again"
                 iconColor="var(--expense)"
                 onClick={() => setConfirming('signout')}
@@ -425,13 +426,13 @@ export default function SettingsTab({
             </Group>
 
             {/* ── Reset ── */}
-            <Group id="reset" color="var(--lent)" title="Reset" Icon={Trash2} summary={'Clear this device · delete data · delete account'}>
-              <ActionRow id="btn-clear-device" Icon={Eraser} label="Clear this device" sub="Sign out and remove all ExpenseTracker data and preferences from this device. Your account keeps everything."
+            <Group id="reset" color="var(--lent)" title={tr("Reset")} Icon={Trash2} summary={'Clear this device · delete data · delete account'}>
+              <ActionRow id="btn-clear-device" Icon={Eraser} label={tr("Clear this device")} sub="Sign out and remove all ExpenseTracker data and preferences from this device. Your account keeps everything."
                 iconColor="var(--lent)" onClick={() => setConfirming('clear')} />
-              <ActionRow id="btn-delete-all" Icon={Trash2} label={busyReset ? 'Deleting…' : 'Delete all my data'} sub="Every transaction, income entry, billing, trip and setting — on all devices. Keeps your sign-in."
+              <ActionRow id="btn-delete-all" Icon={Trash2} label={busyReset ? tr("Deleting…") : tr("Delete all my data")} sub="Every transaction, income entry, billing, trip and setting — on all devices. Keeps your sign-in."
                 iconColor="var(--expense)" onClick={() => !busyReset && setConfirming('delete')} danger />
               {onDeleteAccount && (
-                <ActionRow id="btn-delete-account" Icon={UserX} label="Delete my account" sub="All your data, then the sign-in itself. You'd need to create a new account to come back."
+                <ActionRow id="btn-delete-account" Icon={UserX} label={tr("Delete my account")} sub="All your data, then the sign-in itself. You'd need to create a new account to come back."
                   iconColor="var(--expense)" onClick={() => !busyReset && setConfirming('account')} danger lastRow />
               )}
             </Group>
@@ -443,30 +444,30 @@ export default function SettingsTab({
       </div>
 
       {confirming === 'clear' && (
-        <ConfirmDeleteModal title="Clear this device?"
+        <ConfirmDeleteModal title={tr("Clear this device?")}
           message="You'll be signed out and this device's copy of your data, theme and device name are removed. Everything stays in your account — sign in again to get it back."
           confirmLabel="Clear & sign out" ConfirmIcon={Eraser}
           onConfirm={() => { setConfirming(null); handleSignOut({ forgetDevice: true }); }} onCancel={() => setConfirming(null)} />
       )}
       {confirming === 'delete' && (
-        <ConfirmDeleteModal title="Delete all your data?"
+        <ConfirmDeleteModal title={tr("Delete all your data?")}
           message="Every transaction, income entry, billing, trip, recurring rule, the trash and your settings are deleted from your account and all devices. This can't be undone — export a backup first if you might need it."
           confirmLabel="Delete everything"
           onConfirm={() => { setConfirming(null); handleDeleteAll(); }} onCancel={() => setConfirming(null)} />
       )}
       {confirming === 'account' && (
-        <ConfirmDeleteModal title="Delete your account?"
+        <ConfirmDeleteModal title={tr("Delete your account?")}
           message="All your data is deleted, then your sign-in. This can't be undone — export a backup first if you might need it."
           confirmLabel="Delete account" ConfirmIcon={UserX}
           onConfirm={() => { setConfirming(null); handleDeleteAll({ andAccount: true }); }} onCancel={() => setConfirming(null)} />
       )}
       {confirming === 'signout' && (
-        <ConfirmDeleteModal title="Sign out?" message="Your data stays safe in your account. This device's offline copy is cleared."
+        <ConfirmDeleteModal title={tr("Sign out?")} message="Your data stays safe in your account. This device's offline copy is cleared."
           confirmLabel="Sign out" ConfirmIcon={LogOut}
           onConfirm={() => { setConfirming(null); handleSignOut(); }} onCancel={() => setConfirming(null)} />
       )}
       {confirming?.kind === 'pending' && (
-        <ConfirmDeleteModal title="Changes haven't uploaded yet"
+        <ConfirmDeleteModal title={tr("Changes haven't uploaded yet")}
           message={`${confirming.pending} change${confirming.pending === 1 ? ' is' : 's are'} saved only on this device${sync.online ? '' : ' (you’re offline)'}. Signing out now discards ${confirming.pending === 1 ? 'it' : 'them'}. Reconnect and wait for “Synced” in Settings to keep ${confirming.pending === 1 ? 'it' : 'them'}.`}
           confirmLabel="Sign out anyway" ConfirmIcon={LogOut}
           onConfirm={() => { const o = confirming.opts; setConfirming(null); handleSignOut({ ...o, force: true }); }} onCancel={() => setConfirming(null)} />

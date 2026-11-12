@@ -6,6 +6,7 @@ import { renderShareCard } from '../../../utils/shareCard';
 import { formatMoneyCompact } from '../../../utils/money';
 import { APP_URL } from '../../../config/sites';
 
+import { t as tr } from '../../../i18n';
 export default function WrappedModal({ transactions, income, rules, monthWin, todayKey, onClose, initial = 'month' }) {
   const [period, setPeriod] = useState(initial);
   const [showAmounts, setShowAmounts] = useState(false);
@@ -18,19 +19,19 @@ export default function WrappedModal({ transactions, income, rules, monthWin, to
 
   const extra = (
     <div id="wrapped-options" style={{ display: 'grid', gap: 8 }}>
-      <div role="radiogroup" aria-label="Period" style={{ display: 'flex', gap: 6 }}>
+      <div role="radiogroup" aria-label={tr("Period")} style={{ display: 'flex', gap: 6 }}>
         <button id="wrapped-month" role="radio" aria-checked={period === 'month'} onClick={() => setPeriod('month')} style={chip(period === 'month')}>{monthWin.label}</button>
         <button id="wrapped-year" role="radio" aria-checked={period === 'year'} onClick={() => setPeriod('year')} style={chip(period === 'year')}>{yearWindow(todayKey).label}</button>
       </div>
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-secondary)', cursor: 'pointer' }}>
         <input id="wrapped-amounts" type="checkbox" checked={showAmounts} onChange={(e) => setShowAmounts(e.target.checked)} />
-        Show amounts (off: only shares and habits — safe to post anywhere)
+        {tr("Show amounts (off: only shares and habits — safe to post anywhere)")}
       </label>
     </div>
   );
 
   return (
-    <ShareSummaryModal title="Your money, wrapped" subtitle="A picture to share — your habits, not your bank balance."
+    <ShareSummaryModal title={tr("Your money, wrapped")} subtitle={tr("A picture to share — your habits, not your bank balance.")}
       text={wrappedText(w, opts)} makeImage={makeImage} filename={`wrapped_${win.label}`} onClose={onClose} extra={extra} />
   );
 }

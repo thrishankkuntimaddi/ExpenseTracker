@@ -14,6 +14,7 @@ import ModeToggle from './components/ModeToggle';
 import TripsPanel from '../trips/TripsPanel';
 
 
+import { t as tr } from '../../i18n';
 /* ═══════════════════════════════════════════════════════════════
    MAIN ExternalTab
    Supports multiple sessions (Active, Drafts, History), name & date!
@@ -271,7 +272,7 @@ export default function ExternalTab({
       {/* Confirm Delete Modal */}
       {deletingId && (
         <ConfirmDeleteModal
-          title="Delete billing session?"
+          title={tr("Delete billing session?")}
           message="The session, its items and received entries move to Recently Deleted (Settings), where you can restore them."
           onConfirm={() => { deleteSession(deletingId, { onDeleteIncome, onDeleteTransaction, transactions, income }); setDeletingId(null); }}
           onCancel={() => setDeletingId(null)}

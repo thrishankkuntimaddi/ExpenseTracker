@@ -12,6 +12,7 @@ import { formatAmount } from '../../utils/dateHelpers';
 import { EMPTY_BUDGETS, suggestBudget } from '../../utils/budget';
 
 
+import { t as tr } from '../../i18n';
 export default function BudgetEditorModal({ budgets, transactions = [], rules = {}, onSave, onClose }) {
   const b = budgets ?? EMPTY_BUDGETS;
   const [total, setTotal] = useState(b.total ? String(b.total) : '');
@@ -38,24 +39,24 @@ export default function BudgetEditorModal({ budgets, transactions = [], rules = 
 
   return (
     <ModalShell
-      title="Monthly Budget" subtitle="Caps apply to expenses only — savings and lending are excluded." onClose={onClose}
+      title={tr("Monthly Budget")} subtitle={tr("Caps apply to expenses only — savings and lending are excluded.")} onClose={onClose}
       footer={<>
-        <GhostButton onClick={onClose}>Cancel</GhostButton>
-        <PrimaryButton onClick={save}><Check size={14} /> Save budget</PrimaryButton>
+        <GhostButton onClick={onClose}>{tr("Cancel")}</GhostButton>
+        <PrimaryButton onClick={save}><Check size={14} /> {tr("Save budget")}</PrimaryButton>
       </>}
     >
-      <Field label="Total monthly cap" hint={catSum > 0 && totalNum > 0 && catSum > totalNum ? `Category caps add up to ${formatAmount(catSum)}, above the total.` : 'Leave empty to track categories only.'}>
+      <Field label={tr("Total monthly cap")} hint={catSum > 0 && totalNum > 0 && catSum > totalNum ? `Category caps add up to ${formatAmount(catSum)}, above the total.` : tr("Leave empty to track categories only.")}>
         <input type="text" inputMode="decimal" placeholder="e.g. 30000" value={total}
           onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setTotal(v); }}
           style={{ ...fieldStyle, fontSize: 18, fontWeight: 700 }} autoFocus />
       </Field>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Per category (optional)</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{tr("Per category (optional)")}</span>
         <button type="button" onClick={applySuggestion} disabled={!suggestion.hasData}
-          title={suggestion.hasData ? 'Fill from your last 3 months' : 'Needs a few months of data'}
+          title={suggestion.hasData ? tr("Fill from your last 3 months") : tr("Needs a few months of data")}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 8, border: '1px solid var(--accent-border)', background: 'var(--accent-bg)', color: 'var(--accent)', cursor: suggestion.hasData ? 'pointer' : 'not-allowed', opacity: suggestion.hasData ? 1 : 0.5, fontFamily: 'inherit' }}>
-          <Wand2 size={11} /> Suggest from history
+          <Wand2 size={11} /> {tr("Suggest from history")}
         </button>
       </div>
 
@@ -68,7 +69,7 @@ export default function BudgetEditorModal({ budgets, transactions = [], rules = 
               <CategoryIcon category={c.key} size={13} style={{ color, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</div>
-                {sug > 0 && !cats[c.key] && <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>avg {formatAmount(sug)}</div>}
+                {sug > 0 && !cats[c.key] && <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>{tr("avg")} {formatAmount(sug)}</div>}
               </div>
               <input type="text" inputMode="decimal" placeholder="—" value={cats[c.key] ?? ''}
                 onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setCats((p) => ({ ...p, [c.key]: v })); }}

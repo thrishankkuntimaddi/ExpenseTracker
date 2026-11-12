@@ -14,6 +14,7 @@ import { rawOf } from '../../utils/fx';
 import { getDisplayCurrency } from '../../utils/money';
 import { INSURANCE_TYPES } from '../../utils/bills';
 
+import { t as tr } from '../../i18n';
 const KINDS = [
   { key: 'expense', label: 'Expense', color: 'var(--expense)' },
   { key: 'savings', label: 'Savings', color: 'var(--savings)' },
@@ -76,20 +77,20 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
     <>
       {confirmDelete && (
         <ConfirmDeleteModal
-          title="Delete this recurring rule?"
+          title={tr("Delete this recurring rule?")}
           message="Entries already logged from it are kept. Only future occurrences stop."
           onConfirm={() => { onDelete(rule.id); onClose(); }}
           onCancel={() => setConfirmDelete(false)}
         />
       )}
       <ModalShell
-        title={rule ? 'Edit Recurring' : 'New Recurring Entry'}
-        subtitle="Rent, EMI, SIP, salary, subscriptions — logged on schedule."
+        title={rule ? tr("Edit Recurring") : tr("New Recurring Entry")}
+        subtitle={tr("Rent, EMI, SIP, salary, subscriptions — logged on schedule.")}
         onClose={onClose}
         footer={<>
           {rule && onDelete && <GhostButton danger onClick={() => setConfirmDelete(true)} style={{ flex: '0 0 auto', padding: '11px 14px' }}><Trash2 size={13} /></GhostButton>}
-          <GhostButton onClick={onClose}>Cancel</GhostButton>
-          <PrimaryButton onClick={save} disabled={!canSave} color={sel.color}><Check size={14} /> {rule ? 'Save changes' : 'Create rule'}</PrimaryButton>
+          <GhostButton onClick={onClose}>{tr("Cancel")}</GhostButton>
+          <PrimaryButton onClick={save} disabled={!canSave} color={sel.color}><Check size={14} /> {rule ? tr("Save changes") : tr("Create rule")}</PrimaryButton>
         </>}
       >
         {/* Kind */}
@@ -103,10 +104,10 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 8 }}>
-          <Field label="Name">
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === 'income' ? 'Salary' : kind === 'savings' ? 'Nifty 50 SIP' : 'House rent'} style={fieldStyle} autoFocus />
+          <Field label={tr("Name")}>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === 'income' ? tr("Salary") : kind === 'savings' ? tr("Nifty 50 SIP") : tr("House rent")} style={fieldStyle} autoFocus />
           </Field>
-          <Field label="Amount">
+          <Field label={tr("Amount")}>
             <div style={{ display: 'flex', gap: 4 }}>
               <CurrencySelect compact value={currency} onChange={setCurrency} />
               <input type="text" inputMode="decimal" value={amount} placeholder="0" onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }} style={{ ...fieldStyle, fontWeight: 700, minWidth: 0 }} />
@@ -130,23 +131,23 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
               ))}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <Field label="Insurer">
-                <input id="rule-insurer" type="text" value={insurer} onChange={(e) => setInsurer(e.target.value)} placeholder="Star Health, LIC, Acko…" style={fieldStyle} />
+              <Field label={tr("Insurer")}>
+                <input id="rule-insurer" type="text" value={insurer} onChange={(e) => setInsurer(e.target.value)} placeholder={tr("Star Health, LIC, Acko…")} style={fieldStyle} />
               </Field>
-              <Field label="Cover (sum insured)">
+              <Field label={tr("Cover (sum insured)")}>
                 <input id="rule-cover" type="text" inputMode="decimal" value={cover} onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setCover(v); }} placeholder="500000" style={fieldStyle} />
               </Field>
             </div>
-            <Field label="Policy number (optional)">
-              <input type="text" value={policyNo} onChange={(e) => setPolicyNo(e.target.value)} placeholder="For claims and renewals" style={fieldStyle} />
+            <Field label={tr("Policy number (optional)")}>
+              <input type="text" value={policyNo} onChange={(e) => setPolicyNo(e.target.value)} placeholder={tr("For claims and renewals")} style={fieldStyle} />
             </Field>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>Set “Starts” to the renewal date. With Bills reminders on, you get a heads-up a week before it renews.</p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>{tr("Set “Starts” to the renewal date. With Bills reminders on, you get a heads-up a week before it renews.")}</p>
           </div>
         )}
 
         {kind === 'savings' && (
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Savings type</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{tr("Savings type")}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {savingsChoicesFor(init?.savingsType).map((st) => (
                 <button key={st.key} type="button" onClick={() => setSavingsType(st.key)} style={{
@@ -157,25 +158,25 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
               ))}
             </div>
             {getSavingsType(savingsType).hasPlatform && (
-              <input type="text" value={platform} onChange={(e) => setPlatform(e.target.value)} placeholder="Platform (e.g. Zerodha, Groww)" style={{ ...fieldStyle, marginTop: 8 }} />
+              <input type="text" value={platform} onChange={(e) => setPlatform(e.target.value)} placeholder={tr("Platform (e.g. Zerodha, Groww)")} style={{ ...fieldStyle, marginTop: 8 }} />
             )}
           </div>
         )}
 
         {/* Schedule */}
         <div style={{ display: 'grid', gridTemplateColumns: frequency === 'monthly' || frequency === 'weekly' ? '1fr 1fr' : '1fr', gap: 8 }}>
-          <Field label="Repeats">
+          <Field label={tr("Repeats")}>
             <select value={frequency} onChange={(e) => setFrequency(e.target.value)} style={fieldStyle}>
               {FREQUENCIES.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
             </select>
           </Field>
           {frequency === 'monthly' && (
-            <Field label="Day of month" hint={dom > 28 ? 'Shorter months use their last day.' : undefined}>
+            <Field label={tr("Day of month")} hint={dom > 28 ? tr("Shorter months use their last day.") : undefined}>
               <input type="number" min={1} max={31} value={dayOfMonth} onChange={(e) => setDayOfMonth(e.target.value)} style={fieldStyle} />
             </Field>
           )}
           {frequency === 'weekly' && (
-            <Field label="Weekday">
+            <Field label={tr("Weekday")}>
               <select value={weekday} onChange={(e) => setWeekday(Number(e.target.value))} style={fieldStyle}>
                 {WEEKDAYS.map((w, i) => <option key={w} value={i}>{w}</option>)}
               </select>
@@ -184,10 +185,10 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <Field label="Starts">
+          <Field label={tr("Starts")}>
             <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={fieldStyle} />
           </Field>
-          <Field label="Ends (optional)">
+          <Field label={tr("Ends (optional)")}>
             <input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} style={fieldStyle} />
           </Field>
         </div>
@@ -202,9 +203,9 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
             <Zap size={14} style={{ color: autoPost ? '#fff' : 'var(--text-muted)' }} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{autoPost ? 'Logs automatically' : 'Ask me each time'}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{autoPost ? tr("Logs automatically") : tr("Ask me each time")}</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-              {autoPost ? 'Posted silently on the due date when you open the app.' : 'Shows a one-tap “Log / Skip” card when due — good for amounts that vary.'}
+              {autoPost ? tr("Posted silently on the due date when you open the app.") : tr("Shows a one-tap “Log / Skip” card when due — good for amounts that vary.")}
             </div>
           </div>
           <span className={`toggle-track ${autoPost ? 'on' : ''}`} style={{ pointerEvents: 'none' }}><span className="toggle-thumb" /></span>

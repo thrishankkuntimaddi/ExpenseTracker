@@ -35,6 +35,7 @@ import { cashSummary } from '../../utils/cash';
 import { sumAmounts } from '../../utils/finance';
 import { useShell } from '../../app/shellContext';
 
+import { t as tr } from '../../i18n';
 const rupees = (n) => formatMoneyCompact(n);
 // Order matters: green and red never sit side by side (colour-blind safe)
 const SERIES = [
@@ -145,12 +146,12 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
 
   return (
     <div className="tab-root stats-page">
-      <PageHeader title="Stats" subtitle={`${monthLong} · trends, categories, the big picture`} month
+      <PageHeader title={tr("Stats")} subtitle={`${monthLong} · trends, categories, the big picture`} month
         actions={(
           <span style={{ position: 'relative', display: 'inline-flex', gap: 6 }}>
-            <HeaderAction id="stats-ask" Icon={MessageCircleQuestion} label="Ask" onClick={() => setAskOpen(true)} />
-            <HeaderAction id="stats-open-report" Icon={FileText} label="Report" onClick={() => setReportOpen(true)} />
-            {fresh && <span aria-label="A new report is ready" style={{ position: 'absolute', top: -2, right: -2, width: 9, height: 9, borderRadius: '50%', background: 'var(--expense)', border: '2px solid var(--surface)' }} />}
+            <HeaderAction id="stats-ask" Icon={MessageCircleQuestion} label={tr("Ask")} onClick={() => setAskOpen(true)} />
+            <HeaderAction id="stats-open-report" Icon={FileText} label={tr("Report")} onClick={() => setReportOpen(true)} />
+            {fresh && <span aria-label={tr("A new report is ready")} style={{ position: 'absolute', top: -2, right: -2, width: 9, height: 9, borderRadius: '50%', background: 'var(--expense)', border: '2px solid var(--surface)' }} />}
           </span>
         )} />
 
@@ -166,10 +167,10 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
             {/* ── The month at a glance ── */}
             <Card id="stats-glance">
               <div className="stats-glance" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
-                <Glance label="Money in" tone="income" value={stats.totalIncome} sub={[`${rupees(earned)} earned`, stats.totalBorrowed > 0 && `${rupees(stats.totalBorrowed)} borrowed`, carried > 0.5 && `${rupees(carried)} carried over`].filter(Boolean).join(' · ')} />
-                <Glance label="Spent" tone="expense" value={stats.totalExpense} sub={`${rupees(stats.avgDay)} a day`} />
-                <Glance label="Saved" tone="savings" value={stats.totalSavings} sub={savingsRate != null ? `${savingsRate}% of income` : '—'} />
-                <Glance label="Wasted" tone="lent" value={stats.totalWaste} sub={`${stats.wastePercent}% of spending`} />
+                <Glance label={tr("Money in")} tone="income" value={stats.totalIncome} sub={[`${rupees(earned)} earned`, stats.totalBorrowed > 0 && `${rupees(stats.totalBorrowed)} borrowed`, carried > 0.5 && `${rupees(carried)} carried over`].filter(Boolean).join(' · ')} />
+                <Glance label={tr("Spent")} tone="expense" value={stats.totalExpense} sub={`${rupees(stats.avgDay)} a day`} />
+                <Glance label={tr("Saved")} tone="savings" value={stats.totalSavings} sub={savingsRate != null ? `${savingsRate}% of income` : '—'} />
+                <Glance label={tr("Wasted")} tone="lent" value={stats.totalWaste} sub={`${stats.wastePercent}% of spending`} />
               </div>
             </Card>
 
@@ -179,7 +180,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
             )}
 
             {/* ── Six months ── */}
-            <Card id="stats-trend" title="Six months" hint={avgIn.length ? `avg in ${rupees(avgIn.reduce((s, m) => s + m.in, 0) / avgIn.length)}` : undefined}>
+            <Card id="stats-trend" title={tr("Six months")} hint={avgIn.length ? `avg in ${rupees(avgIn.reduce((s, m) => s + m.in, 0) / avgIn.length)}` : undefined}>
               {hasTrend ? (
                 <>
                   <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 8 }}>
@@ -201,7 +202,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
                     </ResponsiveContainer>
                   </div>
                 </>
-              ) : <Empty>Nothing recorded in the last six months yet.</Empty>}
+              ) : <Empty>{tr("Nothing recorded in the last six months yet.")}</Empty>}
             </Card>
 
             {/* ── Against last month ── */}
@@ -229,9 +230,9 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
                       </div>
                     );
                   })}
-                  <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>Grey bar: last month · coloured bar: this month</div>
+                  <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{tr("Grey bar: last month · coloured bar: this month")}</div>
                 </div>
-              ) : <Empty>No spending to compare yet.</Empty>}
+              ) : <Empty>{tr("No spending to compare yet.")}</Empty>}
             </Card>
 
             <section id="stats-calendar" style={{ marginBottom: 14, scrollMarginTop: 12 }}>
@@ -244,7 +245,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
 
           <div className="stats-right">
             {/* ── Where the money went ── */}
-            <Card id="money-went" title="Where the money went" hint={outTotal ? `${rupees(outTotal)} out` : undefined}>
+            <Card id="money-went" title={tr("Where the money went")} hint={outTotal ? `${rupees(outTotal)} out` : undefined}>
               {moneyOut.length > 0 ? (
                 <div className="money-went" style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
                   <div style={{ position: 'relative', width: 140, height: 140, flexShrink: 0, margin: '0 auto' }}>
@@ -257,7 +258,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
                       </PieChart>
                     </ResponsiveContainer>
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Out</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{tr("Out")}</span>
                       <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{rupees(outTotal)}</span>
                     </div>
                   </div>
@@ -274,24 +275,24 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
                     ))}
                   </div>
                 </div>
-              ) : <Empty>Nothing went out in {monthLong} yet.</Empty>}
+              ) : <Empty>{tr("Nothing went out in")} {monthLong} {tr("yet.")}</Empty>}
             </Card>
 
             {/* ── The big picture (all time) ── */}
-            <Card id="stats-big-picture" title="The big picture" hint="all time">
+            <Card id="stats-big-picture" title={tr("The big picture")} hint={tr("all time")}>
               <div style={{ display: 'grid', gap: 2 }}>
-                <BigRow Icon={PiggyBank} tone="savings" label="Savings" value={big.saved} sub="everything saved, minus what you used" onClick={() => shell?.goTo('savings')} />
+                <BigRow Icon={PiggyBank} tone="savings" label={tr("Savings")} value={big.saved} sub="everything saved, minus what you used" onClick={() => shell?.goTo('savings')} />
                 {big.goalCount > 0 && (
                   <BigRow Icon={Flag} tone="income" label={`Goals · ${big.goalCount}`} value={big.goalSaved}
                     sub={`of ${rupees(big.goalTarget)} · ${big.goalTarget ? Math.round((big.goalSaved / big.goalTarget) * 100) : 0}% there`} onClick={() => shell?.goTo('savings')}
                     bar={big.goalTarget ? big.goalSaved / big.goalTarget : 0} />
                 )}
-                <BigRow Icon={HeartHandshake} tone="given" label="Responsibilities left" value={big.resp.remaining}
+                <BigRow Icon={HeartHandshake} tone="given" label={tr("Responsibilities left")} value={big.resp.remaining}
                   sub={big.resp.count ? `${big.resp.count} to clear${big.resp.dueThisMonth ? ` · ${rupees(big.resp.dueThisMonth)} due this month` : ''}` : 'nothing to clear'} onClick={() => shell?.goTo('responsibilities')}
                   bar={big.resp.total ? big.resp.paid / big.resp.total : null} />
-                <BigRow Icon={ArrowDownLeft} tone="borrowed" label="You owe" value={big.debts.youOwe} sub={big.debts.youOwe ? 'borrowed, still open' : 'all clear'} onClick={() => shell?.goTo('people')} />
-                <BigRow Icon={ArrowUpRight} tone="lent" label="Owed to you" value={big.debts.owedToYou} sub={big.debts.owedToYou ? 'lent, not back yet' : 'all returned'} onClick={() => shell?.goTo('people')} />
-                {big.cash.used && <BigRow Icon={Banknote} tone="lent" label="Cash in hand" value={Math.max(0, big.cash.inHand)} sub="withdrawn minus spent in cash" />}
+                <BigRow Icon={ArrowDownLeft} tone="borrowed" label={tr("You owe")} value={big.debts.youOwe} sub={big.debts.youOwe ? 'borrowed, still open' : 'all clear'} onClick={() => shell?.goTo('people')} />
+                <BigRow Icon={ArrowUpRight} tone="lent" label={tr("Owed to you")} value={big.debts.owedToYou} sub={big.debts.owedToYou ? 'lent, not back yet' : 'all returned'} onClick={() => shell?.goTo('people')} />
+                {big.cash.used && <BigRow Icon={Banknote} tone="lent" label={tr("Cash in hand")} value={Math.max(0, big.cash.inHand)} sub="withdrawn minus spent in cash" />}
               </div>
             </Card>
 
@@ -314,7 +315,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
                     </div>
                   ))}
                 </div>
-              ) : <Empty>No expenses in {monthLong} yet.</Empty>}
+              ) : <Empty>{tr("No expenses in")} {monthLong} {tr("yet.")}</Empty>}
             </Card>
           </div>
         </div>
@@ -322,7 +323,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
 
       {askOpen && <AskModal transactions={transactions} income={income} rules={categoryRules} todayKey={todayKey} onClose={() => setAskOpen(false)} />}
       {reportOpen && (
-        <ModalShell title="Monthly report" subtitle={`Salary to salary, on the ${ordinal(day)} · ‹ › for earlier ones`} onClose={() => setReportOpen(false)} maxWidth={620}>
+        <ModalShell title={tr("Monthly report")} subtitle={`Salary to salary, on the ${ordinal(day)} · ‹ › for earlier ones`} onClose={() => setReportOpen(false)} maxWidth={620}>
           <ReportCard transactions={transactions} income={income} settings={settings} recurringRules={recurring?.rules ?? []} onPatchSettings={onPatchSettings} />
         </ModalShell>
       )}

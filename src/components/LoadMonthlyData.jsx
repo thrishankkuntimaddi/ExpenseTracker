@@ -9,6 +9,7 @@ import { auth } from '../services/firebase';
 import Portal from './Portal';
 import { useEscape } from '../hooks/useEscape';
 
+import { t as tr } from '../i18n';
 /* ── Parse text block: "[Day/Date] Name Amount" per line ── */
 function parseEntries(text, selectedMonth) {
   if (!text || !selectedMonth) return [];
@@ -215,7 +216,7 @@ export default function LoadMonthlyData({
                 </div>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>
-                    Load Past Data
+                    {tr("Load Past Data")}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
                     Import historical income &amp; expenses
@@ -255,21 +256,21 @@ export default function LoadMonthlyData({
                   </div>
                   <div>
                     <p style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', margin: 0 }}>
-                      Data Imported Successfully!
+                      {tr("Data Imported Successfully!")}
                     </p>
                     <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6 }}>
-                    {formatMonthLabel(selectedMonth)} data has been saved.
+                    {formatMonthLabel(selectedMonth)} {tr("data has been saved.")}
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
                     {preview?.income > 0 && (
                       <span style={{ padding: '5px 12px', borderRadius: 20, background: 'var(--income-bg)', color: 'var(--income)', fontSize: 12, fontWeight: 700, border: '1px solid var(--income-border)' }}>
-                        {preview.income} income entries
+                        {preview.income} {tr("income entries")}
                       </span>
                     )}
                     {preview?.expense > 0 && (
                       <span style={{ padding: '5px 12px', borderRadius: 20, background: 'var(--expense-bg)', color: 'var(--expense)', fontSize: 12, fontWeight: 700, border: '1px solid var(--expense-border)' }}>
-                        {preview.expense} expense entries
+                        {preview.expense} {tr("expense entries")}
                       </span>
                     )}
                   </div>
@@ -278,13 +279,13 @@ export default function LoadMonthlyData({
                       onClick={() => { setStatus('idle'); setIncomeText(''); setExpenseText(''); setSelectedMonth(currentMonth); }}
                       style={{ padding: '10px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700, background: 'var(--surface2)', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit' }}
                     >
-                      Import Another
+                      {tr("Import Another")}
                     </button>
                     <button
                       onClick={onClose}
                       style={{ padding: '10px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700, background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
                     >
-                      Done
+                      {tr("Done")}
                     </button>
                   </div>
                 </div>
@@ -318,7 +319,7 @@ export default function LoadMonthlyData({
                       background: 'var(--income-bg)', border: '1px solid var(--income-border)',
                       fontSize: 11, color: 'var(--income)', fontWeight: 600,
                     }}>
-                      ℹ️ Data already exists for {formatMonthLabel(selectedMonth)}. You can still add more entries.
+                      {tr("ℹ️ Data already exists for")} {formatMonthLabel(selectedMonth)}{tr(". You can still add more entries.")}
                     </div>
                   )}
 
@@ -326,12 +327,12 @@ export default function LoadMonthlyData({
                   <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--surface2)', border: '1px solid var(--border)', marginBottom: 14 }}>
                     <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', margin: '0 0 4px' }}>
                       <FileText size={10} style={{ display: 'inline', marginRight: 4 }} />
-                      Format: <code style={{ background: 'var(--surface3)', padding: '1px 5px', borderRadius: 4 }}>[Day] Name Amount</code> (one per line)
+                      {tr("Format:")} <code style={{ background: 'var(--surface3)', padding: '1px 5px', borderRadius: 4 }}>[Day] Name Amount</code> {tr("(one per line)")}
                     </p>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                      • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>01 Salary 25000</span> (Day 1 of selected month)<br/>
-                      • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>15 Rent 8000</span> (Day 15 of selected month)<br/>
-                      • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>Tea 15</span> (Defaults to Day 1)
+                      • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>{tr("01 Salary 25000")}</span> {tr("(Day 1 of selected month)")}<br/>
+                      • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>{tr("15 Rent 8000")}</span> {tr("(Day 15 of selected month)")}<br/>
+                      • <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>{tr("Tea 15")}</span> {tr("(Defaults to Day 1)")}
                     </div>
                   </div>
 
@@ -340,11 +341,11 @@ export default function LoadMonthlyData({
                     <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                         <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--income)', display: 'inline-block' }} />
-                        Income
+                        {tr("Income")}
                       </span>
                       {preview?.income > 0 && (
                         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--income)', background: 'var(--income-bg)', padding: '2px 8px', borderRadius: 20, border: '1px solid var(--income-border)', textTransform: 'none' }}>
-                          {preview.income} entries · {f(preview.incTotal)}
+                          {preview.income} {tr("entries ·")} {f(preview.incTotal)}
                         </span>
                       )}
                     </label>
@@ -363,11 +364,11 @@ export default function LoadMonthlyData({
                     <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                         <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--expense)', display: 'inline-block' }} />
-                        Expenses
+                        {tr("Expenses")}
                       </span>
                       {preview?.expense > 0 && (
                         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--expense)', background: 'var(--expense-bg)', padding: '2px 8px', borderRadius: 20, border: '1px solid var(--expense-border)', textTransform: 'none' }}>
-                          {preview.expense} entries · {f(preview.expTotal)}
+                          {preview.expense} {tr("entries ·")} {f(preview.expTotal)}
                         </span>
                       )}
                     </label>
@@ -399,7 +400,7 @@ export default function LoadMonthlyData({
                   onClick={onClose}
                   style={{ flex: 1, padding: '11px', borderRadius: 10, fontSize: 13, fontWeight: 700, background: 'var(--surface2)', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit' }}
                 >
-                  Cancel
+                  {tr("Cancel")}
                 </button>
                 <button
                   onClick={handleImport}
@@ -419,12 +420,12 @@ export default function LoadMonthlyData({
                   {status === 'importing' ? (
                     <>
                       <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
-                      Importing…
+                      {tr("Importing…")}
                     </>
                   ) : (
                     <>
                       <Upload size={14} />
-                      {(preview?.total ?? 0) > 0 ? `Import ${preview.total} Entries` : 'Import Data'}
+                      {(preview?.total ?? 0) > 0 ? `Import ${preview.total} Entries` : tr("Import Data")}
                     </>
                   )}
                 </button>

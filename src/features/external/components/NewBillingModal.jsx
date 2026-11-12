@@ -4,6 +4,7 @@ import { todayInputValue } from '../../../utils/dateHelpers';
 import Portal from '../../../components/Portal';
 import { useEscape } from '../../../hooks/useEscape';
 
+import { t as tr } from '../../../i18n';
 /* ─── New Billing Modal ─── */
 export default function NewBillingModal({ onCreate, onCancel }) {
   useEscape(onCancel);
@@ -39,8 +40,8 @@ export default function NewBillingModal({ onCreate, onCancel }) {
                 <ReceiptText size={16} style={{ color: 'var(--accent)' }} />
               </div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>New Billing Session</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>Create a workspace for proxy spending</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{tr("New Billing Session")}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{tr("Create a workspace for proxy spending")}</div>
               </div>
             </div>
             <button onClick={onCancel} style={{
@@ -57,7 +58,7 @@ export default function NewBillingModal({ onCreate, onCancel }) {
             <PenLine size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--accent)', pointerEvents: 'none' }} />
             <input
               type="text"
-              placeholder="Session Name (e.g. Bike Purchase, Family Trip)"
+              placeholder={tr("Session Name (e.g. Bike Purchase, Family Trip)")}
               value={name}
               onChange={e => setName(e.target.value)}
               autoFocus
@@ -90,7 +91,7 @@ export default function NewBillingModal({ onCreate, onCancel }) {
               background: 'var(--surface2)', color: 'var(--text-secondary)',
               border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit',
             }}>
-              Cancel
+              {tr("Cancel")}
             </button>
             <button onClick={handleCreate} disabled={!name.trim()} style={{
               flex: 2, padding: '11px', borderRadius: 11, fontSize: 13, fontWeight: 700,
@@ -99,7 +100,7 @@ export default function NewBillingModal({ onCreate, onCancel }) {
               border: 'none', cursor: name.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}>
-              <Plus size={15} />Create Session
+              <Plus size={15} />{tr("Create Session")}
             </button>
           </div>
         </div>

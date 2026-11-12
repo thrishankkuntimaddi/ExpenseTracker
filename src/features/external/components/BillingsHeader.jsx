@@ -3,6 +3,7 @@ import ProfileButton from '../../../components/ProfileButton';
 import HelpButton from '../../../tour/HelpButton';
 import BackButton from '../../../components/BackButton';
 
+import { t as tr } from '../../../i18n';
 export default function BillingsHeader({ currentSession, saving, onBack, onShare, onNew, extra }) {
   return (
     <div className="tab-header">
@@ -23,11 +24,11 @@ export default function BillingsHeader({ currentSession, saving, onBack, onShare
           )}
           <div>
             <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
-              {currentSession ? currentSession.name : 'Billings'}
+              {currentSession ? currentSession.name : tr("Billings")}
             </h1>
             {!currentSession && (
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                Money you spend for others
+                {tr("Money you spend for others")}
               </p>
             )}
           </div>
@@ -37,7 +38,7 @@ export default function BillingsHeader({ currentSession, saving, onBack, onShare
           {saving && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
               <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-              Saving…
+              {tr("Saving…")}
             </div>
           )}
           {currentSession && (
@@ -54,7 +55,7 @@ export default function BillingsHeader({ currentSession, saving, onBack, onShare
                 transition: 'all 0.15s',
               }}
             >
-              <Share2 size={13} /> Share
+              <Share2 size={13} /> {tr("Share")}
             </button>
           )}
           {!currentSession && (
@@ -71,7 +72,7 @@ export default function BillingsHeader({ currentSession, saving, onBack, onShare
                 transition: 'all 0.15s',
               }}
             >
-              <Plus size={13} /> New
+              <Plus size={13} /> {tr("New")}
             </button>
           )}
           {!currentSession && <HelpButton page="external" />}

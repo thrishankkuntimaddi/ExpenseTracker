@@ -10,6 +10,7 @@ import { DOWNLOADS_URL } from '../../config/sites';
 import { captureInviteFromUrl } from '../trips/invite';
 import { demoOn, startDemo, endDemo, afterDemo, DEMO_USER } from '../../demo/demo';
 
+import { t as tr } from '../../i18n';
 // A trip invite link (?trip=…) is kept until the person has signed in
 const inviteAtStart = captureInviteFromUrl();   // trip id from an invite link, or null
 
@@ -23,13 +24,13 @@ function SetupRequired() {
             <Zap size={18} style={{ color: 'var(--expense)' }} />
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>Setup required</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>The app started, but it has no backend configuration.</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{tr("Setup required")}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{tr("The app started, but it has no backend configuration.")}</div>
           </div>
         </div>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>{firebaseConfigError}</p>
         <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 10, marginBottom: 0 }}>
-          Nothing is wrong with your data — this build simply cannot reach it. See <code>SECURITY.md</code> and <code>.env.example</code> in the repository.
+          {tr("Nothing is wrong with your data — this build simply cannot reach it. See")} <code>SECURITY.md</code> {tr("and")} <code>.env.example</code> {tr("in the repository.")}
         </p>
       </div>
     </div>

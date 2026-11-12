@@ -15,23 +15,24 @@ import { Section, Group } from '../features/settings/SettingsGroup';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import { eventText } from './events';
 
+import { t as tr } from '../i18n';
 export default function SecurityCard({ user, devices, events = [] }) {
   const lock = useAppLockContext();
   if (!lock) return null;
   const list = devices?.devices ?? [];
   const live = list.filter((d) => d.id !== devices.thisId && isLive(d)).length;
   return (
-    <Section title="Security">
-      <Group id="app-lock" title="App lock" Icon={lock.enabled ? Lock : LockOpen} color={lock.enabled ? 'var(--income)' : 'var(--text-muted)'}
-        summary={lock.enabled ? `On · PIN on all devices · ${LOCK_AFTER.find((o) => o.key === (lock.cfg.lockAfter ?? DEFAULT_LOCK_AFTER))?.label.toLowerCase()}` : 'Off — anyone holding this device can open the app'}>
+    <Section title={tr("Security")}>
+      <Group id="app-lock" title={tr("App lock")} Icon={lock.enabled ? Lock : LockOpen} color={lock.enabled ? 'var(--income)' : 'var(--text-muted)'}
+        summary={lock.enabled ? `On · PIN on all devices · ${LOCK_AFTER.find((o) => o.key === (lock.cfg.lockAfter ?? DEFAULT_LOCK_AFTER))?.label.toLowerCase()}` : tr("Off — anyone holding this device can open the app")}>
         <AppLockSettings lock={lock} user={user} />
       </Group>
-      <Group id="devices" title="Your devices" Icon={Laptop} color="var(--savings)"
+      <Group id="devices" title={tr("Your devices")} Icon={Laptop} color="var(--savings)"
         summary={`${list.length} signed in${live ? ` · ${live} live now` : ''}`}>
         <DeviceList devices={devices} lockOn={lock.enabled} />
       </Group>
-      <Group id="security-alerts" title="Security alerts" Icon={Bell} color="var(--lent)"
-        summary={events.length ? `${eventText(events[0]).title} · ${timeAgo(events[0].at)}` : 'Nothing unusual'}>
+      <Group id="security-alerts" title={tr("Security alerts")} Icon={Bell} color="var(--lent)"
+        summary={events.length ? `${eventText(events[0]).title} · ${timeAgo(events[0].at)}` : tr("Nothing unusual")}>
         <EventList events={events} />
       </Group>
     </Section>
@@ -75,53 +76,53 @@ function AppLockSettings({ lock, user }) {
     return (
       <div style={pad}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
-          {step === 'set' ? 'Choose a PIN for all your devices' : step === 'change' ? 'Change your PIN' : 'Turn off app lock'}
+          {step === 'set' ? tr("Choose a PIN for all your devices") : step === 'change' ? tr("Change your PIN") : tr("Turn off app lock")}
         </div>
-        {(step === 'change' || step === 'off') && <PinInput id="lock-cur-pin" value={cur} onChange={setCur} placeholder="Current PIN" autoFocus />}
+        {(step === 'change' || step === 'off') && <PinInput id="lock-cur-pin" value={cur} onChange={setCur} placeholder={tr("Current PIN")} autoFocus />}
         {step !== 'off' && (
           <>
             <PinInput id="lock-set-pin" value={a} onChange={setA} placeholder={`New PIN (${PIN_MIN}–${PIN_MAX} digits)`} autoFocus={step === 'set'} />
-            <PinInput id="lock-set-pin2" value={b} onChange={setB} placeholder="Type it again" />
+            <PinInput id="lock-set-pin2" value={b} onChange={setB} placeholder={tr("Type it again")} />
           </>
         )}
         {err && <div role="alert" style={{ fontSize: 12, color: 'var(--expense)', margin: '2px 0 8px' }}>{err}</div>}
         <div style={{ display: 'flex', gap: 8 }}>
           <button id="lock-set-save" disabled={busy} onClick={step === 'off' ? turnOff : saveNew} style={btn(step === 'off' ? 'expense' : 'accent')}>
-            {step === 'off' ? 'Turn off' : step === 'set' ? 'Turn on app lock' : 'Save new PIN'}
+            {step === 'off' ? tr("Turn off") : step === 'set' ? tr("Turn on app lock") : tr("Save new PIN")}
           </button>
-          <button onClick={reset} style={btn(null)}>Cancel</button>
+          <button onClick={reset} style={btn(null)}>{tr("Cancel")}</button>
         </div>
-        {step === 'set' && <p style={note}>You’ll use this PIN on your phone, computer and the website. If you forget it, sign in again with your account to set a new one — nothing is erased.</p>}
+        {step === 'set' && <p style={note}>{tr("You’ll use this PIN on your phone, computer and the website. If you forget it, sign in again with your account to set a new one — nothing is erased.")}</p>}
       </div>
     );
   }
   if (!lock.enabled) {
     return (
       <div style={pad}>
-        <p style={{ ...note, marginTop: 0 }}>Ask for a PIN — or your fingerprint — whenever the app opens. One PIN works on every device you’re signed in on. Wrong guesses lock the app for longer each time, and you’re alerted.</p>
-        <button id="lock-enable" onClick={() => setStep('set')} style={btn('accent')}><Lock size={13} /> Set up app lock</button>
+        <p style={{ ...note, marginTop: 0 }}>{tr("Ask for a PIN — or your fingerprint — whenever the app opens. One PIN works on every device you’re signed in on. Wrong guesses lock the app for longer each time, and you’re alerted.")}</p>
+        <button id="lock-enable" onClick={() => setStep('set')} style={btn('accent')}><Lock size={13} /> {tr("Set up app lock")}</button>
       </div>
     );
   }
   return (
     <div>
-      <Row Icon={Timer} title="Lock after" sub="Time away from the app (computers also lock after 5 minutes untouched)">
+      <Row Icon={Timer} title={tr("Lock after")} sub="Time away from the app (computers also lock after 5 minutes untouched)">
         <select id="lock-after" value={lock.cfg.lockAfter ?? DEFAULT_LOCK_AFTER} onChange={(e) => lock.setLockAfter(Number(e.target.value))}
           style={{ padding: '6px 8px', fontSize: 12, fontWeight: 600, border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit', borderRadius: 8 }}>
           {LOCK_AFTER.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
         </select>
       </Row>
-      <Row Icon={Fingerprint} title={bio?.label ?? 'Fingerprint'} sub={bio?.available ? 'Unlock with it on this device' : bio?.reason === 'none-enrolled' ? 'Add a fingerprint or face in your phone’s settings first' : 'Not available on this device — use your PIN'}>
-        <button id="lock-bio-toggle" className={`toggle-track ${bioOn ? 'on' : ''}`} aria-pressed={bioOn} aria-label="Unlock with fingerprint on this device"
+      <Row Icon={Fingerprint} title={bio?.label ?? tr("Fingerprint")} sub={bio?.available ? 'Unlock with it on this device' : bio?.reason === 'none-enrolled' ? 'Add a fingerprint or face in your phone’s settings first' : 'Not available on this device — use your PIN'}>
+        <button id="lock-bio-toggle" className={`toggle-track ${bioOn ? 'on' : ''}`} aria-pressed={bioOn} aria-label={tr("Unlock with fingerprint on this device")}
           disabled={!bio?.available && !bioOn} style={!bio?.available && !bioOn ? { opacity: 0.4 } : undefined} onClick={toggleBio}>
           <span className="toggle-thumb" />
         </button>
       </Row>
       {err && <div role="alert" style={{ fontSize: 12, color: 'var(--expense)', padding: '0 16px 8px' }}>{err}</div>}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '10px 16px 14px' }}>
-        <button id="lock-now" onClick={() => lock.lock('manual')} style={btn('accent')}><Lock size={13} /> Lock now</button>
-        <button id="lock-change" onClick={() => setStep('change')} style={btn(null)}><KeyRound size={13} /> Change PIN</button>
-        <button id="lock-disable" onClick={() => setStep('off')} style={btn(null)}>Turn off</button>
+        <button id="lock-now" onClick={() => lock.lock('manual')} style={btn('accent')}><Lock size={13} /> {tr("Lock now")}</button>
+        <button id="lock-change" onClick={() => setStep('change')} style={btn(null)}><KeyRound size={13} /> {tr("Change PIN")}</button>
+        <button id="lock-disable" onClick={() => setStep('off')} style={btn(null)}>{tr("Turn off")}</button>
       </div>
     </div>
   );
@@ -163,13 +164,13 @@ function DeviceList({ devices, lockOn }) {
             <Icon size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12.5, fontWeight: 650, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name || 'Unknown device'}</span>
-                {liveNow && !d.locked && <span className="live-tag" id={isThis ? undefined : `live-${d.id}`}><span className="live-dot" />Live</span>}
-                {d.locked && !isThis && <span className="locked-tag"><Lock size={9} /> Locked</span>}
-                {isThis && <span style={{ fontSize: 10.5, color: 'var(--accent)', fontWeight: 700 }}>this device</span>}
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name || tr("Unknown device")}</span>
+                {liveNow && !d.locked && <span className="live-tag" id={isThis ? undefined : `live-${d.id}`}><span className="live-dot" />{tr("Live")}</span>}
+                {d.locked && !isThis && <span className="locked-tag"><Lock size={9} /> {tr("Locked")}</span>}
+                {isThis && <span style={{ fontSize: 10.5, color: 'var(--accent)', fontWeight: 700 }}>{tr("this device")}</span>}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                {d.locked && !isThis ? 'Needs the PIN to open' : liveNow ? 'On screen now' : d.lastSeen ? `Last seen ${timeAgo(d.lastSeen)}` : 'Not seen yet'}{d.kind ? ` · ${d.kind}` : ''}
+                {d.locked && !isThis ? tr("Needs the PIN to open") : liveNow ? tr("On screen now") : d.lastSeen ? `Last seen ${timeAgo(d.lastSeen)}` : tr("Not seen yet")}{d.kind ? ` · ${d.kind}` : ''}
                 {d.unlockRequest && now - d.unlockRequest.at < 120000 && ' · asking to unlock'}
               </div>
             </div>
@@ -182,22 +183,22 @@ function DeviceList({ devices, lockOn }) {
           </div>
         );
       })}
-      {!all && list.length > 6 && <button onClick={() => setAll(true)} style={{ ...linkRow }}>+{list.length - 6} more</button>}
+      {!all && list.length > 6 && <button onClick={() => setAll(true)} style={{ ...linkRow }}>+{list.length - 6} {tr("more")}</button>}
       {others.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '10px 16px 14px', borderTop: '1px solid var(--border)' }}>
-          {lockOn && <button id="lock-all-others" onClick={() => setConfirm({ device: 'all', type: 'lock' })} style={btn(null)}><Lock size={13} /> Lock all other devices</button>}
-          <button id="signout-all-others" onClick={() => setConfirm({ device: 'all', type: 'signout' })} style={btn(null)}><LogOut size={13} /> Sign out all others</button>
+          {lockOn && <button id="lock-all-others" onClick={() => setConfirm({ device: 'all', type: 'lock' })} style={btn(null)}><Lock size={13} /> {tr("Lock all other devices")}</button>}
+          <button id="signout-all-others" onClick={() => setConfirm({ device: 'all', type: 'signout' })} style={btn(null)}><LogOut size={13} /> {tr("Sign out all others")}</button>
         </div>
       )}
-      {!lockOn && others.length > 0 && <p style={{ ...note, padding: '0 16px 12px', margin: 0 }}>Turn on app lock to lock other devices from here.</p>}
-      <p style={{ ...note, padding: '0 16px 12px', margin: 0 }}>A device leaves this list when it signs out, or the moment you sign it out here — even one whose app was deleted. One you no longer use drops off after 30 days unseen.</p>
+      {!lockOn && others.length > 0 && <p style={{ ...note, padding: '0 16px 12px', margin: 0 }}>{tr("Turn on app lock to lock other devices from here.")}</p>}
+      <p style={{ ...note, padding: '0 16px 12px', margin: 0 }}>{tr("A device leaves this list when it signs out, or the moment you sign it out here — even one whose app was deleted. One you no longer use drops off after 30 days unseen.")}</p>
     </div>
   );
 }
 
 /* ── Security alerts ── */
 function EventList({ events }) {
-  if (!events.length) return <p style={{ ...note, padding: '12px 16px', margin: 0 }}><ShieldCheck size={12} style={{ verticalAlign: -2, color: 'var(--income)' }} /> No security alerts. Wrong-PIN attempts and lock changes show up here and on your other devices.</p>;
+  if (!events.length) return <p style={{ ...note, padding: '12px 16px', margin: 0 }}><ShieldCheck size={12} style={{ verticalAlign: -2, color: 'var(--income)' }} /> {tr("No security alerts. Wrong-PIN attempts and lock changes show up here and on your other devices.")}</p>;
   return (
     <div>
       {events.slice(0, 8).map((e, i) => {

@@ -9,6 +9,7 @@ import { Check, Lock } from 'lucide-react';
 import ModalShell, { PrimaryButton, GhostButton } from '../../components/ModalShell';
 import { formatAmount } from '../../utils/dateHelpers';
 
+import { t as tr } from '../../i18n';
 export default function TripCloseModal({ trip, summary, onConfirm, onClose, mode = 'close' }) {
   const member = mode === 'member';   // a friend on a shared trip: post to my own ledger only
   const money = (n) => formatAmount(n, trip?.currency);   // the trip's own currency
@@ -21,19 +22,19 @@ export default function TripCloseModal({ trip, summary, onConfirm, onClose, mode
   const iOwe = summary.iOwe.reduce((s, t) => s + t.amount, 0);
 
   return (
-    <ModalShell title={member ? 'Add to my ledger' : 'Close trip'} subtitle={member ? 'Put your part of the trip into your own expenses.' : trip.shared ? 'Lock the trip for everyone and update your own ledger.' : 'Lock the trip and update your own ledger.'} onClose={onClose}
+    <ModalShell title={member ? tr("Add to my ledger") : tr("Close trip")} subtitle={member ? tr("Put your part of the trip into your own expenses.") : trip.shared ? tr("Lock the trip for everyone and update your own ledger.") : tr("Lock the trip and update your own ledger.")} onClose={onClose}
       footer={<>
-        <GhostButton onClick={onClose}>Cancel</GhostButton>
-        <PrimaryButton onClick={() => onConfirm({ logShare, logLent, logBorrowed })} disabled={member && !(logShare || logLent || logBorrowed)} color="var(--external)">{member ? <><Check size={14} /> Add to ledger</> : <><Lock size={14} /> Close trip</>}</PrimaryButton>
+        <GhostButton onClick={onClose}>{tr("Cancel")}</GhostButton>
+        <PrimaryButton onClick={() => onConfirm({ logShare, logLent, logBorrowed })} disabled={member && !(logShare || logLent || logBorrowed)} color="var(--external)">{member ? <><Check size={14} /> {tr("Add to ledger")}</> : <><Lock size={14} /> {tr("Close trip")}</>}</PrimaryButton>
       </>}
     >
       <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--surface2)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-        <strong style={{ color: 'var(--text)' }}>{trip.name}</strong> · {money(summary.total)} across {summary.members.length} people
+        <strong style={{ color: 'var(--text)' }}>{trip.name}</strong> · {money(summary.total)} {tr("across")} {summary.members.length} {tr("people")}
         {summary.isSettled ? ' · fully settled ✓' : ` · ${money(summary.outstanding)} still to settle`}
       </div>
 
       {!hasMe ? (
-        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Tick who you are in “Edit trip” to post your share and dues to your ledger.</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{tr("Tick who you are in “Edit trip” to post your share and dues to your ledger.")}</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <Opt checked={logShare} onChange={setLogShare} disabled={!(summary.myShare > 0)}
@@ -42,7 +43,7 @@ export default function TripCloseModal({ trip, summary, onConfirm, onClose, mode
             title={`Record what others owe me as Lent — ${money(owed)}`} sub={summary.owedToMe.map((t) => `${t.fromName} ${money(t.amount)}`).join(' · ') || 'Nobody owes you'} />
           <Opt checked={logBorrowed} onChange={setLogBorrowed} disabled={!summary.iOwe.length}
             title={`Record what I owe as Borrowed — ${money(iOwe)}`} sub={summary.iOwe.map((t) => `${t.toName} ${money(t.amount)}`).join(' · ') || 'You owe nobody'} />
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>{member ? 'Doing this again later updates the same entries — nothing is doubled.' : 'Reopening the trip removes these entries again (they go to Recently Deleted).'}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>{member ? tr("Doing this again later updates the same entries — nothing is doubled.") : tr("Reopening the trip removes these entries again (they go to Recently Deleted).")}</div>
         </div>
       )}
     </ModalShell>

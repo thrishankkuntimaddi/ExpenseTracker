@@ -36,6 +36,7 @@ import WidgetsCard from '../settings/WidgetsCard';
 import { widgetsAvailable } from '../../native/intake';
 import { platform } from '../../native';
 
+import { t as tr } from '../../i18n';
 // The owner's read-only list of users: loaded only for that account, only when opened
 const AdminCard = lazy(() => import('../admin/AdminCard'));
 
@@ -97,7 +98,7 @@ export default function ProfilePage(props) {
     <div className="tab-root profile-page">
       <div className="tab-header" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {(phonePanel || onBack) && (
-          <button id="btn-profile-back" onClick={phonePanel ? () => setChosen(null) : onBack} aria-label="Back"
+          <button id="btn-profile-back" onClick={phonePanel ? () => setChosen(null) : onBack} aria-label={tr("Back")}
             style={{ width: 34, height: 34, border: 'none', background: 'var(--surface2)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
             <ArrowLeft size={17} />
           </button>
@@ -120,20 +121,20 @@ export default function ProfilePage(props) {
                     <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayNameOf(user)}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
-                      {providers.includes('google.com') && <Pill>Google</Pill>}
-                      {providers.includes('password') && <Pill>Email</Pill>}
-                      {(user?.emailVerified || providers.includes('google.com')) && <Pill tone="income"><ShieldCheck size={10} /> Verified</Pill>}
+                      {providers.includes('google.com') && <Pill>{tr("Google")}</Pill>}
+                      {providers.includes('password') && <Pill>{tr("Email")}</Pill>}
+                      {(user?.emailVerified || providers.includes('google.com')) && <Pill tone="income"><ShieldCheck size={10} /> {tr("Verified")}</Pill>}
                     </div>
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-                  <Stat value={(transactions.length + income.length).toLocaleString('en-IN')} label="Entries" />
-                  <Stat value={months} label={months === 1 ? 'Month' : 'Months'} />
-                  <Stat value={deviceCount} label={deviceCount === 1 ? 'Device' : 'Devices'} />
+                  <Stat value={(transactions.length + income.length).toLocaleString('en-IN')} label={tr("Entries")} />
+                  <Stat value={months} label={months === 1 ? tr("Month") : tr("Months")} />
+                  <Stat value={deviceCount} label={deviceCount === 1 ? tr("Device") : tr("Devices")} />
                 </div>
                 {since && !Number.isNaN(since.getTime()) && (
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8 }}>
-                    Member since {since.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                    {tr("Member since")} {since.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
                   </div>
                 )}
               </div>
@@ -150,9 +151,9 @@ export default function ProfilePage(props) {
 
               {/* ── Owner only: who uses the app (read only) ── */}
               {isAdmin(user) && (
-                <Section title="Owner">
-                  <Group id="admin" title="Admin sees" Icon={Eye} color="var(--lent)" summary="Who uses the app · read only">
-                    <Suspense fallback={<div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>Loading…</div>}>
+                <Section title={tr("Owner")}>
+                  <Group id="admin" title={tr("Admin sees")} Icon={Eye} color="var(--lent)" summary={tr("Who uses the app · read only")}>
+                    <Suspense fallback={<div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>{tr("Loading…")}</div>}>
                       <AdminCard />
                     </Suspense>
                   </Group>
@@ -160,21 +161,21 @@ export default function ProfilePage(props) {
               )}
 
               {/* ── Help: the app tour and a guide per page ── */}
-              <Section title="Help">
-                <Group id="help" title="App tour & guides" Icon={Compass} color="var(--accent)" summary="Walk through the app · a guide for every page">
+              <Section title={tr("Help")}>
+                <Group id="help" title={tr("App tour & guides")} Icon={Compass} color="var(--accent)" summary={tr("Walk through the app · a guide for every page")}>
                   <HelpCard />
                 </Group>
-                <Group id="invite" title="Invite a friend" Icon={Gift} color="var(--expense)" summary="Send them the app — free, no ads">
+                <Group id="invite" title={tr("Invite a friend")} Icon={Gift} color="var(--expense)" summary={tr("Send them the app — free, no ads")}>
                   <InviteFriendCard name={user?.displayName?.split(' ')[0]} />
                 </Group>
-                <Group id="privacy" title="Your privacy" Icon={ShieldCheck} color="var(--income)" summary="No ads · never sold · no bank access">
+                <Group id="privacy" title={tr("Your privacy")} Icon={ShieldCheck} color="var(--income)" summary={tr("No ads · never sold · no bank access")}>
                   <PrivacyPromise />
                 </Group>
               </Section>
 
               {/* ── Sounds: taps, money, rolling totals… ── */}
-              <Section title="Sounds">
-                <Group id="sounds" title="Sounds" Icon={Music} color="var(--savings)" summary={soundsSummary(sounds)}>
+              <Section title={tr("Sounds")}>
+                <Group id="sounds" title={tr("Sounds")} Icon={Music} color="var(--savings)" summary={soundsSummary(sounds)}>
                   <SoundsCard />
                 </Group>
               </Section>
@@ -183,31 +184,31 @@ export default function ProfilePage(props) {
               <SecurityCard user={user} devices={devices} events={securityEvents} />
 
               {/* ── Notifications ── */}
-              <Section title="Notifications">
-                <Group id="reminders" title="Reminders" Icon={Bell} color="var(--accent)" summary={remSummary}>
+              <Section title={tr("Notifications")}>
+                <Group id="reminders" title={tr("Reminders")} Icon={Bell} color="var(--accent)" summary={remSummary}>
                   <RemindersCard uid={user?.uid} settings={settings} onPatchSettings={onPatchSettings} transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} />
                 </Group>
               </Section>
 
               {/* ── Customize ── */}
-              <Section title="Customize">
+              <Section title={tr("Customize")}>
                 {platform === 'android' && (
-                  <Group id="widgets" title="Home-screen widgets" Icon={LayoutGrid} color="var(--accent)" summary={widgetsAvailable() ? 'Quick add · This month · Bills due' : 'Needs the newest Android app'}>
+                  <Group id="widgets" title={tr("Home-screen widgets")} Icon={LayoutGrid} color="var(--accent)" summary={widgetsAvailable() ? tr("Quick add · This month · Bills due") : tr("Needs the newest Android app")}>
                     <WidgetsCard settings={settings} onPatchSettings={onPatchSettings} />
                   </Group>
                 )}
                 {!desktop && (
-                  <Group id="custom-bar" title="Bottom bar" Icon={LayoutGrid} color="var(--savings)"
+                  <Group id="custom-bar" title={tr("Bottom bar")} Icon={LayoutGrid} color="var(--savings)"
                     summary={['Home', ...ui.tabs.map((k) => PAGE_META[k].label)].join(' · ')}>
                     <BarEditor tabs={ui.tabs} onChange={(tabs) => save({ tabs })} />
                   </Group>
                 )}
-                <Group id="custom-home" title="Home screen" Icon={HomeIcon} color="var(--expense)"
+                <Group id="custom-home" title={tr("Home screen")} Icon={HomeIcon} color="var(--expense)"
                   summary={ui.home.filter((s) => s.visible).map((s) => HOME_SECTIONS.find((h) => h.key === s.key).label).join(' · ')}>
                   <HomeEditor home={ui.home} onChange={(home) => save({ home })} />
                 </Group>
-                <Group id="custom-start" title="Open the app on" Icon={Rocket} color="var(--income)" summary={PAGE_META[ui.start].label}>
-                  <div role="radiogroup" aria-label="Start page" style={{ padding: '12px 16px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <Group id="custom-start" title={tr("Open the app on")} Icon={Rocket} color="var(--income)" summary={PAGE_META[ui.start].label}>
+                  <div role="radiogroup" aria-label={tr("Start page")} style={{ padding: '12px 16px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {PAGE_KEYS.map((k) => (
                       <Chip key={k} id={`start-${k}`} active={ui.start === k} onClick={() => save({ start: k })}>{PAGE_META[k].label}</Chip>
                     ))}
@@ -218,12 +219,12 @@ export default function ProfilePage(props) {
               {/* ── Money · Backup & sync · App · Account ── */}
               <SettingsTab {...props} embedded
                 moneyExtra={
-                  <Group id="currency" title="Currency" Icon={Coins} color="var(--income)" summary={`${currency} · ${CURRENCY_NAMES[currency]}`}>
+                  <Group id="currency" title={tr("Currency")} Icon={Coins} color="var(--income)" summary={`${currency} · ${CURRENCY_NAMES[currency]}`}>
                     <CurrencyCard bare settings={settings} transactions={transactions} income={income} onPatchSettings={onPatchSettings} />
                   </Group>
                 }
                 dataExtra={drive && (
-                  <Group id="drive" title="Google Drive backup" Icon={HardDriveUpload} color="var(--savings)" summary={driveSummary}>
+                  <Group id="drive" title={tr("Google Drive backup")} Icon={HardDriveUpload} color="var(--savings)" summary={driveSummary}>
                     <DriveBackupCard bare user={user} onPatchSettings={onPatchSettings} drive={drive} />
                   </Group>
                 )} />
@@ -233,7 +234,7 @@ export default function ProfilePage(props) {
             <div className="profile-detail" ref={setPanelEl}>
               <div className="profile-detail-empty">
                 <MousePointerClick size={22} />
-                <span>Pick a setting on the left</span>
+                <span>{tr("Pick a setting on the left")}</span>
               </div>
             </div>
           </div>
@@ -280,7 +281,7 @@ function BarEditor({ tabs, onChange }) {
         );
       })}
       <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '8px 0 0', lineHeight: 1.5 }}>
-        Home is always first and <strong>+</strong> adds anything. Every other page is a tile on Home.
+        {tr("Home is always first and")} <strong>+</strong> {tr("adds anything. Every other page is a tile on Home.")}
       </p>
       <ResetLink onClick={() => onChange(normaliseUi({}).tabs)} />
     </div>
@@ -326,7 +327,7 @@ function MoveButtons({ i, n, onMove, label }) {
 function ResetLink({ onClick }) {
   return (
     <button onClick={onClick} style={{ marginTop: 10, padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-      <RotateCcw size={12} /> Reset to default
+      <RotateCcw size={12} /> {tr("Reset to default")}
     </button>
   );
 }
@@ -376,10 +377,10 @@ function ThemeRow({ themePref, theme, onChange }) {
     <div className="theme-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px 11px 16px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
       <div style={{ flex: '1 1 100px', minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{t('Theme')}</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{themePref === 'system' ? `Follows this device · ${theme === 'monoflow' ? 'dark' : 'light'} now` : 'This device only'}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{themePref === 'system' ? `Follows this device · ${theme === 'monoflow' ? 'dark' : 'light'} now` : tr("This device only")}</div>
       </div>
-      <div role="radiogroup" aria-label="Theme" className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
-        {[{ key: 'light', label: 'Light', Icon: Sun }, { key: 'dark', label: 'Dark', Icon: Moon }, { key: 'system', label: 'Auto', Icon: Monitor }].map(({ key, label, Icon }) => {
+      <div role="radiogroup" aria-label={tr("Theme")} className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
+        {[{ key: 'light', label: tr("Light"), Icon: Sun }, { key: 'dark', label: tr("Dark"), Icon: Moon }, { key: 'system', label: tr("Auto"), Icon: Monitor }].map(({ key, label, Icon }) => {
           const on = themePref === key;
           return (
             <button key={key} id={`theme-${key}`} role="radio" aria-checked={on} onClick={() => onChange?.(key)}
@@ -402,10 +403,10 @@ function MotionRow() {
     <div className="theme-row" id="motion-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px 11px 16px', flexWrap: 'wrap' }}>
       <div style={{ flex: '1 1 140px', minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{t('Animations')}</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{reduced ? 'Off — your device asks for reduced motion' : 'Coins, rolling numbers · this device only'}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{reduced ? tr("Off — your device asks for reduced motion") : tr("Coins, rolling numbers · this device only")}</div>
       </div>
-      <div role="radiogroup" aria-label="Animations" className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
-        {[{ key: 'on', label: 'On' }, { key: 'off', label: 'Off' }].map(({ key, label }) => {
+      <div role="radiogroup" aria-label={tr("Animations")} className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
+        {[{ key: 'on', label: tr("On") }, { key: 'off', label: tr("Off") }].map(({ key, label }) => {
           const on = pref === key;
           return (
             <button key={key} id={`motion-${key}`} role="radio" aria-checked={on} disabled={reduced} onClick={() => setMotionPref(key === 'on')}
@@ -426,9 +427,9 @@ function LanguageRow({ onPatchSettings }) {
     <div className="theme-row" id="language-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px 11px 16px', borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
       <div style={{ flex: '1 1 140px', minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{t('Language')}</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{cur === 'en' ? 'Hindi, Telugu and Tamil too' : t('Partly translated — the rest stays in English for now')}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{cur === 'en' ? tr("Hindi, Telugu and Tamil too") : t('Partly translated — the rest stays in English for now')}</div>
       </div>
-      <div role="radiogroup" aria-label="Language" className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0, flexWrap: 'wrap' }}>
+      <div role="radiogroup" aria-label={tr("Language")} className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0, flexWrap: 'wrap' }}>
         {LANGS.map((l) => {
           const on = cur === l.key;
           return (
@@ -450,11 +451,11 @@ function HelpCard() {
       <button id="help-start-tour" onClick={() => startTour('app')}
         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', border: 'none', borderRadius: 14, background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 750, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
         <PlayCircle size={18} />
-        <span style={{ flex: 1 }}>Take the app tour</span>
-        <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.85 }}>about a minute</span>
+        <span style={{ flex: 1 }}>{tr("Take the app tour")}</span>
+        <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.85 }}>{tr("about a minute")}</span>
       </button>
       <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '12px 2px 8px', lineHeight: 1.5 }}>
-        Or a short guide to one page — the same one the <strong>?</strong> at the top of each page opens:
+        {tr("Or a short guide to one page — the same one the")} <strong>?</strong> {tr("at the top of each page opens:")}
       </p>
       <div>
         {GUIDE_PAGES().map((k, i) => {
@@ -493,7 +494,7 @@ function PrivacyPromise() {
           <div><div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{t}</div><div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.45 }}>{d}</div></div>
         </div>
       ))}
-      <a href="https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html" target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 6, fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}>Read the privacy policy</a>
+      <a href="https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html" target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 6, fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}>{tr("Read the privacy policy")}</a>
     </div>
   );
 }

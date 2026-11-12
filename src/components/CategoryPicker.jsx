@@ -7,6 +7,7 @@ import { CATEGORIES, categoryMeta, categoryColor } from '../utils/categories';
 import { CATEGORY_ICONS } from './categoryIcons';
 import { currentTheme } from '../utils/theme';
 
+import { t as tr } from '../i18n';
 export function CategoryIcon({ category, size = 12, style }) {
   const Icon = CATEGORY_ICONS[categoryMeta(category).icon] ?? CircleDashed;
   return <Icon size={size} style={style} />;
@@ -46,7 +47,7 @@ export default function CategoryPicker({ value, suggested, onChange, size = 'md'
               fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'transparent',
               border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0,
             }}>
-              ✦ Use suggestion: {categoryMeta(suggested).label}
+              {tr("✦ Use suggestion:")} {categoryMeta(suggested).label}
             </button>
           )}
         </div>

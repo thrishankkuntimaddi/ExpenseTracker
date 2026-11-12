@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ClipboardList, Plus, Trash2, Check, Bike, Car, TrainFront, Plane } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 
+import { t as tr } from '../../i18n';
 const PLAN_GROUPS = [
   { key: 'travel', label: 'Travel' },
   { key: 'food',   label: 'Food' },
@@ -47,28 +48,28 @@ export default function TripPlan({ tripId, plan, spent = 0, money, onSave, readO
   return (
     <div className="card trip-plan" id="trip-plan">
       <div style={{ ...label, padding: '11px 14px', borderBottom: '1px solid var(--border)', justifyContent: 'space-between' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ClipboardList size={12} /> Plan & estimate</span>
-        {items.length > 0 && <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>{doneCount}/{items.length} ready</span>}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ClipboardList size={12} /> {tr("Plan & estimate")}</span>
+        {items.length > 0 && <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>{doneCount}/{items.length} {tr("ready")}</span>}
       </div>
 
       {items.length === 0 ? (
         <div style={{ padding: '12px 14px' }}>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>Plan the costs before you go. How are you travelling?</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{tr("Plan the costs before you go. How are you travelling?")}</div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
             {MODES.map((m) => (
               <button key={m.key} id={`trip-plan-${m.key}`} disabled={readOnly} onClick={() => startWith(m)} style={chipBtn}>
                 <m.Icon size={13} /> {m.label}
               </button>
             ))}
-            <button id="trip-plan-blank" disabled={readOnly} onClick={() => change([line('travel')])} style={chipBtn}><Plus size={13} /> Blank</button>
+            <button id="trip-plan-blank" disabled={readOnly} onClick={() => change([line('travel')])} style={chipBtn}><Plus size={13} /> {tr("Blank")}</button>
           </div>
         </div>
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
-            <Fig label="Estimated" value={money(estimate)} />
-            <Fig label="Spent so far" value={money(spent)} color={over ? 'var(--expense)' : undefined} />
-            <Fig label={over ? 'Over plan' : 'Left in plan'} value={money(Math.abs(estimate - spent))} color={over ? 'var(--expense)' : 'var(--income)'} />
+            <Fig label={tr("Estimated")} value={money(estimate)} />
+            <Fig label={tr("Spent so far")} value={money(spent)} color={over ? 'var(--expense)' : undefined} />
+            <Fig label={over ? tr("Over plan") : tr("Left in plan")} value={money(Math.abs(estimate - spent))} color={over ? 'var(--expense)' : 'var(--income)'} />
           </div>
           {PLAN_GROUPS.map((g) => {
             const rows = items.filter((i) => (i.group ?? 'other') === g.key);
@@ -85,12 +86,12 @@ export default function TripPlan({ tripId, plan, spent = 0, money, onSave, readO
                       style={{ width: 22, height: 22, borderRadius: 7, flexShrink: 0, border: `1.5px solid ${i.done ? 'var(--income)' : 'var(--border)'}`, background: i.done ? 'var(--income)' : 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
                       {i.done && <Check size={13} />}
                     </button>
-                    <input value={i.name} disabled={readOnly} onChange={(e) => patch(i.id, { name: e.target.value })} placeholder="What" aria-label="What"
+                    <input value={i.name} disabled={readOnly} onChange={(e) => patch(i.id, { name: e.target.value })} placeholder={tr("What")} aria-label={tr("What")}
                       style={{ ...cell, flex: 1, textDecoration: i.done ? 'line-through' : 'none', color: i.done ? 'var(--text-muted)' : 'var(--text)' }} />
                     <input value={i.estimate} disabled={readOnly} inputMode="decimal" placeholder="0" aria-label={`Estimate for ${i.name || 'item'}`}
                       onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) patch(i.id, { estimate: v }); }}
                       style={{ ...cell, width: 84, textAlign: 'right', fontWeight: 700 }} />
-                    {!readOnly && <button aria-label="Remove line" onClick={() => change(items.filter((x) => x.id !== i.id))} style={iconBtn}><Trash2 size={12} /></button>}
+                    {!readOnly && <button aria-label={tr("Remove line")} onClick={() => change(items.filter((x) => x.id !== i.id))} style={iconBtn}><Trash2 size={12} /></button>}
                   </div>
                 ))}
               </div>

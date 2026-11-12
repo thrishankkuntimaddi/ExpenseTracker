@@ -10,6 +10,7 @@ import { generateId } from '../../../utils/storage';
 import { monthName } from '../../../app/month';
 import { useShell } from '../../../app/shellContext';
 
+import { t as tr } from '../../../i18n';
 const rupees = (n) => formatMoneyCompact(n);
 const TARGETS = [4, 8, 12];
 const BASES = [10, 50, 100];
@@ -36,7 +37,7 @@ export default function HabitsCard({ transactions, income, settings, onPatchSett
 
   return (
     <section id="stats-habits" className="card stats-card" style={{ padding: '14px 16px', marginBottom: 14 }}>
-      <h2 className="section-label" style={{ margin: '0 0 8px' }}>Habits</h2>
+      <h2 className="section-label" style={{ margin: '0 0 8px' }}>{tr("Habits")}</h2>
 
       {/* Streak */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -44,9 +45,9 @@ export default function HabitsCard({ transactions, income, settings, onPatchSett
           <Flame size={20} style={{ color: s.current ? 'var(--lent)' : 'var(--text-muted)' }} />
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{s.current ? `${s.current}-day streak` : 'No streak yet'}</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{s.current ? `${s.current}-day streak` : tr("No streak yet")}</div>
           <div style={{ fontSize: 12, color: s.atRisk ? 'var(--lent)' : 'var(--text-muted)', fontWeight: s.atRisk ? 650 : 400 }}>
-            {s.atRisk ? 'Log something today to keep it going' : s.current ? `Best ${s.best} days${s.next ? ` · ${s.next - s.current} to ${s.next}` : ''}` : 'Log something every day — small ones count'}
+            {s.atRisk ? tr("Log something today to keep it going") : s.current ? `Best ${s.best} days${s.next ? ` · ${s.next - s.current} to ${s.next}` : ''}` : tr("Log something every day — small ones count")}
           </div>
         </div>
       </div>
@@ -64,7 +65,7 @@ export default function HabitsCard({ transactions, income, settings, onPatchSett
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>
-              {ns.count} no-spend day{ns.count === 1 ? '' : 's'}{target ? <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}> of {target}</span> : null}
+              {ns.count} {tr("no-spend day")}{ns.count === 1 ? '' : 's'}{target ? <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}> {tr("of")} {target}</span> : null}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               {monthName(monthKey, { month: 'long' })}{ns.run >= 2 ? ` · ${ns.run} in a row now` : ''}{isNow && ns.todayClean ? ' · today so far too' : ''}
@@ -80,11 +81,11 @@ export default function HabitsCard({ transactions, income, settings, onPatchSett
           })}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', margin: '10px 0 0 52px', fontSize: 11.5, color: 'var(--text-muted)' }}>
-          Goal a month:
+          {tr("Goal a month:")}
           {TARGETS.map((n) => (
             <button key={n} id={`habit-target-${n}`} onClick={() => setTarget(target === n ? null : n)}
               style={{ padding: '3px 9px', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1px solid ${target === n ? 'var(--income)' : 'var(--border)'}`, background: target === n ? 'var(--income-bg)' : 'transparent', color: target === n ? 'var(--income)' : 'var(--text-secondary)' }}>
-              {n} days
+              {n} {tr("days")}
             </button>
           ))}
         </div>
@@ -102,32 +103,32 @@ export default function HabitsCard({ transactions, income, settings, onPatchSett
                 <Trophy size={18} style={{ color: 'var(--savings)' }} />
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>Week {w.week}: put <span style={{ color: 'var(--savings)' }}>{rupees(w.thisWeek)}</span> aside</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr("Week")} {w.week}{tr(": put")} <span style={{ color: 'var(--savings)' }}>{rupees(w.thisWeek)}</span> {tr("aside")}</div>
                 <div style={{ fontSize: 12, color: behind ? 'var(--lent)' : 'var(--text-muted)' }}>
-                  {rupees(p.saved)} of {rupees(w.target)} · {behind ? `${rupees(w.dueSoFar - p.saved)} behind` : 'on track'}
+                  {rupees(p.saved)} {tr("of")} {rupees(w.target)} · {behind ? `${rupees(w.dueSoFar - p.saved)} behind` : 'on track'}
                 </div>
                 <div style={{ height: 5, borderRadius: 3, background: 'var(--surface2)', marginTop: 6, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${Math.min(100, (p.saved / w.target) * 100)}%`, background: 'var(--savings)' }} />
                 </div>
               </div>
-              {shell && <button onClick={() => shell.goTo('savings')} style={{ padding: '6px 10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--savings)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', flexShrink: 0 }}>Add</button>}
+              {shell && <button onClick={() => shell.goTo('savings')} style={{ padding: '6px 10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--savings)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', flexShrink: 0 }}>{tr("Add")}</button>}
             </div>
           );
         })}
         {!picking ? (
           <button id="habit-start-52" onClick={() => setPicking(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-            <Plus size={14} /> {challenges.length ? 'Another 52-week challenge' : 'Start a 52-week saving challenge'}
+            <Plus size={14} /> {challenges.length ? tr("Another 52-week challenge") : tr("Start a 52-week saving challenge")}
           </button>
         ) : (
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            Save a little more each week — week 1 one step, week 52 fifty-two steps. Pick a step:
+            {tr("Save a little more each week — week 1 one step, week 52 fifty-two steps. Pick a step:")}
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
               {BASES.map((b) => (
                 <button key={b} id={`habit-52-${b}`} onClick={() => startChallenge(b)} style={{ padding: '7px 12px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: '1px solid var(--savings)', background: 'var(--savings-bg)', color: 'var(--savings)' }}>
-                  {rupees(b)} → {rupees(b * 1378)} a year
+                  {rupees(b)} → {rupees(b * 1378)} {tr("a year")}
                 </button>
               ))}
-              <button onClick={() => setPicking(false)} style={{ padding: '7px 12px', fontSize: 12, fontWeight: 650, fontFamily: 'inherit', cursor: 'pointer', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)' }}>Not now</button>
+              <button onClick={() => setPicking(false)} style={{ padding: '7px 12px', fontSize: 12, fontWeight: 650, fontFamily: 'inherit', cursor: 'pointer', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)' }}>{tr("Not now")}</button>
             </div>
           </div>
         )}

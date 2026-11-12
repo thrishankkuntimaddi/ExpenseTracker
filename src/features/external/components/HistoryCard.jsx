@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { formatAmount, formatDate } from '../../../utils/dateHelpers';
 
+import { t as tr } from '../../../i18n';
 /* ─── Session History Card ────────────────────────────────────── */
 export default function HistoryCard({ session, onEdit, onDelete, onArchive, onUnarchive, onShare }) {
   const [open, setOpen] = useState(false);
@@ -40,14 +41,14 @@ export default function HistoryCard({ session, onEdit, onDelete, onArchive, onUn
                   fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4,
                   background: 'var(--surface2)', color: 'var(--text-muted)',
                   border: '1px solid var(--border)', letterSpacing: '0.05em', textTransform: 'uppercase',
-                }}>Archived</span>
+                }}>{tr("Archived")}</span>
               )}
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {session.name || persons}
               </div>
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-              {session.date ? formatDate(session.date) : '—'} · spent {formatAmount(session.total_spent ?? 0)} · got back {formatAmount(session.total_received ?? 0)}{persons !== 'Unknown' ? ` · ${persons}` : ''}
+              {session.date ? formatDate(session.date) : '—'} {tr("· spent")} {formatAmount(session.total_spent ?? 0)} {tr("· got back")} {formatAmount(session.total_received ?? 0)}{persons !== 'Unknown' ? ` · ${persons}` : ''}
             </div>
           </div>
         </div>
@@ -61,7 +62,7 @@ export default function HistoryCard({ session, onEdit, onDelete, onArchive, onUn
           {onShare && (
             <button
               onClick={(e) => { e.stopPropagation(); onShare(session); }}
-              title="Share session summary & receipt"
+              title={tr("Share session summary & receipt")}
               style={{
                 width: 26, height: 26, borderRadius: 6, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -76,7 +77,7 @@ export default function HistoryCard({ session, onEdit, onDelete, onArchive, onUn
           {onEdit && !isArchived && (
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(session.id); }}
-              title="Edit session"
+              title={tr("Edit session")}
               style={{
                 width: 26, height: 26, borderRadius: 6, background: 'var(--surface2)', border: '1px solid var(--border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -91,7 +92,7 @@ export default function HistoryCard({ session, onEdit, onDelete, onArchive, onUn
           {onUnarchive && isArchived && (
             <button
               onClick={(e) => { e.stopPropagation(); onUnarchive(session.id); }}
-              title="Unarchive — restore to history"
+              title={tr("Unarchive — restore to history")}
               style={{
                 width: 26, height: 26, borderRadius: 6, background: 'var(--surface2)', border: '1px solid var(--border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -106,7 +107,7 @@ export default function HistoryCard({ session, onEdit, onDelete, onArchive, onUn
           {onArchive && !isArchived && (
             <button
               onClick={(e) => { e.stopPropagation(); onArchive(session.id); }}
-              title="Archive — hide from main list"
+              title={tr("Archive — hide from main list")}
               style={{
                 width: 26, height: 26, borderRadius: 6, background: 'transparent', border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -121,7 +122,7 @@ export default function HistoryCard({ session, onEdit, onDelete, onArchive, onUn
           {onDelete && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(session.id); }}
-              title="Delete permanently"
+              title={tr("Delete permanently")}
               style={{
                 width: 26, height: 26, borderRadius: 6, background: 'transparent', border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -143,7 +144,7 @@ export default function HistoryCard({ session, onEdit, onDelete, onArchive, onUn
             {/* Items */}
             <div>
               <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 8 }}>
-                Items Purchased
+                {tr("Items Purchased")}
               </p>
               {(session.items ?? []).filter(i => i.name?.trim() && parseFloat(i.amount) > 0).map(item => (
                 <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
@@ -152,14 +153,14 @@ export default function HistoryCard({ session, onEdit, onDelete, onArchive, onUn
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 12, fontWeight: 700 }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Total Spent</span>
+                <span style={{ color: 'var(--text-secondary)' }}>{tr("Total Spent")}</span>
                 <span style={{ color: 'var(--expense)' }}>{formatAmount(session.total_spent ?? 0)}</span>
               </div>
             </div>
             {/* Received */}
             <div>
               <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 8 }}>
-                Money Received
+                {tr("Money Received")}
               </p>
               {(session.received ?? []).filter(r => r.person?.trim() && parseFloat(r.amount) > 0).map(r => (
                 <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
@@ -168,7 +169,7 @@ export default function HistoryCard({ session, onEdit, onDelete, onArchive, onUn
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 12, fontWeight: 700 }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Total Received</span>
+                <span style={{ color: 'var(--text-secondary)' }}>{tr("Total Received")}</span>
                 <span style={{ color: 'var(--income)' }}>{formatAmount(session.total_received ?? 0)}</span>
               </div>
             </div>

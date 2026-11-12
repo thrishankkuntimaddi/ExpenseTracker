@@ -5,11 +5,12 @@
 import { ArrowLeft } from 'lucide-react';
 import { useShell } from '../app/shellContext';
 
+import { t as tr } from '../i18n';
 export default function BackButton() {
   const shell = useShell();
   if (!shell?.showBack) return null;
   return (
-    <button id="btn-page-back" onClick={shell.back} aria-label="Back"
+    <button id="btn-page-back" onClick={shell.back} aria-label={tr("Back")}
       style={{ width: 34, height: 34, border: 'none', background: 'var(--surface2)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
       <ArrowLeft size={17} />
     </button>

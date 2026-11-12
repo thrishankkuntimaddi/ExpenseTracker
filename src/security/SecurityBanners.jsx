@@ -13,6 +13,7 @@ import { eventText } from './events';
 import { notifyNow } from '../native/reminders';
 import { play } from '../sound/sound';
 
+import { t as tr } from '../i18n';
 const ALERT_TYPES = ['wrong_pins', 'locked_out', 'lock_off', 'new_device'];
 const NOTIFIED_KEY = 'et_alerts_notified';   // system notifications already shown on this device
 const readNotified = () => { try { return new Set(JSON.parse(localStorage.getItem(NOTIFIED_KEY) || '[]')); } catch { return new Set(); } };
@@ -54,11 +55,11 @@ export default function SecurityBanners({ uid, devices, events }) {
         <div key={d.id} id={`unlock-request-${d.id}`} role="alertdialog" className="card" style={banner}>
           <Smartphone size={18} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 750, color: 'var(--text)' }}>Unlock {d.unlockRequest.name || d.name}?</div>
-            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>It’s asking to open now. Only approve if it’s you.</div>
+            <div style={{ fontSize: 13, fontWeight: 750, color: 'var(--text)' }}>{tr("Unlock")} {d.unlockRequest.name || d.name}?</div>
+            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{tr("It’s asking to open now. Only approve if it’s you.")}</div>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button id={`unlock-approve-${d.id}`} onClick={() => devices.answerUnlock(d.id, d.unlockRequest.nonce, true)} style={btn('income')}><Check size={13} /> Approve</button>
-              <button id={`unlock-deny-${d.id}`} onClick={() => devices.answerUnlock(d.id, d.unlockRequest.nonce, false)} style={btn(null)}><X size={13} /> Deny</button>
+              <button id={`unlock-approve-${d.id}`} onClick={() => devices.answerUnlock(d.id, d.unlockRequest.nonce, true)} style={btn('income')}><Check size={13} /> {tr("Approve")}</button>
+              <button id={`unlock-deny-${d.id}`} onClick={() => devices.answerUnlock(d.id, d.unlockRequest.nonce, false)} style={btn(null)}><X size={13} /> {tr("Deny")}</button>
             </div>
           </div>
         </div>
@@ -71,11 +72,11 @@ export default function SecurityBanners({ uid, devices, events }) {
             <ShieldAlert size={18} style={{ color: 'var(--expense)', flexShrink: 0, marginTop: 2 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 750, color: 'var(--text)' }}>{t.title}</div>
-              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{t.sub} · {new Date(e.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. Not you?</div>
+              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{t.sub} · {new Date(e.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}{tr(". Not you?")}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                {dev && !['lock_off', 'new_device'].includes(e.type) && <button onClick={() => { devices.command(dev.id, 'lock'); seen(e); }} style={btn('accent')}><Lock size={13} /> Lock it</button>}
-                {dev && <button onClick={() => { devices.command(dev.id, 'signout'); seen(e); }} style={btn('expense')}><LogOut size={13} /> Sign it out</button>}
-                <button onClick={() => seen(e)} style={btn(null)}>It was me</button>
+                {dev && !['lock_off', 'new_device'].includes(e.type) && <button onClick={() => { devices.command(dev.id, 'lock'); seen(e); }} style={btn('accent')}><Lock size={13} /> {tr("Lock it")}</button>}
+                {dev && <button onClick={() => { devices.command(dev.id, 'signout'); seen(e); }} style={btn('expense')}><LogOut size={13} /> {tr("Sign it out")}</button>}
+                <button onClick={() => seen(e)} style={btn(null)}>{tr("It was me")}</button>
               </div>
             </div>
           </div>

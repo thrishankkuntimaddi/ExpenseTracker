@@ -9,6 +9,7 @@ import { useShell } from '../app/shellContext';
 import { useEscape } from '../hooks/useEscape';
 import { useTour, stepTour, endTour } from './tour';
 
+import { t as tr } from '../i18n';
 const PAD = 6;
 
 function findTarget(selectors) {
@@ -136,15 +137,15 @@ function TourStep({ tour }) {
           <div className="tour-dots" aria-label={`Step ${tour.i + 1} of ${tour.steps.length}`}>
             {tour.steps.map((_, j) => <span key={j} className={j === tour.i ? 'on' : j < tour.i ? 'done' : ''} />)}
           </div>
-          <button id="tour-close" onClick={endTour} aria-label="Close the tour" className="tour-x"><X size={14} /></button>
+          <button id="tour-close" onClick={endTour} aria-label={tr("Close the tour")} className="tour-x"><X size={14} /></button>
         </div>
         <h2 id="tour-title" className="tour-title">{step.title}</h2>
         <p className="tour-text">{text}</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
-          {!last && <button id="tour-skip" onClick={endTour} className="tour-link">Skip</button>}
+          {!last && <button id="tour-skip" onClick={endTour} className="tour-link">{tr("Skip")}</button>}
           <span style={{ flex: 1 }} />
-          {tour.i > 0 && <button id="tour-back" onClick={() => stepTour(-1)} className="tour-btn tour-btn-ghost">Back</button>}
-          <button id="tour-next" onClick={() => stepTour(1)} className="tour-btn" autoFocus>{last ? 'Done' : 'Next'}</button>
+          {tour.i > 0 && <button id="tour-back" onClick={() => stepTour(-1)} className="tour-btn tour-btn-ghost">{tr("Back")}</button>}
+          <button id="tour-next" onClick={() => stepTour(1)} className="tour-btn" autoFocus>{last ? tr("Done") : tr("Next")}</button>
         </div>
       </div>
     </Portal>

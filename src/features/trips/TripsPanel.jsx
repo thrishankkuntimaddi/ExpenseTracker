@@ -24,6 +24,7 @@ import ProfileButton from '../../components/ProfileButton';
 import HelpButton from '../../tour/HelpButton';
 import { pendingInvite, clearPendingInvite, parseInvite } from './invite';
 
+import { t as tr } from '../../i18n';
 export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction, reportError, headerExtra, tripPlans, onSavePlan }) {
   const { trips, saveTrip, removeTrip, opsFor, shareTrip, join, linkFriend, friends, me } = useTrips(user, reportError);
   const [activeId, setActiveId] = useState(null);
@@ -117,7 +118,7 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
           onConfirm={() => { const t = reopening; setReopening(null); reopenTrip(t); }} onCancel={() => setReopening(null)} />
       )}
       {deletingId && (
-        <ConfirmDeleteModal title="Delete this trip?" message={trips.find((t) => t.id === deletingId)?.shared ? 'It disappears for everyone on it. Entries already posted to ledgers stay.' : 'All its rows and settlements are removed. Entries already posted to your ledger stay.'}
+        <ConfirmDeleteModal title={tr("Delete this trip?")} message={trips.find((t) => t.id === deletingId)?.shared ? 'It disappears for everyone on it. Entries already posted to ledgers stay.' : 'All its rows and settlements are removed. Entries already posted to your ledger stay.'}
           onConfirm={() => { const id = deletingId; setDeletingId(null); deleteTripById(id); }} onCancel={() => setDeletingId(null)} />
       )}
 
@@ -127,19 +128,19 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
             {!active && <BackButton />}
             {active && (
-              <button onClick={() => setActiveId(null)} aria-label="Back" style={{ width: 32, height: 32, borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexShrink: 0 }}>
+              <button onClick={() => setActiveId(null)} aria-label={tr("Back")} style={{ width: 32, height: 32, borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexShrink: 0 }}>
                 <ArrowLeft size={16} />
               </button>
             )}
             <div style={{ minWidth: 0 }}>
-              <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{active ? active.name : 'Trips & Splits'}</h1>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{active ? subtitle(active) : 'Shared spending, settled fairly'}</p>
+              <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{active ? active.name : tr("Trips & Splits")}</h1>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{active ? subtitle(active) : tr("Shared spending, settled fairly")}</p>
             </div>
           </div>
           {!active && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <button id="trip-join" onClick={() => setAskCode(true)} style={headerBtn(false)}><LogIn size={13} /> Join</button>
-              <button onClick={() => setNewOpen(true)} style={headerBtn(true)}><Plus size={13} /> New</button>
+              <button id="trip-join" onClick={() => setAskCode(true)} style={headerBtn(false)}><LogIn size={13} /> {tr("Join")}</button>
+              <button onClick={() => setNewOpen(true)} style={headerBtn(true)}><Plus size={13} /> {tr("New")}</button>
               <HelpButton page="trips" />
               <ProfileButton />
             </div>
@@ -184,16 +185,16 @@ function JoinCodeModal({ onJoin, onClose }) {
   const [text, setText] = useState('');
   const id = parseInvite(text);
   return (
-    <ModalShell title="Join a trip" subtitle="Paste the invite link a friend sent you." onClose={onClose}
+    <ModalShell title={tr("Join a trip")} subtitle={tr("Paste the invite link a friend sent you.")} onClose={onClose}
       footer={<>
-        <GhostButton onClick={onClose}>Cancel</GhostButton>
-        <PrimaryButton onClick={() => id && onJoin(id)} disabled={!id} color="var(--external)"><LogIn size={14} /> Continue</PrimaryButton>
+        <GhostButton onClick={onClose}>{tr("Cancel")}</GhostButton>
+        <PrimaryButton onClick={() => id && onJoin(id)} disabled={!id} color="var(--external)"><LogIn size={14} /> {tr("Continue")}</PrimaryButton>
       </>}
     >
       <input type="text" autoFocus value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && id) onJoin(id); }}
-        placeholder="https://…/ExpenseTracker/?trip=…" aria-label="Invite link or code" style={fieldStyle} />
+        placeholder={tr("https://…/ExpenseTracker/?trip=…")} aria-label={tr("Invite link or code")} style={fieldStyle} />
       <div style={{ fontSize: 11, color: text && !id ? 'var(--expense)' : 'var(--text-muted)' }}>
-        {text && !id ? 'That doesn’t look like a trip invite.' : 'Got a QR code instead? Scan it with your phone’s camera — it opens the same page.'}
+        {text && !id ? tr("That doesn’t look like a trip invite.") : tr("Got a QR code instead? Scan it with your phone’s camera — it opens the same page.")}
       </div>
     </ModalShell>
   );

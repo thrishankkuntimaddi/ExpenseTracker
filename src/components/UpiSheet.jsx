@@ -12,6 +12,7 @@ import { isUpiId, savedUpi, rememberUpi, upiLink, payRequestMessage } from '../u
 import { formatMoneyCompact } from '../utils/money';
 import { isNative } from '../native';
 
+import { t as tr } from '../i18n';
 const isPhone = () => isNative || (typeof navigator !== 'undefined' && /Android|iPhone|iPad/i.test(navigator.userAgent));
 
 /**
@@ -43,20 +44,20 @@ export default function UpiSheet({ fromName, toName, amount, note, toIsMe = fals
   const message = () => payRequestMessage({ fromName: fromIsMe ? '' : fromName, toName: toIsMe ? 'me' : toName, id, amount, note, money: formatMoneyCompact });
   const share = async () => {
     remember();
-    if (navigator.share) { try { await navigator.share({ title: 'Pay by UPI', text: message() }); } catch { /* cancelled */ } } else copy(message(), 'msg');
+    if (navigator.share) { try { await navigator.share({ title: tr("Pay by UPI"), text: message() }); } catch { /* cancelled */ } } else copy(message(), 'msg');
   };
 
   const btn = (primary) => ({ flex: 1, minWidth: 140, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '11px 14px', border: primary ? 'none' : '1px solid var(--border)', background: primary ? 'var(--income)' : 'transparent', color: primary ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' });
 
   return (
-    <ModalShell title="Settle by UPI" subtitle={`${fromIsMe ? 'You pay' : `${fromName} pays`} ${toIsMe ? 'you' : toName} · ${formatMoneyCompact(amount)}`} onClose={onClose} maxWidth={440}>
+    <ModalShell title={tr("Settle by UPI")} subtitle={`${fromIsMe ? 'You pay' : `${fromName} pays`} ${toIsMe ? 'you' : toName} · ${formatMoneyCompact(amount)}`} onClose={onClose} maxWidth={440}>
       <label htmlFor="upi-id" style={{ display: 'block', fontSize: 12, fontWeight: 650, color: 'var(--text-secondary)', marginBottom: 6 }}>
-        {toIsMe ? 'Your UPI ID' : `${toName}’s UPI ID`}
+        {toIsMe ? tr("Your UPI ID") : `${toName}’s UPI ID`}
       </label>
-      <input id="upi-id" value={id} onChange={(e) => setId(e.target.value.replace(/\s/g, ''))} onBlur={remember} placeholder="name@okhdfcbank" autoCapitalize="none" autoComplete="off" inputMode="email"
+      <input id="upi-id" value={id} onChange={(e) => setId(e.target.value.replace(/\s/g, ''))} onBlur={remember} placeholder={tr("name@okhdfcbank")} autoCapitalize="none" autoComplete="off" inputMode="email"
         style={{ ...fieldStyle, fontSize: 15, borderColor: id && !valid ? 'var(--expense)' : undefined }} />
       <div style={{ fontSize: 11, color: id && !valid ? 'var(--expense)' : 'var(--text-muted)', marginTop: 5 }}>
-        {id && !valid ? 'That doesn’t look like a UPI ID (something@bank).' : 'Saved for next time. Find it in any UPI app under your profile.'}
+        {id && !valid ? tr("That doesn’t look like a UPI ID (something@bank).") : tr("Saved for next time. Find it in any UPI app under your profile.")}
       </div>
 
       {valid && (
@@ -64,22 +65,22 @@ export default function UpiSheet({ fromName, toName, amount, note, toIsMe = fals
           {!phone && qr && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: 14 }}>
               <img id="upi-qr" src={qr} alt="UPI QR code" width={180} height={180} style={{ borderRadius: 12, background: '#fff', padding: 6 }} />
-              <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{fromIsMe ? 'Scan with any UPI app on your phone' : `${fromName} can scan this to pay`}</span>
+              <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{fromIsMe ? tr("Scan with any UPI app on your phone") : `${fromName} can scan this to pay`}</span>
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
             {phone && (fromIsMe || !toIsMe) && (
-              <a id="upi-open" href={link} onClick={remember} style={btn(true)}><Smartphone size={15} /> Open UPI app</a>
+              <a id="upi-open" href={link} onClick={remember} style={btn(true)}><Smartphone size={15} /> {tr("Open UPI app")}</a>
             )}
             {!fromIsMe && (
-              <button id="upi-share" onClick={share} style={btn(!phone || toIsMe)}><Share2 size={15} /> {copied === 'msg' ? 'Copied' : `Send ${fromName} the link`}</button>
+              <button id="upi-share" onClick={share} style={btn(!phone || toIsMe)}><Share2 size={15} /> {copied === 'msg' ? tr("Copied") : `Send ${fromName} the link`}</button>
             )}
-            <button id="upi-copy" onClick={() => copy(id.trim(), 'id')} style={btn(false)}>{copied === 'id' ? <Check size={15} /> : <Copy size={15} />} {copied === 'id' ? 'Copied' : 'Copy UPI ID'}</button>
+            <button id="upi-copy" onClick={() => copy(id.trim(), 'id')} style={btn(false)}>{copied === 'id' ? <Check size={15} /> : <Copy size={15} />} {copied === 'id' ? tr("Copied") : tr("Copy UPI ID")}</button>
           </div>
         </>
       )}
       <p style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.5, margin: '14px 0 0' }}>
-        The UPI app asks for the PIN — nothing is paid from here. Once it’s done, tap <strong>{recordWith}</strong> to record it.
+        {tr("The UPI app asks for the PIN — nothing is paid from here. Once it’s done, tap")} <strong>{recordWith}</strong> {tr("to record it.")}
       </p>
     </ModalShell>
   );

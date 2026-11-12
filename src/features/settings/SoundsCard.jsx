@@ -5,6 +5,7 @@ import { Play, Volume1, Volume2 } from 'lucide-react';
 import { useSoundPrefs, setSoundPrefs, SOUND_KINDS, play } from '../../sound/sound';
 
 
+import { t as tr } from '../../i18n';
 export default function SoundsCard() {
   const p = useSoundPrefs();
   const row = { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderTop: '1px solid var(--border)' };
@@ -12,15 +13,15 @@ export default function SoundsCard() {
     <div id="sounds-card">
       <div style={{ ...row, borderTop: 'none' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Sounds</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 1 }}>Made by the app itself — on this device only</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{tr("Sounds")}</div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 1 }}>{tr("Made by the app itself — on this device only")}</div>
         </div>
-        <Toggle id="sounds-on" on={p.on} label="Sounds" onClick={() => setSoundPrefs({ on: !p.on })} />
+        <Toggle id="sounds-on" on={p.on} label={tr("Sounds")} onClick={() => setSoundPrefs({ on: !p.on })} />
       </div>
 
       <div style={{ ...row, opacity: p.on ? 1 : 0.5 }}>
         <Volume1 size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-        <input id="sounds-volume" type="range" min="0" max="1" step="0.05" value={p.volume} disabled={!p.on} aria-label="Volume"
+        <input id="sounds-volume" type="range" min="0" max="1" step="0.05" value={p.volume} disabled={!p.on} aria-label={tr("Volume")}
           onChange={(e) => setSoundPrefs({ volume: Number(e.target.value) })}
           onPointerUp={() => play('debit', { force: true })} onKeyUp={() => play('tap', { force: true })}
           style={{ flex: 1, accentColor: 'var(--accent)' }} />

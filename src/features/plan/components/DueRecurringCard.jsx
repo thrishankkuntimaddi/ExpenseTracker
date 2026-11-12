@@ -10,6 +10,7 @@ import { fromKey } from '../../../utils/recurring';
 import { CategoryBadge } from '../../../components/CategoryPicker';
 import ConfirmDeleteModal from '../../../components/ConfirmDeleteModal';
 
+import { t as tr } from '../../../i18n';
 const KIND_COLOR = { expense: 'var(--expense)', savings: 'var(--savings)', income: 'var(--income)' };
 
 export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, compact = false, collapsible = false }) {
@@ -51,7 +52,7 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
               {collapsible
-                ? (total > 0 ? `${formatAmount(total)} outgoing` : 'Log them with one tap')
+                ? (total > 0 ? `${formatAmount(total)} outgoing` : tr("Log them with one tap"))
                 : `${total > 0 ? `${formatAmount(total)} outgoing · ` : ''}log them with one tap`}
             </div>
           </div>
@@ -60,7 +61,7 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
         {collapsible && (
           <button id="due-toggle" onClick={() => setFolded((f) => !f)} aria-expanded={!folded}
             style={{ padding: '6px 10px', borderRadius: 9, fontSize: 11, fontWeight: 700, background: 'var(--surface2)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 3 }}>
-            {folded ? 'Review' : 'Hide'}{folded ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+            {folded ? tr("Review") : tr("Hide")}{folded ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
           </button>
         )}
         {due.length > 1 && (
@@ -69,7 +70,7 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
             disabled={!!busy.all}
             style={{ padding: '6px 11px', borderRadius: 9, fontSize: 11, fontWeight: 700, background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
           >
-            {busy.all ? 'Logging…' : 'Log all'}
+            {busy.all ? tr("Logging…") : tr("Log all")}
           </button>
         )}
         </div>
@@ -78,12 +79,12 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
       {!folded && (<>
       {hidden > 0 && (
         <button onClick={() => setShowAll(true)} style={{ width: '100%', padding: '6px 16px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', background: 'var(--surface2)', border: 'none', borderTop: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-          <ChevronDown size={11} /> {hidden} older occurrence{hidden === 1 ? '' : 's'} hidden — show
+          <ChevronDown size={11} /> {hidden} {tr("older occurrence")}{hidden === 1 ? '' : 's'} {tr("hidden — show")}
         </button>
       )}
       {showAll && due.length > 4 && (
         <button onClick={() => setShowAll(false)} style={{ width: '100%', padding: '6px 16px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', background: 'var(--surface2)', border: 'none', borderTop: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-          <ChevronUp size={11} /> show fewer
+          <ChevronUp size={11} /> {tr("show fewer")}
         </button>
       )}
 
@@ -99,7 +100,7 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
                 {rule.kind === 'expense' && rule.category && <CategoryBadge category={rule.category} compact />}
               </div>
               <div style={{ fontSize: 11, color: isToday ? 'var(--accent)' : 'var(--text-muted)', fontWeight: isToday ? 700 : 500, marginTop: 1 }}>
-                {isToday ? 'Today' : d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+                {isToday ? tr("Today") : d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
                 {rule.kind !== 'expense' && <span style={{ textTransform: 'capitalize' }}> · {rule.kind}</span>}
               </div>
             </div>
@@ -110,7 +111,7 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
               <button
                 onClick={() => run(key, () => onPost({ rule, dateKey }))}
                 disabled={!!busy[key]}
-                title="Log this entry"
+                title={tr("Log this entry")}
                 style={{ width: 34, height: 34, borderRadius: 9, background: 'var(--income)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <Check size={14} />
@@ -118,7 +119,7 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
               <button
                 onClick={() => run(key, () => onSkip({ rule, dateKey }))}
                 disabled={!!busy[key]}
-                title="Skip this occurrence"
+                title={tr("Skip this occurrence")}
                 style={{ width: 34, height: 34, borderRadius: 9, background: 'var(--surface2)', color: 'var(--text-muted)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <SkipForward size={13} />
@@ -134,7 +135,7 @@ export default function DueRecurringCard({ due = [], onPost, onSkip, onSkipAll, 
             onClick={() => setConfirmSkipAll(true)}
             style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
           >
-            Skip everything that is due
+            {tr("Skip everything that is due")}
           </button>
         </div>
       )}

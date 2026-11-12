@@ -11,6 +11,7 @@ import { convertSettingsMoney } from '../../utils/fx';
 import { latestRates, rateBetween, refreshLatest, useRatesVersion } from '../../services/rates';
 import { formatDateShort } from '../../utils/dateHelpers';
 
+import { t as tr } from '../../i18n';
 export default function CurrencyCard({ settings, transactions = [], income = [], onPatchSettings, bare = false }) {
   useRatesVersion();
   const current = settings?.currency ?? 'INR';
@@ -36,40 +37,38 @@ export default function CurrencyCard({ settings, transactions = [], income = [],
   }
 
   return (
-    <CardFrame bare={bare} id="group-currency" title="Currency">
+    <CardFrame bare={bare} id="group-currency" title={tr("Currency")}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="settings-icon" style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--income)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Coins size={16} style={{ color: '#fff' }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Show money in</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{CURRENCY_NAMES[current]} · all your devices</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{tr("Show money in")}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{CURRENCY_NAMES[current]} {tr("· all your devices")}</div>
           </div>
         </div>
         <CurrencySelect id="display-currency" value={pending ?? current} onChange={(c) => setPending(c === current ? null : c)} style={{ marginTop: 12 }} />
 
         {pending && (
           <div id="currency-confirm" style={{ marginTop: 12, padding: 12, borderRadius: 12, background: 'var(--surface2)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-            <div>Totals will show in <strong style={{ color: 'var(--text)' }}>{CURRENCY_NAMES[pending]}</strong>. Your entries keep their own currency — nothing you logged changes.</div>
-            <div style={{ marginTop: 4 }}>Today: 1 {current} = {formatMoney(rateBetween(current, pending) ?? 0, pending)}</div>
+            <div>{tr("Totals will show in")} <strong style={{ color: 'var(--text)' }}>{CURRENCY_NAMES[pending]}</strong>{tr(". Your entries keep their own currency — nothing you logged changes.")}</div>
+            <div style={{ marginTop: 4 }}>{tr("Today: 1")} {current} = {formatMoney(rateBetween(current, pending) ?? 0, pending)}</div>
             {hasPlans && (
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 8, cursor: 'pointer' }}>
                 <input id="currency-convert-plans" type="checkbox" checked={convertPlans} onChange={(e) => setConvertPlans(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--accent)' }} />
-                <span>Also convert my budgets and goal targets at today’s rate</span>
+                <span>{tr("Also convert my budgets and goal targets at today’s rate")}</span>
               </label>
             )}
             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-              <button id="currency-apply" onClick={apply} style={btn(true)}>Switch to {pending}</button>
-              <button onClick={() => setPending(null)} style={btn(false)}>Cancel</button>
+              <button id="currency-apply" onClick={apply} style={btn(true)}>{tr("Switch to")} {pending}</button>
+              <button onClick={() => setPending(null)} style={btn(false)}>{tr("Cancel")}</button>
             </div>
           </div>
         )}
 
         <div style={{ marginTop: 12, fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-          <strong style={{ color: 'var(--text-secondary)' }}>How amounts in other currencies count</strong><br />
-          Spending, income and reports use the rate of the <em>day it happened</em> — $10 of fuel in March stays what it cost in March.
-          Your <em>balance</em> is money you still hold, so it’s valued at <em>today’s</em> rate, per currency.
-          Pick a currency for one entry with the sign next to the amount, or type it: “taxi 30 AED”.
+          <strong style={{ color: 'var(--text-secondary)' }}>{tr("How amounts in other currencies count")}</strong><br />
+          {tr("Spending, income and reports use the rate of the")} <em>{tr("day it happened")}</em> {tr("— $10 of fuel in March stays what it cost in March. Your")} <em>{tr("balance")}</em> {tr("is money you still hold, so it’s valued at")} <em>{tr("today’s")}</em> {tr("rate, per currency. Pick a currency for one entry with the sign next to the amount, or type it: “taxi 30 AED”.")}
         </div>
 
         {used.length > 0 && (
@@ -79,9 +78,9 @@ export default function CurrencyCard({ settings, transactions = [], income = [],
                 1 {c} = {formatMoney(rateBetween(c, current) ?? 0, current)}
               </span>
             ))}
-            <button title="Refresh rates" disabled={busy} onClick={async () => { setBusy(true); await refreshLatest({ force: true }); setBusy(false); }}
+            <button title={tr("Refresh rates")} disabled={busy} onClick={async () => { setBusy(true); await refreshLatest({ force: true }); setBusy(false); }}
               style={{ border: 'none', background: 'none', color: 'var(--accent)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, fontFamily: 'inherit' }}>
-              <RefreshCw size={12} style={busy ? { animation: 'spin 1s linear infinite' } : undefined} /> {latest.date ? formatDateShort(latest.date) : 'Refresh'}
+              <RefreshCw size={12} style={busy ? { animation: 'spin 1s linear infinite' } : undefined} /> {latest.date ? formatDateShort(latest.date) : tr("Refresh")}
             </button>
           </div>
         )}

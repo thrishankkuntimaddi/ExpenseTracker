@@ -3,6 +3,7 @@ import { formatAmount } from '../../../utils/dateHelpers';
 import Portal from '../../../components/Portal';
 import { useEscape } from '../../../hooks/useEscape';
 
+import { t as tr } from '../../../i18n';
 /* ─── Confirmation Modal for Closing ─── */
 export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalance, sessionName, persons, paidByMe, onConfirm, onCancel, loading }) {
   useEscape(onCancel);
@@ -34,7 +35,7 @@ export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalanc
                 : <CheckCircle2 size={20} style={{ color: 'var(--accent)' }} />}
             </div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>Close Billing Session?</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr("Close Billing Session?")}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{sessionName}</div>
             </div>
           </div>
@@ -42,8 +43,8 @@ export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalanc
           {/* Summary rows */}
           <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '14px 16px', marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              { label: 'Total Received', value: totalReceived, color: 'var(--income)' },
-              { label: 'Total Spent',    value: totalSpent,    color: 'var(--expense)' },
+              { label: tr("Total Received"), value: totalReceived, color: 'var(--income)' },
+              { label: tr("Total Spent"),    value: totalSpent,    color: 'var(--expense)' },
             ].map(({ label, value, color }) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
@@ -52,7 +53,7 @@ export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalanc
             ))}
             <div style={{ height: 1, background: 'var(--border)', margin: '2px 0' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 14, color: 'var(--text)', fontWeight: 700 }}>Net Balance</span>
+              <span style={{ fontSize: 14, color: 'var(--text)', fontWeight: 700 }}>{tr("Net Balance")}</span>
               <span style={{
                 fontSize: 16, fontWeight: 800,
                 color: isProfit ? 'var(--income)' : isLoss ? 'var(--expense)' : 'var(--accent)',
@@ -81,7 +82,7 @@ export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalanc
               background: 'var(--surface2)', color: 'var(--text-secondary)',
               border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit',
             }}>
-              Cancel
+              {tr("Cancel")}
             </button>
             <button onClick={onConfirm} disabled={loading} style={{
               flex: 2, padding: '11px', borderRadius: 11, fontSize: 13, fontWeight: 700,
@@ -90,7 +91,7 @@ export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalanc
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}>
               {loading ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={14} />}
-              Confirm & Close
+              {tr("Confirm & Close")}
             </button>
           </div>
         </div>

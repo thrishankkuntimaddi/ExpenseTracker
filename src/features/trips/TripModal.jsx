@@ -11,6 +11,7 @@ import { toKey } from '../../utils/recurring';
 import { getDisplayCurrency } from '../../utils/money';
 import CurrencySelect from '../../components/CurrencySelect';
 
+import { t as tr } from '../../i18n';
 export default function TripModal({ trip, onSave, onDelete, onClose }) {
   const [name, setName] = useState(trip?.name ?? '');
   const [startDate, setStartDate] = useState(trip?.startDate ?? toKey(new Date()));
@@ -71,19 +72,19 @@ export default function TripModal({ trip, onSave, onDelete, onClose }) {
   return (
     <>
       {confirmDelete && (
-        <ConfirmDeleteModal title="Delete this trip?" message="All its expenses and settlements are removed. Entries already logged to your ledger stay."
+        <ConfirmDeleteModal title={tr("Delete this trip?")} message="All its expenses and settlements are removed. Entries already logged to your ledger stay."
           onConfirm={() => { onDelete(trip.id); onClose(); }} onCancel={() => setConfirmDelete(false)} />
       )}
       <ModalShell
-        title={trip ? 'Edit Trip' : 'New Trip'} subtitle="Who came, and who pays as one wallet." onClose={onClose} maxWidth={500}
+        title={trip ? tr("Edit Trip") : tr("New Trip")} subtitle={tr("Who came, and who pays as one wallet.")} onClose={onClose} maxWidth={500}
         footer={<>
           {trip && onDelete && <GhostButton danger onClick={() => setConfirmDelete(true)} style={{ flex: '0 0 auto', padding: '11px 14px' }}><Trash2 size={13} /></GhostButton>}
-          <GhostButton onClick={onClose}>Cancel</GhostButton>
-          <PrimaryButton onClick={save} disabled={!canSave} color="var(--external)"><Check size={14} /> {trip ? 'Save changes' : 'Create trip'}</PrimaryButton>
+          <GhostButton onClick={onClose}>{tr("Cancel")}</GhostButton>
+          <PrimaryButton onClick={save} disabled={!canSave} color="var(--external)"><Check size={14} /> {trip ? tr("Save changes") : tr("Create trip")}</PrimaryButton>
         </>}
       >
-        <Field label="Trip name" hint={!trip ? 'Not just trips: flatmates, a couple’s shared spending, office lunches — leave “To” empty and keep it open.' : undefined}>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Goa road trip" style={fieldStyle} autoFocus />
+        <Field label={tr("Trip name")} hint={!trip ? tr("Not just trips: flatmates, a couple’s shared spending, office lunches — leave “To” empty and keep it open.") : undefined}>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={tr("Goa road trip")} style={fieldStyle} autoFocus />
         </Field>
         {!trip && !name.trim() && (
           <div id="trip-name-ideas" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '-4px 0 10px' }}>
@@ -93,30 +94,30 @@ export default function TripModal({ trip, onSave, onDelete, onClose }) {
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <Field label="From"><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={fieldStyle} /></Field>
-          <Field label="To (optional)"><input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} style={fieldStyle} /></Field>
+          <Field label={tr("From")}><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={fieldStyle} /></Field>
+          <Field label={tr("To (optional)")}><input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} style={fieldStyle} /></Field>
         </div>
 
-        <Field label="Currency" hint="Everything on this trip is in this currency. Your share is converted at the trip’s rate when you close it.">
+        <Field label={tr("Currency")} hint={tr("Everything on this trip is in this currency. Your share is converted at the trip’s rate when you close it.")}>
           <CurrencySelect id="trip-currency" value={currency} onChange={setCurrency} />
         </Field>
 
-        <Field label={`People (${validMembers.length})`} hint="Tick who you are. “Pays with” joins two people into one wallet — their spending and dues are combined.">
+        <Field label={`People (${validMembers.length})`} hint={tr("Tick who you are. “Pays with” joins two people into one wallet — their spending and dues are combined.")}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {members.map((m) => {
               const others = members.filter((o) => o.id !== m.id && o.name.trim());
               const partner = m.groupId ? members.find((o) => o.id !== m.id && o.groupId === m.groupId) : null;
               return (
                 <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <input type="radio" name="me" title="This is me" checked={effectiveMe === m.id} onChange={() => setMeId(m.id)} style={{ accentColor: 'var(--external)', width: 16, height: 16, flexShrink: 0 }} />
-                  <input type="text" value={m.name} placeholder="Name" onChange={(e) => setMembers((p) => p.map((x) => (x.id === m.id ? { ...x, name: e.target.value } : x)))}
+                  <input type="radio" name="me" title={tr("This is me")} checked={effectiveMe === m.id} onChange={() => setMeId(m.id)} style={{ accentColor: 'var(--external)', width: 16, height: 16, flexShrink: 0 }} />
+                  <input type="text" value={m.name} placeholder={tr("Name")} onChange={(e) => setMembers((p) => p.map((x) => (x.id === m.id ? { ...x, name: e.target.value } : x)))}
                     style={{ ...fieldStyle, flex: '1 1 110px', padding: '8px 10px' }} />
-                  <select value={partner?.id ?? ''} onChange={(e) => setPaysWith(m.id, e.target.value)} title="Pays with"
+                  <select value={partner?.id ?? ''} onChange={(e) => setPaysWith(m.id, e.target.value)} title={tr("Pays with")}
                     style={{ ...fieldStyle, flex: '0 1 130px', padding: '8px 8px', fontSize: 12 }}>
-                    <option value="">Pays alone</option>
-                    {others.map((o) => <option key={o.id} value={o.id}>Pays with {o.name.trim()}</option>)}
+                    <option value="">{tr("Pays alone")}</option>
+                    {others.map((o) => <option key={o.id} value={o.id}>{tr("Pays with")} {o.name.trim()}</option>)}
                   </select>
-                  <button type="button" onClick={() => removeMember(m.id)} aria-label="Remove" disabled={members.length <= 1 || joinedIds.has(m.id)} title={joinedIds.has(m.id) ? 'Joined with their account' : 'Remove'}
+                  <button type="button" onClick={() => removeMember(m.id)} aria-label={tr("Remove")} disabled={members.length <= 1 || joinedIds.has(m.id)} title={joinedIds.has(m.id) ? tr("Joined with their account") : tr("Remove")}
                     style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <X size={13} />
                   </button>
@@ -124,11 +125,11 @@ export default function TripModal({ trip, onSave, onDelete, onClose }) {
               );
             })}
             <div style={{ display: 'flex', gap: 6 }}>
-              <input type="text" value={newName} placeholder="Add names — comma separated" onChange={(e) => setNewName(e.target.value)}
+              <input type="text" value={newName} placeholder={tr("Add names — comma separated")} onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMember(newName); } }}
                 style={{ ...fieldStyle, flex: 1, padding: '8px 10px' }} />
               <button type="button" onClick={() => addMember(newName)} style={{ padding: '0 12px', borderRadius: 10, border: 'none', background: 'var(--external)', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Plus size={13} /> Add
+                <Plus size={13} /> {tr("Add")}
               </button>
             </div>
           </div>

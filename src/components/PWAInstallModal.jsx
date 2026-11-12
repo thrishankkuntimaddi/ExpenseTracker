@@ -3,6 +3,7 @@ import { X, Smartphone, Share, PlusSquare, MoreVertical, Download, CheckCircle2 
 import Portal from './Portal';
 import { useEscape } from '../hooks/useEscape';
 
+import { t as tr } from '../i18n';
 export default function PWAInstallModal({ isOpen, onClose }) {
   useEscape(onClose, isOpen);
   const [activeTab, setActiveTab] = useState('ios'); // 'ios' | 'android'
@@ -68,10 +69,10 @@ export default function PWAInstallModal({ isOpen, onClose }) {
               </div>
               <div>
                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>
-                  Install Mobile App
+                  {tr("Install Mobile App")}
                 </h2>
                 <p style={{ margin: '2px 0 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
-                  Add Expense Tracker directly to your phone home screen.
+                  {tr("Add Expense Tracker directly to your phone home screen.")}
                 </p>
               </div>
             </div>
@@ -120,7 +121,7 @@ export default function PWAInstallModal({ isOpen, onClose }) {
                 transition: 'all 0.15s ease',
               }}
             >
-              iOS (iPhone / iPad)
+              {tr("iOS (iPhone / iPad)")}
             </button>
             <button
               onClick={() => setActiveTab('android')}
@@ -137,7 +138,7 @@ export default function PWAInstallModal({ isOpen, onClose }) {
                 transition: 'all 0.15s ease',
               }}
             >
-              Android / Chrome
+              {tr("Android / Chrome")}
             </button>
           </div>
 
@@ -175,10 +176,10 @@ export default function PWAInstallModal({ isOpen, onClose }) {
                   </div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-                      Tap the Share Button
+                      {tr("Tap the Share Button")}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      In Safari bottom bar, tap the Share icon <Share size={15} style={{ color: 'var(--accent)' }} />.
+                      {tr("In Safari bottom bar, tap the Share icon")} <Share size={15} style={{ color: 'var(--accent)' }} />.
                     </div>
                   </div>
                 </div>
@@ -213,10 +214,10 @@ export default function PWAInstallModal({ isOpen, onClose }) {
                   </div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-                      Add to Home Screen
+                      {tr("Add to Home Screen")}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      Scroll down options and tap <strong>'Add to Home Screen'</strong> <PlusSquare size={15} style={{ color: 'var(--accent)' }} />.
+                      {tr("Scroll down options and tap")} <strong>{tr("'Add to Home Screen'")}</strong> <PlusSquare size={15} style={{ color: 'var(--accent)' }} />.
                     </div>
                   </div>
                 </div>
@@ -251,10 +252,10 @@ export default function PWAInstallModal({ isOpen, onClose }) {
                   </div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-                      Confirm & Launch
+                      {tr("Confirm & Launch")}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                      Tap <strong>'Add'</strong> in top right. Open Expense Tracker directly from your home screen!
+                      {tr("Tap")} <strong>{tr("'Add'")}</strong> {tr("in top right. Open Expense Tracker directly from your home screen!")}
                     </div>
                   </div>
                 </div>
@@ -291,10 +292,10 @@ export default function PWAInstallModal({ isOpen, onClose }) {
                   </div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-                      Open Chrome / Browser Menu
+                      {tr("Open Chrome / Browser Menu")}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      Tap the 3 dots menu <MoreVertical size={15} style={{ color: 'var(--accent)' }} /> in the top right corner.
+                      {tr("Tap the 3 dots menu")} <MoreVertical size={15} style={{ color: 'var(--accent)' }} /> {tr("in the top right corner.")}
                     </div>
                   </div>
                 </div>
@@ -329,10 +330,10 @@ export default function PWAInstallModal({ isOpen, onClose }) {
                   </div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-                      Install App or Add to Home Screen
+                      {tr("Install App or Add to Home Screen")}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      Select <strong>'Install app'</strong> or <strong>'Add to Home screen'</strong> <Download size={15} style={{ color: 'var(--accent)' }} />.
+                      {tr("Select")} <strong>{tr("'Install app'")}</strong> {tr("or")} <strong>{tr("'Add to Home screen'")}</strong> <Download size={15} style={{ color: 'var(--accent)' }} />.
                     </div>
                   </div>
                 </div>
@@ -367,10 +368,10 @@ export default function PWAInstallModal({ isOpen, onClose }) {
                   </div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-                      Enjoy Standalone App Mode
+                      {tr("Enjoy Standalone App Mode")}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                      Expense Tracker will launch as an independent full-screen app with offline support!
+                      {tr("Expense Tracker will launch as an independent full-screen app with offline support!")}
                     </div>
                   </div>
                 </div>
@@ -399,7 +400,7 @@ export default function PWAInstallModal({ isOpen, onClose }) {
               }}
             >
               <CheckCircle2 size={16} />
-              <span>Got It</span>
+              <span>{tr("Got It")}</span>
             </button>
           </div>
         </div>

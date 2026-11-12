@@ -4,12 +4,13 @@
 import { useShell } from '../app/shellContext';
 import Avatar from './Avatar';
 
+import { t as tr } from '../i18n';
 export default function ProfileButton() {
   const shell = useShell();
   if (!shell || shell.desktop) return null;   // desktop: Profile is in the sidebar
   return (
     <button id="btn-open-profile" className="profile-button" onClick={shell.openProfile}
-      aria-label="Profile and settings" title="Profile and settings"
+      aria-label={tr("Profile and settings")} title={tr("Profile and settings")}
       style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', flexShrink: 0, position: 'relative', lineHeight: 0 }}>
       <Avatar user={shell.user} size={34} />
       {shell.attention && (

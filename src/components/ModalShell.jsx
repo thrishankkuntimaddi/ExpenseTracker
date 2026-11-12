@@ -6,6 +6,7 @@ import Portal from './Portal';
 import { useEscape } from '../hooks/useEscape';
 import { t } from '../i18n';
 
+import { t as tr } from '../i18n';
 export default function ModalShell({ title, subtitle, onClose, children, footer, maxWidth = 460, zIndex = 1500 }) {
   useEscape(onClose);
 
@@ -34,7 +35,7 @@ export default function ModalShell({ title, subtitle, onClose, children, footer,
               <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{t(title)}</div>
               {subtitle && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{t(subtitle)}</div>}
             </div>
-            <button onClick={onClose} aria-label="Close" style={{
+            <button onClick={onClose} aria-label={tr("Close")} style={{
               width: 30, height: 30, borderRadius: 9, border: 'none', background: 'var(--surface2)',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)',
             }}>

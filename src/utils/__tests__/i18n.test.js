@@ -16,6 +16,19 @@ describe('languages', () => {
     for (const d of [hi, te, ta]) expect(Object.values(d).every((v) => typeof v === 'string' && v.trim())).toBe(true);
     expect(keys.length).toBeGreaterThan(150);
   });
+  it('the screen dictionaries match too, and translate real screen text', async () => {
+    const hm = (await import('../../i18n/hi.more.json')).default;
+    const tm = (await import('../../i18n/te.more.json')).default;
+    const am = (await import('../../i18n/ta.more.json')).default;
+    const keys = Object.keys(hm).sort();
+    expect(Object.keys(tm).sort()).toEqual(keys);
+    expect(Object.keys(am).sort()).toEqual(keys);
+    for (const d of [hm, tm, am]) expect(Object.values(d).every((v) => typeof v === 'string' && v.trim())).toBe(true);
+    expect(keys.length).toBeGreaterThan(700);
+    setLang('te');
+    expect(t('Who pays whom')).toBe('ఎవరు ఎవరికి ఇవ్వాలి');
+    expect(t('Fill your emergency fund first')).toBe('ముందు అత్యవసర నిధి నింపండి');
+  });
   it('falls back to English', () => {
     setLang('te');
     expect(getLang()).toBe('te');

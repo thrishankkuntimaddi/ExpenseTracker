@@ -13,6 +13,7 @@ import { Plus } from 'lucide-react';
 import { useShell } from '../../app/shellContext';
 import EntryAmount from '../../components/EntryAmount';
 
+import { t as tr } from '../../i18n';
 export default function IncomeTab({
   income: rawIncome = [], onUpdateIncome, onDeleteIncome,
   selectedPeriod: periodProp,
@@ -82,7 +83,7 @@ export default function IncomeTab({
       {/* Delete confirmation modal */}
       {deletingId && (
         <ConfirmDeleteModal
-          title="Delete this entry?"
+          title={tr("Delete this entry?")}
           message="It moves to Recently Deleted (Settings), where you can restore it."
           onConfirm={() => { onDeleteIncome(deletingId); setDeletingId(null); }}
           onCancel={() => setDeletingId(null)}
@@ -90,7 +91,7 @@ export default function IncomeTab({
       )}
       {deletingTxnId && (
         <ConfirmDeleteModal
-          title="Delete this entry?"
+          title={tr("Delete this entry?")}
           message="It moves to Recently Deleted (Settings), where you can restore it."
           onConfirm={() => { onDeleteTransaction?.(deletingTxnId); setDeletingTxnId(null); }}
           onCancel={() => setDeletingTxnId(null)}
@@ -98,8 +99,8 @@ export default function IncomeTab({
       )}
 
       {/* Header */}
-      <PageHeader title="Money in" subtitle="Everything that reached your account — earned, borrowed, paid back" month
-        actions={shell && <HeaderAction id="income-add" Icon={Plus} label="Add" onClick={() => shell.openAdd('income')} />} />
+      <PageHeader title={tr("Money in")} subtitle={tr("Everything that reached your account — earned, borrowed, paid back")} month
+        actions={shell && <HeaderAction id="income-add" Icon={Plus} label={tr("Add")} onClick={() => shell.openAdd('income')} />} />
 
       {/* Body */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -108,18 +109,18 @@ export default function IncomeTab({
           {/* Summary: period total, this month, where it comes from */}
           <div className="income-left" style={{ padding: '16px 16px 4px' }}>
             <div className="hero-card hero-income" style={{ borderRadius: 22, padding: '16px 18px', color: '#fff' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.8 }}>Received · {periodLabel}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.8 }}>{tr("Received ·")} {periodLabel}</div>
               <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 2 }}>{formatAmount(totalIncome)}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-                <HeroFigure label="Earned" value={formatAmount(kindTotals.income)} />
-                <HeroFigure label="Borrowed" value={formatAmount(kindTotals.borrowed)} />
-                <HeroFigure label="Paid back to you" value={formatAmount(kindTotals.repayment)} />
+                <HeroFigure label={tr("Earned")} value={formatAmount(kindTotals.income)} />
+                <HeroFigure label={tr("Borrowed")} value={formatAmount(kindTotals.borrowed)} />
+                <HeroFigure label={tr("Paid back to you")} value={formatAmount(kindTotals.repayment)} />
               </div>
             </div>
 
             {bySource.length > 0 && (
               <>
-                <p className="section-label" style={{ margin: '18px 4px 8px' }}>By source</p>
+                <p className="section-label" style={{ margin: '18px 4px 8px' }}>{tr("By source")}</p>
                 <div className="card" style={{ padding: '4px 14px' }}>
                   {bySource.slice(0, 5).map((src, i) => (
                     <div key={src.name} style={{ padding: '10px 0', borderTop: i ? '1px solid var(--border)' : 'none' }}>
@@ -147,12 +148,12 @@ export default function IncomeTab({
                   <Wallet size={22} style={{ color: 'var(--income)' }} />
                 </div>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
-                  No income or borrowed money in this period.
+                  {tr("No income or borrowed money in this period.")}
                 </p>
               </div>
             ) : (
               <>
-                <p className="section-label" style={{ marginBottom: 10 }}>Inflows History</p>
+                <p className="section-label" style={{ marginBottom: 10 }}>{tr("Inflows History")}</p>
                 {grouped.map(group => (
                   <div key={group.label} style={{ marginBottom: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -188,7 +189,7 @@ export default function IncomeTab({
                                   background: isCarryForward(entry) ? 'var(--accent-bg)' : entry.isRepaymentRec ? '#d1fae5' : entry.isBorrowed ? 'var(--person-bg)' : 'var(--income-bg)',
                                   color: isCarryForward(entry) ? 'var(--accent)' : entry.isRepaymentRec ? '#059669' : entry.isBorrowed ? 'var(--person)' : 'var(--income)',
                                 }}>
-                                  {isCarryForward(entry) ? '↪ Carry forward' : entry.isRepaymentRec ? 'Got back' : entry.isBorrowed ? 'Borrowed' : 'Income'}
+                                  {isCarryForward(entry) ? '↪ Carry forward' : entry.isRepaymentRec ? tr("Got back") : entry.isBorrowed ? tr("Borrowed") : tr("Income")}
                                 </span>
                                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
                                   {entry.name}
@@ -202,7 +203,7 @@ export default function IncomeTab({
                             </span>
 
                             {isCarryForward(entry) && (
-                              <span title="Computed from the previous month's remaining balance. Change it in Settings → Carry forward." style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, padding: '2px 6px', borderRadius: 6, background: 'var(--surface2)' }}>auto</span>
+                              <span title={tr("Computed from the previous month's remaining balance. Change it in Settings → Carry forward.")} style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, padding: '2px 6px', borderRadius: 6, background: 'var(--surface2)' }}>{tr("auto")}</span>
                             )}
 
                             {/* Edit button for all entries (Income, Borrowed, Repayment Rec) */}

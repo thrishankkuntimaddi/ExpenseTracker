@@ -14,6 +14,7 @@ import { endGoal } from '../../utils/goals';
 import { ordinal } from '../../utils/report';
 import { formatAmount } from '../../utils/dateHelpers';
 
+import { t as tr } from '../../i18n';
 const lastDayOf = (monthInput) => { const [y, m] = monthInput.split('-').map(Number); return toKey(new Date(y, m, 0)); };
 const monthsBetween = (fromKey, toMonth) => {
   const [fy, fm] = fromKey.split('-').map(Number); const [ty, tm] = toMonth.split('-').map(Number);
@@ -55,61 +56,61 @@ export default function GoalModal({ goal, onSave, onDelete, onClose }) {
   return (
     <>
       {confirm === 'delete' && (
-        <ConfirmDeleteModal title="Delete this goal?" message="The money you put towards it stays in your savings — only the goal is removed."
+        <ConfirmDeleteModal title={tr("Delete this goal?")} message="The money you put towards it stays in your savings — only the goal is removed."
           onConfirm={() => { onDelete(goal.id); onClose(); }} onCancel={() => setConfirm(null)} />
       )}
       {confirm === 'close' && (
-        <ConfirmDeleteModal title="Close this goal?" message="It moves to Finished goals. You can reopen it any time."
+        <ConfirmDeleteModal title={tr("Close this goal?")} message="It moves to Finished goals. You can reopen it any time."
           onConfirm={() => { onSave(endGoal(goal, 'closed', today)); onClose(); }} onCancel={() => setConfirm(null)} />
       )}
       <ModalShell
-        title={goal ? 'Edit goal' : 'New goal'}
-        subtitle="Put a share aside each month — wherever you keep it."
+        title={goal ? tr("Edit goal") : tr("New goal")}
+        subtitle={tr("Put a share aside each month — wherever you keep it.")}
         onClose={onClose}
         footer={<>
           {goal && onDelete && <GhostButton danger onClick={() => setConfirm('delete')} style={{ flex: '0 0 auto', padding: '11px 14px' }}><Trash2 size={13} /></GhostButton>}
-          {goal ? <GhostButton onClick={() => setConfirm('close')}><XCircle size={13} /> Close goal</GhostButton> : <GhostButton onClick={onClose}>Cancel</GhostButton>}
-          <PrimaryButton onClick={save} disabled={!canSave} color="var(--savings)"><Check size={14} /> {goal ? 'Save' : 'Create goal'}</PrimaryButton>
+          {goal ? <GhostButton onClick={() => setConfirm('close')}><XCircle size={13} /> {tr("Close goal")}</GhostButton> : <GhostButton onClick={onClose}>{tr("Cancel")}</GhostButton>}
+          <PrimaryButton onClick={save} disabled={!canSave} color="var(--savings)"><Check size={14} /> {goal ? tr("Save") : tr("Create goal")}</PrimaryButton>
         </>}
       >
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px', gap: 8 }}>
-          <Field label="Goal">
-            <input id="goal-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Bike, emergency fund…" style={fieldStyle} autoFocus />
+          <Field label={tr("Goal")}>
+            <input id="goal-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={tr("Bike, emergency fund…")} style={fieldStyle} autoFocus />
           </Field>
-          <Field label="Amount">
+          <Field label={tr("Amount")}>
             <input id="goal-target" type="text" inputMode="decimal" value={target} placeholder="100000" onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setTarget(v); }} style={{ ...fieldStyle, fontWeight: 700 }} />
           </Field>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <Field label="Needed by (optional)">
+          <Field label={tr("Needed by (optional)")}>
             <input id="goal-by" type="month" value={byMonth} min={startDate.slice(0, 7)} onChange={(e) => setByMonth(e.target.value)} style={fieldStyle} />
           </Field>
-          <Field label="Each month" hint={suggested ? `${formatAmount(suggested)} gets you there` : undefined}>
+          <Field label={tr("Each month")} hint={suggested ? `${formatAmount(suggested)} gets you there` : undefined}>
             <input id="goal-monthly" type="text" inputMode="decimal" value={monthly} placeholder={suggested ? String(suggested) : '20000'} onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setMonthly(v); }} style={fieldStyle} />
           </Field>
         </div>
-        <Field label="Kept with" hint="Cash at home, a person you trust, a bank account — change it any time with “Moved it”.">
-          <input id="goal-held" type="text" value={heldWith} onChange={(e) => setHeldWith(e.target.value)} placeholder="e.g. Pritam, Cash, HDFC savings" style={fieldStyle} />
+        <Field label={tr("Kept with")} hint={tr("Cash at home, a person you trust, a bank account — change it any time with “Moved it”.")}>
+          <input id="goal-held" type="text" value={heldWith} onChange={(e) => setHeldWith(e.target.value)} placeholder={tr("e.g. Pritam, Cash, HDFC savings")} style={fieldStyle} />
         </Field>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <Field label="Remind me on the">
+          <Field label={tr("Remind me on the")}>
             <select value={remindDay} onChange={(e) => setRemindDay(Number(e.target.value))} style={fieldStyle}>
-              {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{ordinal(d)} of the month</option>)}
+              {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{ordinal(d)} {tr("of the month")}</option>)}
             </select>
           </Field>
-          <Field label="Starting">
+          <Field label={tr("Starting")}>
             <input type="date" value={startDate} onChange={(e) => e.target.value && setStartDate(e.target.value)} style={fieldStyle} />
           </Field>
         </div>
         {legacy && (
-          <Field label="Also count these savings" hint="This goal was created before goals took their own money — it also counts matching savings entries.">
+          <Field label={tr("Also count these savings")} hint={tr("This goal was created before goals took their own money — it also counts matching savings entries.")}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-              <button type="button" onClick={() => setSavingsType('')} style={chip(savingsType === '')}>All savings</button>
+              <button type="button" onClick={() => setSavingsType('')} style={chip(savingsType === '')}>{tr("All savings")}</button>
               {SAVINGS_CHOICES.map((st) => (
                 <button key={st.key} type="button" onClick={() => setSavingsType(st.key)} style={chip(savingsType === st.key)}>{st.label}</button>
               ))}
             </div>
-            <input type="text" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Keyword (optional)" style={fieldStyle} />
+            <input type="text" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={tr("Keyword (optional)")} style={fieldStyle} />
           </Field>
         )}
       </ModalShell>

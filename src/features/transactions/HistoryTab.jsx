@@ -31,6 +31,7 @@ import HelpButton from '../../tour/HelpButton';
 import BigAmount from '../../components/BigAmount';
 import { formatMoneyCompact } from '../../utils/money';
 
+import { t as tr } from '../../i18n';
 const ALL_TIME = { type: 'all' };
 const norm = (s) => String(s ?? '').trim().toLowerCase();
 
@@ -122,13 +123,13 @@ export default function HistoryTab({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
           <BackButton />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>History</h1>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>{tr("History")}</h1>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '2px 0 0' }}>
-              {filtTxns.length}{hasFilter ? ` of ${periodTxns.length}` : ''} entries · money in and out
+              {filtTxns.length}{hasFilter ? ` of ${periodTxns.length}` : ''} {tr("entries · money in and out")}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-            <IconAction id="history-expand-all" label={effectiveExpandAll ? 'Collapse all' : 'Expand all'}
+            <IconAction id="history-expand-all" label={effectiveExpandAll ? tr("Collapse all") : tr("Expand all")}
               Icon={effectiveExpandAll ? ChevronsDownUp : ChevronsUpDown} onClick={() => { setExpandAll(!effectiveExpandAll); setCustomToggles({}); }} />
             <HelpButton page="history" />
             <ProfileButton />
@@ -140,11 +141,11 @@ export default function HistoryTab({
           {!searchAll && <MonthSwitcher compact />}
           <div style={{ position: 'relative', flex: 1, minWidth: 160 }}>
             <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-            <input id="history-search" type="search" placeholder="Search…" aria-label="Search name, note or amount"
+            <input id="history-search" type="search" placeholder={tr("Search…")} aria-label={tr("Search name, note or amount")}
               value={search} onChange={(e) => setSearch(e.target.value)}
               style={{ width: '100%', padding: '9px 30px', borderRadius: 10, fontSize: 13, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', WebkitAppearance: 'none', appearance: 'none' }} />
             {search && (
-              <button onClick={() => setSearch('')} aria-label="Clear search" style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', width: 24, height: 24, borderRadius: 7, border: 'none', background: 'var(--surface2)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button onClick={() => setSearch('')} aria-label={tr("Clear search")} style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', width: 24, height: 24, borderRadius: 7, border: 'none', background: 'var(--surface2)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={12} />
               </button>
             )}
@@ -152,7 +153,7 @@ export default function HistoryTab({
           {hasFilter && (
             <button id="history-all-months" onClick={() => setAllMonths((v) => !v)} aria-pressed={allMonths}
               style={{ flexShrink: 0, padding: '8px 11px', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1.5px solid ${allMonths ? 'var(--accent)' : 'var(--border)'}`, background: allMonths ? 'var(--accent-bg)' : 'var(--surface2)', color: allMonths ? 'var(--accent)' : 'var(--text-secondary)' }}>
-              All months
+              {tr("All months")}
             </button>
           )}
         </div>
@@ -191,7 +192,7 @@ export default function HistoryTab({
         {hasFilter && (
           <button onClick={() => { setCatFilter(null); setKindFilter(null); setSearch(''); }} className="hist-chip"
             style={{ marginTop: 8, border: '1.5px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-muted)' }}>
-            Clear filters
+            {tr("Clear filters")}
           </button>
         )}
       </div>
@@ -200,12 +201,12 @@ export default function HistoryTab({
       <div id="history-list" style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 24px' }}>
         {(flow.in > 0 || flow.out > 0) && (
           <div className="card hist-summary" id="history-summary">
-            <div className="tl-title">Net · {searchAll ? 'all months' : monthName(viewMonth, { month: 'long', year: 'numeric' })}</div>
+            <div className="tl-title">{tr("Net ·")} {searchAll ? 'all months' : monthName(viewMonth, { month: 'long', year: 'numeric' })}</div>
             <BigAmount value={flow.in - flow.out} size={38} color={flow.in - flow.out < 0 ? 'var(--expense)' : undefined} />
             <div className="hist-summary-strip">
-              <div><div className="tl-fig-value" style={{ color: 'var(--income)' }}>+{formatMoneyCompact(flow.in)}</div><div className="tl-fig-label">Money in</div></div>
-              <div><div className="tl-fig-value">−{formatMoneyCompact(flow.out)}</div><div className="tl-fig-label">Money out</div></div>
-              <div><div className="tl-fig-value">{periodTxns.length}</div><div className="tl-fig-label">Entries</div></div>
+              <div><div className="tl-fig-value" style={{ color: 'var(--income)' }}>+{formatMoneyCompact(flow.in)}</div><div className="tl-fig-label">{tr("Money in")}</div></div>
+              <div><div className="tl-fig-value">−{formatMoneyCompact(flow.out)}</div><div className="tl-fig-label">{tr("Money out")}</div></div>
+              <div><div className="tl-fig-value">{periodTxns.length}</div><div className="tl-fig-label">{tr("Entries")}</div></div>
             </div>
           </div>
         )}
@@ -213,7 +214,7 @@ export default function HistoryTab({
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12 }}>
             <LayoutList size={32} style={{ color: 'var(--text-muted)' }} />
             <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
-              {hasFilter ? 'Nothing matches these filters' : 'Nothing in this period yet'}
+              {hasFilter ? tr("Nothing matches these filters") : tr("Nothing in this period yet")}
             </p>
           </div>
         ) : grouped.map((group) => {
@@ -230,7 +231,7 @@ export default function HistoryTab({
                 <span className="hist-group-side">
                   {gin > 0 && <span style={{ color: 'var(--income)' }}>+{formatAmount(gin)}</span>}
                   {gout > 0 && <span style={{ color: 'var(--expense)' }}>−{formatAmount(gout)}</span>}
-                  <span className="hist-group-count">{group.entries.length} entr{group.entries.length === 1 ? 'y' : 'ies'}</span>
+                  <span className="hist-group-count">{group.entries.length} {tr("entr")}{group.entries.length === 1 ? 'y' : 'ies'}</span>
                 </span>
               </button>
               {!collapsed && (
@@ -267,12 +268,12 @@ function HistoryRow({ row, theme, rules, settled, onEdit, onDelete }) {
   let detail = null;
   if (cat) detail = <span className="hist-bit" style={{ color: catColor }}>{categoryMeta(cat).label}</span>;
   else if (row._kind === 'savings') detail = <span className="hist-bit">{getSavingsType(row.savingsType).label}{row.platform ? ` · ${row.platform}` : ''}</span>;
-  else if (neutral) detail = <span className="hist-bit">Account → wallet</span>;
+  else if (neutral) detail = <span className="hist-bit">{tr("Account → wallet")}</span>;
   else if (row.note) detail = <span className="hist-bit">{row.note}</span>;
 
   const status = debt
-    ? (settled ? { label: 'Settled', Icon: CheckCircle2, color: 'var(--income)' } : { label: 'Open', Icon: Clock3, color: 'var(--borrowed)' })
-    : { label: 'Done', Icon: CheckCircle2, color: 'var(--text-muted)' };
+    ? (settled ? { label: tr("Settled"), Icon: CheckCircle2, color: 'var(--income)' } : { label: tr("Open"), Icon: Clock3, color: 'var(--borrowed)' })
+    : { label: tr("Done"), Icon: CheckCircle2, color: 'var(--text-muted)' };
 
   // A card per entry: a colour edge for what it is, its icon, what it was
   // for with kind · category beneath; the signed amount large on the right
@@ -290,8 +291,8 @@ function HistoryRow({ row, theme, rules, settled, onEdit, onDelete }) {
         <span className="hist-meta">
           <span className="hist-bit hist-kind" style={{ color: `var(--${k.tone})` }}>{k.label}</span>
           {detail}
-          {row.paidWith === 'cash' && <span className="hist-bit" title="Paid in cash"><Banknote size={11} /> Cash</span>}
-          {wasted && <span className="hist-bit" style={{ color: 'var(--expense)' }}><Flame size={10} /> {formatAmount(row.wasteAmount)} wasted</span>}
+          {row.paidWith === 'cash' && <span className="hist-bit" title={tr("Paid in cash")}><Banknote size={11} /> {tr("Cash")}</span>}
+          {wasted && <span className="hist-bit" style={{ color: 'var(--expense)' }}><Flame size={10} /> {formatAmount(row.wasteAmount)} {tr("wasted")}</span>}
         </span>
       </span>
       <span className="hist-side">
@@ -299,11 +300,11 @@ function HistoryRow({ row, theme, rules, settled, onEdit, onDelete }) {
           <EntryAmount entry={row} prefix={neutral ? '' : incoming ? '+' : '−'} />
         </span>
         <span className="hist-foot">
-          <span className="hist-status" style={{ color: status.color }} title={debt ? (settled ? 'This person’s balance is back to zero' : 'Still to be returned') : 'Recorded'}>
+          <span className="hist-status" style={{ color: status.color }} title={debt ? (settled ? tr("This person’s balance is back to zero") : tr("Still to be returned")) : tr("Recorded")}>
             <status.Icon size={11} />{status.label}
           </span>
-          <button aria-label={`Edit ${row.name}`} title="Edit" className="hist-btn hist-edit" onClick={(e) => { e.stopPropagation(); onEdit(); }}><Pencil size={13} /></button>
-          <button aria-label={`Delete ${row.name}`} title="Delete" className="hist-btn hist-del" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Trash2 size={13} /></button>
+          <button aria-label={`Edit ${row.name}`} title={tr("Edit")} className="hist-btn hist-edit" onClick={(e) => { e.stopPropagation(); onEdit(); }}><Pencil size={13} /></button>
+          <button aria-label={`Delete ${row.name}`} title={tr("Delete")} className="hist-btn hist-del" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Trash2 size={13} /></button>
         </span>
       </span>
     </div>

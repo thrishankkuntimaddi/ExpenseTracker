@@ -15,6 +15,7 @@ import { getDeviceId } from '../../hooks/useDevices';
 import { autostart, platform } from '../../native';
 import { ordinal, getReportSettings } from '../../utils/report';
 
+import { t as tr } from '../../i18n';
 const TYPES = [
   { key: 'recurring', Icon: CalendarClock, tone: 'expense', label: 'Bills due',       sub: '“Have you paid rent?” on the day a bill is due · insurance a week before renewal' },
   { key: 'daily',     Icon: PenLine,       tone: 'accent',  label: 'Log the day',     sub: 'An evening nudge — skipped if you already logged' },
@@ -110,10 +111,10 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
           {deviceOn ? <Bell size={16} style={{ color: 'var(--accent)' }} /> : <BellOff size={16} style={{ color: 'var(--text-muted)' }} />}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Reminders on this device</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{tr("Reminders on this device")}</div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.5 }}>{DELIVERY_NOTE}</div>
         </div>
-        <button id="reminders-device" className={`toggle-track ${deviceOn ? 'on' : ''}`} aria-label="Reminders on this device" aria-pressed={deviceOn}
+        <button id="reminders-device" className={`toggle-track ${deviceOn ? 'on' : ''}`} aria-label={tr("Reminders on this device")} aria-pressed={deviceOn}
           onClick={() => turnDeviceOn(!deviceOn)}>
           <span className="toggle-thumb" />
         </button>
@@ -123,20 +124,20 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
         <div style={{ borderBottom: '1px solid var(--border)' }}>
           {platform === 'android' && (
             <>
-              <OptionRow id="reminders-style" title="Pop up with a sound" sub={style === 'alert' ? 'Shows on top of other apps, like a message' : 'Arrives quietly in the notification shade'}
+              <OptionRow id="reminders-style" title={tr("Pop up with a sound")} sub={style === 'alert' ? 'Shows on top of other apps, like a message' : 'Arrives quietly in the notification shade'}
                 on={style === 'alert'} onToggle={() => { const v = style === 'alert' ? 'quiet' : 'alert'; reminderStyle.set(v); setStyle(v); }} />
-              <OptionRow id="reminders-exact" title="On the minute" sub={exact ? 'Arrives exactly at the time you set' : 'Android may hold it a few minutes to save battery'}
+              <OptionRow id="reminders-exact" title={tr("On the minute")} sub={exact ? 'Arrives exactly at the time you set' : 'Android may hold it a few minutes to save battery'}
                 on={exact} onToggle={async () => { const ok = await exactTiming.set(!exact); if (ok) setExact(!exact); else setNote('Allow “Alarms & reminders” for Expense Tracker in Android settings, then try again.'); }} />
               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, margin: 0, padding: '8px 16px 12px' }}>
-                Not arriving on a vivo, iQOO, Oppo, Xiaomi or Samsung phone? In Android settings → Apps → Expense Tracker → Battery, choose <strong>Unrestricted</strong> (or allow “Auto-start”).
+                {tr("Not arriving on a vivo, iQOO, Oppo, Xiaomi or Samsung phone? In Android settings → Apps → Expense Tracker → Battery, choose")} <strong>{tr("Unrestricted")}</strong> {tr("(or allow “Auto-start”).")}
               </p>
             </>
           )}
           {platform === 'web' && (
             <p id="reminders-push-note" style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, margin: 0, padding: '10px 16px 12px' }}>
               {pushSupported
-                ? 'Reminders reach this browser through the cloud even when the page is closed (Chrome, Edge, Firefox; on iPhone, add the app to your Home Screen first).'
-                : 'This browser only shows reminders while the page is open.'}
+                ? tr("Reminders reach this browser through the cloud even when the page is closed (Chrome, Edge, Firefox; on iPhone, add the app to your Home Screen first).")
+                : tr("This browser only shows reminders while the page is open.")}
             </p>
           )}
         </div>
@@ -144,14 +145,14 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
 
       {(note || blocked) && (
         <div role="status" style={{ margin: '10px 16px 0', padding: '9px 12px', borderRadius: 10, fontSize: 12, lineHeight: 1.5, background: 'var(--surface2)', border: '1px solid var(--border)', color: blocked && !note ? 'var(--expense)' : 'var(--text-secondary)' }}>
-          {note ?? 'Notifications are blocked for this app — allow them in your system or browser settings.'}
+          {note ?? tr("Notifications are blocked for this app — allow them in your system or browser settings.")}
         </div>
       )}
       {/* On, but never allowed to notify (Android 13+ asks once): nothing would arrive */}
       {!note && !blocked && deviceOn && perm === 'prompt' && anyReminderOn(cfg) && (
         <div role="status" style={{ margin: '10px 16px 0', padding: '9px 12px', borderRadius: 10, fontSize: 12, lineHeight: 1.5, background: 'var(--expense-bg)', border: '1px solid var(--expense-border)', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ flex: 1 }}>Reminders can’t arrive yet — allow notifications for this app.</span>
-          <button onClick={async () => setPerm(await requestNotificationPermission())} style={{ border: 'none', borderRadius: 8, padding: '6px 10px', background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' }}>Allow</button>
+          <span style={{ flex: 1 }}>{tr("Reminders can’t arrive yet — allow notifications for this app.")}</span>
+          <button onClick={async () => setPerm(await requestNotificationPermission())} style={{ border: 'none', borderRadius: 8, padding: '6px 10px', background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' }}>{tr("Allow")}</button>
         </div>
       )}
 
@@ -168,7 +169,7 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
               <span style={{ width: 30, height: 30, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: on ? `var(--${tone})` : 'var(--surface)', color: on ? '#fff' : 'var(--text-muted)' }}><Icon size={15} /></span>
               <span style={{ fontSize: 13, fontWeight: 750, color: 'var(--text)' }}>{label}</span>
               <span style={{ fontSize: 11, fontWeight: 650, color: on ? `var(--${tone})` : 'var(--text-muted)' }}>
-                {on ? `On · ${t.time}${key === 'weekly' ? ` · ${DAY_NAMES[t.day ?? 0].slice(0, 3)}` : ''}` : 'Off — tap to turn on'}
+                {on ? `On · ${t.time}${key === 'weekly' ? ` · ${DAY_NAMES[t.day ?? 0].slice(0, 3)}` : ''}` : tr("Off — tap to turn on")}
               </span>
             </button>
           );
@@ -201,14 +202,14 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
                 );
               })}
               {key === 'weekly' && (
-                <select value={t.day ?? 0} aria-label="Day of the week" onChange={(e) => setType('weekly', { day: Number(e.target.value) })}
+                <select value={t.day ?? 0} aria-label={tr("Day of the week")} onChange={(e) => setType('weekly', { day: Number(e.target.value) })}
                   style={{ padding: '6px 8px', borderRadius: 9, fontSize: 12, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit' }}>
                   {DAY_NAMES.map((n, i) => <option key={n} value={i}>{n}</option>)}
                 </select>
               )}
-              {key === 'budget' && !(Number(settings?.budgets?.total) > 0) && <span style={{ fontSize: 11, color: 'var(--lent)' }}>Set a monthly budget on the Budget page for this to work.</span>}
-              {key === 'report' && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Report day: the {ordinal(getReportSettings(settings).day)} — change it in Stats → Monthly report.</span>}
-              {key === 'goals' && !(settings?.goals ?? []).some((g) => !g.status || g.status === 'active') && <span style={{ fontSize: 11, color: 'var(--lent)' }}>Add a goal on the Savings page for this to work.</span>}
+              {key === 'budget' && !(Number(settings?.budgets?.total) > 0) && <span style={{ fontSize: 11, color: 'var(--lent)' }}>{tr("Set a monthly budget on the Budget page for this to work.")}</span>}
+              {key === 'report' && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tr("Report day: the")} {ordinal(getReportSettings(settings).day)} {tr("— change it in Stats → Monthly report.")}</span>}
+              {key === 'goals' && !(settings?.goals ?? []).some((g) => !g.status || g.status === 'active') && <span style={{ fontSize: 11, color: 'var(--lent)' }}>{tr("Add a goal on the Savings page for this to work.")}</span>}
             </div>
           </div>
         );
@@ -216,8 +217,8 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
 
       {/* Tone + preview + test */}
       <div style={{ padding: '12px 16px 14px', borderTop: '1px solid var(--border)' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Tone</div>
-        <div role="radiogroup" aria-label="Reminder tone" style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{tr("Tone")}</div>
+        <div role="radiogroup" aria-label={tr("Reminder tone")} style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
           {TONES.map((t) => (
             <button key={t.key} role="radio" aria-checked={cfg.tone === t.key} onClick={() => save({ ...cfg, tone: t.key })}
               style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1.5px solid ${cfg.tone === t.key ? 'var(--accent)' : 'var(--border)'}`, background: cfg.tone === t.key ? 'var(--accent-bg)' : 'transparent', color: cfg.tone === t.key ? 'var(--accent)' : 'var(--text-muted)' }}>
@@ -226,7 +227,7 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
           ))}
         </div>
 
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Preview</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{tr("Preview")}</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
           {TYPES.map((t) => (
             <button key={t.key} onClick={() => setPreviewType(t.key)} aria-pressed={previewType === t.key}
@@ -240,16 +241,16 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{preview.title}</div>
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{preview.body}</div>
-            {preview.example && <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>Example — your real numbers will be used.</div>}
+            {preview.example && <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>{tr("Example — your real numbers will be used.")}</div>}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
           <span id="reminder-next" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-            {!deviceOn ? 'Off on this device.' : !anyReminderOn(cfg) ? 'No reminders turned on.' : next ? `Next: ${TYPES.find((t) => t.key === next.type)?.label} · ${whenLabel(next.at)}` : 'Nothing due in the next two weeks.'}
+            {!deviceOn ? tr("Off on this device.") : !anyReminderOn(cfg) ? tr("No reminders turned on.") : next ? `Next: ${TYPES.find((t) => t.key === next.type)?.label} · ${whenLabel(next.at)}` : tr("Nothing due in the next two weeks.")}
           </span>
           <button id="btn-reminder-test" onClick={test}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 10, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: '1px solid var(--accent-border)', background: 'var(--accent-bg)', color: 'var(--accent)' }}>
-            <Send size={13} /> Send a test
+            <Send size={13} /> {tr("Send a test")}
           </button>
         </div>
       </div>
@@ -258,10 +259,10 @@ export default function RemindersCard({ settings, onPatchSettings, transactions 
         <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid var(--border)' }}>
           <Power size={16} style={{ color: loginOn ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Open at login</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Starts quietly in the menu bar / tray so reminders arrive after a restart</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{tr("Open at login")}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{tr("Starts quietly in the menu bar / tray so reminders arrive after a restart")}</div>
           </div>
-          <button id="autostart" className={`toggle-track ${loginOn ? 'on' : ''}`} aria-label="Open at login" aria-pressed={loginOn}
+          <button id="autostart" className={`toggle-track ${loginOn ? 'on' : ''}`} aria-label={tr("Open at login")} aria-pressed={loginOn}
             onClick={async () => setLoginOn(await autostart.set(!loginOn))}>
             <span className="toggle-thumb" />
           </button>

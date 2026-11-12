@@ -7,6 +7,10 @@
 import { hi } from './hi';
 import { te } from './te';
 import { ta } from './ta';
+// The rest of the screens (labels, sentences, buttons): keyed by English too
+import hiMore from './hi.more.json';
+import teMore from './te.more.json';
+import taMore from './ta.more.json';
 
 export const LANGS = [
   { key: 'en', label: 'English', native: 'English' },
@@ -14,7 +18,7 @@ export const LANGS = [
   { key: 'te', label: 'Telugu', native: 'తెలుగు' },
   { key: 'ta', label: 'Tamil', native: 'தமிழ்' },
 ];
-const DICTS = { hi, te, ta };
+const DICTS = { hi: { ...hiMore, ...hi }, te: { ...teMore, ...te }, ta: { ...taMore, ...ta } };
 const KEY = 'et_lang';
 const isLang = (l) => LANGS.some((x) => x.key === l);
 

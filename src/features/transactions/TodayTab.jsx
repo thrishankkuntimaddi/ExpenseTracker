@@ -32,6 +32,7 @@ import { respSummary } from '../../utils/responsibilities';
 import { streak as logStreak, milestoneReached } from '../../utils/engagement';
 import { t } from '../../i18n';
 
+import { t as tr } from '../../i18n';
 const linkBtn = { padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
 const rupees = (n) => formatMoneyCompact(n);   // compact: no paise
 const capitalise = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
@@ -150,7 +151,7 @@ export default function TodayTab(props) {
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {shell ? <MonthSwitcher tone="hero" compact /> : <span style={{ fontSize: 12, fontWeight: 700 }}>{monthName(monthKey)}</span>}
           {isNow && daily.current >= 2 && (
-            <span id="home-streak" title={daily.atRisk ? 'Log something today to keep it' : `Best ${daily.best} days`}
+            <span id="home-streak" title={daily.atRisk ? tr("Log something today to keep it") : `Best ${daily.best} days`}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 99, background: 'rgba(255,255,255,0.16)', fontSize: 11, fontWeight: 750, whiteSpace: 'nowrap', opacity: daily.atRisk ? 0.75 : 1 }}>
               <Flame size={12} /> {daily.current}
             </span>
@@ -170,27 +171,27 @@ export default function TodayTab(props) {
           <LiquidGauge variant="bar" fraction={safeToday.limit ? safeToday.spent / safeToday.limit : 0} style={{ marginTop: 10 }} />
           <div style={{ fontSize: 11, marginTop: 6, opacity: 0.85 }}>
             {safeToday.status === 'over'
-              ? <><strong>{formatAmount(Math.abs(safeToday.remaining))}</strong> over the {formatAmount(safeToday.limit)} budget</>
-              : <><strong>{formatAmount(safeToday.remaining)}</strong> left of {formatAmount(safeToday.limit)}</>}
+              ? <><strong>{formatAmount(Math.abs(safeToday.remaining))}</strong> {tr("over the")} {formatAmount(safeToday.limit)} {tr("budget")}</>
+              : <><strong>{formatAmount(safeToday.remaining)}</strong> {tr("left of")} {formatAmount(safeToday.limit)}</>}
           </div>
         </>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.18)' }}>
-        {isNow ? <Metric label="Today" value={todayExpense} /> : <Metric label="Money in" value={stats?.totalIncome ?? 0} />}
+        {isNow ? <Metric label={tr("Today")} value={todayExpense} /> : <Metric label={tr("Money in")} value={stats?.totalIncome ?? 0} />}
         {isNow && safeToday && safeToday.status !== 'over'
-          ? <Metric label="Safe to spend today" value={safeToday.safeToday} />
-          : <Metric label="Saved" value={stats?.totalSavings ?? 0} />}
-        <Metric label="Balance" value={stats?.balance ?? 0} />
+          ? <Metric label={tr("Safe to spend today")} value={safeToday.safeToday} />
+          : <Metric label={tr("Saved")} value={stats?.totalSavings ?? 0} />}
+        <Metric label={tr("Balance")} value={stats?.balance ?? 0} />
       </div>
       {stats?.balanceParts?.length > 0 && (
         <div id="home-balance-fx" style={{ fontSize: 10.5, marginTop: 8, opacity: 0.85, lineHeight: 1.45 }}>
-          Balance at today’s rates: {stats.balanceParts.map((p) => formatAmount(p.amount, p.currency)).join(' + ').replace(/\+ -/g, '− ').replace(/\+ −/g, '− ')}
+          {tr("Balance at today’s rates:")} {stats.balanceParts.map((p) => formatAmount(p.amount, p.currency)).join(' + ').replace(/\+ -/g, '− ').replace(/\+ −/g, '− ')}
         </div>
       )}
       {cash.used && (
         <div id="home-cash" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, marginTop: 8, opacity: 0.9 }}>
           <Banknote size={13} />
-          <span>Cash in hand <strong>{formatAmount(Math.max(0, cash.inHand))}</strong>{cash.monthSpent > 0 ? <> · {formatAmount(cash.monthSpent)} paid in cash in {monthAbbr}</> : null}</span>
+          <span>{tr("Cash in hand")} <strong>{formatAmount(Math.max(0, cash.inHand))}</strong>{cash.monthSpent > 0 ? <> · {formatAmount(cash.monthSpent)} {tr("paid in cash in")} {monthAbbr}</> : null}</span>
         </div>
       )}
     </div>
@@ -210,19 +211,19 @@ export default function TodayTab(props) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Zap size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
         <input id="home-quick-entry" value={quick} onChange={(e) => setQuick(e.target.value)} autoComplete="off" enterKeyHint="done"
-          placeholder={t('Quick entry — "chai 20 vada 15"')} aria-label="Quick entry: name and amount — several at once is fine"
+          placeholder={t('Quick entry — "chai 20 vada 15"')} aria-label={tr("Quick entry: name and amount — several at once is fine")}
           style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', boxShadow: 'none', outline: 'none', color: 'var(--text)', fontSize: 15, padding: '8px 0', fontFamily: 'inherit' }} />
         <button type="submit" disabled={!preview} style={{ padding: '8px 14px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', background: preview ? 'var(--accent)' : 'var(--surface2)', color: preview ? '#fff' : 'var(--text-muted)', cursor: preview ? 'pointer' : 'default' }}>
-          {items.length > 1 ? `Add ${items.length}` : 'Add'}
+          {items.length > 1 ? `Add ${items.length}` : tr("Add")}
         </button>
       </div>
       {quick.trim() && (
         <div id="quick-preview" style={{ fontSize: 12, padding: '2px 0 6px 24px', color: preview ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
-          {!preview && 'Add an amount — e.g. "petrol 500", or several: "coffee 250 water 50"'}
-          {items.length === 1 && <>Expense · <strong style={{ color: 'var(--text)' }}>{items[0].name}</strong> · {formatAmount(items[0].amount, items[0].currency)} · {categoryMeta(items[0].category).label} · today</>}
+          {!preview && tr("Add an amount — e.g. \"petrol 500\", or several: \"coffee 250 water 50\"")}
+          {items.length === 1 && <>{tr("Expense ·")} <strong style={{ color: 'var(--text)' }}>{items[0].name}</strong> · {formatAmount(items[0].amount, items[0].currency)} · {categoryMeta(items[0].category).label} {tr("· today")}</>}
           {items.length > 1 && (
             <>
-              <div style={{ marginBottom: 2 }}>{items.length} expenses · today</div>
+              <div style={{ marginBottom: 2 }}>{items.length} {tr("expenses · today")}</div>
               {items.map((p, i) => (
                 <div key={i} className="quick-item" style={{ display: 'flex', gap: 8 }}>
                   <strong style={{ color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</strong>
@@ -242,7 +243,7 @@ export default function TodayTab(props) {
     <div className="home-bills" style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '4px 4px 8px' }}>
         <p className="section-label" style={{ margin: 0 }}>{lateCount ? `Due · ${lateCount} late` : t('Due this week')}</p>
-        {shell && <button id="home-bills-all" onClick={() => shell.goTo('bills')} style={linkBtn}>All bills</button>}
+        {shell && <button id="home-bills-all" onClick={() => shell.goTo('bills')} style={linkBtn}>{tr("All bills")}</button>}
       </div>
       <div className="card">
         {soon.slice(0, 4).map((b, i) => {
@@ -265,7 +266,7 @@ export default function TodayTab(props) {
                 <button id={`home-pay-${b.rule.id}`} onClick={async () => {
                   if (await recurring.post({ rule: b.rule, dateKey: b.dateKey, paidOn: b.dateKey > todayKey ? todayKey : null })) shell?.toast(`Paid ${b.rule.name} · ${formatEntryAmount(b.rule, b.amount)}`);
                 }} style={{ padding: '7px 13px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: b.status === 'upcoming' ? 'var(--surface2)' : 'var(--income)', color: b.status === 'upcoming' ? 'var(--text-secondary)' : '#fff' }}>
-                  Pay
+                  {tr("Pay")}
                 </button>
               )}
             </div>
@@ -273,7 +274,7 @@ export default function TodayTab(props) {
         })}
         {soon.length > 4 && (
           <button onClick={() => shell?.goTo('bills')} style={{ width: '100%', padding: '10px', border: 'none', borderTop: '1px solid var(--border)', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-            {soon.length - 4} more
+            {soon.length - 4} {tr("more")}
           </button>
         )}
       </div>
@@ -309,7 +310,7 @@ export default function TodayTab(props) {
       <>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '4px 4px 8px' }}>
           <p className="section-label" style={{ margin: 0 }}>{isNow ? t('Recent activity') : `Last entries in ${monthName(monthKey, { month: 'long' })}`}</p>
-          {shell && <button id="home-see-all" onClick={() => shell.goTo('history')} style={linkBtn}>All history</button>}
+          {shell && <button id="home-see-all" onClick={() => shell.goTo('history')} style={linkBtn}>{tr("All history")}</button>}
         </div>
         <div className="card" id="recent-entries">
           {recent.map((txn, i) => {
@@ -348,15 +349,15 @@ export default function TodayTab(props) {
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                         <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{dayLabel(txn.date)}</span>
                         <CategoryBadge category={categoryOf(txn, categoryRules)} compact theme={theme} />
-                        {txn.recurringId && <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>recurring</span>}
-                        {txn.paidWith === 'cash' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}><Banknote size={10} />cash</span>}
+                        {txn.recurringId && <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{tr("recurring")}</span>}
+                        {txn.paidWith === 'cash' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}><Banknote size={10} />{tr("cash")}</span>}
                       </span>
                     ) : (
                       <span style={{ fontSize: 11, color: t.color, fontWeight: 600 }}>
                         <span style={{ fontSize: 10, color: 'var(--text-muted)', marginRight: 6 }}>{dayLabel(txn.date)}</span>
                         {txn.type === 'person'
-                          ? dirMeta?.label ?? 'Person'
-                          : txn.type === 'cash' ? 'Withdrew cash'
+                          ? dirMeta?.label ?? tr("Person")
+                          : txn.type === 'cash' ? tr("Withdrew cash")
                           : `${txn.savingsType ? getSavingsType(txn.savingsType).label : 'Savings'}${txn.platform ? ' · ' + txn.platform : ''}`
                         }
                       </span>
@@ -390,10 +391,10 @@ export default function TodayTab(props) {
         </div>
         <div style={{ textAlign: 'center' }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>
-            {isNow ? 'Nothing logged this week' : `Nothing logged in ${monthName(monthKey, { month: 'long' })}`}
+            {isNow ? tr("Nothing logged this week") : `Nothing logged in ${monthName(monthKey, { month: 'long' })}`}
           </p>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-            Add an entry above — it shows up here
+            {tr("Add an entry above — it shows up here")}
           </p>
         </div>
       </div>

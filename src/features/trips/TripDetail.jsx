@@ -27,6 +27,7 @@ import { toKey } from '../../utils/recurring';
 import { currencySymbol } from '../../utils/money';
 import TripPlan from './TripPlan';
 
+import { t as tr } from '../../i18n';
 const newRow = (paidBy = '', date) => ({ id: generateId(), title: '', amount: '', paidBy, splitAmong: [], date });
 const isValidRow = (r) => r.paidBy && String(r.title ?? '').trim() && Number(r.amount) > 0;
 const isBlankRow = (r) => !String(r.title ?? '').trim() && (r.amount === '' || r.amount == null);
@@ -179,9 +180,9 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
   };
   const allPeople = members.map((m) => ({ value: m.id, label: m.name }));
   const columns = [
-    { key: 'paidBy', label: 'Person', type: 'pick', width: 'minmax(96px, 1fr)', placeholder: 'Who paid?', options: allPeople,
+    { key: 'paidBy', label: tr("Person"), type: 'pick', width: 'minmax(96px, 1fr)', placeholder: tr("Who paid?"), options: allPeople,
       choices: isOwner ? allPeople : allPeople.filter((o) => walletIds.includes(o.value)), onCreate: isOwner ? createMember : undefined },
-    { key: 'title', label: 'What', type: 'text', width: 'minmax(110px, 1.6fr)', placeholder: 'Fuel, food, toll…' },
+    { key: 'title', label: tr("What"), type: 'text', width: 'minmax(110px, 1.6fr)', placeholder: tr("Fuel, food, toll…") },
     { key: 'amount', label: `Amount ${currencySymbol(trip.currency)}`, type: 'amount', width: '104px', placeholder: '0' },
   ];
 
@@ -197,7 +198,7 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
       <div className="trip-entry" style={{ minWidth: 0 }}>
         <div className="card" style={{ padding: '12px 14px', marginBottom: 12 }}>
           <div style={{ ...label, marginBottom: 8, flexWrap: 'wrap' }}>
-            <Users size={12} /> People · {members.length}
+            <Users size={12} /> {tr("People ·")} {members.length}
             <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}>
               {isOwner ? (closed ? '' : shared ? '— tap one for “pays together”' : '— tap one for “me” or “pays together”') : '— you can edit your rows and your wallet partner’s'}
             </span>
@@ -213,20 +214,20 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
                   style={{ padding: account ? '3px 11px 3px 3px' : '5px 11px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: closed || !isOwner ? 'default' : 'pointer', border: `1.5px solid ${on ? 'var(--external)' : m.id === myId ? 'var(--external-border)' : 'var(--border)'}`, background: on || m.id === myId ? 'var(--external-bg)' : 'var(--surface2)', color: 'var(--text)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                   {account && <Avatar user={{ displayName: account.name || m.name, photoURL: account.photo }} size={20} />}
                   {m.name}
-                  {isCreator && <Crown size={11} style={{ color: 'var(--warning, #f59e0b)' }} aria-label="created the trip" />}
-                  {m.id === myId && <span style={{ color: 'var(--external)' }}>· you</span>}
-                  {partner && <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>· with {partner.name}</span>}
-                  {shared && !account && <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>· not joined</span>}
+                  {isCreator && <Crown size={11} style={{ color: 'var(--warning, #f59e0b)' }} aria-label={tr("created the trip")} />}
+                  {m.id === myId && <span style={{ color: 'var(--external)' }}>{tr("· you")}</span>}
+                  {partner && <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{tr("· with")} {partner.name}</span>}
+                  {shared && !account && <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{tr("· not joined")}</span>}
                   <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{money(paidBy[m.id] ?? 0)}</span>
                 </button>
               );
             })}
             {!closed && isOwner && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flex: '1 1 160px' }}>
-                <input id="trip-add-person" type="text" value={newPerson} placeholder="Add people — comma separated" onChange={(e) => setNewPerson(e.target.value)}
+                <input id="trip-add-person" type="text" value={newPerson} placeholder={tr("Add people — comma separated")} onChange={(e) => setNewPerson(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPeople(newPerson); } }}
                   style={{ flex: 1, minWidth: 0, padding: '6px 10px', fontSize: 12.5, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }} />
-                <button type="button" aria-label="Add people" onClick={() => addPeople(newPerson)} style={{ width: 30, height: 30, border: 'none', background: 'var(--external)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><UserPlus size={13} /></button>
+                <button type="button" aria-label={tr("Add people")} onClick={() => addPeople(newPerson)} style={{ width: 30, height: 30, border: 'none', background: 'var(--external)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><UserPlus size={13} /></button>
               </span>
             )}
           </div>
@@ -239,28 +240,28 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
             return (
               <div style={{ marginTop: 10, padding: 12, borderRadius: 12, border: '1.5px solid var(--external-border)', background: 'var(--external-bg)', display: 'grid', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input type="text" aria-label="Name" value={m.name} onChange={(e) => renameMember(m.id, e.target.value)} style={{ flex: 1, padding: '7px 10px', fontSize: 13, fontWeight: 700, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }} />
-                  <button onClick={() => setEditingMember(null)} aria-label="Done" style={{ width: 30, height: 30, border: 'none', background: 'var(--external)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={14} /></button>
+                  <input type="text" aria-label={tr("Name")} value={m.name} onChange={(e) => renameMember(m.id, e.target.value)} style={{ flex: 1, padding: '7px 10px', fontSize: 13, fontWeight: 700, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }} />
+                  <button onClick={() => setEditingMember(null)} aria-label={tr("Done")} style={{ width: 30, height: 30, border: 'none', background: 'var(--external)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={14} /></button>
                 </div>
                 {shared ? (
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    {account ? <>Joined with the account <strong>{account.name}</strong> — edits their own rows.</> : <>Not joined yet — send the invite; they pick “{m.name}” when they open it.</>}
+                    {account ? <>{tr("Joined with the account")} <strong>{account.name}</strong> {tr("— edits their own rows.")}</> : <>{tr("Not joined yet — send the invite; they pick “")}{m.name}{tr("” when they open it.")}</>}
                   </div>
                 ) : (
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>
                     <input type="checkbox" checked={trip.meMemberId === m.id} onChange={() => setMe(m.id)} style={{ width: 16, height: 16, accentColor: 'var(--external)' }} />
-                    This is me — my share and dues go to my ledger when the trip closes
+                    {tr("This is me — my share and dues go to my ledger when the trip closes")}
                   </label>
                 )}
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
-                  <span>Pays together with <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>(one wallet — one covers the other)</span></span>
+                  <span>{tr("Pays together with")} <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>{tr("(one wallet — one covers the other)")}</span></span>
                   <select value={partner?.id ?? ''} onChange={(e) => setPaysWith(m.id, e.target.value)} style={{ flex: '0 1 170px', padding: '6px 8px', fontSize: 12, border: '1.5px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit' }}>
-                    <option value="">Nobody — pays alone</option>
+                    <option value="">{tr("Nobody — pays alone")}</option>
                     {others.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
                   </select>
                 </label>
                 <button onClick={() => removeMember(m.id)} disabled={locked} style={{ justifySelf: 'start', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: locked ? 'not-allowed' : 'pointer', opacity: locked ? 0.5 : 1, background: 'var(--expense-bg)', color: 'var(--expense)', border: '1px solid var(--expense-border)' }}>
-                  <X size={12} /> Remove {m.name}{usedBy(m.id) ? ' (has rows)' : account ? ' (has joined)' : ''}
+                  <X size={12} /> {tr("Remove")} {m.name}{usedBy(m.id) ? ' (has rows)' : account ? ' (has joined)' : ''}
                 </button>
               </div>
             );
@@ -271,13 +272,13 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
           canEditRow={shared ? canEditRow : undefined}
           makeRow={(list) => newRow(lastPayer(list), trip.startDate)} rowLabel={(r) => r.title}
           footer={<span style={{ marginLeft: 'auto', display: 'flex', gap: 12, alignItems: 'baseline' }}>
-            <span>{validExpenses.length} item{validExpenses.length === 1 ? '' : 's'}{members.length ? ` · ${money(s.perHead)} per head` : ''}</span>
-            <strong style={{ fontSize: 14, color: 'var(--text)' }}>Total {money(s.total)}</strong>
+            <span>{validExpenses.length} {tr("item")}{validExpenses.length === 1 ? '' : 's'}{members.length ? ` · ${money(s.perHead)} per head` : ''}</span>
+            <strong style={{ fontSize: 14, color: 'var(--text)' }}>{tr("Total")} {money(s.total)}</strong>
           </span>} />
         {!closed && <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '8px 2px 0', lineHeight: 1.5 }}>
           {shared && !isOwner
-            ? 'Add what you paid for · greyed rows are other people’s — only they (or the trip’s creator) can change them · sums like 120+80 work'
-            : 'Enter moves to the next cell · type a new name to add a person · sums like 120+80 work · paste rows from Excel or Sheets'}
+            ? tr("Add what you paid for · greyed rows are other people’s — only they (or the trip’s creator) can change them · sums like 120+80 work")
+            : tr("Enter moves to the next cell · type a new name to add a person · sums like 120+80 work · paste rows from Excel or Sheets")}
         </p>}
       </div>
 
@@ -286,38 +287,38 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
         <div className="card" style={{ padding: 14 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
             <div>
-              <div style={label}>Total spent</div>
+              <div style={label}>{tr("Total spent")}</div>
               <div id="trip-total" style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', lineHeight: 1.1, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
                 <RollingNumber value={s.total} />
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
-                {members.length} people · {money(s.perHead)} each
+                {members.length} {tr("people ·")} {money(s.perHead)} {tr("each")}
                 {trip.startDate && <> · {formatDateShort(trip.startDate)}{trip.endDate ? ` – ${formatDateShort(trip.endDate)}` : ''}</>}
               </div>
               {myId && s.count > 0 && (
                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 3 }}>
-                  You paid {money(s.myPaid ?? 0)} · your share {money(s.myShare ?? 0)}
+                  {tr("You paid")} {money(s.myPaid ?? 0)} {tr("· your share")} {money(s.myShare ?? 0)}
                 </div>
               )}
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <Btn onClick={() => { persist(); onShare(); }} Icon={Share2}>Share</Btn>
-              {isOwner && onInvite && <Btn onClick={() => { persist(); onInvite(); }} Icon={UserPlus}>{shared ? 'Invite' : 'Invite friends'}</Btn>}
+              <Btn onClick={() => { persist(); onShare(); }} Icon={Share2}>{tr("Share")}</Btn>
+              {isOwner && onInvite && <Btn onClick={() => { persist(); onInvite(); }} Icon={UserPlus}>{shared ? tr("Invite") : tr("Invite friends")}</Btn>}
               {isOwner && (closed
-                ? <Btn onClick={onReopen} Icon={Unlock}>Reopen</Btn>
-                : <Btn onClick={() => { persist(); onClose(); }} Icon={Lock} filled disabled={!s.count || members.length < 2}>Close trip</Btn>)}
-              {!isOwner && closed && onLogMine && myId && <Btn onClick={onLogMine} Icon={BookPlus} filled>Add to my ledger</Btn>}
-              {isOwner && onDelete && <Btn onClick={() => setConfirmDelete(true)} Icon={Trash2} danger>Delete</Btn>}
+                ? <Btn onClick={onReopen} Icon={Unlock}>{tr("Reopen")}</Btn>
+                : <Btn onClick={() => { persist(); onClose(); }} Icon={Lock} filled disabled={!s.count || members.length < 2}>{tr("Close trip")}</Btn>)}
+              {!isOwner && closed && onLogMine && myId && <Btn onClick={onLogMine} Icon={BookPlus} filled>{tr("Add to my ledger")}</Btn>}
+              {isOwner && onDelete && <Btn onClick={() => setConfirmDelete(true)} Icon={Trash2} danger>{tr("Delete")}</Btn>}
             </div>
           </div>
           {shared && !isOwner && (
             <div style={{ marginTop: 10, padding: '7px 10px', background: 'var(--surface2)', fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Crown size={11} /> Shared by {trip.ownerName || 'the creator'} — they close the trip and can correct any row.
+              <Crown size={11} /> {tr("Shared by")} {trip.ownerName || 'the creator'} {tr("— they close the trip and can correct any row.")}
             </div>
           )}
           {closed && (
             <div style={{ marginTop: 10, padding: '7px 10px', background: 'var(--surface2)', fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Lock size={11} /> Closed{trip.closedAt ? ` on ${formatDateShort(trip.closedAt)}` : ''} — {isOwner ? 'reopen to change anything.' : 'only its creator can reopen it.'}
+              <Lock size={11} /> {tr("Closed")}{trip.closedAt ? ` on ${formatDateShort(trip.closedAt)}` : ''} — {isOwner ? 'reopen to change anything.' : 'only its creator can reopen it.'}
             </div>
           )}
         </div>
@@ -328,34 +329,34 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
 
         <div className="card" id="trip-transfers">
           <div style={{ padding: '11px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={label}><ArrowRight size={12} /> Who pays whom</span>
+            <span style={label}><ArrowRight size={12} /> {tr("Who pays whom")}</span>
             <span ref={settledRef} className="settle-pop" style={{ fontSize: 11, fontWeight: 700, color: s.isSettled ? 'var(--income)' : 'var(--expense)' }}>
-              {!s.count ? '' : s.isSettled ? 'All settled ✓' : `${money(s.outstanding)} to settle`}
+              {!s.count ? '' : s.isSettled ? tr("All settled ✓") : `${money(s.outstanding)} to settle`}
             </span>
           </div>
           {!s.count || members.length < 2 ? (
-            <div style={{ padding: 14, fontSize: 12, color: 'var(--text-muted)' }}>{members.length < 2 ? 'Add at least two people.' : 'Fill in a row — the plan appears here as you type.'}</div>
+            <div style={{ padding: 14, fontSize: 12, color: 'var(--text-muted)' }}>{members.length < 2 ? tr("Add at least two people.") : tr("Fill in a row — the plan appears here as you type.")}</div>
           ) : s.transfers.length === 0 ? (
             <div style={{ padding: 14, fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <CheckCircle2 size={14} style={{ color: 'var(--income)' }} /> Everyone is square.
+              <CheckCircle2 size={14} style={{ color: 'var(--income)' }} /> {tr("Everyone is square.")}
             </div>
           ) : s.transfers.map((t, i) => {
             const mine = s.meUnit && (t.from === s.meUnit || t.to === s.meUnit);
             return (
               <div key={`${t.from}-${t.to}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', borderTop: i ? '1px solid var(--border)' : 'none', background: mine ? 'var(--external-bg)' : 'transparent' }}>
                 <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--text)' }}>
-                  <strong>{t.fromName}</strong> <span style={{ color: 'var(--text-muted)' }}>pays</span> <strong>{t.toName}</strong>
+                  <strong>{t.fromName}</strong> <span style={{ color: 'var(--text-muted)' }}>{tr("pays")}</span> <strong>{t.toName}</strong>
                   {mine && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--external)', marginLeft: 6 }}>{t.to === s.meUnit ? 'to you' : 'you pay'}</span>}
                 </div>
                 <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--expense)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{money(t.amount)}</span>
                 {canSettle(t.from, t.to) && getDisplayCurrency() === 'INR' && (
-                  <button id={`trip-upi-${i}`} onClick={() => setUpi(t)} title="Pay or ask by UPI" style={{ height: 28, padding: '0 9px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 800, letterSpacing: '0.02em', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-                    UPI
+                  <button id={`trip-upi-${i}`} onClick={() => setUpi(t)} title={tr("Pay or ask by UPI")} style={{ height: 28, padding: '0 9px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 800, letterSpacing: '0.02em', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                    {tr("UPI")}
                   </button>
                 )}
                 {canSettle(t.from, t.to) && (
-                  <button onClick={(e) => markPaid(t, e)} title="Mark as paid — either of you can" style={{ height: 28, padding: '0 10px', border: 'none', background: 'var(--income)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                    <Check size={12} /> Paid
+                  <button onClick={(e) => markPaid(t, e)} title={tr("Mark as paid — either of you can")} style={{ height: 28, padding: '0 10px', border: 'none', background: 'var(--income)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                    <Check size={12} /> {tr("Paid")}
                   </button>
                 )}
               </div>
@@ -363,12 +364,12 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
           })}
           {settlements.length > 0 && (
             <div style={{ borderTop: '1px solid var(--border)', padding: '8px 14px 10px' }}>
-              <div style={{ ...label, marginBottom: 4 }}>Settled so far · {money(s.settledTotal)}</div>
+              <div style={{ ...label, marginBottom: 4 }}>{tr("Settled so far ·")} {money(s.settledTotal)}</div>
               {settlements.map((x) => (
                 <div key={x.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)', padding: '3px 0' }}>
                   <CheckCircle2 size={12} style={{ color: 'var(--income)', flexShrink: 0 }} />
                   <span style={{ flex: 1, minWidth: 0 }}>{settlementLabel(x)} · {money(x.amount)}{x.date ? ` · ${formatDateShort(x.date)}` : ''}</span>
-                  {canSettle(x.fromUnit, x.toUnit) && <button onClick={() => removeSettlement(x.id)} aria-label="Undo" title="Undo" style={{ width: 26, height: 26, border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={12} /></button>}
+                  {canSettle(x.fromUnit, x.toUnit) && <button onClick={() => removeSettlement(x.id)} aria-label={tr("Undo")} title={tr("Undo")} style={{ width: 26, height: 26, border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={12} /></button>}
                 </div>
               ))}
             </div>
@@ -377,7 +378,7 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
 
         {s.count > 0 && (
           <div className="card">
-            <div style={{ ...label, padding: '11px 14px', borderBottom: '1px solid var(--border)' }}><Users size={12} /> Paid vs share</div>
+            <div style={{ ...label, padding: '11px 14px', borderBottom: '1px solid var(--border)' }}><Users size={12} /> {tr("Paid vs share")}</div>
             {s.units.map((u, i) => {
               const pos = u.remaining > 0.004, neg = u.remaining < -0.004;
               return (
@@ -385,10 +386,10 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-                        {u.name}{u.id === s.meUnit && <span style={{ fontSize: 10, color: 'var(--external)', marginLeft: 6 }}>you</span>}
-                        {u.isGroup && <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 6 }}>one wallet</span>}
+                        {u.name}{u.id === s.meUnit && <span style={{ fontSize: 10, color: 'var(--external)', marginLeft: 6 }}>{tr("you")}</span>}
+                        {u.isGroup && <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 6 }}>{tr("one wallet")}</span>}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>paid {money(u.paid)} · share {money(u.share)}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{tr("paid")} {money(u.paid)} {tr("· share")} {money(u.share)}</div>
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: pos ? 'var(--income)' : neg ? 'var(--expense)' : 'var(--text-muted)', flexShrink: 0 }}>
                       {pos ? `gets ${money(u.remaining)}` : neg ? `owes ${money(-u.remaining)}` : 'settled'}
@@ -401,19 +402,19 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
                     <div style={{ marginTop: 8, padding: '7px 10px', borderRadius: 10, background: 'var(--surface2)', display: 'grid', gap: 5 }}>
                       {u.memberIds.map((mid) => {
                         const r = s.members.find((x) => x.id === mid);
-                        return <div key={mid} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)' }}><span>{r.name}{mid === u.lead && u.inside?.length ? ' · covers the wallet' : ''}</span><span>paid {money(r.paid)} · share {money(r.share)}</span></div>;
+                        return <div key={mid} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)' }}><span>{r.name}{mid === u.lead && u.inside?.length ? ' · covers the wallet' : ''}</span><span>{tr("paid")} {money(r.paid)} {tr("· share")} {money(r.share)}</span></div>;
                       })}
                       {u.inside?.length ? u.inside.map((t) => (
                         <div key={`${t.from}-${t.to}`} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text)', borderTop: '1px dashed var(--border)', paddingTop: 5 }}>
-                          <span style={{ flex: 1, minWidth: 0 }}><strong>{t.fromName}</strong> <span style={{ color: 'var(--text-muted)' }}>owes</span> <strong>{t.toName}</strong></span>
+                          <span style={{ flex: 1, minWidth: 0 }}><strong>{t.fromName}</strong> <span style={{ color: 'var(--text-muted)' }}>{tr("owes")}</span> <strong>{t.toName}</strong></span>
                           <span style={{ fontWeight: 800, color: 'var(--expense)' }}>{money(t.amount)}</span>
                           {canSettle(u.id, u.id) && (
-                            <button onClick={(e) => markInsidePaid(u, t, e)} title="Mark as paid back" style={{ height: 24, padding: '0 8px', border: 'none', background: 'var(--income)', color: '#fff', fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 3 }}>
-                              <Check size={11} /> Paid
+                            <button onClick={(e) => markInsidePaid(u, t, e)} title={tr("Mark as paid back")} style={{ height: 24, padding: '0 8px', border: 'none', background: 'var(--income)', color: '#fff', fontSize: 10.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 3 }}>
+                              <Check size={11} /> {tr("Paid")}
                             </button>
                           )}
                         </div>
-                      )) : <div style={{ fontSize: 11, color: 'var(--income)', fontWeight: 600, borderTop: '1px dashed var(--border)', paddingTop: 5 }}>Square between them ✓</div>}
+                      )) : <div style={{ fontSize: 11, color: 'var(--income)', fontWeight: 600, borderTop: '1px dashed var(--border)', paddingTop: 5 }}>{tr("Square between them ✓")}</div>}
                     </div>
                   )}
                 </div>
@@ -426,7 +427,7 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
 
         {s.categories.length > 0 && (
           <div className="card" id="trip-report">
-            <div style={{ ...label, padding: '11px 14px', borderBottom: '1px solid var(--border)' }}><PieChart size={12} /> Where the money went</div>
+            <div style={{ ...label, padding: '11px 14px', borderBottom: '1px solid var(--border)' }}><PieChart size={12} /> {tr("Where the money went")}</div>
             <div style={{ padding: '8px 14px 12px', display: 'grid', gap: 7 }}>
               {s.categories.map((c) => {
                 const meta = categoryMeta(c.key);

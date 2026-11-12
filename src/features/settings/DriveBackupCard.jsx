@@ -15,6 +15,7 @@ import { platform } from '../../native';
 import { APK_URL } from '../../native/updates';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 
+import { t as tr } from '../../i18n';
 const fmtSize = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
 export default function DriveBackupCard({ user, onPatchSettings, drive, bare = false }) {
@@ -35,7 +36,7 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
       // Ask for Drive access right away, then make the first backup
       save({ enabled: true });
       await run({ interactive: true });
-      setMsg({ text: 'Backed up to your Google Drive. The next ones happen on their own.', tone: 'income' });
+      setMsg({ text: tr("Backed up to your Google Drive. The next ones happen on their own."), tone: 'income' });
     } catch (err) {
       fail(err);
       if (err?.code === 'cancelled' || err?.code === 'unsupported') save({ enabled: false });
@@ -43,7 +44,7 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
   }
   async function now() {
     setMsg(null);
-    try { await run({ interactive: true }); setMsg({ text: 'Backed up just now.', tone: 'income' }); setList(null); } catch (err) { fail(err); }
+    try { await run({ interactive: true }); setMsg({ text: tr("Backed up just now."), tone: 'income' }); setList(null); } catch (err) { fail(err); }
   }
   async function changeAccount() {
     setChanging(false); setMsg(null);
@@ -70,14 +71,14 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
   }
 
   return (
-    <CardFrame bare={bare} id="group-drive" title="Google Drive backup">
+    <CardFrame bare={bare} id="group-drive" title={tr("Google Drive backup")}>
         {restoring && (
           <ConfirmDeleteModal title={`Restore ${restoring.name}?`}
             message="Entries in the backup are written back to your account (same entries are replaced with the backed-up version). Nothing that isn’t in the backup is deleted."
             confirmLabel="Restore" ConfirmIcon={RotateCcw} onConfirm={() => restore(restoring)} onCancel={() => setRestoring(null)} />
         )}
         {changing && (
-          <ConfirmDeleteModal title="Back up to another Google account?"
+          <ConfirmDeleteModal title={tr("Back up to another Google account?")}
             message={`Pick the account in Google’s window. A backup is made there right away, and every backup after that goes there — from all your devices.${account ? ` The copy in ${account} stays in that Drive; Restore shows the new account’s copy.` : ''}`}
             confirmLabel="Pick account" ConfirmIcon={UserRoundCog} onConfirm={changeAccount} onCancel={() => setChanging(false)} />
         )}
@@ -86,17 +87,17 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
             <HardDriveUpload size={16} style={{ color: '#fff' }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{cfg.enabled ? 'Backing up to your Drive' : 'Back up to your own Google Drive'}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{cfg.enabled ? tr("Backing up to your Drive") : tr("Back up to your own Google Drive")}</div>
             <div id="drive-status" style={{ fontSize: 11, color: state.error && cfg.enabled ? 'var(--expense)' : 'var(--text-muted)', marginTop: 1 }}>
-              {running ? 'Backing up…'
+              {running ? tr("Backing up…")
                 : state.error && cfg.enabled ? `Last try failed: ${state.error.message}`
                 : state.lastAt ? `Last backup ${timeAgo(state.lastAt)}${state.lastDevice ? ` · ${state.lastDevice}` : ''}${state.lastFile?.size ? ` · ${fmtSize(state.lastFile.size)}` : ''}`
-                : 'A copy only you hold — even if our servers had a problem, your data is in your Drive'}
+                : tr("A copy only you hold — even if our servers had a problem, your data is in your Drive")}
             </div>
-            {cfg.enabled && account && <div id="drive-account" style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>To {account}</div>}
+            {cfg.enabled && account && <div id="drive-account" style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tr("To")} {account}</div>}
           </div>
           {cfg.enabled && (
-            <button id="drive-toggle" className="toggle-track on" aria-pressed aria-label="Google Drive backup" onClick={() => { save({ enabled: false }); disconnectDrive(); }}>
+            <button id="drive-toggle" className="toggle-track on" aria-pressed aria-label={tr("Google Drive backup")} onClick={() => { save({ enabled: false }); disconnectDrive(); }}>
               <span className="toggle-thumb" />
             </button>
           )}
@@ -104,9 +105,9 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
 
         {!cfg.enabled && (
           <>
-            <p style={note}>Like WhatsApp: a full copy of everything — entries, trips, bills, settings — goes to your Google Drive on the schedule you pick. It’s kept in Drive’s hidden app storage (it doesn’t show up as a file), encrypted, and only the latest copy is kept. The app can’t see anything else in your Drive.</p>
+            <p style={note}>{tr("Like WhatsApp: a full copy of everything — entries, trips, bills, settings — goes to your Google Drive on the schedule you pick. It’s kept in Drive’s hidden app storage (it doesn’t show up as a file), encrypted, and only the latest copy is kept. The app can’t see anything else in your Drive.")}</p>
             <button id="drive-enable" onClick={turnOn} disabled={running} style={btn(true)}>
-              {running ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CloudUpload size={14} />} Connect Google Drive
+              {running ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CloudUpload size={14} />} {tr("Connect Google Drive")}
             </button>
           </>
         )}
@@ -114,40 +115,40 @@ export default function DriveBackupCard({ user, onPatchSettings, drive, bare = f
         {cfg.enabled && (
           <>
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-              <select id="drive-frequency" value={cfg.frequency} onChange={(e) => save({ frequency: e.target.value })} style={select} aria-label="How often">
+              <select id="drive-frequency" value={cfg.frequency} onChange={(e) => save({ frequency: e.target.value })} style={select} aria-label={tr("How often")}>
                 {FREQUENCIES.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
               </select>
             </div>
             <p style={{ ...note, display: 'flex', gap: 6 }}><ShieldCheck size={13} style={{ flexShrink: 0, marginTop: 1, color: 'var(--income)' }} /><span>{state?.hidden === false
-              ? <>Encrypted, one copy — but this Android app keeps it in the “Expense Tracker backups” folder. Install the new app (your data stays) and it moves to hidden storage. <a href={APK_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 700 }}>Get the new app</a></>
-              : 'Encrypted, one copy, in Drive’s hidden app storage — it doesn’t appear in your Drive and can only be opened by signing in here.'}</span></p>
-            {needsTap && <p id="drive-due" style={{ ...note, color: 'var(--lent)' }}><AlertTriangle size={12} style={{ verticalAlign: -2 }} /> A backup is due — tap Back up now{platform === 'web' ? ' (browsers need a tap to reach Google).' : '.'}</p>}
-            {platform === 'web' && !needsTap && <p style={note}>On the website, a due backup waits for your tap. The Android and desktop apps back up by themselves.</p>}
+              ? <>{tr("Encrypted, one copy — but this Android app keeps it in the “Expense Tracker backups” folder. Install the new app (your data stays) and it moves to hidden storage.")} <a href={APK_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr("Get the new app")}</a></>
+              : tr("Encrypted, one copy, in Drive’s hidden app storage — it doesn’t appear in your Drive and can only be opened by signing in here.")}</span></p>
+            {needsTap && <p id="drive-due" style={{ ...note, color: 'var(--lent)' }}><AlertTriangle size={12} style={{ verticalAlign: -2 }} /> {tr("A backup is due — tap Back up now")}{platform === 'web' ? ' (browsers need a tap to reach Google).' : '.'}</p>}
+            {platform === 'web' && !needsTap && <p style={note}>{tr("On the website, a due backup waits for your tap. The Android and desktop apps back up by themselves.")}</p>}
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
               <button id="drive-now" onClick={now} disabled={running} style={btn(true)}>
-                {running ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CloudUpload size={14} />} Back up now
+                {running ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CloudUpload size={14} />} {tr("Back up now")}
               </button>
-              <button id="drive-list" onClick={showList} disabled={busy} style={btn(false)}><History size={14} /> Restore…</button>
+              <button id="drive-list" onClick={showList} disabled={busy} style={btn(false)}><History size={14} /> {tr("Restore…")}</button>
               {(canChooseAccount() || platform === 'android') && (
-                <button id="drive-account-change" onClick={() => setChanging(true)} disabled={running} style={btn(false)}><UserRoundCog size={14} /> Change account</button>
+                <button id="drive-account-change" onClick={() => setChanging(true)} disabled={running} style={btn(false)}><UserRoundCog size={14} /> {tr("Change account")}</button>
               )}
             </div>
           </>
         )}
 
-        {msg && <div role="status" style={{ marginTop: 10, fontSize: 12, lineHeight: 1.5, color: `var(--${msg.tone})` }}>{msg.tone === 'income' ? <CheckCircle2 size={12} style={{ verticalAlign: -2 }} /> : <AlertTriangle size={12} style={{ verticalAlign: -2 }} />} {msg.text}{msg.install && <> <a href={APK_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 700 }}>Get the new app</a></>}</div>}
+        {msg && <div role="status" style={{ marginTop: 10, fontSize: 12, lineHeight: 1.5, color: `var(--${msg.tone})` }}>{msg.tone === 'income' ? <CheckCircle2 size={12} style={{ verticalAlign: -2 }} /> : <AlertTriangle size={12} style={{ verticalAlign: -2 }} />} {msg.text}{msg.install && <> <a href={APK_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr("Get the new app")}</a></>}</div>}
         {busy && !list && <div style={{ marginTop: 10 }}><Loader2 size={16} style={{ animation: 'spin 1s linear infinite', color: 'var(--text-muted)' }} /></div>}
 
         {list && (
           <div id="drive-backups" style={{ marginTop: 12, borderTop: '1px solid var(--border)' }}>
-            {list.files.length === 0 && <p style={note}>No backup in your Drive yet.</p>}
+            {list.files.length === 0 && <p style={note}>{tr("No backup in your Drive yet.")}</p>}
             {list.files.slice(0, 15).map((f) => (
               <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 650, color: 'var(--text)' }}>{new Date(f.createdTime).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{fmtSize(Number(f.size) || 0)}</div>
                 </div>
-                <button onClick={() => setRestoring(f)} disabled={busy} style={btn(false)}><RotateCcw size={13} /> Restore</button>
+                <button onClick={() => setRestoring(f)} disabled={busy} style={btn(false)}><RotateCcw size={13} /> {tr("Restore")}</button>
               </div>
             ))}
           </div>

@@ -18,6 +18,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { evalAmount, parseDateText } from '../utils/sheetValues';
 
+import { t as tr } from '../i18n';
 const matchOption = (options, text) => { const t = text.trim().toLowerCase(); return t ? options.find((o) => o.label.toLowerCase() === t) : null; };
 // Of the names starting with what was typed, the shortest ("Kir" → Kiran, not Kiranr)
 const completeOption = (options, text) => {
@@ -137,7 +138,7 @@ export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly =
       {(footer || removed) && (
         <div className="sheet-foot" style={{ minWidth }}>
           {removed
-            ? <span>Removed “{rowLabel(removed.row) || `row ${removed.index + 1}`}” · <button type="button" className="sheet-undo" onClick={undo}>Undo</button></span>
+            ? <span>{tr("Removed “")}{rowLabel(removed.row) || `row ${removed.index + 1}`}” · <button type="button" className="sheet-undo" onClick={undo}>{tr("Undo")}</button></span>
             : <span />}
           {footer}
         </div>
