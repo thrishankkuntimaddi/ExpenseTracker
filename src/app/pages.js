@@ -17,7 +17,7 @@ export const PAGE_META = {
   trips:    { label: 'Trips',    title: 'Trips & splits',   Icon: Plane,         tone: 'repayment-rec', description: 'Shared spending, settled fairly' },
   external: { label: 'Billings', title: 'Billings',         Icon: HandCoins,     tone: 'external',      description: 'Money spent for others' },
   responsibilities: { label: 'Responsibilities', title: 'Responsibilities', Icon: HeartHandshake, tone: 'given', description: 'Family loans and promises you’re clearing' },
-  planner:  { label: 'Planner',  title: 'Planner',          Icon: Calculator,    tone: 'savings',       description: 'Retirement, FIRE, education, step-up SIP' },
+  planner:  { label: 'Planner',  title: 'Planner',          Icon: Calculator,    tone: 'savings',       description: 'Retirement, FIRE, education, SIP, loans, tax' },
 };
 
 /* Accent per page (bar highlight) */

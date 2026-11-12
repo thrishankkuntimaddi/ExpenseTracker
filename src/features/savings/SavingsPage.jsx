@@ -14,6 +14,7 @@ import GoalModal from '../plan/GoalModal';
 import { SAVINGS_TYPES, getSavingsType } from '../../utils/typeConfig';
 import { formatAmount, localMonthKey } from '../../utils/dateHelpers';
 import { generateId } from '../../utils/storage';
+import NetWorthCard from './NetWorthCard';
 import { useShell } from '../../app/shellContext';
 import { useViewMonth, monthName } from '../../app/month';
 import EntryAmount from '../../components/EntryAmount';
@@ -83,6 +84,10 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
             )}
           </div>
         )}
+
+        <div style={{ marginTop: 12 }}>
+          <NetWorthCard transactions={transactions} income={income} settings={settings} onPatchSettings={onPatchSettings} />
+        </div>
 
         {byType.length > 0 && (
           <>

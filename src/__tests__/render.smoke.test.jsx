@@ -245,6 +245,16 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Emergency fund');
   });
 
+  it('Net worth on Savings, festivals on Budget', () => {
+    const sav = render(<SavingsPage {...common} />);
+    expect(sav).toContain('id="net-worth"');
+    expect(sav).toContain('Net worth');
+    const bud = render(<BudgetPage {...common} settings={{ ...common.settings, events: [{ id: 'd', name: 'Diwali', start: '2026-10-01', end: '2026-10-10', limit: 9000 }] }} />);
+    expect(bud).toContain('id="budget-events"');
+    expect(bud).toContain('Diwali');
+    expect(bud).not.toMatch(/NaN/);
+  });
+
   it('UPI sheet and Wrapped render', async () => {
     const { default: UpiSheet } = await import('../components/UpiSheet');
     const { default: WrappedModal } = await import('../features/stats/components/WrappedModal');
@@ -286,7 +296,7 @@ describe('screens render with planning features', () => {
   });
 
   it('Planner: every calculator renders a result', () => {
-    for (const tab of ['retirement', 'fire', 'education', 'sip']) {
+    for (const tab of ['retirement', 'fire', 'education', 'sip', 'loan', 'tax']) {
       const html = render(<PlannerPage {...common} settings={{ ...common.settings, planner: { tab } }} />);
       expect(html).toContain('planner-tabs');
       expect(html).toContain('planner-big');

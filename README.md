@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.24.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.25.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
@@ -126,6 +126,7 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 - **Taken from salary**: deductions (TDS, PF, professional tax …) to see gross pay; shown, never subtracted twice
 - A total cap and/or per-category caps; with none set, a ready-made budget from your last three months
 - Pace markers, **safe to spend today**, projected month end, an envelope per category, six months against the budget
+- **Festivals & occasions**: a limit for Diwali, a wedding, Sankranti … counting the spending in those days, not everyday essentials
 - **Money plan** — a health check built from your real entries: essentials (keep under 40% of income), lifestyle (under 20%), EMIs & loans (under 30%), investments (aim for 20%+) and what's left over, each with a plain verdict; plus how many months your savings would carry you (an emergency fund of six months). The monthly report carries the same check
 
 ### 🧮 Planner
@@ -133,6 +134,8 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 - **FIRE**: your FIRE number (25× — the 4% rule — and a safer 30×), what you'd have by then with a rising salary, the earliest age you could stop, and how long the money lasts
 - **A child's education**: the cost on the day it's needed, as a monthly SIP, a yearly amount or one lump sum — and a check of your own step-up plan
 - **Step-up SIP**: a SIP that rises every year by a % or a fixed amount, then held for more years; against a flat SIP
+- **Loan**: the EMI (monthly reducing, as Indian lenders do), total interest, a yearly schedule, and what paying a little extra each month saves
+- **Tax** (old regime): 80C, NPS 80CCD(1B), 80D health insurance and rent for HRA, found in your entries for the financial year, against the limits — with the 80C room left before 31 March and the tax it saves at your slab
 - Starts from what you actually spend, earn and have saved; remembers your inputs; **Make it a goal** turns an answer into a Savings goal
 
 ### 🧾 Bills & recurring entries
@@ -199,6 +202,9 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 ### 👁️ Admin sees (the owner's account only)
 - A **read-only** list of who uses the app — name, email, when they last opened it and last added an entry, how many entries, which app and version — with filters (today, this week, adding entries, opens but adds nothing, no entries, new, going quiet, stopped), search and sorting
 - Each app writes only a small activity record about its own account (`user_activity/{uid}`); `firestore.rules` lets only the owner's verified account read them and no one write anyone else's. It never includes amounts or entries, and it's deleted with the account
+
+### 🧾 Net worth (Savings)
+- What you own (money in hand, savings by type, money owed to you, anything you add — a house, gold, PF) minus what you owe (people, responsibilities, loans you add)
 
 ### 📲 Settle by UPI & share
 - Every *who pays whom* in a trip, and every person in Debts, has **UPI**: open your UPI app with their UPI ID, the amount and a note filled in (on a phone), show a **QR** to scan (on a computer), or **send the pay link** to whoever owes. UPI IDs are remembered per person; the UPI app asks for the PIN — nothing is paid from here

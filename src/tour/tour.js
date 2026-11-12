@@ -136,7 +136,7 @@ const PAGE_GUIDES = {
     { target: ['#resp-list'], optional: true, title: 'Your order', text: 'Top is cleared first. Move them up or down, and pay from your salary or savings.' },
   ],
   planner: () => [
-    { target: HEADER, title: 'Planner', text: 'Long-term sums in today’s numbers: how much to retire, your FIRE number, a child’s education, a SIP that rises every year.' },
+    { target: HEADER, title: 'Planner', text: 'Long-term sums in today’s numbers: how much to retire, your FIRE number, a child’s education, a SIP that rises every year, a loan’s EMI and prepayment, and your tax-saving so far this year.' },
     { target: ['.planner-tabs'], optional: true, title: 'Four calculators', text: 'They start from what you actually spend, earn and have saved. Change any number — the answer updates as you type.' },
     { target: ['#ret-make-goal', '#fire-make-goal', '#edu-make-goal'], optional: true, title: 'Make it a goal', text: 'Turn the answer into a Savings goal with a monthly amount and a date.' },
   ],

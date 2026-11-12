@@ -7,7 +7,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Target, ChevronRight, Info } from 'lucide-react';
 import { PageHeader, PrimaryPill } from '../../components/Page';
 import { useShell } from '../../app/shellContext';
-import { retirement, fire, education, stepUpSip, RETIREMENT_DEFAULTS, FIRE_DEFAULTS, EDUCATION_DEFAULTS, SIP_DEFAULTS } from '../../utils/planner';
+import { retirement, fire, education, stepUpSip, loan, RETIREMENT_DEFAULTS, FIRE_DEFAULTS, EDUCATION_DEFAULTS, SIP_DEFAULTS, LOAN_DEFAULTS } from '../../utils/planner';
+import { taxSummary, taxSaved } from '../../utils/tax';
+import { toKey as dayKey } from '../../utils/recurring';
 import { bucketTotals, emergencyCover } from '../../utils/moneyPlan';
 import { formatBig, formatMoneyCompact, currencySymbol } from '../../utils/money';
 import { localMonthKey } from '../../utils/dateHelpers';
@@ -22,6 +24,8 @@ const TABS = [
   { key: 'fire', label: 'FIRE' },
   { key: 'education', label: 'Education' },
   { key: 'sip', label: 'SIP' },
+  { key: 'loan', label: 'Loan' },
+  { key: 'tax', label: 'Tax' },
 ];
 const big = (n) => formatBig(n);
 const money = (n) => formatMoneyCompact(n);
@@ -44,7 +48,7 @@ function useYourNumbers(transactions, income, rules) {
   }, [transactions, income, rules]);
 }
 
-export default function PlannerPage({ transactions = [], income = [], settings, onPatchSettings }) {
+export default function PlannerPage({ transactions = [], income = [], settings, onPatchSettings, recurring }) {
   const shell = useShell();
   const rules = settings?.categoryRules ?? EMPTY_RULES;
   const yours = useYourNumbers(transactions, income, rules);
@@ -63,6 +67,8 @@ export default function PlannerPage({ transactions = [], income = [], settings, 
     },
     education: { ...EDUCATION_DEFAULTS, ...saved.education },
     sip: { ...SIP_DEFAULTS, ...saved.sip },
+    loan: { ...LOAN_DEFAULTS, ...saved.loan },
+    tax: { slab: 0.2, ...saved.tax },
   }));
 
   // Remember inputs (quietly, a moment after the last change)
@@ -86,7 +92,7 @@ export default function PlannerPage({ transactions = [], income = [], settings, 
 
   return (
     <div className="tab-root planner-page">
-      <PageHeader title="Planner" subtitle="Retirement, FIRE, education, SIPs — in today’s numbers" />
+      <PageHeader title="Planner" subtitle="Retirement, FIRE, education, SIPs, loans, tax" />
       <div className="tab-body">
         <div className="tl-ranges planner-tabs" role="tablist" aria-label="Calculator">
           {TABS.map((t) => (
@@ -97,6 +103,8 @@ export default function PlannerPage({ transactions = [], income = [], settings, 
         {tab === 'fire' && <Fire v={inputs.fire} set={set('fire')} onGoal={makeGoal} />}
         {tab === 'education' && <Education v={inputs.education} set={set('education')} onGoal={makeGoal} />}
         {tab === 'sip' && <Sip v={inputs.sip} set={set('sip')} />}
+        {tab === 'loan' && <Loan v={inputs.loan} set={set('loan')} />}
+        {tab === 'tax' && <Tax v={inputs.tax} set={set('tax')} transactions={transactions} recurringRules={recurring?.rules ?? []} rules={rules} />}
         <p style={{ display: 'flex', gap: 6, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, margin: '14px 2px 0' }}>
           <Info size={13} style={{ flexShrink: 0, marginTop: 1 }} />
           Estimates, not advice. Returns and inflation are assumptions — change them to see how the picture moves.
@@ -349,5 +357,99 @@ function Sip({ v, set }) {
         <Table id="sip-table" head={['Year', 'Monthly', 'Value']} rows={s.rows.map((x) => [x.year, money(x.monthly), big(x.end)])} />
       </Result>
     </>
+  );
+}
+
+/* ── Loan EMI & prepayment ──────────────────────────────────────── */
+function Loan({ v, set }) {
+  const l = useMemo(() => loan(v), [v]);
+  const ym = (m) => `${Math.floor(m / 12) ? `${Math.floor(m / 12)} yr${Math.floor(m / 12) === 1 ? '' : 's'}` : ''}${m % 12 ? ` ${m % 12} mo` : ''}`.trim();
+  return (
+    <>
+      <Inputs>
+        <Num id="loan-amount" label="Loan amount" value={v.principal} onChange={(n) => set('principal', n)} />
+        <Num id="loan-rate" label="Interest a year" kind="pct" value={v.rate} onChange={(n) => set('rate', n)} />
+        <Num id="loan-years" label="For" kind="years" value={v.years} onChange={(n) => set('years', n)} />
+        <Num id="loan-extra" label="Pay extra each month" value={v.extra} onChange={(n) => set('extra', n)} hint="Optional — see what it saves" />
+      </Inputs>
+      <Result label="Your EMI" value={money(l.emi)} sub={<>For {ym(l.months)} — you pay back <strong>{big(l.totalPaid)}</strong>, of which <strong>{big(l.totalInterest)}</strong> is interest.</>}>
+        <Figures items={[
+          { label: 'Interest', value: big(l.totalInterest), color: 'var(--expense)' },
+          { label: 'Interest share', value: `${Math.round((l.totalInterest / Math.max(1, l.totalPaid)) * 100)}%` },
+          { label: 'Paid back in all', value: big(l.totalPaid) },
+        ]} />
+        {l.prepay && (
+          <Verdict ok>
+            Paying {money(v.extra)} more a month saves <strong>{big(l.prepay.interestSaved)}</strong> in interest and closes the loan {ym(l.prepay.monthsSaved)} early.
+          </Verdict>
+        )}
+        <Bars values={(l.prepay?.schedule ?? l.schedule).map((y) => y.end)} labels={(l.prepay?.schedule ?? l.schedule).map((y) => `Year ${y.year}`)} highlightLast={false} />
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>What’s still owed at the end of each year</div>
+        <Table id="loan-table" head={['Year', 'Interest', 'Principal', 'Still owed']} rows={(l.prepay?.schedule ?? l.schedule).map((y) => [y.year, big(y.interest), big(y.principal), big(y.end)])} />
+      </Result>
+    </>
+  );
+}
+
+/* ── Tax saving (old regime) ────────────────────────────────────── */
+const SLABS = [0.05, 0.2, 0.3];
+function Tax({ v, set, transactions, recurringRules, rules }) {
+  const todayKey = dayKey(new Date());
+  const t = useMemo(() => taxSummary({ transactions, recurringRules, rules, todayKey }), [transactions, recurringRules, rules, todayKey]);
+  const c80 = t.sections.find((x) => x.key === '80C');
+  return (
+    <>
+      <Result label={`Tax saving · ${t.fy.label}`} value={big(t.deductible)} tone="income"
+        sub={<>Found in your entries so far · about <strong>{money(taxSaved(t.deductible, v.slab))}</strong> less tax at the {Math.round(v.slab * 100)}% slab · {t.daysLeft} days left in the year.</>}>
+        <div role="radiogroup" aria-label="Your tax slab" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>
+          Your slab:
+          {SLABS.map((sl) => (
+            <button key={sl} id={`tax-slab-${Math.round(sl * 100)}`} role="radio" aria-checked={v.slab === sl} onClick={() => set('slab', sl)}
+              style={{ padding: '4px 10px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1px solid ${v.slab === sl ? 'var(--income)' : 'var(--border)'}`, background: v.slab === sl ? 'var(--income-bg)' : 'transparent', color: v.slab === sl ? 'var(--income)' : 'var(--text-secondary)' }}>
+              {Math.round(sl * 100)}%
+            </button>
+          ))}
+        </div>
+        <div id="tax-sections" style={{ marginTop: 14 }}>
+          {t.sections.map((sec) => <TaxRow key={sec.key} sec={sec} />)}
+        </div>
+        {c80 && c80.left > 0 && (
+          <Verdict ok={false}>{money(c80.left)} of 80C room left — PPF, ELSS or a tax-saver FD before 31 March would use it.</Verdict>
+        )}
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, margin: '12px 0 0' }}>
+          Only the old tax regime allows these deductions. Entries are matched by name (PPF, ELSS, NPS, LIC, health insurance, tuition, rent); EPF taken from salary isn’t here unless you log it.
+        </p>
+      </Result>
+    </>
+  );
+}
+function TaxRow({ sec }) {
+  const [open, setOpen] = useState(false);
+  const pct = sec.limit ? Math.min(100, (sec.used / sec.limit) * 100) : null;
+  return (
+    <div style={{ padding: '10px 0', borderTop: '1px solid var(--border)' }}>
+      <button id={`tax-${sec.key}`} onClick={() => setOpen((o) => !o)} disabled={!sec.entries.length}
+        style={{ width: '100%', display: 'flex', alignItems: 'baseline', gap: 8, padding: 0, border: 'none', background: 'transparent', cursor: sec.entries.length ? 'pointer' : 'default', fontFamily: 'inherit', textAlign: 'left' }}>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{sec.label}</span>
+          <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{sec.hint}</span>
+        </span>
+        <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+          {money(sec.used)}{sec.limit ? <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}> / {big(sec.limit)}</span> : null}
+        </span>
+      </button>
+      {pct != null && (
+        <div style={{ height: 5, borderRadius: 3, background: 'var(--surface2)', marginTop: 7, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? 'var(--income)' : 'var(--accent)' }} />
+        </div>
+      )}
+      {open && sec.entries.map((e) => (
+        <div key={e.id} style={{ display: 'flex', gap: 8, fontSize: 12, color: 'var(--text-secondary)', padding: '4px 0 0 10px' }}>
+          <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</span>
+          <span style={{ color: 'var(--text-muted)' }}>{new Date(e.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+          <strong style={{ color: 'var(--text)' }}>{money(e.amount)}</strong>
+        </div>
+      ))}
+    </div>
   );
 }

@@ -430,3 +430,6 @@ nav.desktop-nav button { margin: 0; }
 
 /* Planner: the calculator switch sits in the page, not in a card */
 .planner-tabs { margin: 0 0 12px; }
+.planner-tabs { flex-wrap: wrap; }
+.planner-tabs button { flex: 1 0 auto; }
+@media (max-width: 560px) { .planner-tabs button { flex: 1 0 30%; } }

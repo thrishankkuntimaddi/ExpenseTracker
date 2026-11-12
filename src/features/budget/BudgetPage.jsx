@@ -12,6 +12,7 @@ import { BudgetBar } from '../plan/components/BudgetStatusCard';
 import { CategoryIcon } from '../../components/CategoryPicker';
 import BudgetEditorModal from '../plan/BudgetEditorModal';
 import MoneyPlanCard from './MoneyPlanCard';
+import EventsCard from './EventsCard';
 import { computeBudgetStatus, suggestBudget, monthPlan, DEDUCTION_PRESETS } from '../../utils/budget';
 import { categoryTotals, categoryColor, EMPTY_RULES } from '../../utils/categories';
 import { formatAmount, localMonthKey } from '../../utils/dateHelpers';
@@ -171,6 +172,10 @@ export default function BudgetPage({ transactions = [], income = [], settings, o
             </div>
           </>
         )}
+
+        {/* ── Festivals & occasions ── */}
+        <SectionHeading id="budget-events-heading" title="Festivals & occasions" hint="a limit for a few days" />
+        <EventsCard transactions={transactions} rules={rules} settings={settings} onPatchSettings={onPatchSettings} />
 
         {/* ── Six months ── */}
         <SectionHeading title="Last 6 months" hint="total spend" />

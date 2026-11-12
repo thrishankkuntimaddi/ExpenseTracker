@@ -166,3 +166,41 @@ export function stepUpSip(input) {
   for (let y = 1; y <= total && y <= 80; y++) flat = yearEnd(flat, y <= years ? num(p.monthly) : 0, num(p.expectedReturn));
   return { rows, value: r2(start), invested: r2(invested), gain: r2(start - invested), flatValue: r2(flat) };
 }
+
+/* ── Loan EMI & prepayment ─────────────────────────────────────────
+   Indian lenders: monthly reducing balance at the annual rate ÷ 12. */
+export const LOAN_DEFAULTS = { principal: 2500000, rate: 0.085, years: 20, extra: 0 };
+
+export function loanEmi(principal, annualRate, months) {
+  const r = annualRate / 12;
+  if (months <= 0) return 0;
+  if (r === 0) return principal / months;
+  const g = (1 + r) ** months;
+  return (principal * r * g) / (g - 1);
+}
+
+function amortise(principal, r, emi, extra, maxMonths) {
+  let bal = principal, interest = 0, months = 0;
+  const years = [];
+  while (bal > 0.005 && months < maxMonths + 1) {
+    const i = bal * r;
+    const pay = Math.min(bal + i, emi + extra);
+    interest += i; bal = bal + i - pay; months++;
+    const y = Math.ceil(months / 12);
+    (years[y - 1] ??= { year: y, interest: 0, principal: 0, end: 0 });
+    years[y - 1].interest += i; years[y - 1].principal += pay - i; years[y - 1].end = Math.max(0, bal);
+  }
+  return { interest, months, years: years.map((x) => ({ year: x.year, interest: r2(x.interest), principal: r2(x.principal), end: r2(x.end) })) };
+}
+
+export function loan(input) {
+  const p = { ...LOAN_DEFAULTS, ...input };
+  const P = Math.max(0, num(p.principal)), n = Math.max(1, Math.round(num(p.years) * 12)), r = num(p.rate) / 12;
+  const emi = loanEmi(P, num(p.rate), n);
+  const base = amortise(P, r, emi, 0, n);
+  const fast = num(p.extra) > 0 ? amortise(P, r, emi, num(p.extra), n) : null;
+  return {
+    emi: r2(emi), months: n, totalInterest: r2(base.interest), totalPaid: r2(P + base.interest), schedule: base.years,
+    prepay: fast && { months: fast.months, interest: r2(fast.interest), interestSaved: r2(base.interest - fast.interest), monthsSaved: n - fast.months, schedule: fast.years },
+  };
+}

@@ -125,7 +125,7 @@ export default function TodayTab(props) {
     people: debts.owedToYou ? `${rupees(debts.owedToYou)} owed to you` : debts.youOwe ? `You owe ${rupees(debts.youOwe)}` : 'Lent, borrowed, paid back',
     trips: 'Split shared costs',
     external: 'Spent for others',
-    planner: 'Retirement, FIRE, education',
+    planner: 'Retirement, FIRE, loans, tax',
   };
   const explorePages = EXPLORE_ORDER.filter((k) => !ui.tabs.includes(k));
 
