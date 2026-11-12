@@ -1,0 +1,67 @@
+// தமிழ் — keys are the English text. Please have a native speaker review.
+export const ta = {
+  // Pages
+  'Home': 'முகப்பு', 'History': 'வரலாறு', 'Bills': 'பில்கள்', 'Bills & payments': 'பில்கள் & கட்டணங்கள்', 'Stats': 'புள்ளிவிவரம்',
+  'Budget': 'பட்ஜெட்', 'Savings': 'சேமிப்பு', 'Savings & goals': 'சேமிப்பு & இலக்குகள்', 'Money in': 'வந்த பணம்', 'Debts': 'கடன்கள்',
+  'Trips': 'பயணங்கள்', 'Trips & splits': 'பயணங்கள் & பகிர்வு', 'Billings': 'பில்லிங்', 'Responsibilities': 'பொறுப்புகள்',
+  'Planner': 'திட்டமிடல்', 'Profile': 'சுயவிவரம்', 'Profile & settings': 'சுயவிவரம் & அமைப்புகள்',
+  'This month at a glance': 'இந்த மாதம் ஒரு பார்வையில்', 'Every transaction · search & filters': 'ஒவ்வொரு பரிவர்த்தனையும் · தேடல் & வடிகட்டிகள்',
+  'Rent, EMIs, SIPs, utilities': 'வாடகை, EMI, SIP, மின்சாரம்-தண்ணீர்', 'Calendar, categories, monthly report': 'நாட்காட்டி, வகைகள், மாத அறிக்கை',
+  'Limits and what’s safe to spend': 'வரம்புகள், எவ்வளவு செலவு பாதுகாப்பானது', 'SIPs, funds, deposits, goals': 'SIP, நிதிகள், வைப்புகள், இலக்குகள்',
+  'Salary, borrowed, paid back — all that came in': 'சம்பளம், கடன் வாங்கியது, திரும்பி வந்தது — வந்த அனைத்தும்',
+  'Lent, borrowed, paid back': 'கொடுத்தது, வாங்கியது, திருப்பியது', 'Shared spending, settled fairly': 'பகிர்ந்த செலவு, நியாயமான கணக்கு',
+  'Money spent for others': 'மற்றவர்களுக்காக செலவு', 'Family loans and promises you’re clearing': 'நீங்கள் தீர்க்கும் குடும்பக் கடன்கள், வாக்குறுதிகள்',
+  'Retirement, FIRE, education, SIP, loans, tax': 'ஓய்வு, FIRE, கல்வி, SIP, கடன்கள், வரி',
+  'Overview': 'சுருக்கம்', 'Money': 'பணம்', 'With others': 'மற்றவர்களுடன்', 'Records': 'பதிவுகள்',
+  // Add
+  'Expense': 'செலவு', 'Income': 'வருமானம்', 'Debt': 'கடன்', 'Add': 'சேர்', 'Save': 'சேமி', 'Cancel': 'ரத்து', 'Delete': 'நீக்கு',
+  'Edit': 'திருத்து', 'Done': 'முடிந்தது', 'Back': 'பின்', 'Close': 'மூடு', 'Share': 'பகிர்', 'Paid': 'செலுத்தியது',
+  'Report': 'அறிக்கை', 'Ask': 'கேள்', 'Reset': 'மீட்டமை', 'New goal': 'புதிய இலக்கு', 'Make it a goal': 'இதை இலக்காக்கு',
+  // Categories
+  'Food & Dining': 'உணவு', 'Groceries': 'மளிகை', 'Transport': 'போக்குவரத்து', 'Fuel': 'எரிபொருள்', 'Shopping': 'ஷாப்பிங்',
+  'Bills & Utilities': 'பில்கள் & சேவைகள்', 'Rent & Home': 'வாடகை & வீடு', 'Health': 'ஆரோக்கியம்', 'Entertainment': 'பொழுதுபோக்கு',
+  'Subscriptions': 'சந்தாக்கள்', 'Education': 'கல்வி', 'Travel': 'பயணம்', 'Personal Care': 'தனிப்பட்ட பராமரிப்பு',
+  'Gifts & Donations': 'பரிசுகள் & நன்கொடைகள்', 'Family': 'குடும்பம்', 'Insurance': 'காப்பீடு', 'Other': 'மற்றவை',
+  // Home
+  'Spent': 'செலவானது', 'Today': 'இன்று', 'Safe to spend today': 'இன்று செலவிடலாம்', 'Saved': 'சேமித்தது', 'Balance': 'மீதம்',
+  'Explore': 'பாருங்கள்', 'Good morning': 'காலை வணக்கம்', 'Good afternoon': 'மதிய வணக்கம்', 'Good evening': 'மாலை வணக்கம்', 'Over budget': 'பட்ஜெட்டை மீறியது',
+  'Quick entry': 'விரைவுப் பதிவு', 'Month overview': 'மாதச் சுருக்கம்', 'Bills due': 'செலுத்த வேண்டிய பில்கள்', 'Recent activity': 'சமீபத்திய செயல்பாடு',
+  // Profile
+  'Appearance': 'தோற்றம்', 'Theme': 'தீம்', 'Light': 'ஒளி', 'Dark': 'இருள்', 'Auto': 'தானியங்கி', 'Animations': 'அசைவூட்டங்கள்',
+  'On': 'ஆன்', 'Off': 'ஆஃப்', 'Language': 'மொழி', 'Help': 'உதவி', 'App tour & guides': 'ஆப் சுற்றுலா & வழிகாட்டிகள்', 'Invite a friend': 'நண்பரை அழையுங்கள்',
+  'Your privacy': 'உங்கள் தனியுரிமை', 'Sounds': 'ஒலிகள்', 'Notifications': 'அறிவிப்புகள்', 'Reminders': 'நினைவூட்டல்கள்', 'Customize': 'தனிப்பயனாக்கு',
+  'Bottom bar': 'கீழ்ப் பட்டை', 'Home screen': 'முகப்புத் திரை', 'Open the app on': 'ஆப் இங்கே திறக்கட்டும்', 'Currency': 'நாணயம்',
+  'Google Drive backup': 'Google Drive காப்புப்பிரதி', 'Account': 'கணக்கு', 'App lock': 'ஆப் பூட்டு', 'Your devices': 'உங்கள் சாதனங்கள்',
+  'Data Management': 'தரவு மேலாண்மை', 'Sync': 'ஒத்திசைவு', 'Security alerts': 'பாதுகாப்பு எச்சரிக்கைகள்', 'Get the app': 'ஆப்பைப் பெறுங்கள்',
+  'Walk through the app · a guide for every page': 'ஆப் அறிமுகம் · ஒவ்வொரு பக்கத்துக்கும் வழிகாட்டி', 'Send them the app — free, no ads': 'அவர்களுக்கு ஆப்பை அனுப்புங்கள் — இலவசம், விளம்பரம் இல்லை',
+  'No ads · never sold · no bank access': 'விளம்பரம் இல்லை · விற்கப்படாது · வங்கி அணுகல் இல்லை',
+  // Sections
+  'By category': 'வகை வாரியாக', 'Last 6 months': 'கடந்த 6 மாதங்கள்', 'Spending budget': 'செலவு பட்ஜெட்', 'Festivals & occasions': 'பண்டிகைகள் & நிகழ்வுகள்',
+  'Where it goes': 'பணம் எங்கே போகிறது', 'Went up': 'கூடியது', 'Went down': 'குறைந்தது', 'About the same': 'கிட்டத்தட்ட அதே', 'Missed or skipped': 'தவறியவை அல்லது தவிர்த்தவை',
+  'Habits': 'பழக்கங்கள்', 'Heads-up': 'கவனிக்க', 'all time': 'இதுவரை', 'newest first': 'புதியவை முதலில்', 'total spend': 'மொத்தச் செலவு',
+  'Set a monthly budget': 'மாத பட்ஜெட் அமையுங்கள்', 'Start tracking your savings': 'உங்கள் சேமிப்பைப் பதிவு செய்யத் தொடங்குங்கள்',
+  'Insurance policies': 'காப்பீட்டுக் கொள்கைகள்', 'All regular payments': 'அனைத்து வழக்கமான கட்டணங்கள்', 'Common payments': 'பொதுவான கட்டணங்கள்',
+  // Money plan & planner
+  'Essentials': 'அத்தியாவசியம்', 'Lifestyle': 'வாழ்க்கைமுறை செலவு', 'EMIs & loans': 'EMI & கடன்கள்', 'Investments': 'முதலீடுகள்', 'Left over': 'மீதம்',
+  'Retirement': 'ஓய்வு', 'FIRE': 'FIRE', 'SIP': 'SIP', 'Loan': 'கடன்', 'Tax': 'வரி',
+  'Net worth': 'நிகர மதிப்பு', 'You own': 'உங்களிடம் உள்ளது', 'You owe': 'நீங்கள் தர வேண்டியது',
+  // Demo / sign in
+  'Create free account': 'இலவசக் கணக்கை உருவாக்கு', 'Try it without an account →': 'கணக்கு இல்லாமல் முயற்சி செய் →',
+  // Home & language
+  "Good night": "இனிய இரவு",
+  "Category limits set": "வகை வரம்புகள் அமைக்கப்பட்டன",
+  "Quick entry — \"chai 20 vada 15\"": "விரைவுப் பதிவு — \"டீ 20 வடை 15\"",
+  "Due this week": "இந்த வாரம் செலுத்த வேண்டியவை",
+  "Split shared costs": "பகிர்ந்த செலவுகளைப் பிரியுங்கள்",
+  "Spent for others": "மற்றவர்களுக்காக செலவு",
+  "Retirement, FIRE, loans, tax": "ஓய்வு, FIRE, கடன்கள், வரி",
+  "Family loans, promises": "குடும்பக் கடன்கள், வாக்குறுதிகள்",
+  "Calendar & report": "நாட்காட்டி & அறிக்கை",
+  "Nothing yet this month": "இந்த மாதம் இன்னும் எதுவும் இல்லை",
+  "English": "English",
+  "Hindi": "हिन्दी",
+  "Telugu": "తెలుగు",
+  "Tamil": "தமிழ்",
+  "Partly translated — the rest stays in English for now": "பகுதி மொழிபெயர்ப்பு — மீதி இப்போதைக்கு ஆங்கிலத்தில்",
+  "Account, look & layout, settings": "கணக்கு, தோற்றம் & அமைப்பு, அமைப்புகள்",
+};

@@ -437,3 +437,7 @@ nav.desktop-nav button { margin: 0; }
 /* Demo: a floating bar above the phone bar (bottom-centre on wide screens) */
 .demo-banner { position: fixed; left: 12px; right: 12px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 1100; max-width: 460px; margin: 0 auto; border-radius: 14px; }
 @media (min-width: 768px) and (min-height: 600px) { .demo-banner { bottom: 18px; left: 240px; } }
+
+/* Indian scripts: no tracking (it breaks conjuncts) and no forced capitals */
+html[lang^="hi"] *, html[lang^="te"] *, html[lang^="ta"] * { letter-spacing: normal !important; }
+html[lang^="hi"] .section-label, html[lang^="te"] .section-label, html[lang^="ta"] .section-label { text-transform: none; }

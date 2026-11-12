@@ -7,6 +7,7 @@ import { useDriveBackup } from '../hooks/useDriveBackup';
 import { useActivity } from '../hooks/useActivity';
 import { useDemoData } from '../hooks/useDemoData';
 import { isDemoUser } from '../demo/demo';
+import { getLang, setLang, onLang } from '../i18n';
 import { DemoBanner, DemoLocked, DemoProfile } from '../demo/DemoBits';
 import { useSyncStatus, clearSyncError } from '../services/sync';
 import { setStatusBarTheme, onBackButton } from '../native';
@@ -122,6 +123,9 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     patchSettings,
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   } = isDemo ? demoData : liveData;
+
+  // The language chosen on any device (settings.lang) — applied here too
+  useEffect(() => { if (settings?.lang) setLang(settings.lang); }, [settings?.lang]);
 
   // Usage activity for the app's owner (Profile → Admin sees): when, never what
   useActivity(isDemo ? null : user, transactions, income, loaded);
@@ -575,6 +579,9 @@ function LockGate(props) {
   const [signOutNote, setSignOutNote] = useState(null);
   const remoteSignOut = useCallback(() => { signOut({ force: true }); }, [signOut]);
   const lock = useAppLock(isDemoUser(props.user) ? null : props.user, { onRemoteSignOut: remoteSignOut });
+  // A new language re-draws every screen (labels are read at render)
+  const [lang, setLangState] = useState(getLang);
+  useEffect(() => onLang(setLangState), []);
   if (lock.locked) {
     return (
       <>
@@ -588,7 +595,7 @@ function LockGate(props) {
   }
   return (
     <AppLockContext.Provider value={lock}>
-      <AuthenticatedApp {...props} />
+      <AuthenticatedApp key={lang} {...props} />
     </AppLockContext.Provider>
   );
 }

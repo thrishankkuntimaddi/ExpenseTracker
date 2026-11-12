@@ -1,0 +1,67 @@
+// తెలుగు — keys are the English text. Please have a native speaker review.
+export const te = {
+  // Pages
+  'Home': 'హోమ్', 'History': 'చరిత్ర', 'Bills': 'బిల్లులు', 'Bills & payments': 'బిల్లులు & చెల్లింపులు', 'Stats': 'గణాంకాలు',
+  'Budget': 'బడ్జెట్', 'Savings': 'పొదుపు', 'Savings & goals': 'పొదుపు & లక్ష్యాలు', 'Money in': 'వచ్చిన డబ్బు', 'Debts': 'అప్పులు',
+  'Trips': 'ట్రిప్‌లు', 'Trips & splits': 'ట్రిప్‌లు & పంపకాలు', 'Billings': 'బిల్లింగ్స్', 'Responsibilities': 'బాధ్యతలు',
+  'Planner': 'ప్లానర్', 'Profile': 'ప్రొఫైల్', 'Profile & settings': 'ప్రొఫైల్ & సెట్టింగ్‌లు',
+  'This month at a glance': 'ఈ నెల ఒక్క చూపులో', 'Every transaction · search & filters': 'ప్రతి లావాదేవీ · వెతుకు & ఫిల్టర్లు',
+  'Rent, EMIs, SIPs, utilities': 'అద్దె, EMIలు, SIPలు, కరెంట్-నీళ్లు', 'Calendar, categories, monthly report': 'క్యాలెండర్, వర్గాలు, నెలవారీ నివేదిక',
+  'Limits and what’s safe to spend': 'పరిమితులు, ఎంత ఖర్చు సురక్షితం', 'SIPs, funds, deposits, goals': 'SIPలు, ఫండ్‌లు, డిపాజిట్లు, లక్ష్యాలు',
+  'Salary, borrowed, paid back — all that came in': 'జీతం, అప్పు తీసుకున్నది, తిరిగి వచ్చినది — వచ్చినదంతా',
+  'Lent, borrowed, paid back': 'ఇచ్చినది, తీసుకున్నది, తిరిగి చెల్లించినది', 'Shared spending, settled fairly': 'పంచుకున్న ఖర్చు, న్యాయంగా లెక్క',
+  'Money spent for others': 'ఇతరుల కోసం ఖర్చు', 'Family loans and promises you’re clearing': 'మీరు తీరుస్తున్న కుటుంబ అప్పులు, మాటలు',
+  'Retirement, FIRE, education, SIP, loans, tax': 'రిటైర్మెంట్, FIRE, చదువు, SIP, లోన్లు, పన్ను',
+  'Overview': 'సారాంశం', 'Money': 'డబ్బు', 'With others': 'ఇతరులతో', 'Records': 'రికార్డులు',
+  // Add
+  'Expense': 'ఖర్చు', 'Income': 'ఆదాయం', 'Debt': 'అప్పు', 'Add': 'చేర్చు', 'Save': 'సేవ్ చేయి', 'Cancel': 'రద్దు', 'Delete': 'తొలగించు',
+  'Edit': 'మార్చు', 'Done': 'అయింది', 'Back': 'వెనక్కి', 'Close': 'మూసివేయి', 'Share': 'షేర్ చేయి', 'Paid': 'చెల్లించారు',
+  'Report': 'నివేదిక', 'Ask': 'అడగండి', 'Reset': 'రీసెట్', 'New goal': 'కొత్త లక్ష్యం', 'Make it a goal': 'దీన్ని లక్ష్యంగా చేయి',
+  // Categories
+  'Food & Dining': 'భోజనం & తినడం', 'Groceries': 'కిరాణా', 'Transport': 'ప్రయాణ ఖర్చు', 'Fuel': 'పెట్రోల్', 'Shopping': 'షాపింగ్',
+  'Bills & Utilities': 'బిల్లులు & సౌకర్యాలు', 'Rent & Home': 'అద్దె & ఇల్లు', 'Health': 'ఆరోగ్యం', 'Entertainment': 'వినోదం',
+  'Subscriptions': 'సబ్‌స్క్రిప్షన్లు', 'Education': 'చదువు', 'Travel': 'యాత్ర', 'Personal Care': 'వ్యక్తిగత సంరక్షణ',
+  'Gifts & Donations': 'బహుమతులు & దానాలు', 'Family': 'కుటుంబం', 'Insurance': 'బీమా', 'Other': 'ఇతర',
+  // Home
+  'Spent': 'ఖర్చయింది', 'Today': 'ఈ రోజు', 'Safe to spend today': 'ఈ రోజు ఖర్చు చేయగలిగింది', 'Saved': 'పొదుపు', 'Balance': 'మిగిలింది',
+  'Explore': 'చూడండి', 'Good morning': 'శుభోదయం', 'Good afternoon': 'నమస్కారం', 'Good evening': 'శుభ సాయంత్రం', 'Over budget': 'బడ్జెట్ దాటింది',
+  'Quick entry': 'త్వరిత ఎంట్రీ', 'Month overview': 'నెల సారాంశం', 'Bills due': 'చెల్లించాల్సిన బిల్లులు', 'Recent activity': 'ఇటీవలి కార్యకలాపం',
+  // Profile
+  'Appearance': 'రూపం', 'Theme': 'థీమ్', 'Light': 'లైట్', 'Dark': 'డార్క్', 'Auto': 'ఆటో', 'Animations': 'యానిమేషన్లు',
+  'On': 'ఆన్', 'Off': 'ఆఫ్', 'Language': 'భాష', 'Help': 'సహాయం', 'App tour & guides': 'యాప్ టూర్ & గైడ్‌లు', 'Invite a friend': 'స్నేహితుడిని ఆహ్వానించండి',
+  'Your privacy': 'మీ గోప్యత', 'Sounds': 'శబ్దాలు', 'Notifications': 'నోటిఫికేషన్లు', 'Reminders': 'రిమైండర్లు', 'Customize': 'మీకు నచ్చినట్లు',
+  'Bottom bar': 'కింది బార్', 'Home screen': 'హోమ్ స్క్రీన్', 'Open the app on': 'యాప్ ఇక్కడ తెరుచుకోవాలి', 'Currency': 'కరెన్సీ',
+  'Google Drive backup': 'Google Drive బ్యాకప్', 'Account': 'ఖాతా', 'App lock': 'యాప్ లాక్', 'Your devices': 'మీ పరికరాలు',
+  'Data Management': 'డేటా నిర్వహణ', 'Sync': 'సింక్', 'Security alerts': 'భద్రతా హెచ్చరికలు', 'Get the app': 'యాప్ పొందండి',
+  'Walk through the app · a guide for every page': 'యాప్ పరిచయం · ప్రతి పేజీకి గైడ్', 'Send them the app — free, no ads': 'వారికి యాప్ పంపండి — ఉచితం, ప్రకటనలు లేవు',
+  'No ads · never sold · no bank access': 'ప్రకటనలు లేవు · ఎప్పుడూ అమ్మం · బ్యాంక్ యాక్సెస్ లేదు',
+  // Sections
+  'By category': 'వర్గాల వారీగా', 'Last 6 months': 'గత 6 నెలలు', 'Spending budget': 'ఖర్చు బడ్జెట్', 'Festivals & occasions': 'పండుగలు & సందర్భాలు',
+  'Where it goes': 'డబ్బు ఎక్కడికి వెళ్తుంది', 'Went up': 'పెరిగింది', 'Went down': 'తగ్గింది', 'About the same': 'దాదాపు అంతే', 'Missed or skipped': 'మిస్ అయినవి లేదా వదిలినవి',
+  'Habits': 'అలవాట్లు', 'Heads-up': 'గమనించండి', 'all time': 'ఇప్పటి వరకు', 'newest first': 'కొత్తవి ముందు', 'total spend': 'మొత్తం ఖర్చు',
+  'Set a monthly budget': 'నెలవారీ బడ్జెట్ పెట్టండి', 'Start tracking your savings': 'మీ పొదుపు రాయడం మొదలుపెట్టండి',
+  'Insurance policies': 'బీమా పాలసీలు', 'All regular payments': 'అన్ని క్రమ చెల్లింపులు', 'Common payments': 'సాధారణ చెల్లింపులు',
+  // Money plan & planner
+  'Essentials': 'అవసరాలు', 'Lifestyle': 'జీవనశైలి ఖర్చులు', 'EMIs & loans': 'EMIలు & అప్పులు', 'Investments': 'పెట్టుబడులు', 'Left over': 'మిగిలింది',
+  'Retirement': 'రిటైర్మెంట్', 'FIRE': 'FIRE', 'SIP': 'SIP', 'Loan': 'లోన్', 'Tax': 'పన్ను',
+  'Net worth': 'నికర సంపద', 'You own': 'మీ దగ్గర ఉన్నది', 'You owe': 'మీరు ఇవ్వాల్సింది',
+  // Demo / sign in
+  'Create free account': 'ఉచిత ఖాతా సృష్టించండి', 'Try it without an account →': 'ఖాతా లేకుండా ప్రయత్నించండి →',
+  // Home & language
+  "Good night": "శుభ రాత్రి",
+  "Category limits set": "వర్గ పరిమితులు పెట్టారు",
+  "Quick entry — \"chai 20 vada 15\"": "త్వరిత ఎంట్రీ — \"టీ 20 వడ 15\"",
+  "Due this week": "ఈ వారం చెల్లించాల్సినవి",
+  "Split shared costs": "పంచుకున్న ఖర్చులు విభజించండి",
+  "Spent for others": "ఇతరుల కోసం ఖర్చు",
+  "Retirement, FIRE, loans, tax": "రిటైర్మెంట్, FIRE, లోన్లు, పన్ను",
+  "Family loans, promises": "కుటుంబ అప్పులు, మాటలు",
+  "Calendar & report": "క్యాలెండర్ & నివేదిక",
+  "Nothing yet this month": "ఈ నెల ఇంకా ఏమీ లేదు",
+  "English": "English",
+  "Hindi": "हिन्दी",
+  "Telugu": "తెలుగు",
+  "Tamil": "தமிழ்",
+  "Partly translated — the rest stays in English for now": "కొంత అనువదించాం — మిగతాది ప్రస్తుతానికి ఇంగ్లీష్‌లో",
+  "Account, look & layout, settings": "ఖాతా, రూపం & లేఅవుట్, సెట్టింగ్‌లు",
+};

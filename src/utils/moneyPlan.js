@@ -11,6 +11,7 @@ import { localMonthKey, localDateKey } from './dateHelpers';
 import { categoryOf } from './categories';
 import { ESSENTIALS } from './report';
 import { incomeKind } from './finance';
+import { translatable } from '../i18n';
 
 export const PLAN_LIMITS = { essentials: 40, lifestyle: 20, emis: 30, investments: 20, leftover: 10 };
 export const EMERGENCY_MONTHS = 6;
@@ -22,6 +23,8 @@ export const BUCKETS = [
   { key: 'investments', label: 'Investments', hint: 'SIPs, deposits, anything saved', tone: 'savings' },
   { key: 'leftover',    label: 'Left over',   hint: 'Still in hand', tone: 'income' },
 ];
+
+BUCKETS.forEach((b) => translatable(b, ['label', 'hint']));
 
 const EMI_RE = /\b(e\.?m\.?i\.?s?|loans?|instal+ments?)\b/i;
 

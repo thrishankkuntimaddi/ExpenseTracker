@@ -11,12 +11,13 @@ import { useContext, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronRight } from 'lucide-react';
 import { SettingsNav } from './settingsNav';
+import { t } from '../../i18n';
 
 /* A titled card holding several settings groups, iOS-style. */
 export function Section({ title, children }) {
   return (
     <section style={{ marginBottom: 18 }}>
-      <p className="section-label" style={{ padding: '0 6px' }}>{title}</p>
+      <p className="section-label" style={{ padding: '0 6px' }}>{t(title)}</p>
       <div className="card settings-section">{children}</div>
     </section>
   );
@@ -40,7 +41,8 @@ function RowHeader({ title, Icon, summary, color, chevron = true, rotate = false
 const rowStyle = { width: '100%', display: 'flex', alignItems: 'center', gap: 13, padding: '14px 16px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' };
 
 /* One setting. `color` tints its icon tile. */
-export function Group({ id, title, Icon, summary, color = 'var(--accent)', children }) {
+export function Group({ id, title: rawTitle, Icon, summary: rawSummary, color = 'var(--accent)', children }) {
+  const title = t(rawTitle), summary = t(rawSummary);
   const nav = useContext(SettingsNav);
   if (nav) return <NavGroup nav={nav} id={id} title={title} Icon={Icon} summary={summary} color={color}>{children}</NavGroup>;
   return <Accordion id={id} title={title} Icon={Icon} summary={summary} color={color}>{children}</Accordion>;
@@ -94,7 +96,7 @@ export function CardFrame({ bare, id, title, children }) {
   if (bare) return <div style={{ padding: '14px 16px' }}>{children}</div>;
   return (
     <section id={id} style={{ marginBottom: 18, scrollMarginTop: 12 }}>
-      <p className="section-label" style={{ padding: '0 6px' }}>{title}</p>
+      <p className="section-label" style={{ padding: '0 6px' }}>{t(title)}</p>
       <div className="card" style={{ padding: '14px 16px' }}>{children}</div>
     </section>
   );

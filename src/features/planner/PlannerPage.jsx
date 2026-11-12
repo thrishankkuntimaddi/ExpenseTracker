@@ -18,6 +18,7 @@ import { toKey } from '../../utils/recurring';
 import { incomeKind } from '../../utils/finance';
 import { EMPTY_RULES } from '../../utils/categories';
 import { fieldStyle } from '../../components/formTokens';
+import { t as tr } from '../../i18n';
 
 const TABS = [
   { key: 'retirement', label: 'Retirement' },
@@ -95,8 +96,8 @@ export default function PlannerPage({ transactions = [], income = [], settings, 
       <PageHeader title="Planner" subtitle="Retirement, FIRE, education, SIPs, loans, tax" />
       <div className="tab-body">
         <div className="tl-ranges planner-tabs" role="tablist" aria-label="Calculator">
-          {TABS.map((t) => (
-            <button key={t.key} id={`planner-tab-${t.key}`} role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'on' : ''} onClick={() => setTab(t.key)}>{t.label}</button>
+          {TABS.map((tb) => (
+            <button key={tb.key} id={`planner-tab-${tb.key}`} role="tab" aria-selected={tab === tb.key} className={tab === tb.key ? 'on' : ''} onClick={() => setTab(tb.key)}>{tr(tb.label)}</button>
           ))}
         </div>
         {tab === 'retirement' && <Retirement v={inputs.retirement} set={set('retirement')} onGoal={makeGoal} />}

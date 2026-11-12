@@ -7,6 +7,7 @@
 // Everything here is pure so it can be unit-tested and reused by the
 // insights / budget maths.
 
+import { translatable } from '../i18n';
 export const CATEGORIES = [
   { key: 'food',          label: 'Food & Dining',      light: '#F97316', dark: '#FB923C', icon: 'Utensils',
     keywords: ['swiggy', 'zomato', 'restaurant', 'cafe', 'coffee', 'chai', 'tea', 'lunch', 'dinner', 'breakfast',
@@ -78,6 +79,7 @@ export const CATEGORIES = [
   { key: 'other',         label: 'Other',              light: '#64748B', dark: '#94A3B8', icon: 'CircleDashed',
     keywords: [] },
 ];
+CATEGORIES.forEach((c) => translatable(c, ['label']));
 
 export const CATEGORY_KEYS = CATEGORIES.map((c) => c.key);
 /** Stable empty rules object — use as the `?? EMPTY_RULES` fallback so hook deps don't churn. */

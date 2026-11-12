@@ -30,6 +30,7 @@ import BorrowAlerts from './BorrowAlerts';
 import { borrowAlerts } from '../../utils/borrowed';
 import { respSummary } from '../../utils/responsibilities';
 import { streak as logStreak, milestoneReached } from '../../utils/engagement';
+import { t } from '../../i18n';
 
 const linkBtn = { padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
 const rupees = (n) => formatMoneyCompact(n);   // compact: no paise
@@ -58,7 +59,7 @@ export default function TodayTab(props) {
     .reduce((s, t) => s + t.amount, 0);
   const monthAbbr = monthName(monthKey, { month: 'short' });
   const hour = now.getHours();
-  const greeting = hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const greeting = t(hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening');
 
   // Bills: late + the next seven days
   const existingIds = useMemo(() => {
@@ -119,13 +120,13 @@ export default function TodayTab(props) {
     history: `${monthTxns.length} entr${monthTxns.length === 1 ? 'y' : 'ies'} this month`,
     bills: rules.length ? (lateCount ? `${lateCount} late` : soon.length ? `${soon.length} due this week` : 'Nothing due this week') : 'Add rent, EMIs, SIPs',
     stats: `Calendar & report · ${monthAbbr}`,
-    budget: safeToday ? (safeToday.remaining < 0 ? 'Over budget' : `${rupees(safeToday.remaining)} left`) : budgetStatus.hasBudget ? 'Category limits set' : 'Set a monthly budget',
+    budget: safeToday ? (safeToday.remaining < 0 ? t('Over budget') : `${rupees(safeToday.remaining)} left`) : budgetStatus.hasBudget ? t('Category limits set') : t('Set a monthly budget'),
     savings: savedThisMonth ? `${rupees(savedThisMonth)} in ${monthAbbr}` : 'SIPs, funds, goals',
     income: monthIncome ? `${rupees(monthIncome)} in ${monthAbbr}` : 'Nothing yet this month',
     people: debts.owedToYou ? `${rupees(debts.owedToYou)} owed to you` : debts.youOwe ? `You owe ${rupees(debts.youOwe)}` : 'Lent, borrowed, paid back',
-    trips: 'Split shared costs',
-    external: 'Spent for others',
-    planner: 'Retirement, FIRE, loans, tax',
+    trips: t('Split shared costs'),
+    external: t('Spent for others'),
+    planner: t('Retirement, FIRE, loans, tax'),
   };
   const explorePages = EXPLORE_ORDER.filter((k) => !ui.tabs.includes(k));
 
@@ -157,10 +158,10 @@ export default function TodayTab(props) {
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, opacity: 0.85 }}>
           {safeToday?.status === 'over' && <Sign kind="warn" size={15} style={{ color: '#FFD0D7' }} />}
-          {safeToday ? (safeToday.status === 'over' ? 'Over budget' : `${Math.round(pct)}% of budget`) : 'Stats'} <ArrowUpRight size={13} />
+          {safeToday ? (safeToday.status === 'over' ? t('Over budget') : `${Math.round(pct)}% of budget`) : t('Stats')} <ArrowUpRight size={13} />
         </span>
       </div>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8, marginTop: 10 }}>Spent</div>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8, marginTop: 10 }}>{t('Spent')}</div>
       <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 0, fontVariantNumeric: 'tabular-nums' }}>
         <RollingNumber id="home-spent" value={stats?.totalExpense ?? 0} sound />
       </div>
@@ -209,7 +210,7 @@ export default function TodayTab(props) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Zap size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
         <input id="home-quick-entry" value={quick} onChange={(e) => setQuick(e.target.value)} autoComplete="off" enterKeyHint="done"
-          placeholder='Quick entry — "chai 20 vada 15"' aria-label="Quick entry: name and amount — several at once is fine"
+          placeholder={t('Quick entry — "chai 20 vada 15"')} aria-label="Quick entry: name and amount — several at once is fine"
           style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', boxShadow: 'none', outline: 'none', color: 'var(--text)', fontSize: 15, padding: '8px 0', fontFamily: 'inherit' }} />
         <button type="submit" disabled={!preview} style={{ padding: '8px 14px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', background: preview ? 'var(--accent)' : 'var(--surface2)', color: preview ? '#fff' : 'var(--text-muted)', cursor: preview ? 'pointer' : 'default' }}>
           {items.length > 1 ? `Add ${items.length}` : 'Add'}
@@ -240,7 +241,7 @@ export default function TodayTab(props) {
   const billsSection = soon.length > 0 && (
     <div className="home-bills" style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '4px 4px 8px' }}>
-        <p className="section-label" style={{ margin: 0 }}>{lateCount ? `Due · ${lateCount} late` : 'Due this week'}</p>
+        <p className="section-label" style={{ margin: 0 }}>{lateCount ? `Due · ${lateCount} late` : t('Due this week')}</p>
         {shell && <button id="home-bills-all" onClick={() => shell.goTo('bills')} style={linkBtn}>All bills</button>}
       </div>
       <div className="card">
@@ -281,7 +282,7 @@ export default function TodayTab(props) {
 
   const exploreSection = shell && explorePages.length > 0 && (
     <div className="home-explore" style={{ marginBottom: 14 }}>
-      <p className="section-label" style={{ margin: '4px 4px 8px' }}>Explore</p>
+      <p className="section-label" style={{ margin: '4px 4px 8px' }}>{t('Explore')}</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
         {explorePages.map((k) => {
           const { label, Icon, tone } = PAGE_META[k];
@@ -307,7 +308,7 @@ export default function TodayTab(props) {
     {recent.length > 0 ? (
       <>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '4px 4px 8px' }}>
-          <p className="section-label" style={{ margin: 0 }}>{isNow ? 'Recent activity' : `Last entries in ${monthName(monthKey, { month: 'long' })}`}</p>
+          <p className="section-label" style={{ margin: 0 }}>{isNow ? t('Recent activity') : `Last entries in ${monthName(monthKey, { month: 'long' })}`}</p>
           {shell && <button id="home-see-all" onClick={() => shell.goTo('history')} style={linkBtn}>All history</button>}
         </div>
         <div className="card" id="recent-entries">
@@ -453,7 +454,8 @@ export default function TodayTab(props) {
   );
 }
 
-function Metric({ label, value }) {
+function Metric({ label: rawLabel, value }) {
+  const label = t(rawLabel);
   return (
     <div style={{ minWidth: 0 }}>
       <div style={{ fontSize: 10, fontWeight: 600, opacity: 0.75, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>

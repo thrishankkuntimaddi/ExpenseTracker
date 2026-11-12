@@ -3,6 +3,7 @@
 import {
   Home, List, Wallet, BarChart2, ShoppingCart, PiggyBank, CalendarClock, Target, Plane, HandCoins, ArrowLeftRight, HeartHandshake, Calculator,
 } from 'lucide-react';
+import { translatable } from '../i18n';
 
 /* `tone` is a colour family from the theme (var(--<tone>), var(--<tone>-bg)) */
 export const PAGE_META = {
@@ -20,6 +21,8 @@ export const PAGE_META = {
   planner:  { label: 'Planner',  title: 'Planner',          Icon: Calculator,    tone: 'savings',       description: 'Retirement, FIRE, education, SIP, loans, tax' },
 };
 
+Object.values(PAGE_META).forEach((m) => translatable(m, ['label', 'title', 'description']));
+
 /* Accent per page (bar highlight) */
 export const PAGE_COLOR = {
   light: { today: '#4F46E5', history: '#D97706', bills: '#E11D48', stats: '#2563EB', budget: '#4F46E5', savings: '#2563EB', income: '#059669', people: '#C2410C', trips: '#0891B2', external: '#7C3AED', responsibilities: '#7C3AED', planner: '#2563EB', profile: '#6366F1' },
@@ -34,6 +37,8 @@ export const ADD_KINDS = [
   { key: 'savings', label: 'Savings', Icon: PiggyBank,    color: 'var(--savings)', bg: 'var(--savings-bg)' },
 ];
 
+ADD_KINDS.forEach((k) => translatable(k, ['label']));
+
 /* Home → Explore: most-used first (pages already in the bar are left out) */
 export const EXPLORE_ORDER = ['income', 'trips', 'external', 'bills', 'responsibilities', 'budget', 'planner', 'people', 'savings', 'history', 'stats'];
 
@@ -44,3 +49,5 @@ export const DESKTOP_NAV = [
   { title: 'With others', keys: ['trips', 'external', 'people'] },
   { title: 'Records',  keys: ['history'] },
 ];
+
+DESKTOP_NAV.forEach((g) => translatable(g, ['title']));

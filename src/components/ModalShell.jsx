@@ -4,6 +4,7 @@
 import { X } from 'lucide-react';
 import Portal from './Portal';
 import { useEscape } from '../hooks/useEscape';
+import { t } from '../i18n';
 
 export default function ModalShell({ title, subtitle, onClose, children, footer, maxWidth = 460, zIndex = 1500 }) {
   useEscape(onClose);
@@ -30,8 +31,8 @@ export default function ModalShell({ title, subtitle, onClose, children, footer,
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{title}</div>
-              {subtitle && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{subtitle}</div>}
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{t(title)}</div>
+              {subtitle && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{t(subtitle)}</div>}
             </div>
             <button onClick={onClose} aria-label="Close" style={{
               width: 30, height: 30, borderRadius: 9, border: 'none', background: 'var(--surface2)',
@@ -56,7 +57,7 @@ export default function ModalShell({ title, subtitle, onClose, children, footer,
 export function Field({ label, hint, children }) {
   return (
     <label style={{ display: 'block' }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(label)}</div>
       {children}
       {hint && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{hint}</div>}
     </label>
@@ -70,7 +71,7 @@ export function PrimaryButton({ children, onClick, disabled, color = 'var(--acce
       background: disabled ? 'var(--surface2)' : color, color: disabled ? 'var(--text-muted)' : '#fff',
       border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, ...style,
-    }}>{children}</button>
+    }}>{t(children)}</button>
   );
 }
 
@@ -82,6 +83,6 @@ export function GhostButton({ children, onClick, danger, style }) {
       color: danger ? 'var(--expense)' : 'var(--text-secondary)',
       border: `1px solid ${danger ? 'var(--expense-border)' : 'var(--border)'}`,
       cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, ...style,
-    }}>{children}</button>
+    }}>{t(children)}</button>
   );
 }

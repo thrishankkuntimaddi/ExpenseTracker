@@ -6,6 +6,7 @@ import {
 import { getInvitePreview } from '../../services/sharedTrips';
 import Avatar from '../../components/Avatar';
 import { formatDateShort } from '../../utils/dateHelpers';
+import { t } from '../../i18n';
 
 /* One screen for every signed-out state:
    'login' | 'signup' | 'reset' (forgot password).
@@ -239,7 +240,7 @@ export default function AuthScreen({
         {onDemo && !invited && (
           <button type="button" id="btn-try-demo" onClick={onDemo}
             style={{ marginTop: 14, padding: '10px 18px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-            Try it without an account →
+            {t('Try it without an account →')}
           </button>
         )}
         <p id="auth-privacy" style={{ maxWidth: 380, marginTop: 14, fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.5, textAlign: 'center' }}>

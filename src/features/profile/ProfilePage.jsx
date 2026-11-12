@@ -30,6 +30,7 @@ import { FREQUENCIES } from '../../services/drive';
 import { timeAgo } from '../../services/sync';
 import { startTour, GUIDE_PAGES } from '../../tour/tour';
 import { isAdmin } from '../../config/admin';
+import { t, LANGS, getLang, setLang } from '../../i18n';
 import InviteFriendCard from '../settings/InviteFriendCard';
 
 // The owner's read-only list of users: loaded only for that account, only when opened
@@ -99,8 +100,8 @@ export default function ProfilePage(props) {
           </button>
         )}
         <div style={{ minWidth: 0 }}>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>{phonePanel ? openTitle || 'Profile' : 'Profile'}</h1>
-          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{phonePanel ? openSummary || 'Profile' : 'Account, look & layout, settings'}</p>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>{phonePanel ? openTitle || t('Profile') : t('Profile')}</h1>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{phonePanel ? openSummary || t('Profile') : t('Account, look & layout, settings')}</p>
         </div>
       </div>
 
@@ -136,10 +137,11 @@ export default function ProfilePage(props) {
 
               {/* ── Appearance: two quick switches in one card ── */}
               <section style={{ marginBottom: 18 }}>
-                <p className="section-label" style={{ padding: '0 6px' }}>Appearance</p>
+                <p className="section-label" style={{ padding: '0 6px' }}>{t('Appearance')}</p>
                 <div className="card settings-section">
                   <ThemeRow themePref={themePref} theme={theme} onChange={onThemePrefChange} />
                   <MotionRow />
+                  <LanguageRow onPatchSettings={onPatchSettings} />
                 </div>
               </section>
 
@@ -365,7 +367,7 @@ function ThemeRow({ themePref, theme, onChange }) {
   return (
     <div className="theme-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px 11px 16px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
       <div style={{ flex: '1 1 100px', minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Theme</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{t('Theme')}</div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{themePref === 'system' ? `Follows this device · ${theme === 'monoflow' ? 'dark' : 'light'} now` : 'This device only'}</div>
       </div>
       <div role="radiogroup" aria-label="Theme" className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
@@ -374,7 +376,7 @@ function ThemeRow({ themePref, theme, onChange }) {
           return (
             <button key={key} id={`theme-${key}`} role="radio" aria-checked={on} onClick={() => onChange?.(key)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 11px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: on ? 'var(--shadow-sm)' : 'none' }}>
-              <Icon size={13} /> {label}
+              <Icon size={13} /> {t(label)}
             </button>
           );
         })}
@@ -391,7 +393,7 @@ function MotionRow() {
   return (
     <div className="theme-row" id="motion-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px 11px 16px', flexWrap: 'wrap' }}>
       <div style={{ flex: '1 1 140px', minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Animations</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{t('Animations')}</div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{reduced ? 'Off — your device asks for reduced motion' : 'Coins, rolling numbers · this device only'}</div>
       </div>
       <div role="radiogroup" aria-label="Animations" className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
@@ -400,7 +402,31 @@ function MotionRow() {
           return (
             <button key={key} id={`motion-${key}`} role="radio" aria-checked={on} disabled={reduced} onClick={() => setMotionPref(key === 'on')}
               style={{ padding: '7px 13px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: reduced ? 'default' : 'pointer', background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: on ? 'var(--shadow-sm)' : 'none', opacity: reduced ? 0.5 : 1 }}>
-              {label}
+              {t(label)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* Language — synced to every device (settings.lang); cached here so the first screen shows it */
+function LanguageRow({ onPatchSettings }) {
+  const cur = getLang();
+  return (
+    <div className="theme-row" id="language-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px 11px 16px', borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
+      <div style={{ flex: '1 1 140px', minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{t('Language')}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{cur === 'en' ? 'Hindi, Telugu and Tamil too' : t('Partly translated — the rest stays in English for now')}</div>
+      </div>
+      <div role="radiogroup" aria-label="Language" className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0, flexWrap: 'wrap' }}>
+        {LANGS.map((l) => {
+          const on = cur === l.key;
+          return (
+            <button key={l.key} id={`lang-${l.key}`} role="radio" aria-checked={on} lang={l.key} onClick={() => { onPatchSettings?.({ lang: l.key }); setLang(l.key); }}
+              style={{ padding: '7px 11px', border: 'none', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: on ? 'var(--shadow-sm)' : 'none' }}>
+              {l.native}
             </button>
           );
         })}

@@ -1,0 +1,67 @@
+// हिन्दी — keys are the English text. Please have a native speaker review.
+export const hi = {
+  // Pages
+  'Home': 'होम', 'History': 'इतिहास', 'Bills': 'बिल', 'Bills & payments': 'बिल और भुगतान', 'Stats': 'आँकड़े',
+  'Budget': 'बजट', 'Savings': 'बचत', 'Savings & goals': 'बचत और लक्ष्य', 'Money in': 'आमदनी', 'Debts': 'उधार',
+  'Trips': 'यात्राएँ', 'Trips & splits': 'यात्राएँ और बँटवारा', 'Billings': 'बिलिंग', 'Responsibilities': 'ज़िम्मेदारियाँ',
+  'Planner': 'प्लानर', 'Profile': 'प्रोफ़ाइल', 'Profile & settings': 'प्रोफ़ाइल और सेटिंग्स',
+  'This month at a glance': 'इस महीने की झलक', 'Every transaction · search & filters': 'हर लेन-देन · खोज और फ़िल्टर',
+  'Rent, EMIs, SIPs, utilities': 'किराया, EMI, SIP, बिजली-पानी', 'Calendar, categories, monthly report': 'कैलेंडर, श्रेणियाँ, मासिक रिपोर्ट',
+  'Limits and what’s safe to spend': 'सीमाएँ और कितना ख़र्च सुरक्षित है', 'SIPs, funds, deposits, goals': 'SIP, फ़ंड, जमा, लक्ष्य',
+  'Salary, borrowed, paid back — all that came in': 'वेतन, उधार लिया, वापस मिला — जो भी आया',
+  'Lent, borrowed, paid back': 'उधार दिया, लिया, लौटाया', 'Shared spending, settled fairly': 'साझा ख़र्च, बराबर हिसाब',
+  'Money spent for others': 'दूसरों के लिए ख़र्च', 'Family loans and promises you’re clearing': 'परिवार के कर्ज़ और वादे जो आप चुका रहे हैं',
+  'Retirement, FIRE, education, SIP, loans, tax': 'रिटायरमेंट, FIRE, पढ़ाई, SIP, लोन, टैक्स',
+  'Overview': 'सारांश', 'Money': 'पैसा', 'With others': 'दूसरों के साथ', 'Records': 'रिकॉर्ड',
+  // Add
+  'Expense': 'ख़र्च', 'Income': 'आय', 'Debt': 'उधार', 'Add': 'जोड़ें', 'Save': 'सहेजें', 'Cancel': 'रद्द करें', 'Delete': 'हटाएँ',
+  'Edit': 'बदलें', 'Done': 'हो गया', 'Back': 'वापस', 'Close': 'बंद करें', 'Share': 'शेयर करें', 'Paid': 'चुका दिया',
+  'Report': 'रिपोर्ट', 'Ask': 'पूछें', 'Reset': 'रीसेट', 'New goal': 'नया लक्ष्य', 'Make it a goal': 'इसे लक्ष्य बनाएँ',
+  // Categories
+  'Food & Dining': 'खाना-पीना', 'Groceries': 'किराना', 'Transport': 'आना-जाना', 'Fuel': 'ईंधन', 'Shopping': 'ख़रीदारी',
+  'Bills & Utilities': 'बिल और सुविधाएँ', 'Rent & Home': 'किराया और घर', 'Health': 'सेहत', 'Entertainment': 'मनोरंजन',
+  'Subscriptions': 'सब्सक्रिप्शन', 'Education': 'पढ़ाई', 'Travel': 'यात्रा', 'Personal Care': 'निजी देखभाल',
+  'Gifts & Donations': 'तोहफ़े और दान', 'Family': 'परिवार', 'Insurance': 'बीमा', 'Other': 'अन्य',
+  // Home
+  'Spent': 'ख़र्च हुआ', 'Today': 'आज', 'Safe to spend today': 'आज सुरक्षित ख़र्च', 'Saved': 'बचाया', 'Balance': 'बाक़ी',
+  'Explore': 'देखें', 'Good morning': 'सुप्रभात', 'Good afternoon': 'नमस्कार', 'Good evening': 'शुभ संध्या', 'Over budget': 'बजट से ज़्यादा',
+  'Quick entry': 'झटपट एंट्री', 'Month overview': 'महीने का सारांश', 'Bills due': 'देय बिल', 'Recent activity': 'हाल की गतिविधि',
+  // Profile
+  'Appearance': 'रूप-रंग', 'Theme': 'थीम', 'Light': 'हल्का', 'Dark': 'गहरा', 'Auto': 'अपने-आप', 'Animations': 'एनिमेशन',
+  'On': 'चालू', 'Off': 'बंद', 'Language': 'भाषा', 'Help': 'मदद', 'App tour & guides': 'ऐप टूर और गाइड', 'Invite a friend': 'दोस्त को बुलाएँ',
+  'Your privacy': 'आपकी निजता', 'Sounds': 'आवाज़ें', 'Notifications': 'सूचनाएँ', 'Reminders': 'रिमाइंडर', 'Customize': 'अपने हिसाब से',
+  'Bottom bar': 'नीचे की पट्टी', 'Home screen': 'होम स्क्रीन', 'Open the app on': 'ऐप यहाँ खुले', 'Currency': 'मुद्रा',
+  'Google Drive backup': 'Google Drive बैकअप', 'Account': 'खाता', 'App lock': 'ऐप लॉक', 'Your devices': 'आपके डिवाइस',
+  'Data Management': 'डेटा प्रबंधन', 'Sync': 'सिंक', 'Security alerts': 'सुरक्षा चेतावनियाँ', 'Get the app': 'ऐप पाएँ',
+  'Walk through the app · a guide for every page': 'ऐप की सैर · हर पेज की गाइड', 'Send them the app — free, no ads': 'उन्हें ऐप भेजें — मुफ़्त, बिना विज्ञापन',
+  'No ads · never sold · no bank access': 'कोई विज्ञापन नहीं · कभी बेचा नहीं · बैंक तक पहुँच नहीं',
+  // Sections
+  'By category': 'श्रेणी के अनुसार', 'Last 6 months': 'पिछले 6 महीने', 'Spending budget': 'ख़र्च का बजट', 'Festivals & occasions': 'त्योहार और मौक़े',
+  'Where it goes': 'पैसा कहाँ जाता है', 'Went up': 'बढ़ा', 'Went down': 'घटा', 'About the same': 'लगभग उतना ही', 'Missed or skipped': 'छूटे या टाले',
+  'Habits': 'आदतें', 'Heads-up': 'ध्यान दें', 'all time': 'अब तक', 'newest first': 'नए पहले', 'total spend': 'कुल ख़र्च',
+  'Set a monthly budget': 'महीने का बजट तय करें', 'Start tracking your savings': 'अपनी बचत लिखना शुरू करें',
+  'Insurance policies': 'बीमा पॉलिसियाँ', 'All regular payments': 'सभी नियमित भुगतान', 'Common payments': 'आम भुगतान',
+  // Money plan & planner
+  'Essentials': 'ज़रूरी ख़र्च', 'Lifestyle': 'शौक़ के ख़र्च', 'EMIs & loans': 'EMI और कर्ज़', 'Investments': 'निवेश', 'Left over': 'बचा हुआ',
+  'Retirement': 'रिटायरमेंट', 'FIRE': 'FIRE', 'SIP': 'SIP', 'Loan': 'लोन', 'Tax': 'टैक्स',
+  'Net worth': 'कुल संपत्ति', 'You own': 'आपके पास', 'You owe': 'आप पर बकाया',
+  // Demo / sign in
+  'Create free account': 'मुफ़्त खाता बनाएँ', 'Try it without an account →': 'बिना खाते के आज़माएँ →',
+  // Home & language
+  "Good night": "शुभ रात्रि",
+  "Category limits set": "श्रेणी सीमाएँ तय हैं",
+  "Quick entry — \"chai 20 vada 15\"": "झटपट एंट्री — \"चाय 20 वड़ा 15\"",
+  "Due this week": "इस हफ़्ते देय",
+  "Split shared costs": "साझा ख़र्च बाँटें",
+  "Spent for others": "दूसरों के लिए ख़र्च",
+  "Retirement, FIRE, loans, tax": "रिटायरमेंट, FIRE, लोन, टैक्स",
+  "Family loans, promises": "परिवार के कर्ज़, वादे",
+  "Calendar & report": "कैलेंडर और रिपोर्ट",
+  "Nothing yet this month": "इस महीने अभी कुछ नहीं",
+  "English": "English",
+  "Hindi": "हिन्दी",
+  "Telugu": "తెలుగు",
+  "Tamil": "தமிழ்",
+  "Partly translated — the rest stays in English for now": "कुछ हिस्सा अनुवादित — बाक़ी अभी अंग्रेज़ी में",
+  "Account, look & layout, settings": "खाता, रूप-रंग और लेआउट, सेटिंग्स",
+};

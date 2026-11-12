@@ -8,6 +8,7 @@
 
 /* Every phone page. Home ('today') is always the first bar item; the bar's
    other slots take any of SLOT_KEYS. */
+import { translatable } from '../i18n';
 export const PAGE_KEYS = ['today', 'history', 'bills', 'stats', 'budget', 'savings', 'income', 'people', 'trips', 'external', 'responsibilities', 'planner'];
 export const SLOT_KEYS = PAGE_KEYS.filter((k) => k !== 'today');
 export const BAR_SLOTS = 3;
@@ -25,6 +26,7 @@ export const HOME_SECTIONS = [
   { key: 'explore',  label: 'Explore',         hint: 'Every page that isn’t in your bar', locked: true },
   { key: 'recent',   label: 'Recent activity', hint: 'Your last seven days · off by default on phones' },
 ];
+HOME_SECTIONS.forEach((s) => translatable(s, ['label']));
 const HOME_KEYS = HOME_SECTIONS.map((s) => s.key);
 const DEFAULT_HIDDEN = ['recent'];
 const UI_VERSION = 2;
