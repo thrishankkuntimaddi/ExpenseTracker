@@ -79,6 +79,18 @@ jobs:
             ./gradlew assembleDebug --no-daemon
             mv app/build/outputs/apk/debug/app-debug.apk ../ExpenseTracker-Android.apk
           fi
+      # The website APK must install anywhere: Play Protect blocks sideloaded
+      # apps that read SMS or notifications (those live only in the Play .aab).
+      # Stop the release if any of that ever leaks into the APK.
+      - name: Check the website APK is safe to sideload
+        run: |
+          AAPT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/aapt2
+          M=$("$AAPT" dump xmltree --file AndroidManifest.xml ExpenseTracker-Android.apk)
+          if echo "$M" | grep -E "RECEIVE_SMS|READ_SMS|SEND_SMS|BIND_NOTIFICATION_LISTENER_SERVICE|BIND_ACCESSIBILITY_SERVICE|REQUEST_INSTALL_PACKAGES|PaymentListenerService|BankSmsReceiver"; then
+            echo "::error::The website APK declares something Play Protect blocks — it belongs in android/app/src/play only"; exit 1
+          fi
+          "$AAPT" dump badging ExpenseTracker-Android.apk | grep -o "versionCode='[0-9]*' versionName='[^']*'"
+          echo "APK is clean"
       - uses: actions/upload-artifact@v4
         with:
           name: ExpenseTracker-Android

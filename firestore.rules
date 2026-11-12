@@ -170,6 +170,48 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
     }
 
+    // ─── Invite a friend → supporter days ─────────────────────────────
+    // referral_codes/{code}: a short code that points at its owner. Anyone
+    // signed in may look one up (to credit the right person), only the owner
+    // creates or removes it, nobody edits it.
+    match /referral_codes/{code} {
+      allow get: if request.auth != null;
+      allow create: if request.auth != null
+        && code.matches('^[A-Z2-9]{7}$')
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+    // referrals/{newUserId}: who invited this account — written once, by the
+    // new account itself, naming the real owner of an existing code (never
+    // itself). Never changed or removed, so it can't be claimed twice. The
+    // only later change: "activeAt", set once when they add their first entry
+    // (that's when the inviter's supporter days count).
+    match /referrals/{userId} {
+      allow get: if isOwner(userId) || isAppAdmin()
+        || (request.auth != null && resource.data.referrer == request.auth.uid);
+      allow list: if isAppAdmin()
+        || (request.auth != null && resource.data.referrer == request.auth.uid);
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['code', 'referrer', 'createdAt'])
+        && request.resource.data.code is string && request.resource.data.code.size() == 7
+        && request.resource.data.referrer is string
+        && request.resource.data.referrer != userId
+        && get(/databases/$(database)/documents/referral_codes/$(request.resource.data.code)).data.uid == request.resource.data.referrer
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(userId)
+        && !('activeAt' in resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeAt'])
+        && request.resource.data.activeAt == request.time;
+    }
+    // supporters/{userId}: paid support (Play Billing / Razorpay), written
+    // only by the server after it verifies a payment — never by the app.
+    match /supporters/{userId} {
+      allow get: if isOwner(userId) || isAppAdmin();
+      allow list: if isAppAdmin();
+    }
+
     match /users/{userId} {
       allow read, write: if isOwner(userId);
 

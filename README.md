@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.31.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.32.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
@@ -205,6 +205,12 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 
 ### 🗣️ Languages
 - **English, हिन्दी, తెలుగు, தமிழ்** (Profile → Appearance → Language, synced to every device): every screen — about 1,100 labels, buttons, hints and sentences per language; a few numbers-and-words fragments stay in English (`src/i18n`, keyed by the English text; native-speaker review welcome)
+
+### 💜 Supporters & invites (Profile → Supporter)
+- **Everything stays free** — supporters get extras only: a badge on the profile and new features first
+- **Invite friends to become one**: your invite link carries your code; each friend who makes an account with it and adds their first entry gives you **30 supporter days** (they add up)
+- Safe without a server: Firestore rules let a code be used only for its real owner, credit an account once, and never yourself
+- Paid support (Razorpay / Google Play) is written in `server/functions` and switched off until the server plan is upgraded — see [server/README.md](server/README.md)
 
 ### 📲 Auto-capture payments (Google Play app)
 - **UPI app notifications and bank SMS** — Google Pay, PhonePe, Paytm, BHIM, CRED and your banks' debit/credit messages show up on Home as “Add this payment?” with the name, category and account filled in

@@ -9,10 +9,13 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { confirmBundleBoots, startAutoUpdates } from './native/updates.js'
 import { takeQuickBoot } from './app/quickBoot.js'
 import { play, wireTapSounds } from './sound/sound.js'
+import { rememberRefFromUrl } from './app/refLink.js'
 
 // Android: tell the over-the-air updater this bundle boots, before anything
 // else (a bundle that never gets here is rolled back automatically).
 confirmBundleBoots()
+// An invite link (?ref=CODE): keep the code for when an account is made
+rememberRefFromUrl()
 
 function bootstrap() {
   const rootEl = document.getElementById('root');

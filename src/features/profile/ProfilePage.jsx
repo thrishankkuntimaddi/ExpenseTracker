@@ -8,7 +8,7 @@
 //     full screen on phones (Back — or the Android back button — returns)
 import { useMotionPref, setMotionPref } from '../../motion/motion';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Compass, PlayCircle, ChevronRight, Eye, Gift, ScanLine } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Compass, PlayCircle, ChevronRight, Eye, Gift, ScanLine, Heart } from 'lucide-react';
 import Avatar from '../../components/Avatar';
 import { displayNameOf } from '../../app/shellContext';
 import { PAGE_META } from '../../app/pages';
@@ -36,6 +36,8 @@ import WidgetsCard from '../settings/WidgetsCard';
 import { widgetsAvailable } from '../../native/intake';
 import { platform } from '../../native';
 import CaptureCard from '../settings/CaptureCard';
+import SupporterCard from '../settings/SupporterCard';
+import { useSupporter, supporterSummary } from '../../hooks/useSupporter';
 import { useCaptureStatus, captureSummary } from '../settings/captureStatus';
 import { captureUsable } from '../../native/paymentCapture';
 
@@ -93,6 +95,7 @@ export default function ProfilePage(props) {
   const remSummary = remOn.length ? `${remOn.length} on · ${remOn.map((t) => REMINDER_NAMES[t]).join(', ')}` : 'Off';
   const sounds = useSoundPrefs();
   const [capture, setCapture] = useCaptureStatus();
+  const supporter = useSupporter(user?.isDemo ? null : user?.uid);
   const currency = isCurrency(settings?.currency) ? settings.currency : DEFAULT_CURRENCY;
   const driveSummary = drive?.cfg?.enabled
     ? `On · ${(FREQUENCIES.find((f) => f.key === drive.cfg.frequency)?.label ?? 'Every week').toLowerCase()}${drive.state?.lastAt ? ` · last ${timeAgo(drive.state.lastAt)}` : ''}`
@@ -128,6 +131,7 @@ export default function ProfilePage(props) {
                       {providers.includes('google.com') && <Pill>{tr("Google")}</Pill>}
                       {providers.includes('password') && <Pill>{tr("Email")}</Pill>}
                       {(user?.emailVerified || providers.includes('google.com')) && <Pill tone="income"><ShieldCheck size={10} /> {tr("Verified")}</Pill>}
+                      {supporter.active && <Pill tone="accent"><Heart size={10} fill="currentColor" /> {tr("Supporter")}</Pill>}
                     </div>
                   </div>
                 </div>
@@ -170,7 +174,10 @@ export default function ProfilePage(props) {
                   <HelpCard />
                 </Group>
                 <Group id="invite" title={tr("Invite a friend")} Icon={Gift} color="var(--expense)" summary={tr("Send them the app — free, no ads")}>
-                  <InviteFriendCard name={user?.displayName?.split(' ')[0]} />
+                  <InviteFriendCard name={user?.displayName?.split(' ')[0]} uid={user?.isDemo ? null : user?.uid} />
+                </Group>
+                <Group id="supporter" title={tr("Supporter")} Icon={Heart} color="var(--accent)" summary={supporterSummary(supporter)}>
+                  <SupporterCard status={supporter} settings={settings} onPatchSettings={onPatchSettings} onInvite={() => openSetting('invite')} />
                 </Group>
                 <Group id="privacy" title={tr("Your privacy")} Icon={ShieldCheck} color="var(--income)" summary={tr("No ads · never sold · no bank access")}>
                   <PrivacyPromise />
