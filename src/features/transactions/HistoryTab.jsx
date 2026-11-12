@@ -8,7 +8,7 @@
 // person's balance is back to zero, then Settled; everything else is Done.
 // Tap a row (or ✎) to edit it.
 import { useState, useMemo, useCallback } from 'react';
-import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown, CheckCircle2, Clock3, Banknote, Wallet, ArrowDownLeft, ArrowUpRight, Undo2, Receipt, Gift, PiggyBank } from 'lucide-react';
+import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown, CheckCircle2, Clock3, Banknote, Wallet, ArrowDownLeft, ArrowUpRight, Undo2, Receipt, Gift, PiggyBank, FileUp } from 'lucide-react';
 import { formatAmount } from '../../utils/dateHelpers';
 import MonthSwitcher from '../../components/MonthSwitcher';
 import { useViewMonth, monthName } from '../../app/month';
@@ -32,14 +32,16 @@ import BigAmount from '../../components/BigAmount';
 import { formatMoneyCompact } from '../../utils/money';
 
 import { t as tr } from '../../i18n';
+import StatementImport from '../import/StatementImport';
 const ALL_TIME = { type: 'all' };
 const norm = (s) => String(s ?? '').trim().toLowerCase();
 
 export default function HistoryTab({
   transactions = [], income = [], selectedPeriod,
   onUpdateTransaction, onDeleteTransaction, onUpdateIncome, onDeleteIncome,
-  settings, onLearnCategory,
+  settings, onLearnCategory, onAddTransaction, onAddIncome,
 }) {
+  const [importing, setImporting] = useState(false);
   const { period: monthPeriod, month: viewMonth } = useViewMonth(selectedPeriod);
   const [allMonths, setAllMonths] = useState(false);   // search every month, not just the one on screen
   const [expandAll, setExpandAll] = useState(null);    // null = default: open when grouped by day
@@ -102,6 +104,10 @@ export default function HistoryTab({
 
   return (
     <div className="tab-root">
+      {importing && (
+        <StatementImport transactions={transactions} income={income} settings={settings}
+          onAddTransaction={onAddTransaction} onAddIncome={onAddIncome} onClose={() => setImporting(false)} />
+      )}
       {editing && editing._src === 'transaction' && (
         <EditTransactionModal txn={editing} onSave={onUpdateTransaction} onDelete={onDeleteTransaction}
           onClose={() => setEditing(null)} categoryRules={categoryRules} onLearnCategory={onLearnCategory} />
@@ -129,6 +135,7 @@ export default function HistoryTab({
             </p>
           </div>
           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            <IconAction id="history-import" label={tr("Import a bank statement")} Icon={FileUp} onClick={() => setImporting(true)} />
             <IconAction id="history-expand-all" label={effectiveExpandAll ? tr("Collapse all") : tr("Expand all")}
               Icon={effectiveExpandAll ? ChevronsDownUp : ChevronsUpDown} onClick={() => { setExpandAll(!effectiveExpandAll); setCustomToggles({}); }} />
             <HelpButton page="history" />

@@ -1,7 +1,7 @@
 {
   "name": "expensetracker",
   "private": true,
-  "version": "3.29.0",
+  "version": "3.30.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -30,10 +30,12 @@
     "@tauri-apps/plugin-updater": "^2.13.2",
     "firebase": "^12.19.0",
     "lucide-react": "^1.7.0",
+    "pdfjs-dist": "^4.10.38",
     "qrcode": "^1.5.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.3",

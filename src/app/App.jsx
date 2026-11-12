@@ -378,6 +378,8 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     {activeTab === 'history' && (
       <HistoryTab
         {...commonProps}
+        onAddTransaction={addTransaction}
+        onAddIncome={addIncome}
         onUpdateTransaction={updateTransaction}
         onDeleteTransaction={deleteTransaction}
         onUpdateIncome={updateIncome}
