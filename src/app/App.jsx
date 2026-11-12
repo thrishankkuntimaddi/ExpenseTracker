@@ -5,6 +5,9 @@ import { useRecurring } from '../hooks/useRecurring';
 import { useDevices } from '../hooks/useDevices';
 import { useDriveBackup } from '../hooks/useDriveBackup';
 import { useActivity } from '../hooks/useActivity';
+import { useDemoData } from '../hooks/useDemoData';
+import { isDemoUser } from '../demo/demo';
+import { DemoBanner, DemoLocked, DemoProfile } from '../demo/DemoBits';
 import { useSyncStatus, clearSyncError } from '../services/sync';
 import { setStatusBarTheme, onBackButton } from '../native';
 import { overlayOpen } from '../hooks/useEscape';
@@ -105,6 +108,12 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   }, []);
   const { isStandalone, canInstallNative, triggerInstall } = usePWAInstall();
 
+  // Demo (no account): the same data API, in memory — and every cloud hook
+  // below gets no uid, so nothing is read from or written to Firestore
+  const isDemo = isDemoUser(user);
+  const uid = isDemo ? null : user.uid;
+  const liveData = useFirestoreData(uid, user.email);
+  const demoData = useDemoData(isDemo);
   const {
     transactions, income, settings, recentlyDeleted, loaded,
     writeError, clearWriteError, reportError,
@@ -112,10 +121,10 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     addIncome, updateIncome, deleteIncome,
     patchSettings,
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
-  } = useFirestoreData(user.uid, user.email);
+  } = isDemo ? demoData : liveData;
 
   // Usage activity for the app's owner (Profile → Admin sees): when, never what
-  useActivity(user, transactions, income, loaded);
+  useActivity(isDemo ? null : user, transactions, income, loaded);
 
   // Your data has arrived (from the device cache or the server): end the splash
   useEffect(() => { if (loaded) markAppReady(); }, [loaded]);
@@ -129,13 +138,13 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   const activeTab = chosenTab ?? ui.start;
 
   // "Your devices" (presence heartbeat while the app is open) and security alerts
-  const devices = useDevices(user.uid);
-  const securityEvents = useSecurityEvents(user.uid);
+  const devices = useDevices(uid);
+  const securityEvents = useSecurityEvents(uid);
   // Google Drive backups on the schedule picked in Profile
-  const drive = useDriveBackup({ uid: user.uid, email: user.email, settings, loaded });
+  const drive = useDriveBackup({ uid, email: user.email, settings, loaded });
 
   // Recurring rules (rent, SIP, salary …) + what is due right now
-  const recurring = useRecurring({ uid: user.uid, transactions, income, loaded, addTransaction, addIncome, reportError });
+  const recurring = useRecurring({ uid, transactions, income, loaded, addTransaction, addIncome, reportError, demoRules: isDemo ? demoData.demoRules : null });
 
   /** Remember a category override so the next identical name is auto-tagged. */
   const learnCategory = useCallback((name, category) => {
@@ -272,16 +281,17 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   useEffect(() => { initReminders(); }, []);
   // Cloud push: the reminder plan is uploaded for the website's reminders;
   // this device gets security alerts (and, on the website, reminders) by push
-  useEffect(() => { setPushUser(user.uid); return () => setPushUser(null); }, [user.uid]);
+  useEffect(() => { setPushUser(uid); return () => setPushUser(null); }, [uid]);
   useEffect(() => {
-    const reg = () => registerPush(user.uid, devices.thisId, { reminders: deviceDelivery.get() });
+    if (!uid) return undefined;
+    const reg = () => registerPush(uid, devices.thisId, { reminders: deviceDelivery.get() });
     reg();
     // Coming back to the app: register again (a token the notifier dropped,
     // or one the browser rotated, is replaced instead of staying silent)
     const onVisible = () => { if (document.visibilityState === 'visible') reg(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [user.uid, devices.thisId]);
+  }, [uid, devices.thisId]);
   useEffect(() => {
     onReminderTap((route) => { if (['today', 'plan', 'bills', 'budget', 'stats', 'history', 'savings', 'responsibilities', 'people', 'planner'].includes(route)) goTo(route === 'plan' ? 'bills' : route); });
   }, [goTo]);
@@ -359,7 +369,8 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
         onDeleteTransaction={deleteTransaction}
       />
     )}
-    {(activeTab === 'external' || activeTab === 'trips') && (
+    {isDemo && (activeTab === 'external' || activeTab === 'trips') && <DemoLocked what={activeTab === 'trips' ? 'Trips & splits' : 'Billings'} />}
+    {!isDemo && (activeTab === 'external' || activeTab === 'trips') && (
       <ExternalTab
         key={activeTab}
         initialMode={activeTab === 'trips' ? 'trips' : 'billings'}
@@ -397,7 +408,8 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     {activeTab === 'stats' && <StatsTab {...commonProps} />}
     {activeTab === 'responsibilities' && <ResponsibilitiesPage {...commonProps} onAddTransaction={addTransaction} onDeleteTransaction={deleteTransaction} />}
     {activeTab === 'planner' && <PlannerPage {...commonProps} />}
-    {activeTab === 'profile' && (
+    {isDemo && activeTab === 'profile' && <DemoProfile />}
+    {!isDemo && activeTab === 'profile' && (
       <ProfilePage
         {...commonProps}
         onBack={isDesktop ? null : goBack}
@@ -416,7 +428,8 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   const overlays = (
     <>
       {errorBanner}
-      <SecurityBanners uid={user.uid} devices={devices} events={securityEvents} />
+      {!isDemo && <SecurityBanners uid={user.uid} devices={devices} events={securityEvents} />}
+      {isDemo && <DemoBanner />}
 
       {addKind && (
         <Suspense fallback={null}>
@@ -561,7 +574,7 @@ function LockGate(props) {
   const { signOut } = props;
   const [signOutNote, setSignOutNote] = useState(null);
   const remoteSignOut = useCallback(() => { signOut({ force: true }); }, [signOut]);
-  const lock = useAppLock(props.user, { onRemoteSignOut: remoteSignOut });
+  const lock = useAppLock(isDemoUser(props.user) ? null : props.user, { onRemoteSignOut: remoteSignOut });
   if (lock.locked) {
     return (
       <>

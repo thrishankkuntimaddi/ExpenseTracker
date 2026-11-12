@@ -23,10 +23,12 @@ export default function AuthScreen({
   error, setError, loading,
   googleAvailable = true,   // false in the desktop app until its Google client is configured
   appsLink = null,          // website only: link to the app downloads
+  onDemo = null,            // try the app with sample data, no account
+  startMode = null,         // 'signup' when coming from the demo
   invited = false,          // opened from a trip invite link
   inviteId = null,          // …and which trip
 }) {
-  const [mode, setMode]         = useState(invited ? 'signup' : 'login');
+  const [mode, setMode]         = useState(invited || startMode === 'signup' ? 'signup' : 'login');
   // The trip behind the link: name, organiser, dates (readable before signing in)
   const [trip, setTrip] = useState(null);
   useEffect(() => { if (inviteId) getInvitePreview(inviteId).then(setTrip); }, [inviteId]);
@@ -234,6 +236,16 @@ export default function AuthScreen({
             </p>
           )}
         </div>
+        {onDemo && !invited && (
+          <button type="button" id="btn-try-demo" onClick={onDemo}
+            style={{ marginTop: 14, padding: '10px 18px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+            Try it without an account →
+          </button>
+        )}
+        <p id="auth-privacy" style={{ maxWidth: 380, marginTop: 14, fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.5, textAlign: 'center' }}>
+          No ads. We never sell or share your data, and never ask for bank access. Only you can read your entries.{' '}
+          <a href="https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 600 }}>Privacy</a>
+        </p>
         {appsLink && (
           <a href={appsLink} target="_blank" rel="noreferrer" id="link-get-apps"
             style={{ marginTop: 16, fontSize: 12, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none' }}>

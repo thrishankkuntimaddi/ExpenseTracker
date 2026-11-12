@@ -8,7 +8,7 @@
 //     full screen on phones (Back — or the Android back button — returns)
 import { useMotionPref, setMotionPref } from '../../motion/motion';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Compass, PlayCircle, ChevronRight, Eye } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Compass, PlayCircle, ChevronRight, Eye, Gift } from 'lucide-react';
 import Avatar from '../../components/Avatar';
 import { displayNameOf } from '../../app/shellContext';
 import { PAGE_META } from '../../app/pages';
@@ -30,6 +30,7 @@ import { FREQUENCIES } from '../../services/drive';
 import { timeAgo } from '../../services/sync';
 import { startTour, GUIDE_PAGES } from '../../tour/tour';
 import { isAdmin } from '../../config/admin';
+import InviteFriendCard from '../settings/InviteFriendCard';
 
 // The owner's read-only list of users: loaded only for that account, only when opened
 const AdminCard = lazy(() => import('../admin/AdminCard'));
@@ -157,6 +158,12 @@ export default function ProfilePage(props) {
               <Section title="Help">
                 <Group id="help" title="App tour & guides" Icon={Compass} color="var(--accent)" summary="Walk through the app · a guide for every page">
                   <HelpCard />
+                </Group>
+                <Group id="invite" title="Invite a friend" Icon={Gift} color="var(--expense)" summary="Send them the app — free, no ads">
+                  <InviteFriendCard name={user?.displayName?.split(' ')[0]} />
+                </Group>
+                <Group id="privacy" title="Your privacy" Icon={ShieldCheck} color="var(--income)" summary="No ads · never sold · no bank access">
+                  <PrivacyPromise />
                 </Group>
               </Section>
 
@@ -431,6 +438,28 @@ function HelpCard() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/* ── The privacy promise, in plain words ── */
+function PrivacyPromise() {
+  const items = [
+    ['No ads, ever', 'The app isn’t paid for by showing you things to buy.'],
+    ['Never sold or shared', 'Your entries are used only to run the app for you.'],
+    ['No bank access', 'You type or import what you choose; nothing reads your bank or SMS.'],
+    ['Only you can read it', 'The database rules let your account — and no one else — open your entries.'],
+    ['Yours to take or delete', 'Export everything, back it up to your own Google Drive, or delete it all from Profile.'],
+  ];
+  return (
+    <div id="privacy-promise" style={{ padding: '10px 16px 16px' }}>
+      {items.map(([t, d]) => (
+        <div key={t} style={{ display: 'flex', gap: 10, padding: '7px 0' }}>
+          <ShieldCheck size={15} style={{ color: 'var(--income)', flexShrink: 0, marginTop: 2 }} />
+          <div><div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{t}</div><div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.45 }}>{d}</div></div>
+        </div>
+      ))}
+      <a href="https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html" target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 6, fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}>Read the privacy policy</a>
     </div>
   );
 }

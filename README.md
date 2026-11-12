@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.25.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.26.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
@@ -202,6 +202,11 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 ### 👁️ Admin sees (the owner's account only)
 - A **read-only** list of who uses the app — name, email, when they last opened it and last added an entry, how many entries, which app and version — with filters (today, this week, adding entries, opens but adds nothing, no entries, new, going quiet, stopped), search and sorting
 - Each app writes only a small activity record about its own account (`user_activity/{uid}`); `firestore.rules` lets only the owner's verified account read them and no one write anyone else's. It never includes amounts or entries, and it's deleted with the account
+
+### 🙋 Try it, share it
+- **Demo without an account** (sign-in screen, or `…/?demo=1`): three months of sample data in memory — add, edit, explore every page; nothing is sent anywhere and it resets when the tab closes. Trips & Billings ask for a free account (they sync between people)
+- **Your privacy** in plain words (Profile → Help, and on the sign-in screen): no ads, never sold or shared, no bank access, only you can read your entries
+- **Invite a friend** (Profile → Help): a ready message with the app (and demo) link
 
 ### 🧾 Net worth (Savings)
 - What you own (money in hand, savings by type, money owed to you, anything you add — a house, gold, PF) minus what you owe (people, responsibilities, loans you add)

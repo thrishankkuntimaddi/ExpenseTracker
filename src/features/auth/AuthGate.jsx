@@ -8,6 +8,7 @@ import { googleSignInAvailable } from '../../native/googleSignIn';
 import { isNative } from '../../native';
 import { DOWNLOADS_URL } from '../../config/sites';
 import { captureInviteFromUrl } from '../trips/invite';
+import { demoOn, startDemo, endDemo, afterDemo, DEMO_USER } from '../../demo/demo';
 
 // A trip invite link (?trip=…) is kept until the person has signed in
 const inviteAtStart = captureInviteFromUrl();   // trip id from an invite link, or null
@@ -81,9 +82,15 @@ function LoadingScreen() {
 export default function AuthGate({ children }) {
   const { user, loading, signIn, signUp, signInWithGoogle, resetPassword, resendVerification, signOut, deleteAccount, error, setError } = useAuth();
   const [authLoading, setAuthLoading] = useState(false);
+  const [startMode] = useState(() => afterDemo());
 
   if (firebaseConfigError) { markAppReady(); return <SetupRequired />; }
   if (loading || user === undefined) return <LoadingScreen />;
+
+  // Demo: sample data in memory, no account (until the tab closes)
+  if (!user && demoOn()) {
+    return children({ user: DEMO_USER, signOut: async () => { endDemo(false); return { ok: true }; }, deleteAccount: async () => {}, resetPassword: async () => {}, resendVerification: async () => {} });
+  }
 
   if (!user) {
     markAppReady();   // the sign-in screen is the first screen
@@ -104,6 +111,8 @@ export default function AuthGate({ children }) {
         loading={authLoading}
         googleAvailable={googleSignInAvailable}
         appsLink={isNative ? null : DOWNLOADS_URL}
+        onDemo={startDemo}
+        startMode={startMode}
         invited={!!inviteAtStart}
         inviteId={inviteAtStart}
       />
