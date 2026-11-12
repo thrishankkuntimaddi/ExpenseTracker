@@ -4,3 +4,4 @@ import { initializeApp } from 'firebase-admin/app';
 initializeApp();
 
 export { razorpayWebhook, verifyPlayPurchase } from './supporters.js';
+export { setuCreateConsent, setuFetch, setuWebhook } from './setu.js';

@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.32.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.33.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
@@ -205,6 +205,11 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 
 ### 🗣️ Languages
 - **English, हिन्दी, తెలుగు, தமிழ்** (Profile → Appearance → Language, synced to every device): every screen — about 1,100 labels, buttons, hints and sentences per language; a few numbers-and-words fragments stay in English (`src/i18n`, keyed by the English text; native-speaker review welcome)
+
+### 🏛️ Bank linking (built, switched off)
+- **Account Aggregator via Setu**: link a bank with your mobile number, approve in the AA app, and transactions arrive for review — read only, it can never move money
+- Reviewed exactly like an imported statement: names cleaned, categories guessed, and anything you already have (typed, captured from SMS, imported) left unticked — one ledger, never doubled
+- Off until the server plan and Setu keys are in place (`VITE_BANK_LINK=1`) — steps in [server/README.md](server/README.md)
 
 ### 💜 Supporters & invites (Profile → Supporter)
 - **Everything stays free** — supporters get extras only: a badge on the profile and new features first

@@ -8,7 +8,7 @@
 //     full screen on phones (Back — or the Android back button — returns)
 import { useMotionPref, setMotionPref } from '../../motion/motion';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Compass, PlayCircle, ChevronRight, Eye, Gift, ScanLine, Heart } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Compass, PlayCircle, ChevronRight, Eye, Gift, ScanLine, Heart, Landmark } from 'lucide-react';
 import Avatar from '../../components/Avatar';
 import { displayNameOf } from '../../app/shellContext';
 import { PAGE_META } from '../../app/pages';
@@ -40,10 +40,13 @@ import SupporterCard from '../settings/SupporterCard';
 import { useSupporter, supporterSummary } from '../../hooks/useSupporter';
 import { useCaptureStatus, captureSummary } from '../settings/captureStatus';
 import { captureUsable } from '../../native/paymentCapture';
+import { BANK_LINK } from '../../services/bankLink';
 
 import { t as tr } from '../../i18n';
 // The owner's read-only list of users: loaded only for that account, only when opened
 const AdminCard = lazy(() => import('../admin/AdminCard'));
+// Bank linking (Account Aggregator): only in builds with VITE_BANK_LINK=1
+const BankLinkCard = lazy(() => import('../settings/BankLinkCard'));
 
 const REMINDER_NAMES = { recurring: 'bills', daily: 'log the day', budget: 'budget', report: 'report', goals: 'goals', weekly: 'weekly' };
 
@@ -163,6 +166,16 @@ export default function ProfilePage(props) {
                   <Group id="admin" title={tr("Admin sees")} Icon={Eye} color="var(--lent)" summary={tr("Who uses the app · read only")}>
                     <Suspense fallback={<div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>{tr("Loading…")}</div>}>
                       <AdminCard />
+                    </Suspense>
+                  </Group>
+                </Section>
+              )}
+
+              {BANK_LINK && !user?.isDemo && (
+                <Section title={tr("Bank accounts")}>
+                  <Group id="bank" title={tr("Link your bank")} Icon={Landmark} color="var(--income)" summary={tr("Account Aggregator · review before adding")}>
+                    <Suspense fallback={<div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>{tr("Loading…")}</div>}>
+                      <BankLinkCard uid={user?.uid} transactions={transactions} income={income} settings={settings} />
                     </Suspense>
                   </Group>
                 </Section>

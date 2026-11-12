@@ -18,17 +18,18 @@ import { t as tr } from '../../i18n';
 const money = (n) => formatMoneyCompact(n);
 const KIND = { expense: { label: 'Expense', tone: 'expense' }, income: { label: 'Money in', tone: 'income' }, cash: { label: 'Cash', tone: 'lent' } };
 
-export default function StatementImport({ transactions = [], income = [], settings, onAddTransaction, onAddIncome, onClose }) {
+// `preset` (bank linking): { lines, title, subtitle, onSaved } — skip the file, review these lines
+export default function StatementImport({ transactions = [], income = [], settings, onAddTransaction, onAddIncome, onClose, preset }) {
   const shell = useShell();
   const input = useRef(null);
   const [file, setFile] = useState(null);
-  const [step, setStep] = useState('pick');          // pick | password | reading | review | saving | done
+  const rules = settings?.categoryRules ?? EMPTY_RULES;
+  const [step, setStep] = useState(preset ? 'review' : 'pick');   // pick | password | reading | review | saving | done
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(() => (preset ? linesToItems(preset.lines, { transactions, income, rules, source: 'bank' }) : []));
   const [showDupes, setShowDupes] = useState(false);
   const [saved, setSaved] = useState(null);
-  const rules = settings?.categoryRules ?? EMPTY_RULES;
 
   async function read(f, pw) {
     setStep('reading'); setError('');
@@ -56,6 +57,7 @@ export default function StatementImport({ transactions = [], income = [], settin
       if (shell?.user?.uid && !shell.user.isDemo) await bulkImport(shell.user.uid, records);
       else { for (const t of records.transactions) await onAddTransaction?.(t); for (const i of records.income) await onAddIncome?.(i); }
       setSaved(records.transactions.length + records.income.length);
+      await preset?.onSaved?.();
       setStep('done');
     } catch {
       setError(tr('Couldn’t save — check your connection and try again.')); setStep('review');
@@ -70,7 +72,7 @@ export default function StatementImport({ transactions = [], income = [], settin
   ) : step === 'done' ? <PrimaryButton onClick={onClose}>{tr('Done')}</PrimaryButton> : null;
 
   return (
-    <ModalShell title={tr('Import a bank statement')} subtitle={tr('CSV, Excel or PDF — read on this device, never uploaded')} onClose={onClose} maxWidth={640} footer={footer}>
+    <ModalShell title={preset?.title ?? tr('Import a bank statement')} subtitle={preset?.subtitle ?? tr('CSV, Excel or PDF — read on this device, never uploaded')} onClose={onClose} maxWidth={640} footer={footer}>
       <input ref={input} type="file" accept=".csv,.txt,.xls,.xlsx,.pdf,text/csv,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onChange={pick} />
       {error && <div role="alert" style={{ display: 'flex', gap: 8, padding: '10px 12px', background: 'var(--expense-bg)', color: 'var(--expense)', fontSize: 12.5, fontWeight: 600 }}><AlertCircle size={15} style={{ flexShrink: 0 }} />{error}</div>}
 
