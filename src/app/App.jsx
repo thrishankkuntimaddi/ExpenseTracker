@@ -4,6 +4,7 @@ import { useFirestoreData } from '../hooks/useFirestoreData';
 import { useRecurring } from '../hooks/useRecurring';
 import { useDevices } from '../hooks/useDevices';
 import { useDriveBackup } from '../hooks/useDriveBackup';
+import { useActivity } from '../hooks/useActivity';
 import { useSyncStatus, clearSyncError } from '../services/sync';
 import { setStatusBarTheme, onBackButton } from '../native';
 import { overlayOpen } from '../hooks/useEscape';
@@ -112,6 +113,9 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     patchSettings,
     restoreDeletedItem, permanentlyDeleteRecentlyDeletedItem, emptyTrash,
   } = useFirestoreData(user.uid, user.email);
+
+  // Usage activity for the app's owner (Profile → Admin sees): when, never what
+  useActivity(user, transactions, income, loaded);
 
   // Your data has arrived (from the device cache or the server): end the splash
   useEffect(() => { if (loaded) markAppReady(); }, [loaded]);

@@ -21,6 +21,7 @@ import { platform } from "../native";
 import { nativeGoogleIdToken } from "../native/googleSignIn";
 import { getDeviceId, DEVICE_ID_KEY } from "./useDevices";
 import { clearLegacyDataCache } from "../utils/storage";
+import { deleteActivity } from "../services/activity";
 
 /**
  * Provides Firebase Auth state with a short (800 ms) grace period to
@@ -175,6 +176,7 @@ export function useAuth() {
   /** Delete the sign-in account itself (call after deleting the data). */
   const deleteAccount = useCallback(async () => {
     try {
+      await deleteActivity(auth.currentUser?.uid).catch(() => {});
       await deleteUser(auth.currentUser);
     } catch (err) {
       if (err?.code === "auth/requires-recent-login") {

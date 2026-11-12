@@ -7,8 +7,8 @@
 //   • a row opens its setting: beside the list on wide screens (two panes),
 //     full screen on phones (Back — or the Android back button — returns)
 import { useMotionPref, setMotionPref } from '../../motion/motion';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Compass, PlayCircle, ChevronRight } from 'lucide-react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Compass, PlayCircle, ChevronRight, Eye } from 'lucide-react';
 import Avatar from '../../components/Avatar';
 import { displayNameOf } from '../../app/shellContext';
 import { PAGE_META } from '../../app/pages';
@@ -29,6 +29,10 @@ import { CURRENCY_NAMES, isCurrency, DEFAULT_CURRENCY } from '../../utils/money'
 import { FREQUENCIES } from '../../services/drive';
 import { timeAgo } from '../../services/sync';
 import { startTour, GUIDE_PAGES } from '../../tour/tour';
+import { isAdmin } from '../../config/admin';
+
+// The owner's read-only list of users: loaded only for that account, only when opened
+const AdminCard = lazy(() => import('../admin/AdminCard'));
 
 const REMINDER_NAMES = { recurring: 'bills', daily: 'log the day', budget: 'budget', report: 'report', goals: 'goals', weekly: 'weekly' };
 
@@ -137,6 +141,17 @@ export default function ProfilePage(props) {
                   <MotionRow />
                 </div>
               </section>
+
+              {/* ── Owner only: who uses the app (read only) ── */}
+              {isAdmin(user) && (
+                <Section title="Owner">
+                  <Group id="admin" title="Admin sees" Icon={Eye} color="var(--lent)" summary="Who uses the app · read only">
+                    <Suspense fallback={<div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>Loading…</div>}>
+                      <AdminCard />
+                    </Suspense>
+                  </Group>
+                </Section>
+              )}
 
               {/* ── Help: the app tour and a guide per page ── */}
               <Section title="Help">

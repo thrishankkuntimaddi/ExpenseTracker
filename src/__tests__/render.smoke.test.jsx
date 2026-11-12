@@ -32,6 +32,7 @@ const { default: AddSheet } = await import('../components/AddSheet');
 const { default: BillsPage } = await import('../features/bills/BillsPage');
 const { default: BudgetPage } = await import('../features/budget/BudgetPage');
 const { default: PlannerPage } = await import('../features/planner/PlannerPage');
+const { default: AdminCard } = await import('../features/admin/AdminCard');
 const { default: SavingsPage } = await import('../features/savings/SavingsPage');
 const { default: EditTransactionModal } = await import('../components/EditTransactionModal');
 const { default: RecurringRuleModal } = await import('../features/plan/RecurringRuleModal');
@@ -242,6 +243,23 @@ describe('screens render with planning features', () => {
     expect(html).toContain('EMIs &amp; loans');
     expect(html).toContain('Investments');
     expect(html).toContain('Emergency fund');
+  });
+
+  it('Admin sees: read-only list with filters (owner only in Profile)', () => {
+    const t = Date.now();
+    const users = [
+      { uid: 'u1', name: 'Asha', email: 'asha@x.in', lastOpenedAt: t - 3600e3, lastEntryAt: t - 7200e3, entries: 12, platform: 'android', createdAt: t - 9e9 },
+      { uid: 'u2', name: '', email: 'b@x.in', lastOpenedAt: t - 40 * 864e5, lastEntryAt: null, entries: 0, platform: 'web' },
+    ];
+    const html = render(<AdminCard users={users} />);
+    expect(html).toContain('id="admin-sees"');
+    expect(html).toContain('asha@x.in');
+    expect(html).toContain('Stopped using');
+    expect(html).toContain('Opens, adds nothing');
+    const plain = render(<ProfilePage {...common} user={{ uid: 'x', email: 'someone@x.in', emailVerified: true }} />);
+    expect(plain).not.toContain('Admin sees');
+    const owner = render(<ProfilePage {...common} user={{ uid: 'x', email: 'thrishankkuntimaddi@gmail.com', emailVerified: true }} />);
+    expect(owner).toContain('Admin sees');
   });
 
   it('Planner: every calculator renders a result', () => {

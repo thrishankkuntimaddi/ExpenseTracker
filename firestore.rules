@@ -139,6 +139,37 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
     }
 
+    // ─── Usage activity (Profile → Admin sees) ──────────────────────
+    // One small doc per account about the account itself: email, name,
+    // when it was created, last opened, last added an entry, a count of
+    // entries, opens, platform, version — never amounts or entry details.
+    // Each person writes only their own; only the app owner's verified
+    // account can read them, and nobody can write anyone else's.
+    // Keep the owner list in step with src/config/admin.js.
+    function isAppAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['thrishankkuntimaddi@gmail.com'];
+    }
+    function validActivity(d) {
+      return d.keys().hasOnly(['email', 'name', 'createdAt', 'lastOpenedAt', 'lastEntryAt', 'entries', 'opens', 'platform', 'version'])
+        && (!('email' in d) || (d.email is string && (d.email == '' || d.email == request.auth.token.email)))
+        && (!('name' in d) || (d.name is string && d.name.size() <= 120))
+        && (!('createdAt' in d) || d.createdAt == null || d.createdAt is int)
+        && (!('lastOpenedAt' in d) || d.lastOpenedAt is int)
+        && (!('lastEntryAt' in d) || d.lastEntryAt == null || d.lastEntryAt is int)
+        && (!('entries' in d) || (d.entries is int && d.entries >= 0))
+        && (!('opens' in d) || (d.opens is int && d.opens >= 0))
+        && (!('platform' in d) || (d.platform is string && d.platform.size() <= 20))
+        && (!('version' in d) || (d.version is string && d.version.size() <= 20));
+    }
+    match /user_activity/{userId} {
+      allow get: if isOwner(userId) || isAppAdmin();
+      allow list: if isAppAdmin();
+      allow create, update: if isOwner(userId) && validActivity(request.resource.data);
+      allow delete: if isOwner(userId);
+    }
+
     match /users/{userId} {
       allow read, write: if isOwner(userId);
 
