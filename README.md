@@ -2,7 +2,7 @@
 
 > **One account for your whole money life — expenses, income, bills, budgets, savings goals, debts with people, trip splits and a monthly report — in any currency, on the web, Android, Mac, Windows and Linux. Live sync, app lock across devices, backups in your own Google Drive, reminders that arrive, and automatic updates.**
 
-**Current version: 3.22.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
+**Current version: 3.23.0** · [Open the app](https://expensetracker-in.web.app/) · [Product page](https://thrishankkuntimaddi.github.io/ExpenseTracker/) · [Download](#-get-the-app) · [Privacy policy](https://thrishankkuntimaddi.github.io/ExpenseTracker/privacy.html) · [Releases](https://github.com/thrishankkuntimaddi/ExpenseTracker/releases/latest)
 
 ---
 
@@ -191,6 +191,9 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 
 ### 📊 Stats
 - A **timeline** of your remaining balance (the same Balance as Home — each month starts afresh, so spent money never looks present): one big number, against this day last month, a smooth line you can scrub, 1M (the default) · 3M · 6M · 1Y · All, and this month in / out, saved in total and what you owe beneath
+- **Heads-up** (this month): where the month will end at your pace — monthly payments counted once, bills still to come added — categories running at 2× their usual week, and the **subscriptions** found in your entries with the yearly total
+- **Habits**: your logging **streak** (and best), **no-spend days** this month against a goal of 4 / 8 / 12, and **52-week saving challenges** (₹10 / ₹50 / ₹100 steps) with this week's amount
+- **Ask** (header button): questions answered on the device — “Swiggy in October”, “food last month”, “biggest expense this year”, “how many times Zomato”, “average per day”, “compare this month and last month”, “my subscriptions”, “income in August”
 - The month at a glance, **six months** of money in / saved / spent, **this vs last month** by category, **the big picture** (savings, goals, responsibilities, debts, cash in hand), where the money went, the biggest spends and the **spending calendar**; the monthly report opens from the *Report* button
 
 ### 👁️ Admin sees (the owner's account only)
@@ -220,6 +223,7 @@ Six optional reminders, all off until you tap their tile (Profile → Reminders)
 - **Bills due** — "Have you paid rent?" on the day a bill is due (never for auto-paid bills or income)
 - **Log the day** — skipped if you already logged something that day
 - **Budget check** — once at 80% of the month's budget, once at 100%
+- The evening nudge mentions your streak when there's one to keep; Home's month card shows a small 🔥 streak, with a cheer at 3, 7, 14, 30 … days
 - **Monthly report** — on your report day
 - **Goals** — each goal's day: this month's share to put aside, or a nudge to collect it
 - **Weekly summary** — your week in one line on the evening you pick

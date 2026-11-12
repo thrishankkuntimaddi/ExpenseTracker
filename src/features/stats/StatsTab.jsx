@@ -9,7 +9,7 @@
 // The monthly report opens from the header when you want it; a fresh one
 // only shows a small dot there, never a banner.
 import { useState, useMemo } from 'react';
-import { FileText, TrendingUp, TrendingDown, Minus, PiggyBank, HeartHandshake, ArrowDownLeft, ArrowUpRight, Banknote, Flag, ChevronRight } from 'lucide-react';
+import { FileText, MessageCircleQuestion, TrendingUp, TrendingDown, Minus, PiggyBank, HeartHandshake, ArrowDownLeft, ArrowUpRight, Banknote, Flag, ChevronRight } from 'lucide-react';
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { formatAmount, localMonthKey } from '../../utils/dateHelpers';
 import { categoryTotals, categoryColor, categoryOf, EMPTY_RULES } from '../../utils/categories';
@@ -20,6 +20,9 @@ import { useViewMonth, monthName } from '../../app/month';
 import SpendingCalendar from './components/SpendingCalendar';
 import ReportCard from './components/ReportCard';
 import BalanceTimeline from './components/BalanceTimeline';
+import HeadsUpCard from './components/HeadsUpCard';
+import HabitsCard from './components/HabitsCard';
+import AskModal from './components/AskModal';
 import { PageHeader, HeaderAction } from '../../components/Page';
 import ModalShell from '../../components/ModalShell';
 import { CategoryBadge } from '../../components/CategoryPicker';
@@ -88,6 +91,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
   const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
   const dark = theme === 'monoflow';
   const [reportOpen, setReportOpen] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
   const todayKey = toKey(new Date());
   const monthLong = monthName(month, { month: 'long' });
 
@@ -143,7 +147,8 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
     <div className="tab-root stats-page">
       <PageHeader title="Stats" subtitle={`${monthLong} · trends, categories, the big picture`} month
         actions={(
-          <span style={{ position: 'relative', display: 'inline-flex' }}>
+          <span style={{ position: 'relative', display: 'inline-flex', gap: 6 }}>
+            <HeaderAction id="stats-ask" Icon={MessageCircleQuestion} label="Ask" onClick={() => setAskOpen(true)} />
             <HeaderAction id="stats-open-report" Icon={FileText} label="Report" onClick={() => setReportOpen(true)} />
             {fresh && <span aria-label="A new report is ready" style={{ position: 'absolute', top: -2, right: -2, width: 9, height: 9, borderRadius: '50%', background: 'var(--expense)', border: '2px solid var(--surface)' }} />}
           </span>
@@ -167,6 +172,11 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
                 <Glance label="Wasted" tone="lent" value={stats.totalWaste} sub={`${stats.wastePercent}% of spending`} />
               </div>
             </Card>
+
+            {/* ── Heads-up: where this month lands, hot categories, subscriptions ── */}
+            {month === todayKey.slice(0, 7) && (
+              <HeadsUpCard transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} rules={categoryRules} todayKey={todayKey} budgetTotal={Number(settings?.budgets?.total) || 0} />
+            )}
 
             {/* ── Six months ── */}
             <Card id="stats-trend" title="Six months" hint={avgIn.length ? `avg in ${rupees(avgIn.reduce((s, m) => s + m.in, 0) / avgIn.length)}` : undefined}>
@@ -227,6 +237,9 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
             <section id="stats-calendar" style={{ marginBottom: 14, scrollMarginTop: 12 }}>
               <SpendingCalendar transactions={transactions} month={month} onMonthChange={setMonth} rules={categoryRules} theme={theme} />
             </section>
+
+            {/* ── Habits: streak, no-spend days, 52-week challenge ── */}
+            <HabitsCard transactions={transactions} income={income} settings={settings} onPatchSettings={onPatchSettings} monthKey={month} todayKey={todayKey} />
           </div>
 
           <div className="stats-right">
@@ -307,6 +320,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
         </div>
       </div>
 
+      {askOpen && <AskModal transactions={transactions} income={income} rules={categoryRules} todayKey={todayKey} onClose={() => setAskOpen(false)} />}
       {reportOpen && (
         <ModalShell title="Monthly report" subtitle={`Salary to salary, on the ${ordinal(day)} · ‹ › for earlier ones`} onClose={() => setReportOpen(false)} maxWidth={620}>
           <ReportCard transactions={transactions} income={income} settings={settings} recurringRules={recurring?.rules ?? []} onPatchSettings={onPatchSettings} />

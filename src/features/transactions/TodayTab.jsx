@@ -3,8 +3,8 @@ import RollingNumber from '../../motion/RollingNumber';
 import LiquidGauge from '../../motion/LiquidGauge';
 import Sign from '../../motion/Sign';
 import { useTilt } from '../../motion/useTilt';
-import { useMemo, useRef, useState, Fragment } from 'react';
-import { Coins, Users, Zap, ArrowUpRight, Banknote } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, Fragment } from 'react';
+import { Coins, Users, Zap, ArrowUpRight, Banknote, Flame } from 'lucide-react';
 import { generateId } from '../../utils/storage';
 import { formatAmount, todayInputValue, dateInputToISO, isoToMonth, localMonthKey } from '../../utils/dateHelpers';
 import { TRANSACTION_TYPES as TYPES, getDirectionMeta, getSavingsType } from '../../utils/typeConfig';
@@ -29,6 +29,7 @@ import EntryAmount from '../../components/EntryAmount';
 import BorrowAlerts from './BorrowAlerts';
 import { borrowAlerts } from '../../utils/borrowed';
 import { respSummary } from '../../utils/responsibilities';
+import { streak as logStreak, milestoneReached } from '../../utils/engagement';
 
 const linkBtn = { padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
 const rupees = (n) => formatMoneyCompact(n);   // compact: no paise
@@ -131,11 +132,29 @@ export default function TodayTab(props) {
   const pct = safeToday ? Math.min(100, (safeToday.spent / safeToday.limit) * 100) : 0;
   const heroRef = useRef(null);
   useTilt(heroRef);
+  // Logging streak: a small flame on the month card; a cheer once at each milestone
+  const daily = logStreak(transactions, income, todayKey);
+  const milestone = milestoneReached(daily);
+  useEffect(() => {
+    if (!milestone || !shell?.toast) return;
+    const key = 'et_streak_cheered', mark = `${todayKey}:${milestone}`;
+    try { if (localStorage.getItem(key) === mark) return; localStorage.setItem(key, mark); } catch { return; }
+    shell.toast(`🔥 ${milestone}-day streak — you’ve logged ${milestone} days in a row`);
+  }, [milestone, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const overviewSection = (
     <div ref={heroRef} className="home-hero" id="home-summary" role={shell ? 'button' : undefined} tabIndex={shell ? 0 : undefined}
       onClick={(e) => { if (!e.target.closest('.month-switcher')) shell?.goTo('stats'); }} style={{ marginBottom: 14, padding: '14px 18px 14px', borderRadius: 26, color: '#fff', cursor: shell ? 'pointer' : 'default', position: 'relative', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-        {shell ? <MonthSwitcher tone="hero" compact /> : <span style={{ fontSize: 12, fontWeight: 700 }}>{monthName(monthKey)}</span>}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          {shell ? <MonthSwitcher tone="hero" compact /> : <span style={{ fontSize: 12, fontWeight: 700 }}>{monthName(monthKey)}</span>}
+          {isNow && daily.current >= 2 && (
+            <span id="home-streak" title={daily.atRisk ? 'Log something today to keep it' : `Best ${daily.best} days`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 99, background: 'rgba(255,255,255,0.16)', fontSize: 11, fontWeight: 750, whiteSpace: 'nowrap', opacity: daily.atRisk ? 0.75 : 1 }}>
+              <Flame size={12} /> {daily.current}
+            </span>
+          )}
+        </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, opacity: 0.85 }}>
           {safeToday?.status === 'over' && <Sign kind="warn" size={15} style={{ color: '#FFD0D7' }} />}
           {safeToday ? (safeToday.status === 'over' ? 'Over budget' : `${Math.round(pct)}% of budget`) : 'Stats'} <ArrowUpRight size={13} />

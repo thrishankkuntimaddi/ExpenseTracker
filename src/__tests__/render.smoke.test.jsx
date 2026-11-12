@@ -245,6 +245,17 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Emergency fund');
   });
 
+  it('Stats: Ask, Heads-up and Habits', () => {
+    const html = render(<StatsTab {...common} />);
+    expect(html).toContain('id="stats-ask"');
+    expect(html).toContain('id="stats-heads-up"');
+    expect(html).toContain('This month will end near');
+    expect(html).toContain('id="stats-habits"');
+    expect(html).toMatch(/no-spend day/);
+    expect(html).toContain('Start a 52-week saving challenge');
+    expect(html).not.toMatch(/NaN|undefined/);
+  });
+
   it('Admin sees: read-only list with filters (owner only in Profile)', () => {
     const t = Date.now();
     const users = [

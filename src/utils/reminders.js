@@ -28,6 +28,7 @@ import { computeGoalProgress, isGoalOpen } from './goals';
 import { formatMoneyCompact } from './money';
 import { respProgress, isRespOpen } from './responsibilities';
 import { borrowings } from './borrowed';
+import { streak as logStreak } from './engagement';
 
 /* Notifications are one line: drop “.00” on whole amounts (₹15,000, not ₹15,000.00). */
 const formatAmount = (n) => (Math.round(n * 100) % 100 === 0 ? formatMoneyCompact(n) : fullAmount(n));
@@ -100,6 +101,13 @@ const COPY = {
 };
 
 function dailyCopy(tone, seed) { const [t, b] = pick(COPY.daily[tone] ?? COPY.daily.friendly, seed); return { title: t, body: b }; }
+
+/* The evening nudge when there's a streak worth keeping */
+function streakCopy(tone, n) {
+  if (tone === 'brief') return { title: `${n}-day streak`, body: 'Log today to keep it.' };
+  if (tone === 'coach') return { title: `Day ${n + 1} is waiting`, body: `You’ve logged ${n} days in a row. One entry keeps the streak alive.` };
+  return { title: `🔥 Keep your ${n}-day streak`, body: 'Add today’s spending — even a chai counts.' };
+}
 
 function recurringCopy(tone, entries) {
   const amount = (e) => formatAmount(e.amount);
@@ -234,6 +242,8 @@ export function buildSchedule(now, cfg, data = {}, horizonDays = 14) {
   const push = (type, key, when, copy, route) => items.push({ id: reminderId(type, key), type, key, at: when, route, ...copy });
 
   const loggedToday = [...transactions, ...income].some((e) => localDateKey(e.date) === todayKey);
+  // Known today: the streak still to keep tonight, or tomorrow's if today is done
+  const run = logStreak(transactions, income, todayKey).current;
 
   for (let d = 0; d < horizonDays; d++) {
     const date = addDays(today, d);
@@ -243,7 +253,9 @@ export function buildSchedule(now, cfg, data = {}, horizonDays = 14) {
     // Daily nudge
     if (c.daily.enabled && (c.daily.days ?? ALL_DAYS).includes(weekday)) {
       const when = at(date, c.daily.time);
-      if (when > now && !(d === 0 && loggedToday)) push('daily', key, when, dailyCopy(tone, daySeed(date)), REMINDER_ROUTE.daily);
+      const streakNow = (d === 0 && !loggedToday) || (d === 1 && loggedToday) ? run : 0;
+      const copy = streakNow >= 2 ? streakCopy(tone, streakNow) : dailyCopy(tone, daySeed(date));
+      if (when > now && !(d === 0 && loggedToday)) push('daily', key, when, copy, REMINDER_ROUTE.daily);
     }
 
     // Bills due today: "Have you paid …?"
