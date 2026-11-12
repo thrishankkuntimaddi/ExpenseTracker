@@ -18,6 +18,8 @@ import { learnCategoryRule } from '../utils/categories';
 import { useTheme, HAD_LOCAL_THEME_CHOICE } from '../utils/theme';
 import AuthGate from '../features/auth/AuthGate';
 import TodayTab         from '../features/transactions/TodayTab';
+// Home shows the Add form inline, so AddSheet is part of the first screen anyway.
+import AddSheet         from '../components/AddSheet';
 // Everything past the first screen loads on demand — keeps the startup
 // bundle small (charts and the desktop dashboard are the heavy parts).
 // If a chunk can't load (a tab left open across a deploy), reload once to
@@ -42,7 +44,6 @@ const ExternalTab      = lazyPage(() => import('../features/external/ExternalTab
 const ProfilePage      = lazyPage(() => import('../features/profile/ProfilePage'));
 const DebtsPage        = lazyPage(() => import('../features/debts/DebtsPage'));
 const ResponsibilitiesPage = lazyPage(() => import('../features/responsibilities/ResponsibilitiesPage'));
-const AddSheet         = lazyPage(() => import('../components/AddSheet'));
 import UpdateBanner from '../components/UpdateBanner';
 import { ShellContext } from './shellContext';
 import { markAppReady } from './ready';
