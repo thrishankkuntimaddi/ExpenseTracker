@@ -56,7 +56,7 @@ export default function AdminCard({ users: given }) {
       {users && (
         <>
           <div className="admin-tiles" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, marginTop: 12 }}>
-            <Tile label="All accounts" value={sum.total} />
+            <button type="button" id="admin-all-accounts" onClick={() => { setFilter('accounts'); setSearch(''); }} style={{ padding: 0, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', minWidth: 0 }}><Tile label="All accounts" value={sum.total} /></button>
             <Tile label="This week" value={sum.counts.active} tone="income" />
             <Tile label="Today" value={sum.counts.today} tone="income" />
             <Tile label="Stopped" value={sum.counts.gone} tone="expense" />

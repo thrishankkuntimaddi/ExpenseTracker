@@ -22,6 +22,8 @@ describe('admin users', () => {
     expect(ids('logging')).toEqual(['a']);
     expect(ids('lurking').sort()).toEqual(['b', 'e']);
     expect(ids('nodata')).toEqual(['b']);
+    expect(ids('accounts')).toHaveLength(5);
+    expect(ids('never')).toEqual(['b']);
     expect(ids('new')).toEqual(['b']);
     expect(ids('gone')).toEqual(['d']);
     expect(ids('all', { platform: 'android' })).toEqual(['a', 'e']);

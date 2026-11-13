@@ -292,6 +292,8 @@ describe('screens render with planning features', () => {
     // people who stopped are folded under one row; the count covers every account
     expect(html).toContain('All accounts');
     expect(html).toContain('id="admin-show-stopped"');
+    expect(html).toContain('id="admin-filter-accounts"');
+    expect(html).toContain('Never used');
     expect(html).toContain('1 still around · 1 stopped · 2 accounts in all');
     expect(html).not.toContain('b@x.in');
     expect(render(<AdminCard users={[...users, { uid: 'u3', email: 'old@x.in', createdAt: t - 9e9, lastOpenedAt: t - 3 * 864e5 }]} />)).toContain('never opened an up-to-date app');

@@ -20,7 +20,9 @@ export function statusOf(u, now = Date.now()) {
 }
 
 export const FILTERS = [
-  { key: 'all',     label: 'Everyone',          test: () => true },
+  { key: 'all',     label: 'Everyone',          hint: 'People still around on top; those who stopped are folded below', test: () => true },
+  { key: 'accounts', label: 'All accounts',     hint: 'Every account ever made, one list, nothing folded', test: () => true },
+  { key: 'never',   label: 'Never used',        hint: 'Signed up, but never added anything', test: (u) => !(Number(u.entries) > 0) && !u.lastEntryAt },
   { key: 'today',   label: 'Today',             test: (u, now) => statusOf(u, now) === 'today' },
   { key: 'active',  label: 'This week',         test: (u, now) => ['today', 'active'].includes(statusOf(u, now)) },
   { key: 'logging', label: 'Adding entries',    hint: 'Added something in the last 7 days', test: (u, now) => now - (Number(u.lastEntryAt) || 0) < 7 * DAY },
