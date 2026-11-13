@@ -1,0 +1,230 @@
+/* ══════════════════════════════════════════════════════════════════
+   LIQUID GLASS — components (loaded last, after layout.css + motion.css)
+   The phone dock and its sliding lens, the "+" orb, the desktop sidebar
+   as a floating glass pane, circular icon buttons, hero, tiles, toasts,
+   and the performance guards that keep it all at 60/120 fps.
+
+   Performance rules followed here
+   • Only transform / opacity animate (GPU-composited, no layout).
+   • Live backdrop blur only where content moves underneath: the dock,
+     the toolbar, sheets/dialogs. Static tiles carry the lens without it.
+   • Touch devices skip the full-screen blur behind dialogs (the dialog
+     body keeps its own), the most expensive paint on a phone.
+══════════════════════════════════════════════════════════════════ */
+
+/* ══ PHONE DOCK ══════════════════════════════════════════════════ */
+#phone-bar {
+  position: fixed !important;
+  height: 64px;
+  padding: 6px !important;
+  gap: 2px;
+  isolation: isolate;
+  contain: layout paint;
+  transform: translateZ(0);        /* its own layer: scrolling never repaints it */
+  overflow: visible !important;
+}
+/* the sliding glass lens behind the active tab */
+.dock-pill {
+  position: absolute; left: 0; top: 0; z-index: 0;
+  border-radius: var(--lg-radius-pill);
+  background: rgba(255, 255, 255, 0.82);
+  border: 0.5px solid rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(0, 0, 0, 0.03),
+              0 4px 14px -6px rgba(0, 0, 0, 0.22);
+  pointer-events: none; opacity: 0;
+  will-change: transform;
+}
+.dock-pill.ready { transition: transform .45s cubic-bezier(.3, 1.3, .5, 1), opacity .25s ease; }
+[data-theme="monoflow"] .dock-pill {
+  background: var(--lg-pill-active);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 4px 14px -6px rgba(0, 0, 0, 0.6);
+}
+/* tabs sit on top of the lens; no fill of their own */
+#phone-bar .dock-tab {
+  position: relative; z-index: 1; margin: 0 !important; height: 52px;
+  background: transparent !important; box-shadow: none !important; filter: none !important;
+  color: var(--lg-text-secondary) !important;
+}
+#phone-bar .dock-tab.on { color: var(--lg-tint) !important; }
+#phone-bar .dock-tab svg { transition: transform .35s var(--lg-ease); }
+#phone-bar .dock-tab.on svg { transform: translateY(-1px) scale(1.08); filter: var(--lg-icon-glow); }
+#phone-bar .dock-tab:not(:disabled):active { transform: scale(0.9); }
+#phone-bar .dock-tab > span[style*="position: absolute"] { display: inline-flex !important; } /* due badge */
+
+/* The "+" — a raised, tinted glass orb */
+#phone-bar button.nav-add {
+  position: relative; z-index: 1;
+  width: 52px !important; height: 52px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(180deg, #2A93FF 0%, #007AFF 55%, #0066E0 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.7), inset 0 -2px 4px rgba(0, 0, 0, 0.12),
+              inset 0 0 14px rgba(255, 255, 255, 0.18), 0 8px 20px -6px rgba(0, 122, 255, 0.6) !important;
+  color: #fff !important;
+}
+[data-theme="monoflow"] #phone-bar button.nav-add {
+  background: linear-gradient(180deg, #3D9BFF 0%, #0A84FF 55%, #0070E8 100%) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.5), inset 0 0 14px rgba(255, 255, 255, 0.12),
+              0 8px 22px -8px rgba(10, 132, 255, 0.7) !important;
+  color: #fff !important;
+}
+#phone-bar button.nav-add:not(:disabled):active { transform: scale(0.9); }
+
+/* Small tablets: the dock is a centred capsule, not edge to edge */
+@media (min-width: 600px) {
+  #phone-bar { max-width: 560px; margin-left: auto !important; margin-right: auto !important; }
+}
+
+/* ══ DESKTOP / TABLET — a floating glass sidebar ═════════════════ */
+.desktop-sidebar {
+  margin: 10px 0 10px 10px;
+  height: calc(100% - 20px);
+  border-right: none !important;
+  border: 1px solid transparent !important;
+  border-radius: 26px;
+  background:
+    linear-gradient(var(--glass-bar), var(--glass-bar)) padding-box,
+    var(--lg-rim-gradient) border-box;
+  box-shadow: var(--lg-lens-specular-sm);
+  transform: translateZ(0);
+}
+.desktop-nav-item, .desktop-profile { border-radius: 12px !important; transition: background-color .25s ease, color .2s ease, transform .35s var(--lg-ease) !important; }
+.desktop-nav-item.on::before { display: none; }          /* the lens marks the page now */
+.desktop-nav-item.on {
+  background: rgba(255, 255, 255, 0.78) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 3px 10px -5px rgba(0, 0, 0, 0.2);
+}
+[data-theme="monoflow"] .desktop-nav-item.on {
+  background: var(--lg-pill-active) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 3px 12px -6px rgba(0, 0, 0, 0.6);
+}
+.desktop-nav-item.on svg { filter: var(--lg-icon-glow); }
+.desktop-profile.on { background: var(--lg-pill-active) !important; }
+.desktop-brand img { border-radius: 10px; box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.3); }
+.desktop-main .tab-header { border-radius: var(--lg-radius-panel) !important; }
+
+/* ══ ICON BUTTONS — circular glass ═══════════════════════════════ */
+.help-button,
+.month-switcher button:not(#month-now),
+.tour-x,
+button[aria-label="Close"],
+#btn-page-back, .lg-close {
+  border-radius: 50% !important;
+  background: var(--lg-bg-regular) !important;
+  border: var(--lg-lens-rim) !important;
+  box-shadow: var(--lg-lens-specular-sm) !important;
+  color: var(--lg-text-primary) !important;
+}
+.help-button:hover { color: var(--lg-tint) !important; }
+@media (hover: hover) {
+  :is(.help-button, .month-switcher button:not(#month-now), .tour-x, button[aria-label="Close"], #btn-page-back, .lg-close):not(:disabled):hover { transform: scale(1.06); }
+}
+:is(.help-button, .month-switcher button:not(#month-now), .tour-x, button[aria-label="Close"], #btn-page-back, .lg-close):not(:disabled):active { transform: scale(0.94); }
+/* Profile avatar: a glass ring */
+.profile-button .et-avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7), 0 4px 12px -4px rgba(0, 0, 0, 0.3); }
+[data-theme="monoflow"] .profile-button .et-avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18), 0 4px 12px -4px rgba(0, 0, 0, 0.6); }
+
+/* ══ HOME HERO — tinted glass in the system blue ═════════════════ */
+.home-hero {
+  background: linear-gradient(140deg, #0A84FF 0%, #2F6BFF 45%, #5E5CE6 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(255, 255, 255, 0.15),
+              inset 0 0 24px rgba(255, 255, 255, 0.12), 0 20px 40px -18px rgba(10, 100, 255, 0.6) !important;
+  border-radius: var(--lg-radius-panel) !important;
+}
+.home-hero::before { background: radial-gradient(120% 85% at 0% 0%, rgba(255,255,255,.34), rgba(255,255,255,0) 55%) !important; }
+[data-theme="monoflow"] .home-hero {
+  background: linear-gradient(140deg, #0B4FC2 0%, #2A3FB8 50%, #3F2F9E 100%) !important;
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.28), inset 0 0 24px rgba(255, 255, 255, 0.06), 0 20px 40px -20px rgba(0, 0, 0, 0.9) !important;
+}
+.hero-card { border-radius: var(--lg-radius-panel) !important; border: 1px solid rgba(255, 255, 255, 0.28); }
+.hero-card.hero-income  { background: linear-gradient(140deg, #34C759 0%, #1E9E4A 100%) !important; }
+.hero-card.hero-expense { background: linear-gradient(140deg, #FF5A4F 0%, #E0281E 100%) !important; }
+.hero-card { box-shadow: inset 0 1.5px 0 rgba(255,255,255,.5), inset 0 0 20px rgba(255,255,255,.1), 0 16px 32px -18px rgba(0,0,0,.4) !important; }
+[data-theme="monoflow"] .hero-card.hero-income  { background: linear-gradient(140deg, #1F8A43 0%, #12592C 100%) !important; }
+[data-theme="monoflow"] .hero-card.hero-expense { background: linear-gradient(140deg, #B3261E 0%, #761812 100%) !important; }
+
+/* ══ TILE ICONS — little glass app icons ═════════════════════════ */
+.tile-icon, .explore-icon, .hist-tile, .settings-icon {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 0 0 0.5px rgba(255, 255, 255, 0.4) !important;
+}
+.tile-icon { border-radius: 15px; }
+.tile-icon-solid {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,0) 58%) !important;
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,.6), inset 0 0 10px rgba(255,255,255,.15), 0 6px 14px -8px rgba(0,0,0,.45) !important;
+}
+[data-theme="monoflow"] :is(.tile-icon, .explore-icon, .hist-tile, .settings-icon) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16) !important; }
+.home-tile:active .tile-icon { transform: scale(.92); transition: transform .35s var(--lg-ease); }
+
+/* History rows: glass cards (the colour edge stays) */
+.hist-row { border-radius: 20px !important; }
+.hist-row:hover { filter: brightness(1.03); }
+.overview-stat { border-radius: 20px !important; }
+
+/* Timeline ranges: a recessed track with a raised lens on the choice */
+.tl-ranges { border-radius: var(--lg-radius-pill) !important; background: rgba(120, 120, 128, 0.14) !important; }
+.tl-ranges button { border-radius: var(--lg-radius-pill) !important; }
+.tl-line { filter: drop-shadow(0 6px 10px rgba(0, 122, 255, .25)); }
+[data-theme="monoflow"] .tl-line { filter: drop-shadow(0 6px 12px rgba(10, 132, 255, .3)); }
+
+/* "Paid with" & similar option chips: glass capsules, tinted when on */
+.add-paid-opt { border: var(--lg-lens-rim) !important; background: var(--lg-bg-regular) !important; box-shadow: var(--lg-spec-top); }
+.add-paid-opt.on { background: var(--lg-tint-accent) !important; color: var(--lg-tint) !important; border-color: var(--accent-border) !important; }
+
+/* Sheet grip: a soft glass handle */
+.sheet-grip { background: rgba(120, 120, 128, 0.4) !important; width: 36px !important; }
+
+/* Toasts: a dark clear-glass capsule (light in dark mode) */
+[style*="var(--toast-bg"] {
+  -webkit-backdrop-filter: var(--lg-lens-blur-regular);
+  backdrop-filter: var(--lg-lens-blur-regular);
+  border-radius: var(--lg-radius-pill) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 14px 36px -10px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* Demo banner: tinted glass capsule */
+.demo-banner {
+  border-radius: 22px !important;
+  background: linear-gradient(180deg, #2A93FF, #007AFF) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.55), 0 10px 26px -12px rgba(0, 122, 255, 0.55) !important;
+}
+
+/* Content tiles that are buttons stay rounded rectangles, not capsules */
+.explore-card, .home-tile, .add-kind, .theme-tile { border-radius: 22px !important; }
+.explore-icon { border-radius: 12px !important; }
+
+/* ══ PERFORMANCE GUARDS ══════════════════════════════════════════ */
+/* Touch devices: the dim behind a dialog is a plain tint (a full-screen
+   blur under another blurred sheet is the heaviest paint a phone does) */
+@media (pointer: coarse) {
+  [style*="position: fixed"][style*="inset: 0"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  /* sheets keep a lighter lens so opening one is instant */
+  [style*="position: fixed"][style*="inset: 0"] > :is([style*="background: var(--surface)"], [style*="background: var(--glass-bg)"], .add-sheet, [role="dialog"]) {
+    -webkit-backdrop-filter: blur(16px) saturate(170%) !important;
+    backdrop-filter: blur(16px) saturate(170%) !important;
+  }
+  /* no hover filters on touch (they stick after a tap and force repaints) */
+  button:hover, .hist-row:hover { filter: none !important; }
+}
+/* Low-end Android / data saver: no live blur at all, dense glass instead */
+@media (pointer: coarse) and (max-resolution: 1.5dppx) {
+  #phone-bar, [style*="position: sticky"] { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  :root, [data-theme="light"] { --glass-bar: rgba(250, 250, 252, 0.94); }
+  [data-theme="monoflow"]     { --glass-bar: rgba(30, 30, 34, 0.95); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dock-pill.ready { transition: opacity .2s ease; }
+  #phone-bar .dock-tab svg, #phone-bar .dock-tab.on svg { transition: none; transform: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .dock-pill { background: var(--surface2) !important; }
+  #phone-bar { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}

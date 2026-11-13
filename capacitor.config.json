@@ -2,7 +2,7 @@
   "appId": "com.thrishank.expensetracker",
   "appName": "Expense Tracker",
   "webDir": "dist-native",
-  "backgroundColor": "#E4E5EA",
+  "backgroundColor": "#EEF0F6",
   "android": {
     "allowMixedContent": false
   },

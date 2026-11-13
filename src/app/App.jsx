@@ -30,6 +30,7 @@ import AuthGate from '../features/auth/AuthGate';
 import TodayTab         from '../features/transactions/TodayTab';
 // Home shows the Add form inline, so AddSheet is part of the first screen anyway.
 import AddSheet         from '../components/AddSheet';
+import DockPill         from '../components/DockPill';
 // Everything past the first screen loads on demand — keeps the startup
 // bundle small (charts and the desktop dashboard are the heavy parts).
 // If a chunk can't load (a tab left open across a deploy), reload once to
@@ -575,6 +576,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
 
       {/* ── Bottom bar: Home · 2 pages · + · 1 page ── */}
       <nav id="phone-bar" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', background: 'var(--nav-bg)', borderTop: '1px solid var(--nav-border)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <DockPill active={activeTab} />
         {barItems.map(({ key, label, Icon }) => {
           if (key === 'add') {
             return (
@@ -590,6 +592,8 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
             <button
               key={key}
               id={`tab-${key}`}
+              className={`dock-tab${isActive ? ' on' : ''}`}
+              aria-current={isActive ? 'page' : undefined}
               onClick={() => goTo(key)}
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column',

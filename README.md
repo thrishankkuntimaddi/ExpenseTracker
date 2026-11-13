@@ -288,7 +288,9 @@ At most one per type per day. On Android they **pop up with a sound** (or arrive
 - **Sync status** ("Synced", "Syncing…", "Offline — saved on this device") and **Updates** (version, build, *Check for updates*, *Restart to update*)
 
 ### 🎨 Look & layout
-- **Liquid-glass** surfaces; a deep ink-blue **Midnight** dark mode; light, dark or follow the device — per device, applied before the first paint
+- **Liquid Glass** everywhere (4.0) — Apple's material on phone, tablet, desktop and web: translucent lenses with a specular rim and top light over a soft colour wallpaper, capsule buttons, circular glass icon buttons, a **floating dock** with a glass lens that slides to the open page and a raised **＋** orb, a floating glass sidebar and toolbar on wide screens, glass sheets and dialogs, Apple system colours and SF type; light, smoked-glass dark, or follow the device — per device, applied before the first paint
+- Smooth by design: only transform / opacity animate, live blur only on bars that content scrolls under, lighter blur on touch devices; *Reduce transparency*, *Increase contrast* and *Reduce motion* are respected (`src/styles/glass.css`, `liquid.css`)
+- A new layered-glass **app icon** (card + ₹ coin) on every platform, rendered from `assets/icon.svg` by `scripts/render-icons.mjs`
 - Motion you can switch off: a coin that flies into the month card, rolling numbers, a liquid budget gauge, self-drawing signs (respects *reduce motion*)
 - **Phone**: bottom bar *Home · two pages · ＋ · one page* (choose them in Profile → Customize), Explore tiles on Home for every other page, swipe between bar pages
 - **Desktop, web and tablets** (≥768 px wide and ≥600 px tall): the same pages with a sidebar — Overview (Home, History, Stats) · Money (Income, Bills, Budget, Savings, Planner) · With others (Trips, Billings, Debts) — and the full Add form open on Home; Home fits the window without page scrolling

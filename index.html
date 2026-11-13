@@ -4,19 +4,19 @@
     <meta charset="UTF-8" />
 
     <!-- ── Favicon — all browsers ── -->
-    <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%favicon-32x32.png?v=4" />
-    <link rel="icon" type="image/png" sizes="16x16" href="%BASE_URL%favicon-16x16.png?v=4" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%favicon-32x32.png?v=5" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%BASE_URL%favicon-16x16.png?v=5" />
     <!-- Shortcut icon for legacy -->
-    <link rel="shortcut icon" href="%BASE_URL%favicon-32x32.png?v=4" />
+    <link rel="shortcut icon" href="%BASE_URL%favicon-32x32.png?v=5" />
 
     <!-- ── Apple / PWA icons ── -->
-    <link rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%apple-touch-icon.png?v=4" />
-    <link rel="apple-touch-icon" sizes="512x512" href="%BASE_URL%icon-512.png?v=4" />
-    <link rel="manifest" href="%BASE_URL%manifest.json?v=4" /><!-- web-only -->
+    <link rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%apple-touch-icon.png?v=5" />
+    <link rel="apple-touch-icon" sizes="512x512" href="%BASE_URL%icon-512.png?v=5" />
+    <link rel="manifest" href="%BASE_URL%manifest.json?v=5" /><!-- web-only -->
 
     <!-- ── Viewport & Theme ── -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#E4E5EA" />
+    <meta name="theme-color" content="#EEF0F6" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -39,9 +39,9 @@
         --sp-glass: linear-gradient(135deg, rgba(255,255,255,.78), rgba(255,255,255,.38) 55%, rgba(255,255,255,.55));
         --sp-edge: rgba(255,255,255,.9);
         --sp-side: rgba(200,205,215,.85);
-        --sp-text: #0F172A;
+        --sp-text: #0A0A0C;
         --sp-sub: #64748B;
-        --sp-glow: rgba(99,102,241,.35);
+        --sp-glow: rgba(0,122,255,.35);
         --sp-shadow: rgba(15,23,42,.28);
         position: fixed; inset: 0; z-index: 9999;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -57,7 +57,7 @@
         --sp-side: rgba(30,32,40,.95);
         --sp-text: #F1F5F9;
         --sp-sub: #8A93A6;
-        --sp-glow: rgba(99,102,241,.45);
+        --sp-glow: rgba(10,132,255,.45);
         --sp-shadow: rgba(0,0,0,.85);
       }
 
@@ -165,7 +165,7 @@
       }
     </style>
   </head>
-  <body style="background:#E4E5EA;margin:0">
+  <body style="background:#EEF0F6;margin:0">
     <!-- Theme applied before React boots — prevents FOUC. Mirrors
          src/utils/theme.js: per-device Light / Dark / System. -->
     <script>
@@ -179,9 +179,9 @@
           var dark = pref === 'dark' || (pref === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
           var t = dark ? 'monoflow' : 'light';
           document.documentElement.setAttribute('data-theme', t);
-          document.body.style.backgroundColor = dark ? '#0A0C11' : '#E4E5EA';
+          document.body.style.backgroundColor = dark ? '#06070B' : '#EEF0F6';
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', dark ? '#0A0C11' : '#E4E5EA');
+          if (meta) meta.setAttribute('content', dark ? '#06070B' : '#EEF0F6');
         } catch(e) {}
       })();
     </script>
@@ -189,6 +189,14 @@
 
     <!-- 3D splash: OUTSIDE #root so React's createRoot() doesn't wipe it.
          Removed by src/main.jsx once the app has painted (min. display time). -->
+    <!-- Liquid Glass lens: bends the backdrop at the edges (used by .lg-lens-refractive, Chromium) -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+      <filter id="liquid-glass-lens" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="1" seed="7" result="noise" />
+        <feGaussianBlur in="noise" stdDeviation="2" result="soft" />
+        <feDisplacementMap in="SourceGraphic" in2="soft" scale="14" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </svg>
     <div id="app-splash" role="status" aria-label="Loading Expense Tracker">
       <div class="sp-stage">
         <div class="sp-glow"></div>
