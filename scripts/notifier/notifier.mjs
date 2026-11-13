@@ -11,6 +11,8 @@
 //      account that has no user_activity record yet (signed up, never opened
 //      an up-to-date app) gets one from its sign-in record — email, name,
 //      when it was created and last signed in. Nothing about anyone's money.
+//   0b. Closing, restoring and purging accounts for the owner (Profile → Admin
+//      sees writes the request in account_admin/{uid}; see accounts()).
 //   2. Security alerts. New users/{uid}/security_events (wrong PINs, lock
 //      changes, a sign-in on a new device) are pushed to the account's other
 //      devices and emailed to the account's address (when SMTP is
@@ -361,9 +363,92 @@ async function roster() {
   stats.accounts = accounts; stats.rosterAdded = missing.length;
 }
 
+/* ── Closing and restoring accounts (asked for in Admin sees) ──
+   account_admin/{uid}.state, written by the owner's verified account:
+     delete_requested  → the data moves to deleted_accounts/{uid} (same
+                         layout), then sign-in is switched off. Only for an
+                         account quiet for INACTIVE_DAYS, never the owner's.
+     restore_requested → the data moves back and sign-in is switched on.
+     purge_requested   → the archive and the sign-in account go for good.
+   Archives older than KEEP_DAYS are purged on their own. Each step reports
+   back on the same doc (state, doneAt, error), which the admin screen shows. */
+const INACTIVE_DAYS = 25;
+const KEEP_DAYS = 90;
+const OWNER_EMAILS = ['thrishankkuntimaddi@gmail.com'];   // keep in step with src/config/admin.js
+const DAY_MS = 86400e3;
+
+/** Copy every document under `src` (and the doc itself) to the same paths under `dst`. */
+async function copyTree(src, dst, writer) {
+  let n = 0;
+  const snap = await src.get();
+  if (snap.exists) { writer.set(dst, snap.data()); n += 1; }
+  for (const col of await src.listCollections()) {
+    for (const d of (await col.get()).docs) n += await copyTree(d.ref, dst.collection(col.id).doc(d.id), writer);
+  }
+  return n;
+}
+
+/** Anything stored under this document (itself or any collection below it)? */
+async function hasData(ref) {
+  if ((await ref.get()).exists) return true;
+  return (await ref.listCollections()).length > 0;
+}
+
+async function accounts() {
+  const reqs = (await db.collection('account_admin').get()).docs;
+  for (const d of reqs) {
+    const uid = d.id, r = d.data();
+    const live = db.collection('users').doc(uid), archive = db.collection('deleted_accounts').doc(uid);
+    const report = (fields) => (DRY ? console.log('account', uid, fields) : d.ref.set({ ...fields, doneAt: Date.now() }, { merge: true }));
+    try {
+      const expired = r.state === 'deleted' && r.purgeAfter && r.purgeAfter < now;
+      if (r.state === 'delete_requested') {
+        const user = await getAuth().getUser(uid).catch(() => null);
+        const act = (await db.collection('user_activity').doc(uid).get()).data() ?? {};
+        const seen = Math.max(Number(act.lastOpenedAt) || 0, Date.parse(user?.metadata?.lastRefreshTime ?? '') || 0, Date.parse(user?.metadata?.lastSignInTime ?? '') || 0);
+        if (user?.email && OWNER_EMAILS.includes(user.email.toLowerCase())) { await report({ state: 'refused', error: 'This is the owner’s account.' }); continue; }
+        if (now - seen < INACTIVE_DAYS * DAY_MS) { await report({ state: 'refused', error: `Used ${Math.floor((now - seen) / DAY_MS)} days ago — only accounts quiet for ${INACTIVE_DAYS}+ days can be closed.` }); continue; }
+        if (DRY) { console.log('would close', uid); continue; }
+        const w = db.bulkWriter();
+        const copied = await copyTree(live, archive, w);
+        await w.close();
+        await db.recursiveDelete(live);
+        if (user) { await getAuth().updateUser(uid, { disabled: true }); await getAuth().revokeRefreshTokens(uid); }
+        await report({ state: 'deleted', deletedAt: now, purgeAfter: now + KEEP_DAYS * DAY_MS, docs: copied, error: null });
+        stats.closed = (stats.closed ?? 0) + 1;
+      } else if (r.state === 'restore_requested') {
+        const user = await getAuth().getUser(uid).catch(() => null);
+        // Only a closed account: sign-in off, or data waiting in the archive
+        if (!(user?.disabled || await hasData(archive))) { await report({ state: 'refused', error: 'Not closed — nothing to restore.' }); continue; }
+        if (DRY) { console.log('would restore', uid); continue; }
+        const w = db.bulkWriter();
+        const copied = await copyTree(archive, live, w);
+        await w.close();
+        await db.recursiveDelete(archive);
+        await getAuth().updateUser(uid, { disabled: false }).catch((err) => { if (err.code !== 'auth/user-not-found') throw err; });
+        await report({ state: 'active', restoredAt: now, docs: copied, purgeAfter: null, error: null });
+        stats.restored = (stats.restored ?? 0) + 1;
+      } else if (r.state === 'purge_requested' || expired) {
+        const user = await getAuth().getUser(uid).catch(() => null);
+        // Only a closed account: sign-in already off and nothing left in the live data
+        if ((user && !user.disabled) || await hasData(live)) { await report({ state: 'refused', error: 'Not closed — close the account first.' }); continue; }
+        if (DRY) { console.log('would purge', uid); continue; }
+        await db.recursiveDelete(archive);
+        await getAuth().deleteUser(uid).catch((err) => { if (err.code !== 'auth/user-not-found') throw err; });
+        await db.collection('user_activity').doc(uid).delete().catch(() => {});
+        await report({ state: 'purged', purgedAt: now, error: null });
+        stats.purged = (stats.purged ?? 0) + 1;
+      }
+    } catch (err) {
+      console.error('account step failed', uid, err.message);
+      await report({ error: String(err.message).slice(0, 300) }).catch(() => {});
+    }
+  }
+}
+
 // Each part on its own: a failure in one (e.g. a quota error) must not stop the other
 let failed = false;
-for (const [name, run] of [['reminders', reminders], ['alerts', alerts], ['invites', invites], ['roster', roster]]) {
+for (const [name, run] of [['reminders', reminders], ['alerts', alerts], ['invites', invites], ['roster', roster], ['accounts', accounts]]) {
   try { await run(); } catch (err) { failed = true; console.error(`${name} failed:`, err); }
 }
 console.log('done', JSON.stringify(stats));

@@ -170,6 +170,36 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
     }
 
+    // ─── Closing / restoring accounts (Profile → Admin sees) ──────────
+    // account_admin/{uid}: the owner asks, the notifier (server) does it and
+    // reports back on the same doc. The owner may only ask (the *_requested
+    // states) or cancel a request that hasn't run; never for their own
+    // account. deleted_accounts/** (the archive) has no client access at all.
+    match /account_admin/{userId} {
+      function asks(d) {
+        return d.state in ['delete_requested', 'restore_requested', 'purge_requested', 'cancelled']
+          && d.requestedAt is int
+          && (!('note' in d) || (d.note is string && d.note.size() <= 300));
+      }
+      allow get, list: if isAppAdmin();
+      allow create: if isAppAdmin() && userId != request.auth.uid
+        && request.resource.data.keys().hasOnly(['state', 'requestedAt', 'note'])
+        && asks(request.resource.data)
+        && request.resource.data.state == 'delete_requested';
+      // Which request fits where the account is: close an open one (again
+      // after a refusal or a restore), restore or purge only a closed one,
+      // cancel only a close that hasn't run yet
+      function fits(before, after) {
+        return (after == 'delete_requested' && !(before in ['deleted', 'delete_requested', 'restore_requested', 'purge_requested']))
+          || (after in ['restore_requested', 'purge_requested'] && before == 'deleted')
+          || (after == 'cancelled' && before == 'delete_requested');
+      }
+      allow update: if isAppAdmin() && userId != request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'requestedAt', 'note'])
+        && asks(request.resource.data)
+        && fits(resource.data.state, request.resource.data.state);
+    }
+
     // ─── Invite a friend → supporter days ─────────────────────────────
     // referral_codes/{code}: a short code that points at its owner. Anyone
     // signed in may look one up (to credit the right person), only the owner

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { statusOf, viewUsers, summarise, agoLabel } from '../adminUsers';
+import { statusOf, viewUsers, summarise, agoLabel, adminStateOf, daysQuiet } from '../adminUsers';
 import { isAdmin } from '../../config/admin';
 
 const DAY = 86400000;
@@ -16,27 +16,26 @@ describe('admin users', () => {
   it('status by last open', () => {
     expect(users.map((u) => statusOf(u, now))).toEqual(['today', 'active', 'idle', 'gone', 'active']);
   });
-  it('smart filters', () => {
-    const ids = (f, o = {}) => viewUsers(users, { filter: f, ...o }, now).map((u) => u.uid);
-    expect(ids('active')).toEqual(['a', 'e', 'b']);
-    expect(ids('logging')).toEqual(['a']);
-    expect(ids('lurking').sort()).toEqual(['b', 'e']);
-    expect(ids('nodata')).toEqual(['b']);
-    expect(ids('accounts')).toHaveLength(5);
-    expect(ids('never')).toEqual(['b']);
-    expect(ids('new')).toEqual(['b']);
-    expect(ids('gone')).toEqual(['d']);
-    expect(ids('all', { platform: 'android' })).toEqual(['a', 'e']);
+  it('four tabs: active by default, inactive 25+ days, closed, all', () => {
+    const ids = (tab, o = {}) => viewUsers(users, { tab, ...o }, now).map((u) => u.uid);
+    expect(ids()).toEqual(['a', 'e', 'b', 'c']);                      // default: active, last opened first
+    expect(ids('inactive')).toEqual(['d']);
+    expect(ids('all')).toHaveLength(5);
     expect(ids('all', { search: 'DEV@' })).toEqual(['d']);
     expect(ids('all', { sort: 'entries' })).toEqual(['a', 'c', 'e', 'd', 'b']);
+    expect(ids('all', { sort: 'quiet' })[0]).toBe('d');
+    // closing / closed accounts leave the other tabs
+    const admin = { d: { state: 'deleted', deletedAt: now - DAY }, a: { state: 'delete_requested' }, e: { state: 'cancelled' } };
+    expect(ids('deleted', { admin })).toEqual(['a', 'd']);
+    expect(ids('inactive', { admin })).toEqual([]);
+    expect(ids('active', { admin })).toEqual(['e', 'b', 'c']);
+    expect(adminStateOf(admin.e)).toBe('none');
+    expect(daysQuiet(users[3], now)).toBe(90);
   });
   it('summary', () => {
     const s = summarise(users, now);
-    expect(s.total).toBe(5);
-    expect(s.counts.active).toBe(3);
-    expect(s.returning).toBe(2);
-    expect(s.platforms).toEqual({ android: 2, web: 2, desktop: 1 });
-    expect(s.entries).toBe(508);
+    expect(s).toMatchObject({ total: 5, today: 1, week: 3, newWeek: 1, neverUsed: 1 });
+    expect(s.counts).toEqual({ active: 4, inactive: 1, deleted: 0, all: 5 });
   });
   it('ago labels', () => {
     expect(agoLabel(null, now)).toBe('never');

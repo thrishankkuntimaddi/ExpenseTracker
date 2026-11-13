@@ -286,17 +286,12 @@ describe('screens render with planning features', () => {
     ];
     const html = render(<AdminCard users={users} />);
     expect(html).toContain('id="admin-sees"');
-    expect(html).toContain('asha@x.in');
-    expect(html).toContain('Stopped using');
-    expect(html).toContain('Opens, adds nothing');
-    // people who stopped are folded under one row; the count covers every account
-    expect(html).toContain('All accounts');
-    expect(html).toContain('id="admin-show-stopped"');
-    expect(html).toContain('id="admin-filter-accounts"');
-    expect(html).toContain('Never used');
-    expect(html).toContain('1 still around · 1 stopped · 2 accounts in all');
-    expect(html).not.toContain('b@x.in');
-    expect(render(<AdminCard users={[...users, { uid: 'u3', email: 'old@x.in', createdAt: t - 9e9, lastOpenedAt: t - 3 * 864e5 }]} />)).toContain('never opened an up-to-date app');
+    expect(html).toContain('asha@x.in');                       // Active is the default tab
+    expect(html).not.toContain('b@x.in');                      // quiet 40 days → Inactive
+    for (const t of ['active', 'inactive', 'deleted', 'all']) expect(html).toContain(`id="admin-tab-${t}"`);
+    expect(html).not.toContain('Opens, adds nothing');         // the chip wall is gone
+    const closed = render(<AdminCard users={users} admin={{ u2: { state: 'deleted', deletedAt: t - 864e5, purgeAfter: t + 89 * 864e5 } }} />);
+    expect(closed).not.toContain('b@x.in');
     const plain = render(<ProfilePage {...common} user={{ uid: 'x', email: 'someone@x.in', emailVerified: true }} />);
     expect(plain).not.toContain('Admin sees');
     const owner = render(<ProfilePage {...common} user={{ uid: 'x', email: 'thrishankkuntimaddi@gmail.com', emailVerified: true }} />);

@@ -71,3 +71,17 @@ export async function deleteActivity(uid) {
   if (!db || !uid) return;
   await deleteDoc(doc(db, COLL, uid));
 }
+
+/* ── Closing / restoring accounts (owner only; the notifier carries it out) ──
+   account_admin/{uid}: { state, requestedAt, note?, …what the notifier reports } */
+export async function listAccountAdmin() {
+  const snap = await getDocs(collection(db, 'account_admin'));
+  return Object.fromEntries(snap.docs.map((d) => [d.id, d.data()]));
+}
+
+/** state: 'delete_requested' | 'restore_requested' | 'purge_requested' | 'cancelled' */
+export async function askAccount(uid, state, note) {
+  const data = { state, requestedAt: Date.now(), ...(note ? { note: String(note).slice(0, 300) } : {}) };
+  await setDoc(doc(db, 'account_admin', uid), data, { merge: true });
+  return data;
+}

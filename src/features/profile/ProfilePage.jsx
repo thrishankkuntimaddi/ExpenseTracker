@@ -165,7 +165,7 @@ export default function ProfilePage(props) {
                 <Section title={tr("Owner")}>
                   <Group id="admin" title={tr("Admin sees")} Icon={Eye} color="var(--lent)" summary={tr("Who uses the app · read only")}>
                     <Suspense fallback={<div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>{tr("Loading…")}</div>}>
-                      <AdminCard />
+                      <AdminCard me={user?.uid} />
                     </Suspense>
                   </Group>
                 </Section>
