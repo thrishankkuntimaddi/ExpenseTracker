@@ -52,24 +52,25 @@
 #phone-bar .dock-tab:not(:disabled):active { transform: scale(0.9); }
 #phone-bar .dock-tab > span[style*="position: absolute"] { display: inline-flex !important; } /* due badge */
 
-/* The "+" — a raised, tinted glass orb */
+/* The "+" — a raised, clear glass orb (colourless, like Apple's) */
 #phone-bar button.nav-add {
   position: relative; z-index: 1;
   width: 52px !important; height: 52px !important;
   border-radius: 50% !important;
-  background: linear-gradient(180deg, #2A93FF 0%, #007AFF 55%, #0066E0 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.45) !important;
-  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.7), inset 0 -2px 4px rgba(0, 0, 0, 0.12),
-              inset 0 0 14px rgba(255, 255, 255, 0.18), 0 8px 20px -6px rgba(0, 122, 255, 0.6) !important;
-  color: #fff !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(255,255,255,.78) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow: inset 0 1.5px 0 #fff, inset 0 -2px 6px rgba(0, 0, 0, 0.05),
+              0 0 0 0.5px rgba(0, 0, 0, 0.06), 0 8px 20px -8px rgba(0, 0, 0, 0.3) !important;
+  color: #0A0A0C !important;
 }
 [data-theme="monoflow"] #phone-bar button.nav-add {
-  background: linear-gradient(180deg, #3D9BFF 0%, #0A84FF 55%, #0070E8 100%) !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.5), inset 0 0 14px rgba(255, 255, 255, 0.12),
-              0 8px 22px -8px rgba(10, 132, 255, 0.7) !important;
-  color: #fff !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.24) 0%, rgba(255,255,255,.12) 100%) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.35), inset 0 0 14px rgba(255, 255, 255, 0.06),
+              0 8px 22px -8px rgba(0, 0, 0, 0.7) !important;
+  color: #F5F5F7 !important;
 }
+#phone-bar button.nav-add svg { color: inherit !important; }
 #phone-bar button.nav-add:not(:disabled):active { transform: scale(0.9); }
 
 /* Small tablets: the dock is a centred capsule, not edge to edge */
@@ -100,7 +101,7 @@
   background: var(--lg-pill-active) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 3px 12px -6px rgba(0, 0, 0, 0.6);
 }
-.desktop-nav-item.on svg { filter: var(--lg-icon-glow); }
+.desktop-nav-item.on { color: var(--text) !important; }
 .desktop-profile.on { background: var(--lg-pill-active) !important; }
 .desktop-brand img { border-radius: 10px; box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.3); }
 .desktop-main .tab-header { border-radius: var(--lg-radius-panel) !important; }
@@ -126,20 +127,19 @@ button[aria-label="Close"],
 .profile-button .et-avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7), 0 4px 12px -4px rgba(0, 0, 0, 0.3); }
 [data-theme="monoflow"] .profile-button .et-avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18), 0 4px 12px -4px rgba(0, 0, 0, 0.6); }
 
-/* ══ HOME HERO — tinted glass in the system blue ═════════════════ */
+/* ══ HOME HERO — clear glass, a little denser than the tiles ══════ */
 .home-hero {
-  background: linear-gradient(140deg, #0A84FF 0%, #2F6BFF 45%, #5E5CE6 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(255, 255, 255, 0.15),
-              inset 0 0 24px rgba(255, 255, 255, 0.12), 0 20px 40px -18px rgba(10, 100, 255, 0.6) !important;
+  --lg-hero-fill: rgba(255, 255, 255, 0.62);
+  background:
+    linear-gradient(var(--lg-hero-fill), var(--lg-hero-fill)) padding-box,
+    var(--lg-rim-gradient) border-box !important;
+  border: 1px solid transparent !important;
+  box-shadow: var(--lg-tile-top), var(--lg-inner-glow), var(--lg-elevation) !important;
   border-radius: var(--lg-radius-panel) !important;
 }
-.home-hero::before { background: radial-gradient(120% 85% at 0% 0%, rgba(255,255,255,.34), rgba(255,255,255,0) 55%) !important; }
-[data-theme="monoflow"] .home-hero {
-  background: linear-gradient(140deg, #0B4FC2 0%, #2A3FB8 50%, #3F2F9E 100%) !important;
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.28), inset 0 0 24px rgba(255, 255, 255, 0.06), 0 20px 40px -20px rgba(0, 0, 0, 0.9) !important;
-}
+.home-hero::before { background: radial-gradient(120% 85% at 0% 0%, rgba(255,255,255,.45), rgba(255,255,255,0) 55%) !important; }
+[data-theme="monoflow"] .home-hero { --lg-hero-fill: rgba(44, 44, 48, 0.6); }
+[data-theme="monoflow"] .home-hero::before { background: radial-gradient(120% 85% at 0% 0%, rgba(255,255,255,.08), rgba(255,255,255,0) 55%) !important; }
 .hero-card { border-radius: var(--lg-radius-panel) !important; border: 1px solid rgba(255, 255, 255, 0.28); }
 .hero-card.hero-income  { background: linear-gradient(140deg, #34C759 0%, #1E9E4A 100%) !important; }
 .hero-card.hero-expense { background: linear-gradient(140deg, #FF5A4F 0%, #E0281E 100%) !important; }
@@ -167,8 +167,8 @@ button[aria-label="Close"],
 /* Timeline ranges: a recessed track with a raised lens on the choice */
 .tl-ranges { border-radius: var(--lg-radius-pill) !important; background: rgba(120, 120, 128, 0.14) !important; }
 .tl-ranges button { border-radius: var(--lg-radius-pill) !important; }
-.tl-line { filter: drop-shadow(0 6px 10px rgba(0, 122, 255, .25)); }
-[data-theme="monoflow"] .tl-line { filter: drop-shadow(0 6px 12px rgba(10, 132, 255, .3)); }
+.tl-line { filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .14)); }
+[data-theme="monoflow"] .tl-line { filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .5)); }
 
 /* "Paid with" & similar option chips: glass capsules, tinted when on */
 .add-paid-opt { border: var(--lg-lens-rim) !important; background: var(--lg-bg-regular) !important; box-shadow: var(--lg-spec-top); }
@@ -186,13 +186,17 @@ button[aria-label="Close"],
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 14px 36px -10px rgba(0, 0, 0, 0.45) !important;
 }
 
-/* Demo banner: tinted glass capsule */
+/* Demo banner: a clear glass capsule */
 .demo-banner {
   border-radius: 22px !important;
-  background: linear-gradient(180deg, #2A93FF, #007AFF) !important;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.55), 0 10px 26px -12px rgba(0, 122, 255, 0.55) !important;
+  background: var(--lg-bg-dense) !important;
+  -webkit-backdrop-filter: var(--lg-lens-blur-regular);
+  backdrop-filter: var(--lg-lens-blur-regular);
+  border: var(--lg-lens-rim);
+  box-shadow: var(--lg-lens-specular) !important;
+  color: var(--text) !important;
 }
+.demo-banner #demo-signup { border-color: transparent !important; background: var(--accent) !important; color: var(--surface-solid) !important; }
 
 /* Content tiles that are buttons stay rounded rectangles, not capsules */
 .explore-card, .home-tile, .add-kind, .theme-tile { border-radius: 22px !important; }

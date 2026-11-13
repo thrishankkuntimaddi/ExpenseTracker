@@ -58,7 +58,7 @@ const out = await p.evaluate(async (svg, jobs) => {
     if (mode === 'glyph') s = s.replace(/<g id="bg"[\s\S]*?<\/g>/, '')
     if (mode === 'field') s = s.replace(/<g id="glyph">[\s\S]*<\/g>\s*<\/svg>/, '</svg>')
     if (mode === 'bleed' || mode === 'field' || mode === 'maskable' || mode === 'round') s = s.replace('<g id="bg" clip-path="url(#tile)">', '<g id="bg">')
-    if (mode === 'maskable') s = s.replace('<g id="glyph">', '<g id="glyph" transform="translate(512 512) scale(0.86) translate(-512 -546)">')
+    if (mode === 'maskable') s = s.replace('<g id="glyph">', '<g id="glyph" transform="translate(512 512) scale(0.86) translate(-512 -512)">')
     return s
   }
   const load = async (s) => { const img = new Image(); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s); await img.decode(); return img }

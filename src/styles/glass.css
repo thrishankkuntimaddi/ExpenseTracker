@@ -42,22 +42,23 @@
   --lg-inner-glow:   inset 0 0 18px 0 rgba(255, 255, 255, 0.16);
   --lg-elevation:    0 12px 32px -4px rgba(0, 0, 0, 0.18);
   --lg-elevation-sm: 0 4px 14px -6px rgba(0, 0, 0, 0.16);
+  --lg-tile-top:     inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
   --lg-lens-specular: var(--lg-spec-top), var(--lg-spec-bottom), var(--lg-inner-glow), var(--lg-elevation);
   --lg-lens-specular-sm: var(--lg-spec-top), var(--lg-spec-bottom), var(--lg-inner-glow), var(--lg-elevation-sm);
   /* the rim, brightest where light hits the curved edge (top-left, bottom-right) */
   --lg-rim-gradient: linear-gradient(135deg,
-                       rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 20%,
-                       rgba(255,255,255,.22) 45%, rgba(255,255,255,.22) 60%,
-                       rgba(255,255,255,.5) 85%, rgba(255,255,255,.85) 100%);
+                       rgba(255,255,255,.7) 0%, rgba(255,255,255,.42) 22%,
+                       rgba(255,255,255,.18) 45%, rgba(255,255,255,.18) 60%,
+                       rgba(255,255,255,.34) 85%, rgba(255,255,255,.55) 100%);
 
   /* Typography & icons */
   --lg-text-primary:   #0A0A0C;
   --lg-text-secondary: rgba(10, 10, 12, 0.65);
   --lg-text-tertiary:  rgba(10, 10, 12, 0.45);
-  --lg-tint:           #007AFF;
-  --lg-tint-accent:    rgba(0, 122, 255, 0.24);
+  --lg-tint:           #0A0A0C;                    /* Liquid Glass is colourless: the tint is the label colour */
+  --lg-tint-accent:    rgba(120, 120, 128, 0.16);
   --lg-pill-active:    rgba(255, 255, 255, 0.42);
-  --lg-icon-glow:      drop-shadow(0 0 6px rgba(0, 122, 255, 0.45));
+  --lg-icon-glow:      none;
 
   /* Geometry & motion */
   --lg-radius-panel: 28px;
@@ -97,11 +98,13 @@
   --border-dark:  rgba(60, 60, 67, 0.22);
   --input-border: rgba(60, 60, 67, 0.10);
 
-  /* Apple system colours (light) */
-  --accent:        #007AFF;
-  --accent-hover:  #0062CC;
-  --accent-bg:     rgba(0, 122, 255, 0.12);
-  --accent-border: rgba(0, 122, 255, 0.28);
+  /* Accent: colourless graphite (labels, links, prominent buttons).
+     Colour stays only where it means something: money in / out and the
+     category icons. */
+  --accent:        #1C1C1E;
+  --accent-hover:  #000000;
+  --accent-bg:     rgba(120, 120, 128, 0.14);
+  --accent-border: rgba(120, 120, 128, 0.30);
 
   --income:  #1E9E4A;  --income-bg:  rgba(52, 199, 89, 0.14);  --income-border:  rgba(52, 199, 89, 0.32);
   --expense: #FF3B30;  --expense-bg: rgba(255, 59, 48, 0.11);  --expense-border: rgba(255, 59, 48, 0.28);
@@ -135,18 +138,19 @@
   --lg-inner-glow:   inset 0 0 18px 0 rgba(255, 255, 255, 0.08);
   --lg-elevation:    0 14px 36px -4px rgba(0, 0, 0, 0.45);
   --lg-elevation-sm: 0 6px 18px -8px rgba(0, 0, 0, 0.55);
+  --lg-tile-top:     inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
   --lg-rim-gradient: linear-gradient(135deg,
-                       rgba(255,255,255,.42) 0%, rgba(255,255,255,.2) 20%,
-                       rgba(255,255,255,.07) 45%, rgba(255,255,255,.07) 60%,
-                       rgba(255,255,255,.16) 85%, rgba(255,255,255,.32) 100%);
+                       rgba(255,255,255,.3) 0%, rgba(255,255,255,.15) 22%,
+                       rgba(255,255,255,.06) 45%, rgba(255,255,255,.06) 60%,
+                       rgba(255,255,255,.1) 85%, rgba(255,255,255,.2) 100%);
 
   --lg-text-primary:   #F5F5F7;
   --lg-text-secondary: rgba(245, 245, 247, 0.68);
   --lg-text-tertiary:  rgba(245, 245, 247, 0.45);
-  --lg-tint:           #0A84FF;
-  --lg-tint-accent:    rgba(10, 132, 255, 0.30);
+  --lg-tint:           #F5F5F7;
+  --lg-tint-accent:    rgba(255, 255, 255, 0.14);
   --lg-pill-active:    rgba(255, 255, 255, 0.16);
-  --lg-icon-glow:      drop-shadow(0 0 6px rgba(10, 132, 255, 0.55));
+  --lg-icon-glow:      none;
   --lg-fallback-bg:    #1C1C1E;
 
   --lg-wall-base: #06070B;
@@ -167,11 +171,11 @@
   --border-dark:  rgba(255, 255, 255, 0.18);
   --input-border: rgba(255, 255, 255, 0.08);
 
-  /* Apple system colours (dark) */
-  --accent:        #0A84FF;
-  --accent-hover:  #409CFF;
-  --accent-bg:     rgba(10, 132, 255, 0.20);
-  --accent-border: rgba(10, 132, 255, 0.40);
+  /* Accent (dark): near-white */
+  --accent:        #F5F5F7;
+  --accent-hover:  #FFFFFF;
+  --accent-bg:     rgba(255, 255, 255, 0.12);
+  --accent-border: rgba(255, 255, 255, 0.26);
 
   --income:  #30D158;  --income-bg:  rgba(48, 209, 88, 0.16);  --income-border:  rgba(48, 209, 88, 0.34);
   --expense: #FF453A;  --expense-bg: rgba(255, 69, 58, 0.16);  --expense-border: rgba(255, 69, 58, 0.34);
@@ -184,6 +188,7 @@
   --waste:   #FF8A3D;  --waste-bg:   rgba(255, 138, 61, 0.16);
   --external: #BF5AF2; --external-bg: rgba(191, 90, 242, 0.16); --external-border: rgba(191, 90, 242, 0.34);
 
+  color-scheme: dark;   /* native pickers, scrollbars and form icons follow */
   --heat-rgb: 255, 69, 58;
   --toast-bg: rgba(242, 242, 247, 0.92);
   --toast-text: #0A0A0C;
@@ -293,7 +298,7 @@ body::before {
     linear-gradient(var(--glass-fill), var(--glass-fill)) padding-box,
     var(--lg-rim-gradient) border-box !important;
   border: 1px solid transparent !important;
-  box-shadow: var(--lg-spec-top), var(--lg-spec-bottom), var(--lg-inner-glow), var(--lg-elevation-sm) !important;
+  box-shadow: var(--lg-tile-top), var(--lg-inner-glow), var(--lg-elevation-sm) !important;
 }
 /* Rows / sub-panels inside a tile: no second pane, no double tint */
 .card [style*="background: var(--surface)"],
@@ -386,6 +391,12 @@ button:is([style*="background: var(--accent)"], [style*="background: var(--incom
 @media (hover: hover) {
   button:is([style*="background: var(--accent)"], [style*="background: var(--income)"], [style*="background: var(--expense)"], [style*="background: var(--savings)"]):not(:disabled):hover { transform: scale(1.03); }
 }
+/* The accent is near-white in dark mode: anything filled with it (and any
+   white text or icon inside it) turns dark so it stays readable */
+[data-theme="monoflow"] :is([style*="background: var(--accent)"]:not(.demo-banner), .tour-btn:not(.tour-btn-ghost), .tl-ranges button.on),
+[data-theme="monoflow"] :is([style*="background: var(--accent)"]:not(.demo-banner), .tour-btn:not(.tour-btn-ghost)) :is([style*="color: rgb(255, 255, 255)"], [style*="color: #fff"], svg) {
+  color: #0A0A0C !important;
+}
 /* Light tinted fills (accent-bg etc.) → tinted glass */
 button:is([style*="background: var(--accent-bg)"]) {
   background: var(--lg-tint-accent) !important;
@@ -404,9 +415,16 @@ textarea {
 [data-theme="monoflow"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35) !important;
 }
-:is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea):focus {
-  border-color: var(--accent) !important;
-  box-shadow: 0 0 0 4px var(--accent-bg), inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+/* Fields drawn inline in a tile (Quick entry, the amount): no well, no edge */
+:root input[style*="background: transparent"]:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+:root input[style*="background: transparent"]:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+:root textarea[style*="background: transparent"]:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+:is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea):not([style*="background: transparent"]):focus {
+  border-color: var(--border-dark) !important;
+  box-shadow: 0 0 0 3px rgba(120, 120, 128, 0.16), inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 input[type="range"], input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 

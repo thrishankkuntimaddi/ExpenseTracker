@@ -149,19 +149,19 @@ export default function TodayTab(props) {
 
   const overviewSection = (
     <div ref={heroRef} className="home-hero" id="home-summary" role={shell ? 'button' : undefined} tabIndex={shell ? 0 : undefined}
-      onClick={(e) => { if (!e.target.closest('.month-switcher')) shell?.goTo('stats'); }} style={{ marginBottom: 14, padding: '14px 18px 14px', borderRadius: 26, color: '#fff', cursor: shell ? 'pointer' : 'default', position: 'relative', overflow: 'hidden' }}>
+      onClick={(e) => { if (!e.target.closest('.month-switcher')) shell?.goTo('stats'); }} style={{ marginBottom: 14, padding: '14px 18px 14px', borderRadius: 26, color: 'var(--text)', cursor: shell ? 'pointer' : 'default', position: 'relative', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-          {shell ? <MonthSwitcher tone="hero" compact /> : <span style={{ fontSize: 12, fontWeight: 700 }}>{monthName(monthKey)}</span>}
+          {shell ? <MonthSwitcher compact /> : <span style={{ fontSize: 12, fontWeight: 700 }}>{monthName(monthKey)}</span>}
           {isNow && daily.current >= 2 && (
             <span id="home-streak" title={daily.atRisk ? tr("Log something today to keep it") : `Best ${daily.best} days`}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 99, background: 'rgba(255,255,255,0.16)', fontSize: 11, fontWeight: 750, whiteSpace: 'nowrap', opacity: daily.atRisk ? 0.75 : 1 }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 99, background: 'var(--surface2)', fontSize: 11, fontWeight: 750, whiteSpace: 'nowrap', opacity: daily.atRisk ? 0.75 : 1 }}>
               <Flame size={12} /> {daily.current}
             </span>
           )}
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, opacity: 0.85 }}>
-          {safeToday?.status === 'over' && <Sign kind="warn" size={15} style={{ color: '#FFD0D7' }} />}
+          {safeToday?.status === 'over' && <Sign kind="warn" size={15} style={{ color: 'var(--expense)' }} />}
           {safeToday ? (safeToday.status === 'over' ? t('Over budget') : `${Math.round(pct)}% of budget`) : t('Stats')} <ArrowUpRight size={13} />
         </span>
       </div>
@@ -179,7 +179,7 @@ export default function TodayTab(props) {
           </div>
         </>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.18)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
         {isNow ? <Metric label={tr("Today")} value={todayExpense} /> : <Metric label={tr("Money in")} value={stats?.totalIncome ?? 0} />}
         {isNow && safeToday && safeToday.status !== 'over'
           ? <Metric label={tr("Safe to spend today")} value={safeToday.safeToday} />

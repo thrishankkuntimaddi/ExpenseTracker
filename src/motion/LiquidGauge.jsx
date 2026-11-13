@@ -50,7 +50,7 @@ export default function LiquidGauge({ fraction = 0, variant = 'capsule', classNa
       g.clearRect(0, 0, W, H);
       const pad = bar ? 0 : 2, x = pad, y = pad, w = W - pad * 2, h = H - pad * 2, rad = bar ? h / 2 : Math.min(w / 2, 26);
       g.save(); g.beginPath(); g.roundRect(x, y, w, h, rad); g.clip();
-      g.fillStyle = bar ? 'rgba(255,255,255,0.22)' : 'rgba(127,127,140,0.10)'; g.fillRect(x, y, w, h);
+      g.fillStyle = bar ? 'rgba(127,127,140,0.18)' : 'rgba(127,127,140,0.10)'; g.fillRect(x, y, w, h);
       const t = now / 1000, amp = animate ? (bar ? 1.2 : 3) + Math.min(bar ? 2 : 10, Math.abs(vel) * 300 + sloshRef.current * (bar ? 2 : 8)) : 0;
       for (let layer = 0; layer < 2; layer++) {
         g.beginPath();
