@@ -289,6 +289,12 @@ describe('screens render with planning features', () => {
     expect(html).toContain('asha@x.in');
     expect(html).toContain('Stopped using');
     expect(html).toContain('Opens, adds nothing');
+    // people who stopped are folded under one row; the count covers every account
+    expect(html).toContain('All accounts');
+    expect(html).toContain('id="admin-show-stopped"');
+    expect(html).toContain('1 still around · 1 stopped · 2 accounts in all');
+    expect(html).not.toContain('b@x.in');
+    expect(render(<AdminCard users={[...users, { uid: 'u3', email: 'old@x.in', createdAt: t - 9e9, lastOpenedAt: t - 3 * 864e5 }]} />)).toContain('never opened an up-to-date app');
     const plain = render(<ProfilePage {...common} user={{ uid: 'x', email: 'someone@x.in', emailVerified: true }} />);
     expect(plain).not.toContain('Admin sees');
     const owner = render(<ProfilePage {...common} user={{ uid: 'x', email: 'thrishankkuntimaddi@gmail.com', emailVerified: true }} />);
@@ -432,6 +438,13 @@ describe('screens render with planning features', () => {
     expect(open).toContain('Who pays whom');                          // no second step: the plan is right there
     expect(open).not.toContain('Done — see who pays whom');
     expect(open).toContain('24,500');
+    // money collected up front: Dev holds ₹2,000 from Arjun for food
+    expect(open).toContain('id="trip-pool-collect"');
+    const pooled = render(<TripDetail trip={{ ...trip, settlements: [{ id: 'a1', kind: 'advance', fromUnit: 'm:p1', toUnit: 'm:p4', toMember: 'p4', amount: 2000, note: 'Food' }] }} onChange={noop} onShare={noop} onClose={noop} onReopen={noop} />);
+    expect(pooled).toContain('holds the money');
+    expect(pooled).toContain('Every handover');
+    expect(pooled).not.toContain('Settled so far');
+    expect(pooled).not.toMatch(/NaN|undefined/);
     // closed trip → step 2: the settlement
     const html = render(<TripDetail trip={{ ...trip, status: 'closed' }} onChange={noop} onEdit={noop} onShare={noop} onClose={noop} onReopen={noop} onDelete={noop} />);
     expect(html).toContain('Delete');

@@ -62,4 +62,13 @@ describe('monthPlan', () => {
     const p = monthPlan({ budgets: null, rules, income: [{ id: 'b', type: 'income', name: 'Amma', amount: 9000, isBorrowed: true, date: at(2) }], monthKey: '2026-10', todayKey: '2026-10-13' });
     expect(p).toMatchObject({ incomeBase: 60000, useExpected: true, spendBudget: null, free: 42000 });
   });
+  it('what already went out, and what was carried in, count', () => {
+    const tx = (id, amount, extra = {}) => ({ id, type: 'expense', name: id, amount, date: at(5), ...extra });
+    const income = [{ id: 'i', type: 'income', name: 'Salary', amount: 11100, date: at(1) }, { id: 'carry_2026-10', isCarryForward: true, amount: 5878.74, date: at(1) }];
+    const p = monthPlan({ budgets: null, rules: [], transactions: [tx('a', 3688), { id: 'g', type: 'person', direction: 'given_gift', amount: 250, date: at(6) }, tx('fd', 900, { paidFrom: 'savings' })], income, monthKey: '2026-10', todayKey: '2026-10-13' });
+    expect(p).toMatchObject({ carried: 5878.74, spent: 3938, spendBudget: null, free: 13040.74 });
+    // a budget bigger than the spending is what is set aside; a smaller one is overrun
+    expect(monthPlan({ budgets: { total: 6000 }, rules: [], transactions: [tx('a', 3688)], income, monthKey: '2026-10' })).toMatchObject({ overBudget: false, free: 10978.74 });
+    expect(monthPlan({ budgets: { total: 3000 }, rules: [], transactions: [tx('a', 3688)], income, monthKey: '2026-10' })).toMatchObject({ overBudget: true, free: 13290.74 });
+  });
 });

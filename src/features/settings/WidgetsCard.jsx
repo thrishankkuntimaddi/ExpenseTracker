@@ -37,6 +37,7 @@ export default function WidgetsCard({ settings, onPatchSettings }) {
       <div role="radiogroup" aria-label={tr("Big number")} style={row}>
         <span style={label}>{tr("This month shows")}</span>
         <Chip id="w-headline-safe" on={w.headline === 'safe'} onClick={() => set({ headline: 'safe' })}>{tr("Safe to spend today")}</Chip>
+        <Chip id="w-headline-balance" on={w.headline === 'balance'} onClick={() => set({ headline: 'balance' })}>{tr("Balance")}</Chip>
         <Chip id="w-headline-left" on={w.headline === 'left'} onClick={() => set({ headline: 'left' })}>{tr("Left in budget")}</Chip>
         <Chip id="w-headline-spent" on={w.headline === 'spent'} onClick={() => set({ headline: 'spent' })}>{tr("Spent this month")}</Chip>
       </div>

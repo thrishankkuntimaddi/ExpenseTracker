@@ -12,9 +12,12 @@
 // Columns: { key, label, type: 'text' | 'amount' | 'pick' | 'date', width,
 //   placeholder, options: [{ value, label }] (pick), onCreate(label) → value
 //   (pick, optional: accept new values), choices (pick, optional: the subset
-//   that may be picked — the rest still display), align }
+//   that may be picked — the rest still display), align, line: 2 }
+// On a phone the sheet never scrolls sideways: when it is narrower than its
+// columns need, the columns marked line: 2 (a note, a date) drop to a second
+// line under the row, and the main ones share the width.
 // canEditRow(row) → false locks one row (shared trips: other people's rows).
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { evalAmount, parseDateText } from '../utils/sheetValues';
 
@@ -32,9 +35,26 @@ export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly =
   const [ghost, setGhost] = useState(() => makeRow(rows));
   const [removed, setRemoved] = useState(null);   // { row, index } — for Undo
   const all = readOnly ? rows : [...rows, ghost];
-  const template = `34px ${columns.map((c) => c.width ?? '1fr').join(' ')}${readOnly ? '' : ' 30px'}`;
+  const px = (c) => Number(String(c.width ?? '').match(/(\d+)px/)?.[1]) || 90;
+  const widthOf = (cols) => 34 + (readOnly ? 0 : 30) + cols.reduce((t, c) => t + px(c), 0);
+  const fullWidth = widthOf(columns);
+  // Too narrow for every column (a phone): the line-2 columns go under the row
+  const rootRef = useRef(null);
+  const [narrow, setNarrow] = useState(false);
+  const canWrap = columns.some((c) => c.line === 2);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || !canWrap || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(() => setNarrow(el.clientWidth < fullWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [canWrap, fullWidth]);
+  const wrapped = canWrap && narrow;
+  const main = wrapped ? columns.filter((c) => c.line !== 2) : columns;
+  const under = wrapped ? columns.filter((c) => c.line === 2) : [];
+  const template = `34px ${main.map((c) => c.width ?? '1fr').join(' ')}${readOnly ? '' : ' 30px'}`;
   // Narrower than this and the sheet scrolls sideways inside its box (never the page)
-  const minWidth = 34 + (readOnly ? 0 : 30) + columns.reduce((t, c) => t + (Number(String(c.width ?? '').match(/(\d+)px/)?.[1]) || 90), 0);
+  const minWidth = widthOf(main);
   const line = { gridTemplateColumns: template, minWidth };
 
   // Right away when the cell is on screen; a frame later for a row that is about to appear
@@ -103,10 +123,10 @@ export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly =
   }
 
   return (
-    <div className={`sheet sheet-${tone}`} data-sheet-root={id}>
+    <div ref={rootRef} className={`sheet sheet-${tone}${wrapped ? ' sheet-wrapped' : ''}`} data-sheet-root={id}>
       <div className="sheet-head" style={line}>
         <span className="sheet-num">#</span>
-        {columns.map((c) => <span key={c.key} style={{ textAlign: c.type === 'amount' ? 'right' : 'left' }}>{c.label}</span>)}
+        {main.map((c) => <span key={c.key} style={{ textAlign: c.type === 'amount' ? 'right' : 'left' }}>{c.label}</span>)}
         {!readOnly && <span />}
       </div>
       {all.map((row, r) => {
@@ -115,9 +135,10 @@ export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly =
         return (
           <div key={row.id} className={`sheet-row${isGhost ? ' sheet-ghost' : ''}${locked && !readOnly ? ' sheet-locked' : ''}`} style={line}>
             <span className="sheet-num">{isGhost ? '+' : r + 1}</span>
-            {columns.map((col, c) => {
+            {(() => { const renderCell = (col) => {
+              const c = columns.indexOf(col);
               const cell = { 'data-sheet': id, 'data-r': r, 'data-c': c, className: 'sheet-cell', 'aria-label': `${col.label}, row ${r + 1}`, disabled: locked,
-                onPaste: (e) => paste(e, r, c), placeholder: isGhost || !row[col.key] ? col.placeholder : undefined };
+                onPaste: (e) => paste(e, r, c), placeholder: isGhost || !row[col.key] ? (wrapped && col.line === 2 && col.type === 'text' ? `${col.label} (${col.placeholder ?? 'optional'})` : col.placeholder) : undefined };
               const nav = (e) => {
                 if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); move(r, c, 'next'); }
                 else if (e.key === 'ArrowDown' && col.type !== 'date') { e.preventDefault(); e.currentTarget.blur(); move(r, c, 'down'); }
@@ -128,10 +149,16 @@ export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly =
               if (col.type === 'amount') return <AmountCell key={col.key} cell={cell} value={row[col.key] ?? ''} onCommit={(v) => { if (v !== String(row[col.key] ?? '')) setCells(r, { [col.key]: v }); }} onKeyDown={nav} />;
               if (col.type === 'date') return <input key={col.key} {...cell} type="date" value={row[col.key] ?? ''} onChange={(e) => e.target.value && setCells(r, { [col.key]: e.target.value })} onKeyDown={nav} />;
               return <input key={col.key} {...cell} type="text" value={row[col.key] ?? ''} autoComplete="off" onChange={(e) => setCells(r, { [col.key]: e.target.value })} onKeyDown={nav} />;
-            })}
-            {!readOnly && (isGhost || locked
-              ? <span />
-              : <button type="button" className="sheet-del" aria-label={`Remove row ${r + 1}`} tabIndex={-1} onClick={() => remove(r)}><X size={13} /></button>)}
+            };
+            return (
+              <>
+                {main.map(renderCell)}
+                {!readOnly && (isGhost || locked
+                  ? <span />
+                  : <button type="button" className="sheet-del" aria-label={`Remove row ${r + 1}`} tabIndex={-1} onClick={() => remove(r)}><X size={13} /></button>)}
+                {under.length > 0 && <div className="sheet-under" style={{ gridTemplateColumns: under.map((c) => (c.type === 'date' ? '132px' : 'minmax(0, 1fr)')).join(' ') }}>{under.map(renderCell)}</div>}
+              </>
+            ); })()}
           </div>
         );
       })}

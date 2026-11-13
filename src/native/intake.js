@@ -43,6 +43,16 @@ export function pushWidgets(data) {
   timer = setTimeout(() => { Widgets.update({ data: pending }).catch(() => {}); }, 800);
 }
 
+/** Entries typed on the home screen (quick-entry card): [{ id, kind, amount, name, at }]. */
+export async function widgetQueue() {
+  if (!widgetsAvailable()) return [];
+  try { return (await Widgets.queue()).items ?? []; } catch { return []; }   // an older app has no queue
+}
+export async function clearWidgetQueue(ids) {
+  if (!widgetsAvailable() || !ids.length) return;
+  try { await Widgets.clearQueue({ ids }); } catch { /* stays queued; ids are stable, so nothing doubles */ }
+}
+
 export async function widgetCount() {
   if (!widgetsAvailable()) return 0;
   try { return (await Widgets.status()).placed ?? 0; } catch { return 0; }

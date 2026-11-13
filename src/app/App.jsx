@@ -8,10 +8,11 @@ import { useActivity } from '../hooks/useActivity';
 import { useDemoData } from '../hooks/useDemoData';
 import { isDemoUser } from '../demo/demo';
 import { getLang, setLang, onLang } from '../i18n';
-import { onShared, onWidgetAction, pushWidgets } from '../native/intake';
+import { onShared, onWidgetAction, pushWidgets, widgetQueue, clearWidgetQueue } from '../native/intake';
+import { queuedEntries } from '../utils/widgetData';
 import { parsePayment } from '../utils/receiptParse';
 import { widgetData } from '../utils/widgetData';
-import { formatMoneyCompact } from '../utils/money';
+import { formatMoneyCompact, currencySymbol } from '../utils/money';
 import { DemoBanner, DemoLocked, DemoProfile } from '../demo/DemoBits';
 import { useSyncStatus, clearSyncError } from '../services/sync';
 import { setStatusBarTheme, onBackButton } from '../native';
@@ -326,8 +327,31 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   // Home-screen widgets follow the data
   useEffect(() => {
     if (!loaded || isDemo) return;
-    pushWidgets(widgetData({ transactions, income, settings, rules: recurring.rules, money: formatMoneyCompact }));
+    pushWidgets(widgetData({ transactions, income, settings, rules: recurring.rules, money: formatMoneyCompact, symbol: currencySymbol() }));
   }, [loaded, isDemo, transactions, income, settings, recurring.rules]);
+  // Entries typed on the home screen (the widgets' quick-entry card) come into
+  // the ledger when the app opens or comes back to the front. Their ids are
+  // fixed by the phone, so taking the same one twice can't double it.
+  useEffect(() => {
+    if (!loaded || isDemo || !uid) return undefined;
+    let busy = false;
+    const take = async () => {
+      if (busy || document.visibilityState !== 'visible') return;
+      busy = true;
+      try {
+        const items = await widgetQueue();
+        const { transactions: tx, income: inc, ids } = queuedEntries(items);
+        if (!ids.length) return;
+        tx.forEach((e) => addTransaction(e));
+        inc.forEach((e) => addIncome(e));
+        await clearWidgetQueue(ids);
+        setToastMsg(`Added ${ids.length} ${ids.length === 1 ? 'entry' : 'entries'} from your home screen`);
+      } finally { busy = false; }
+    };
+    take();
+    document.addEventListener('visibilitychange', take);
+    return () => document.removeEventListener('visibilitychange', take);
+  }, [loaded, isDemo, uid, addTransaction, addIncome]);
 
   const swipe = useSwipeNavigation({ order: pageOrder, active: activeTab, onChange: goTo, enabled: !isDesktop && !addKind && pageOrder.includes(activeTab) });
 

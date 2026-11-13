@@ -7,6 +7,10 @@
 //      users/{uid}/push_plan/current; due items are pushed to that account's
 //      browsers that turned reminders on (push_tokens with reminders: true).
 //      Android and desktop apps schedule their own and are never sent these.
+//   0. The account list for Profile → Admin sees: once a day, every sign-in
+//      account that has no user_activity record yet (signed up, never opened
+//      an up-to-date app) gets one from its sign-in record — email, name,
+//      when it was created and last signed in. Nothing about anyone's money.
 //   2. Security alerts. New users/{uid}/security_events (wrong PINs, lock
 //      changes, a sign-in on a new device) are pushed to the account's other
 //      devices and emailed to the account's address (when SMTP is
@@ -318,9 +322,48 @@ async function invites() {
   }
 }
 
+/* ── The full account list (once a day) ──
+   The apps write user_activity/{uid} themselves, so an account that signed
+   up and never came back to an up-to-date app has none and the owner can't
+   see it. Give those one from the sign-in records. Only the fields the apps
+   write (firestore.rules checks the whole record on their next write), and
+   never over a record an app already wrote. */
+const ROSTER_EVERY = 24 * 3600e3;
+async function roster() {
+  const metaRef = db.collection('notifier_meta').doc('roster');
+  const last = (await metaRef.get()).data()?.at ?? 0;
+  if (now - last < ROSTER_EVERY) return;
+  const have = new Set((await db.collection('user_activity').select().get()).docs.map((d) => d.id));
+  const missing = [];
+  let accounts = 0, pageToken;
+  do {
+    const page = await getAuth().listUsers(1000, pageToken);
+    accounts += page.users.length;
+    page.users.filter((u) => !have.has(u.uid)).forEach((u) => missing.push(u));
+    pageToken = page.pageToken;
+  } while (pageToken);
+  const ms = (v) => Date.parse(v ?? '') || null;
+  for (let i = 0; i < missing.length && !DRY; i += 400) {
+    const batch = db.batch();
+    missing.slice(i, i + 400).forEach((u) => {
+      const created = ms(u.metadata.creationTime);
+      batch.create(db.collection('user_activity').doc(u.uid), {
+        email: String(u.email ?? '').slice(0, 200),
+        name: String(u.displayName ?? '').slice(0, 120),
+        createdAt: created,
+        lastOpenedAt: ms(u.metadata.lastRefreshTime) ?? ms(u.metadata.lastSignInTime) ?? created ?? 0,
+      });
+    });
+    // create() refuses a record an app wrote in the meantime — then nothing in this batch lands; the next day retries
+    await batch.commit().catch((err) => console.warn('roster batch skipped:', err.message));
+  }
+  if (!DRY) await metaRef.set({ at: now, accounts, added: missing.length });
+  stats.accounts = accounts; stats.rosterAdded = missing.length;
+}
+
 // Each part on its own: a failure in one (e.g. a quota error) must not stop the other
 let failed = false;
-for (const [name, run] of [['reminders', reminders], ['alerts', alerts], ['invites', invites]]) {
+for (const [name, run] of [['reminders', reminders], ['alerts', alerts], ['invites', invites], ['roster', roster]]) {
   try { await run(); } catch (err) { failed = true; console.error(`${name} failed:`, err); }
 }
 console.log('done', JSON.stringify(stats));

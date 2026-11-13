@@ -42,7 +42,7 @@
         android:layout_height="wrap_content"
         android:maxLines="1"
         android:textColor="#FFFFFFFF"
-        android:textSize="26sp"
+        android:textSize="30sp"
         android:textStyle="bold" />
     <LinearLayout
         android:layout_width="match_parent"
@@ -62,12 +62,16 @@
             android:textColor="#E6FFFFFF"
             android:textSize="12sp" />
     </LinearLayout>
+    <!-- pushes the chart to the bottom; the chart keeps its own size (drawn to fit, never stretched) -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
     <ImageView
         android:id="@+id/w_s_chart"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="6dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:adjustViewBounds="true"
         android:contentDescription="Spending, last seven days"
-        android:scaleType="fitXY" />
+        android:scaleType="fitCenter" />
 </LinearLayout>

@@ -128,11 +128,11 @@ function QuickDebts({ ledger, onAddTransaction, onAddIncome, toast }) {
       <SectionHeading title={tr("Quick entry")} hint={tr("type, Enter to move on — paste from Excel works")} />
       <Sheet id="debts-sheet" tone="lent" rows={rows} onChange={setRows} makeRow={draftRow} rowLabel={(r) => r.name}
         columns={[
-          { key: 'name', label: tr("Person"), type: 'pick', width: 'minmax(96px, 1.1fr)', placeholder: tr("Who?"), options: ledger.map((p) => ({ value: p.name, label: p.name })), onCreate: (n) => n },
-          { key: 'move', label: tr("Type"), type: 'pick', width: 'minmax(92px, 0.9fr)', placeholder: tr("Lent"), options: DEBT_MOVE_KEYS.map((k) => ({ value: k, label: DEBT_MOVES[k].label })) },
-          { key: 'amount', label: `Amount ${currencySymbol()}`, type: 'amount', width: '96px', placeholder: '0' },
-          { key: 'note', label: tr("Note"), type: 'text', width: 'minmax(80px, 1fr)', placeholder: 'optional' },
-          { key: 'date', label: tr("Date"), type: 'date', width: '132px' },
+          { key: 'name', label: tr("Person"), type: 'pick', width: 'minmax(84px, 1.1fr)', placeholder: tr("Who?"), options: ledger.map((p) => ({ value: p.name, label: p.name })), onCreate: (n) => n },
+          { key: 'move', label: tr("Type"), type: 'pick', width: 'minmax(84px, 0.9fr)', placeholder: tr("Lent"), options: DEBT_MOVE_KEYS.map((k) => ({ value: k, label: DEBT_MOVES[k].label })) },
+          { key: 'amount', label: `Amount ${currencySymbol()}`, type: 'amount', width: '84px', placeholder: '0' },
+          { key: 'note', label: tr("Note"), type: 'text', width: 'minmax(80px, 1fr)', placeholder: 'optional', line: 2 },
+          { key: 'date', label: tr("Date"), type: 'date', width: '132px', line: 2 },
         ]}
         footer={
           <button id="debts-quick-save" type="button" onClick={save} disabled={!ready.length}

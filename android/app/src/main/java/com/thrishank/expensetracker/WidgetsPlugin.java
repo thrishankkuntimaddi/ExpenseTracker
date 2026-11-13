@@ -3,6 +3,7 @@ package com.thrishank.expensetracker;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -25,6 +26,26 @@ public class WidgetsPlugin extends Plugin {
         prefs.edit().putString(KEY, data.toString()).apply();
         WidgetRender.refreshAll(getContext());
         call.resolve();
+    }
+
+    /** Entries made from the home screen that the app hasn't taken yet. */
+    @PluginMethod
+    public void queue(PluginCall call) {
+        JSObject r = new JSObject();
+        try { r.put("items", new JSArray(WidgetQueue.all(getContext()).toString())); } catch (Exception e) { r.put("items", new JSArray()); }
+        call.resolve(r);
+    }
+
+    /** The app saved these: drop them from the queue. */
+    @PluginMethod
+    public void clearQueue(PluginCall call) {
+        try {
+            WidgetQueue.remove(getContext(), call.getArray("ids", new JSArray()).<String>toList());
+            WidgetRender.refreshAll(getContext());
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Couldn't clear the queue", e);
+        }
     }
 
     /** Whether any widget is on the home screen (to hint in Profile). */

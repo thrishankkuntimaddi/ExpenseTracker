@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { widgetData } from '../widgetData';
+import { widgetData, queuedEntries } from '../widgetData';
 
 const iso = (k, h = 12) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d, h).toISOString(); };
 const e = (name, amount, k) => ({ id: `${name}${k}`, type: 'expense', name, amount, date: iso(k) });
@@ -15,7 +15,9 @@ describe('widget data', () => {
     expect(w.week).toHaveLength(7);
     expect(w.week.at(-1)).toEqual({ label: 'T', value: 200 });
     expect(w.week.reduce((s, d) => s + d.value, 0)).toBe(1000);   // 6–12 Nov: petrol + today
-    expect(w.bigLabel).toBe('Spent this month');                    // no budget → spent
+    expect(w.bigLabel).toBe('Balance');                             // no budget → the Home balance
+    expect(w).toMatchObject({ bigValue: '−₹16000', sideLabel: 'Spent', sideValue: '₹16000' });
+    expect(w.raw).toMatchObject({ symbol: '₹', big: -16000, bigMode: 'balance', side: 16000, sideMode: 'spent', today: 200 });
     expect(w.pct).toBe(-1);
   });
   it('safe to spend today with a budget', () => {
@@ -34,5 +36,28 @@ describe('widget data', () => {
     const w = widgetData({ transactions: txns, settings: {}, rules, now, money });
     expect(w.bills).toEqual([{ name: 'Electricity bill', when: 'In 3 days', amount: '₹1200', late: false }, expect.objectContaining({ name: 'Electricity bill' })].slice(0, w.bills.length));
     expect(w.bills[0].name).toBe('Electricity bill');
+  });
+  it('balance counts income and what was carried in; spent as the headline puts balance beside it', () => {
+    const income = [{ id: 'i', type: 'income', name: 'Salary', amount: 30000, date: iso('2026-11-01') }, { id: 'o', type: 'income', name: 'Oct', amount: 2000, date: iso('2026-10-02') }];
+    const w = widgetData({ transactions: txns, income, settings: { widgets: { headline: 'spent' } }, now, money });
+    // October: 2000 − 999 = 1001 carried in; November: 30000 − 16000
+    expect(w).toMatchObject({ bigLabel: 'Spent this month', bigValue: '₹16000', sideLabel: 'Balance', sideValue: '₹15001' });
+  });
+  it('entries typed on the home screen become ledger entries with fixed ids', () => {
+    const at = new Date(2026, 10, 12, 9).getTime();
+    const q = queuedEntries([
+      { id: 'a-1', kind: 'expense', amount: 120.456, name: ' Tea ', at },
+      { id: 'b', kind: 'income', amount: 500, name: '', at },
+      { id: 'c', kind: 'savings', amount: 1000, name: 'Gold', at },
+      { id: 'bad', kind: 'expense', amount: 0, name: 'x', at },
+      { kind: 'expense', amount: 5 },
+    ]);
+    expect(q.ids).toEqual(['a-1', 'b', 'c', 'bad']);
+    expect(q.transactions).toEqual([
+      expect.objectContaining({ id: 'w_a-1', type: 'expense', name: 'Tea', amount: 120.46, month: '2026-11' }),
+      expect.objectContaining({ id: 'w_c', type: 'savings', name: 'Gold', savingsType: 'other' }),
+    ]);
+    expect(q.income).toEqual([expect.objectContaining({ id: 'w_b', type: 'income', name: 'Money in', amount: 500 })]);
+    expect(queuedEntries(null)).toEqual({ transactions: [], income: [], ids: [] });
   });
 });

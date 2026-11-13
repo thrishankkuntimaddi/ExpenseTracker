@@ -159,11 +159,27 @@ export function monthPlan({ budgets, rules: recurringRules = [], transactions = 
   const deductionTotal = deductions.reduce((s, d) => s + Number(d.amount), 0);
   const spendBudget = Number(budgets?.total) > 0 ? Number(budgets.total) : null;
 
+  // What was left of last month and carried into this one is money to plan with too
+  const carried = income.filter((i) => inMonth(i) && i.isCarryForward).reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  // Everything that already left your hands this month, apart from the fixed
+  // payments counted above — so "left" is never more than you really have
+  const gone = transactions.filter((t) => inMonth(t) && !t.isCarryForward).reduce((s, t) => {
+    const a = Number(t.amount) || 0;
+    if (t.type === 'expense') return t.paidFrom === 'savings' ? s : s + a;
+    if (t.type === 'savings') return s + a;
+    if (t.type === 'person' && ['lent', 'repaid', 'given_gift'].includes(t.direction)) return s + a;
+    return s;
+  }, 0);
+  const spent = Math.max(0, Math.round((gone - bills.paid) * 100) / 100);
+  const overBudget = spendBudget != null && spent > spendBudget;
+  const spending = Math.max(spendBudget ?? 0, spent);
+
   return {
+    carried, spent, overBudget, spending,
     incomeBase, received, expected, useExpected,
     fixed, fixedSavings, fixedSpend: fixed - fixedSavings, fixedItems, fixedPaid: bills.paid,
     spendBudget, deductions, deductionTotal, gross: incomeBase + deductionTotal,
-    free: incomeBase - fixed - (spendBudget ?? 0),
+    free: Math.round((incomeBase + carried - fixed - spending) * 100) / 100,
   };
 }
 

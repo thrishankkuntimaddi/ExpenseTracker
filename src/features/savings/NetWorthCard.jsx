@@ -13,7 +13,7 @@ import { t as tr } from '../../i18n';
 const IDEAS = { asset: ['House / flat', 'Gold at home', 'PF balance', 'Car', 'Land'], liability: ['Home loan', 'Car loan', 'Education loan', 'Credit card'] };
 
 export default function NetWorthCard({ transactions, income, settings, onPatchSettings }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);   // where the number comes from is the point — shown, not hidden
   const [adding, setAdding] = useState(null);   // 'asset' | 'liability' | null
   const n = useMemo(() => netWorth({ transactions, income, settings, todayKey: toKey(new Date()) }), [transactions, income, settings]);
   const items = settings?.netWorth?.items ?? [];
@@ -28,7 +28,7 @@ export default function NetWorthCard({ transactions, income, settings, onPatchSe
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{tr("Net worth")}</span>
           <span style={{ display: 'block', fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', color: n.netWorth < 0 ? 'var(--expense)' : 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{formatBig(n.netWorth)}</span>
-          <span style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)' }}>{formatBig(n.totalAssets)} {tr("you own −")} {formatBig(n.totalLiabilities)} {tr("you owe")}</span>
+          <span style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)' }}>{formatBig(n.totalAssets)} {tr("you own −")} {formatBig(n.totalLiabilities)} {tr("you owe")} · {open ? tr("hide what it’s made of") : tr("see what it’s made of")}</span>
         </span>
         <ChevronRight size={15} style={{ color: 'var(--text-muted)', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
       </button>
@@ -53,8 +53,11 @@ export default function NetWorthCard({ transactions, income, settings, onPatchSe
 
 function Rows({ list, tone, onRemove }) {
   return list.map((r) => (
-    <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: 13 }}>
-      <span style={{ flex: 1, minWidth: 0, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.label}{r.auto ? '' : <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 6 }}>{tr("added")}</span>}</span>
+    <div key={r.key} className="nw-row" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 0', fontSize: 13, borderTop: '1px solid var(--border)' }}>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'block', color: 'var(--text)', fontWeight: 600 }}>{tr(r.label)}</span>
+        {r.hint && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4, marginTop: 1 }}>{tr(r.hint)}</span>}
+      </span>
       <strong style={{ color: r.value < 0 ? 'var(--expense)' : `var(--${tone})`, fontVariantNumeric: 'tabular-nums' }}>{formatMoneyCompact(r.value)}</strong>
       {r.id && <button aria-label={`Remove ${r.label}`} onClick={() => onRemove(r.id)} style={{ width: 22, height: 22, border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={12} /></button>}
     </div>

@@ -20,12 +20,13 @@ import Avatar from '../../components/Avatar';
 import RollingNumber from '../../motion/RollingNumber';
 import { flyCoin, burstCoins, pop } from '../../motion/motion';
 import { formatAmount, formatDateShort } from '../../utils/dateHelpers';
-import { computeTripSummary, unitIdOf } from '../../utils/split';
+import { computeTripSummary, unitIdOf, isAdvance } from '../../utils/split';
 import { categoryMeta } from '../../utils/categories';
 import { generateId } from '../../utils/storage';
 import { toKey } from '../../utils/recurring';
 import { currencySymbol } from '../../utils/money';
 import TripPlan from './TripPlan';
+import TripPool from './TripPool';
 
 import { t as tr } from '../../i18n';
 const newRow = (paidBy = '', date) => ({ id: generateId(), title: '', amount: '', paidBy, splitAmong: [], date });
@@ -171,6 +172,14 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
   }
   const markPaid = (t, e) => addSettlement({ fromUnit: t.from, toUnit: t.to, amount: t.amount }, e);
   const markInsidePaid = (u, t, e) => addSettlement({ fromUnit: u.id, toUnit: u.id, fromMember: t.from, toMember: t.to, amount: t.amount }, e);
+  // Money handed to whoever holds the kitty — several wallets in one go
+  function collect(list, e) {
+    flyCoin({ from: e?.currentTarget, to: '#trip-total', tone: 'gold' });
+    const date = toKey(new Date());
+    const made = list.map((x) => ({ id: generateId(), date, ...x }));
+    if (ops) made.forEach((x) => ops.addSettlement(x));
+    else onChange({ ...latest.current.trip, settlements: [...(latest.current.trip.settlements ?? []), ...made] });
+  }
   const removeSettlement = (id) => (ops ? ops.removeSettlement(id) : onChange({ ...latest.current.trip, settlements: trip.settlements.filter((x) => x.id !== id) }));
 
   const lastPayer = (list) => {
@@ -180,14 +189,15 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
   };
   const allPeople = members.map((m) => ({ value: m.id, label: m.name }));
   const columns = [
-    { key: 'paidBy', label: tr("Person"), type: 'pick', width: 'minmax(96px, 1fr)', placeholder: tr("Who paid?"), options: allPeople,
+    { key: 'paidBy', label: tr("Person"), type: 'pick', width: 'minmax(80px, 1fr)', placeholder: tr("Who paid?"), options: allPeople,
       choices: isOwner ? allPeople : allPeople.filter((o) => walletIds.includes(o.value)), onCreate: isOwner ? createMember : undefined },
-    { key: 'title', label: tr("What"), type: 'text', width: 'minmax(110px, 1.6fr)', placeholder: tr("Fuel, food, toll…") },
-    { key: 'amount', label: `Amount ${currencySymbol(trip.currency)}`, type: 'amount', width: '104px', placeholder: '0' },
+    { key: 'title', label: tr("What"), type: 'text', width: 'minmax(90px, 1.6fr)', placeholder: tr("Fuel, food, toll…") },
+    { key: 'amount', label: `Amount ${currencySymbol(trip.currency)}`, type: 'amount', width: '92px', placeholder: '0' },
   ];
 
   const editing = isOwner && editingMember && members.find((m) => m.id === editingMember);
-  const settlements = trip.settlements ?? [];
+  const advances = (trip.settlements ?? []).filter(isAdvance);
+  const settlements = (trip.settlements ?? []).filter((x) => !isAdvance(x));
   const settlementLabel = (x) => (x.fromUnit === x.toUnit
     ? `${memberName[x.fromMember] ?? '?'} → ${memberName[x.toMember] ?? '?'} (inside wallet)`
     : `${unitName[x.fromUnit] ?? '?'} → ${unitName[x.toUnit] ?? '?'}`);
@@ -327,14 +337,17 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
             onConfirm={() => { setConfirmDelete(false); onDelete(trip.id); }} onCancel={() => setConfirmDelete(false)} />
         )}
 
+        <TripPool summary={s} trip={trip} members={members} unitOf={unitOf} myId={myId} myUnit={myUnit} isOwner={isOwner} closed={closed}
+          money={money} advances={advances} onCollect={collect} onUndo={removeSettlement} />
+
         <div className="card" id="trip-transfers">
           <div style={{ padding: '11px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={label}><ArrowRight size={12} /> {tr("Who pays whom")}</span>
             <span ref={settledRef} className="settle-pop" style={{ fontSize: 11, fontWeight: 700, color: s.isSettled ? 'var(--income)' : 'var(--expense)' }}>
-              {!s.count ? '' : s.isSettled ? tr("All settled ✓") : `${money(s.outstanding)} to settle`}
+              {!s.count && !s.transfers.length ? '' : s.isSettled ? tr("All settled ✓") : `${money(s.outstanding)} to settle`}
             </span>
           </div>
-          {!s.count || members.length < 2 ? (
+          {(!s.count && !s.transfers.length) || members.length < 2 ? (
             <div style={{ padding: 14, fontSize: 12, color: 'var(--text-muted)' }}>{members.length < 2 ? tr("Add at least two people.") : tr("Fill in a row — the plan appears here as you type.")}</div>
           ) : s.transfers.length === 0 ? (
             <div style={{ padding: 14, fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -389,7 +402,11 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
                         {u.name}{u.id === s.meUnit && <span style={{ fontSize: 10, color: 'var(--external)', marginLeft: 6 }}>{tr("you")}</span>}
                         {u.isGroup && <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 6 }}>{tr("one wallet")}</span>}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{tr("paid")} {money(u.paid)} {tr("· share")} {money(u.share)}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                        {tr("paid")} {money(u.paid)} {tr("· share")} {money(u.share)}
+                        {u.advancedOut > 0 && <> · {tr("gave")} {money(u.advancedOut)} {tr("up front")}</>}
+                        {u.advancedIn > 0 && <> · {tr("collected")} {money(u.advancedIn)}</>}
+                      </div>
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: pos ? 'var(--income)' : neg ? 'var(--expense)' : 'var(--text-muted)', flexShrink: 0 }}>
                       {pos ? `gets ${money(u.remaining)}` : neg ? `owes ${money(-u.remaining)}` : 'settled'}

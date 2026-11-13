@@ -140,8 +140,6 @@ nav.desktop-nav button { margin: 0; }
 .desktop-main > .tab-root, .desktop-main > div > .tab-root { width: 100%; max-width: 1120px; margin: 0 auto; }
 .desktop-main .tab-header { margin: 16px 20px 0; border-radius: 24px; }
 .desktop-main .tab-body, .desktop-main .home-body { padding: 18px 20px 40px !important; }
-/* Pages that read best as one column stay a comfortable width */
-.desktop-main:is(.page-bills, .page-budget, .page-savings, .page-people, .page-income) > .tab-root { max-width: 860px; }
 /* Profile on a wide screen: settings list · the open setting (two panes, each scrolls) */
 .desktop-main.page-profile > .tab-root { max-width: 1180px; }
 .desktop-main.page-profile .profile-body:has(.two-pane) { overflow: hidden !important; display: flex; flex-direction: column; padding-bottom: 0 !important; }
@@ -265,6 +263,13 @@ nav.desktop-nav button { margin: 0; }
 .sheet-row:hover .sheet-del, .sheet-row:focus-within .sheet-del { opacity: 1; }
 @media (hover: none) { .sheet-del { opacity: 0.6; } }
 .sheet-del:hover { color: var(--expense); }
+/* Phone: the note / date of a row sit on a second line under it */
+.sheet-wrapped { overflow-x: hidden; }
+.sheet-under { grid-column: 2 / -1; display: grid; border-top: 1px dashed var(--border); }
+.sheet-wrapped .sheet-under .sheet-cell { height: 34px; font-size: 12.5px; color: var(--text-secondary); }
+.sheet-wrapped .sheet-under .sheet-cell:first-child { border-left: 1px solid var(--border) !important; }
+.sheet-wrapped .sheet-row { border-bottom-width: 2px; }
+.sheet-wrapped .sheet-foot { flex-wrap: wrap; }
 .sheet-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--border); background: var(--surface2); font-size: 12px; color: var(--text-muted); }
 .sheet-undo { border: none; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 750; cursor: pointer; }
 /* Trips: the sheet beside the live settlement on wide screens */

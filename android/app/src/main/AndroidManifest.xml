@@ -39,6 +39,17 @@
             </intent-filter>
         </activity>
 
+        <!-- Quick entry from a widget: a small card over the home screen, not the app -->
+        <activity
+            android:name=".QuickEntryActivity"
+            android:exported="false"
+            android:theme="@style/QuickEntryTheme"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:launchMode="singleInstance"
+            android:windowSoftInputMode="stateAlwaysVisible|adjustNothing" />
+
         <!-- Home-screen widgets -->
         <receiver android:name=".QuickAddWidget" android:exported="false" android:label="@string/widget_quick_label">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>

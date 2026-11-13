@@ -183,6 +183,7 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
   - either side of a payment taps **Paid**; inside a wallet the app shows who still owes whom (e.g. *Hanudeep owes Muza*, assuming the one who paid most covered the wallet) and that can be marked paid too
   - closed trips stay in everyone's history; friends can **Add to my ledger** to post their own share
   - enforced by the security rules, not just the screen
+- **Money collected up front**: one person takes ₹1,000 from everyone for food (or ₹5,000 from each family) and pays from it — record the round in one go, see how much of the collected money is left and each person's part of it, **Collect again** when it runs out; whatever is left over is counted in *who pays whom*
 - **Plan & estimate**: start from how you travel (bike: petrol, service, tolls…), add food, stay and things to do, tick them off, and see the estimate against what the trip really cost
 - Trips stay personal until you invite — "one person handles it" works as before
 
@@ -200,7 +201,7 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 - The month at a glance, **six months** of money in / saved / spent, **this vs last month** by category, **the big picture** (savings, goals, responsibilities, debts, cash in hand), where the money went, the biggest spends and the **spending calendar**; the monthly report opens from the *Report* button
 
 ### 👁️ Admin sees (the owner's account only)
-- A **read-only** list of who uses the app — name, email, when they last opened it and last added an entry, how many entries, which app and version — with filters (today, this week, adding entries, opens but adds nothing, no entries, new, going quiet, stopped), search and sorting
+- A **read-only** list of who uses the app — name, email, when they last opened it and last added an entry, how many entries, which app and version — with filters (today, this week, adding entries, opens but adds nothing, no entries, new, going quiet, stopped), search and sorting. **Every account** is counted: people who stopped (30+ days) are folded under one row you open when you want them, and accounts that signed up but never opened an up-to-date app are added once a day by the notifier from the sign-in records
 - Each app writes only a small activity record about its own account (`user_activity/{uid}`); `firestore.rules` lets only the owner's verified account read them and no one write anyone else's. It never includes amounts or entries, and it's deleted with the account
 
 ### 🗣️ Languages
@@ -237,7 +238,8 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 - What you own (money in hand, savings by type, money owed to you, anything you add — a house, gold, PF) minus what you owe (people, responsibilities, loans you add)
 
 ### 📱 Android: widgets, share, scan (app 3.28+, one-time install from the download page)
-- **Home-screen widgets**: *Quick add* (Expense · Money in · Savings · Bills), *This month* (safe to spend / left / spent, today, a seven-day chart, a + button) and *Bills due* (the next three) — choose what they show in Profile → Customize → Home-screen widgets
+- **Home-screen widgets**: *Quick add* (Expense · Money in · Savings · Bills), *This month* (balance / safe to spend / left / spent, today, a seven-day chart drawn to the widget's size, a + button) and *Bills due* (the next three) — choose what they show in Profile → Customize → Home-screen widgets
+- **Type an entry on the home screen** (app with the quick-entry card): Expense, Money in, Savings and + open a small card over the home screen — amount, what it was, Save — without opening the app. The widgets count it at once; it enters the ledger the next time the app is opened (ids are fixed on the phone, so nothing doubles)
 - **Share to Expense Tracker** from GPay, PhonePe, Paytm or any app: a payment message or a screenshot opens Add with the name, amount and date filled in
 - **Scan a receipt or UPI screenshot** in Add → Expense; pictures are read on the phone (ML Kit), never uploaded
 - Older installs keep updating over the air; these appear once the new app is installed

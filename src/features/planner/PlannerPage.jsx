@@ -4,7 +4,7 @@
 // what you spend, earn and have saved — and are remembered in
 // settings.planner. A result can become a Savings goal.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Target, ChevronRight, Info } from 'lucide-react';
+import { Target, ChevronRight, Info, Bookmark, X, Lightbulb } from 'lucide-react';
 import { PageHeader, PrimaryPill } from '../../components/Page';
 import { useShell } from '../../app/shellContext';
 import { retirement, fire, education, stepUpSip, loan, RETIREMENT_DEFAULTS, FIRE_DEFAULTS, EDUCATION_DEFAULTS, SIP_DEFAULTS, LOAN_DEFAULTS } from '../../utils/planner';
@@ -28,6 +28,26 @@ const TABS = [
   { key: 'loan', label: 'Loan' },
   { key: 'tax', label: 'Tax' },
 ];
+/* What each calculator is for, in plain words — shown above its inputs */
+const GUIDE = {
+  retirement: { q: 'How much money do I need to stop working at 60 — and what should I put away each month to get there?', how: 'Enter your age, when you want to retire and what you spend a month today. The rest are sensible assumptions you can leave alone.', then: 'The answer is one monthly amount. Tap “Make it a goal” and Savings tracks it for you.' },
+  fire: { q: 'Could I stop working early — say at 45 — and live off my investments?', how: 'FIRE means “financial independence, retire early”: once your investments are about 25 times your yearly expenses, they can pay for your life. Enter what you earn, spend and have invested.', then: 'You see the amount you need, whether you reach it, and the earliest age you could stop.' },
+  education: { q: 'What will my child’s college cost when they get there, and how much should I save each month for it?', how: 'Enter the child’s age, the age they’ll need the money, and what the course costs today. Fees rise fast, so the future cost is much higher.', then: 'Pick the monthly, yearly or one-time amount that suits you, or check a plan you already have.' },
+  sip: { q: 'If I invest a fixed amount every month (a SIP), what will it grow to?', how: 'Enter the monthly amount, for how many years, and how much you’ll raise it each year. Save one plan per SIP — a mutual fund, gold, a recurring deposit.', then: 'Compare what you put in with what it becomes. Add it as a monthly payment in Bills so it is not forgotten.' },
+  loan: { q: 'What will this loan really cost me — the monthly EMI, the total interest — and how much do I save by paying a little extra?', how: 'Enter the amount, interest rate and years. Save one plan per loan (home, car, personal) to see all your EMIs together.', then: 'Try an extra amount each month: even a small one cuts years and a lot of interest.' },
+  tax: { q: 'Am I using the tax savings I’m allowed this financial year?', how: 'Built from your own entries — insurance, PF, investments, home-loan interest. Pick your tax slab.', then: 'It shows what is still unused under each section, and the tax that would save.' },
+};
+const HEADLINE = {
+  retirement: (v) => `${tr("needs")} ${formatBig(retirement(v).corpus)}`,
+  fire: (v) => `${tr("needs")} ${formatBig(fire(v).fireNumber)}`,
+  education: (v) => `${tr("needs")} ${formatBig(education(v).corpus)}`,
+  sip: (v) => `${formatMoneyCompact(v.monthly)} ${tr("a month")}`,
+  loan: (v) => `EMI ${formatMoneyCompact(loan(v).emi)}`,
+};
+const TOTAL = {
+  sip: (list) => `${tr("All your SIPs:")} ${formatMoneyCompact(list.reduce((t, p) => t + (Number(p.v.monthly) || 0), 0))} ${tr("a month")}`,
+  loan: (list) => `${tr("All your loans:")} ${formatMoneyCompact(list.reduce((t, p) => t + (loan(p.v).emi || 0), 0))} ${tr("EMI a month ·")} ${formatBig(list.reduce((t, p) => t + (Number(p.v.principal) || 0), 0))} ${tr("borrowed")}`,
+};
 const big = (n) => formatBig(n);
 const money = (n) => formatMoneyCompact(n);
 
@@ -72,13 +92,26 @@ export default function PlannerPage({ transactions = [], income = [], settings, 
     tax: { slab: 0.2, ...saved.tax },
   }));
 
+  // Named plans kept per calculator — one per loan, per SIP, per child …
+  const [plans, setPlans] = useState(() => saved.plans ?? {});
+  const [rev, setRev] = useState(0);   // loading a plan re-mounts the inputs with its values
+  const savePlan = (name) => setPlans((p) => {
+    const list = p[tab] ?? [];
+    const same = list.find((x) => x.name.toLowerCase() === name.toLowerCase());
+    const next = same ? list.map((x) => (x === same ? { ...x, v: inputs[tab] } : x)) : [...list, { id: generateId(), name, v: inputs[tab] }].slice(-20);
+    shell?.toast?.(same ? `Updated “${same.name}”` : `Saved “${name}”`);
+    return { ...p, [tab]: next };
+  });
+  const loadPlan = (pl) => { setInputs((s) => ({ ...s, [tab]: { ...s[tab], ...pl.v } })); setRev((r) => r + 1); };
+  const removePlan = (id) => setPlans((p) => ({ ...p, [tab]: (p[tab] ?? []).filter((x) => x.id !== id) }));
+
   // Remember inputs (quietly, a moment after the last change)
   const first = useRef(true);
   useEffect(() => {
     if (first.current) { first.current = false; return undefined; }
-    const t = setTimeout(() => onPatchSettings?.({ planner: { ...inputs, tab } }), 700);
+    const t = setTimeout(() => onPatchSettings?.({ planner: { ...inputs, tab, plans } }), 700);
     return () => clearTimeout(t);
-  }, [inputs, tab]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [inputs, tab, plans]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (calc) => (key, value) => setInputs((s) => ({ ...s, [calc]: { ...s[calc], [key]: value } }));
 
@@ -100,17 +133,76 @@ export default function PlannerPage({ transactions = [], income = [], settings, 
             <button key={tb.key} id={`planner-tab-${tb.key}`} role="tab" aria-selected={tab === tb.key} className={tab === tb.key ? 'on' : ''} onClick={() => setTab(tb.key)}>{tr(tb.label)}</button>
           ))}
         </div>
+        <Guide tab={tab} />
+        {tab !== 'tax' && <SavedPlans key={tab} tab={tab} list={plans[tab] ?? []} current={inputs[tab]} onSave={savePlan} onLoad={loadPlan} onRemove={removePlan} />}
+        <div key={`${tab}-${rev}`}>
         {tab === 'retirement' && <Retirement v={inputs.retirement} set={set('retirement')} onGoal={makeGoal} />}
         {tab === 'fire' && <Fire v={inputs.fire} set={set('fire')} onGoal={makeGoal} />}
         {tab === 'education' && <Education v={inputs.education} set={set('education')} onGoal={makeGoal} />}
         {tab === 'sip' && <Sip v={inputs.sip} set={set('sip')} />}
         {tab === 'loan' && <Loan v={inputs.loan} set={set('loan')} />}
         {tab === 'tax' && <Tax v={inputs.tax} set={set('tax')} transactions={transactions} recurringRules={recurring?.rules ?? []} rules={rules} />}
+        </div>
         <p style={{ display: 'flex', gap: 6, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, margin: '14px 2px 0' }}>
           <Info size={13} style={{ flexShrink: 0, marginTop: 1 }} />
           {tr("Estimates, not advice. Returns and inflation are assumptions — change them to see how the picture moves.")}
         </p>
       </div>
+    </div>
+  );
+}
+
+/* ── What this calculator answers ───────────────────────────────── */
+function Guide({ tab }) {
+  const g = GUIDE[tab];
+  if (!g) return null;
+  return (
+    <div className="card planner-guide" id="planner-guide" style={{ padding: '12px 14px', marginBottom: 12, display: 'flex', gap: 10 }}>
+      <Lightbulb size={16} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }} />
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', lineHeight: 1.4 }}>{tr(g.q)}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, marginTop: 4 }}>{tr(g.how)}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}>{tr(g.then)}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Your saved plans for this calculator ───────────────────────── */
+function SavedPlans({ tab, list, current, onSave, onLoad, onRemove }) {
+  const [name, setName] = useState('');
+  const [naming, setNaming] = useState(false);
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const submit = () => { const n = name.trim().slice(0, 40); if (!n) return; onSave(n); setName(''); setNaming(false); };
+  const chip = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 6px 6px 11px', fontSize: 12, fontFamily: 'inherit', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' };
+  return (
+    <div id="planner-plans" style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+        {list.map((pl) => {
+          const on = same({ ...current, ...pl.v }, current);
+          return (
+            <span key={pl.id} style={{ ...chip, borderColor: on ? 'var(--accent)' : 'var(--border)', background: on ? 'var(--accent-bg)' : 'var(--surface2)' }}>
+              <button type="button" onClick={() => onLoad(pl)} style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, textAlign: 'left', color: 'inherit' }}>
+                <strong>{pl.name}</strong> <span style={{ color: 'var(--text-muted)' }}>· {HEADLINE[tab]?.(pl.v)}</span>
+              </button>
+              <button type="button" aria-label={`Remove ${pl.name}`} onClick={() => onRemove(pl.id)} style={{ width: 20, height: 20, border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={12} /></button>
+            </span>
+          );
+        })}
+        {naming ? (
+          <span style={{ display: 'inline-flex', gap: 6, flex: '1 1 200px', maxWidth: 320 }}>
+            <input id="planner-plan-name" autoFocus value={name} maxLength={40} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') setNaming(false); }}
+              placeholder={tab === 'loan' ? tr("Home loan, car loan…") : tab === 'sip' ? tr("Mutual fund, gold, RD…") : tr("A name for this plan")} style={{ ...fieldStyle, flex: 1, padding: '7px 10px', fontSize: 13 }} />
+            <button type="button" id="planner-plan-save" onClick={submit} disabled={!name.trim()} style={{ padding: '0 12px', border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', opacity: name.trim() ? 1 : 0.5 }}>{tr("Save")}</button>
+          </span>
+        ) : (
+          <button type="button" id="planner-plan-add" onClick={() => setNaming(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 11px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: '1px dashed var(--accent)', background: 'transparent', color: 'var(--accent)' }}>
+            <Bookmark size={12} /> {list.length ? tr("Save as another plan") : tr("Save this plan")}
+          </button>
+        )}
+      </div>
+      {list.length === 0 && !naming && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>{tr("Have more than one? Save each with a name and switch between them.")}</div>}
+      {list.length > 1 && TOTAL[tab] && <div id="planner-plans-total" style={{ fontSize: 12, fontWeight: 650, color: 'var(--text-secondary)', marginTop: 8 }}>{TOTAL[tab](list)}</div>}
     </div>
   );
 }

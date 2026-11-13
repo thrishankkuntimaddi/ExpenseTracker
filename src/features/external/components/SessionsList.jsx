@@ -4,18 +4,22 @@ import { formatAmount, formatDate } from '../../../utils/dateHelpers';
 import HistoryCard from './HistoryCard';
 
 import { t as tr } from '../../../i18n';
-/* What Billings adds up to: open now, spent for others, got back, still out */
+/* What Billings adds up to. Only CLOSED billings count as spent / got back:
+   a draft or an open one isn't in the ledger yet and its rows can still
+   change — those are shown apart, as "in progress". */
 function Overview({ sessions }) {
   const live = sessions.filter(s => s.status !== 'archived');
-  const spent = live.reduce((t, s) => t + (Number(s.total_spent) || 0), 0);
-  const back = live.reduce((t, s) => t + (Number(s.total_received) || 0), 0);
-  const out = live.filter(s => s.status === 'closed').reduce((t, s) => t + Math.max(0, -(Number(s.net_balance) || 0)), 0);
-  const open = live.filter(s => s.status === 'open' || s.status === 'draft').length;
-  const closed = live.filter(s => s.status === 'closed').length;
+  const done = live.filter(s => s.status === 'closed');
+  const pending = live.filter(s => s.status === 'open' || s.status === 'draft');
+  const sum = (list, k) => list.reduce((t, s) => t + (Number(s[k]) || 0), 0);
+  const spent = sum(done, 'total_spent');
+  const back = sum(done, 'total_received');
+  const out = done.reduce((t, s) => t + Math.max(0, -(Number(s.net_balance) || 0)), 0);
+  const pendingSpent = sum(pending, 'total_spent');
   return (
-    <div className="overview-stats">
-      <div className="overview-stat"><div className="k">{tr("Open")}</div><div className="v">{open}</div><div className="s">{closed} {tr("closed")}</div></div>
-      <div className="overview-stat"><div className="k">{tr("Spent for others")}</div><div className="v" style={{ color: 'var(--expense)' }}>{formatAmount(spent)}</div><div className="s">{tr("all billings")}</div></div>
+    <div className="overview-stats" id="billings-overview">
+      <div className="overview-stat"><div className="k">{tr("Open")}</div><div className="v">{pending.length}</div><div className="s">{pendingSpent > 0 ? `${formatAmount(pendingSpent)} ${tr("not counted yet")}` : `${done.length} ${tr("closed")}`}</div></div>
+      <div className="overview-stat"><div className="k">{tr("Spent for others")}</div><div className="v" style={{ color: 'var(--expense)' }}>{formatAmount(spent)}</div><div className="s">{tr("closed billings")}</div></div>
       <div className="overview-stat"><div className="k">{tr("Got back")}</div><div className="v" style={{ color: 'var(--income)' }}>{formatAmount(back)}</div><div className="s">{spent ? `${Math.round(Math.min(1, back / spent) * 100)}% recovered` : '—'}</div></div>
       <div className="overview-stat"><div className="k">{tr("Not recovered")}</div><div className="v" style={{ color: out > 0 ? 'var(--expense)' : 'var(--text)' }}>{out > 0 ? formatAmount(out) : '—'}</div><div className="s">{tr("on closed billings")}</div></div>
     </div>

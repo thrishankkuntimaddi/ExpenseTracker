@@ -7,8 +7,14 @@
 //   id, name, startDate, endDate?, status: 'open'|'closed', meMemberId?,
 //   members:     [{ id, name, groupId? }],
 //   expenses:    [{ id, title, amount, paidBy: memberId, splitAmong: memberId[] (empty = everyone), date, category? }],
-//   settlements: [{ id, fromUnit, toUnit, amount, date, note?, fromMember?, toMember? }],
+//   settlements: [{ id, fromUnit, toUnit, amount, date, note?, fromMember?, toMember?, kind? }],
 // }
+//
+// Money collected up front ("Shiva takes ₹1,000 from each of us for food") is
+// a settlement with kind: 'advance' — paid before the spending instead of
+// after it. The maths is the same (giving raises your balance, holding
+// lowers it); `pools` reports each holder's kitty: collected, spent on the
+// others, what is left of it.
 //
 // A settlement inside one wallet (fromUnit === toUnit) is the partner paying
 // back what the other covered — e.g. Hanudeep repaying Muza after the trip.
@@ -98,21 +104,69 @@ function walletInside(unit, memberRows, settlements) {
   return { lead, transfers: settleTransfers(net) };
 }
 
+export const isAdvance = (s) => s?.kind === 'advance';
+
+/**
+ * One kitty per wallet that holds collected money.
+ *   collected  what the others handed over
+ *   spent      the others' share of everything the holder paid for
+ *   left       collected − spent (below zero: the holder is out of pocket —
+ *              time to collect again)
+ *   givers     per wallet: given, used (its share of the holder's spending), left
+ */
+function buildPools(advances, unitRows, usedFrom, memberName) {
+  const byHolder = new Map();
+  advances.forEach((a) => {
+    if (!byHolder.has(a.toUnit)) byHolder.set(a.toUnit, []);
+    byHolder.get(a.toUnit).push(a);
+  });
+  return [...byHolder.entries()].map(([unitId, list]) => {
+    const unit = unitRows.find((u) => u.id === unitId);
+    if (!unit) return null;
+    const used = usedFrom[unitId] ?? {};
+    const given = {};
+    list.forEach((a) => { given[a.fromUnit] = round2((given[a.fromUnit] ?? 0) + (Number(a.amount) || 0)); });
+    const givers = Object.entries(given).map(([id, amount]) => ({
+      unitId: id, name: unitRows.find((u) => u.id === id)?.name ?? '?',
+      given: amount, used: used[id] ?? 0, left: round2(amount - (used[id] ?? 0)),
+    }));
+    const collected = sumAmounts(list);
+    const spent = round2(Object.entries(used).reduce((sum, [id, v]) => (id === unitId ? sum : sum + v), 0));
+    // The person inside the wallet who actually holds it, when the rows say so
+    const holderId = [...list].reverse().map((a) => a.toMember).find((id) => unit.memberIds.includes(id));
+    const notes = [...new Set(list.map((a) => String(a.note ?? '').trim()).filter(Boolean))];
+    return {
+      unitId, holderId: holderId ?? null, holderName: memberName[holderId] ?? unit.name,
+      purpose: notes.join(', '), collected, paid: unit.paid, spent, left: round2(collected - spent),
+      givers, lastAmount: Number(list[list.length - 1]?.amount) || 0,
+    };
+  }).filter(Boolean);
+}
+
 export function computeTripSummary(trip) {
   const members = trip?.members ?? [];
   // Unfinished table rows (no payer / no amount) are ignored
   const expenses = (trip?.expenses ?? []).filter((e) => e.paidBy && Number(e.amount) > 0);
   const settlements = trip?.settlements ?? [];
   const external = settlements.filter((s) => s.fromUnit !== s.toUnit);
+  const advances = external.filter(isAdvance);
+  const repaid = external.filter((s) => !isAdvance(s));
   const units = buildUnits(members);
   const unitOfMember = Object.fromEntries(members.map((m) => [m.id, unitIdOf(m)]));
   const memberName = Object.fromEntries(members.map((m) => [m.id, m.name]));
 
   const paid = {}, share = {};
+  const usedFrom = {};   // payer's wallet → wallet → its share of what that payer paid
   members.forEach((m) => { paid[m.id] = 0; share[m.id] = 0; });
   expenses.forEach((e) => {
     if (paid[e.paidBy] !== undefined) paid[e.paidBy] = round2(paid[e.paidBy] + (Number(e.amount) || 0));
-    Object.entries(expenseShares(e, members)).forEach(([id, v]) => { share[id] = round2(share[id] + v); });
+    const from = unitOfMember[e.paidBy];
+    Object.entries(expenseShares(e, members)).forEach(([id, v]) => {
+      share[id] = round2(share[id] + v);
+      if (!from) return;
+      const row = (usedFrom[from] ??= {});
+      row[unitOfMember[id]] = round2((row[unitOfMember[id]] ?? 0) + v);
+    });
   });
 
   const memberRows = members.map((m) => ({
@@ -129,7 +183,9 @@ export function computeTripSummary(trip) {
     const settledIn = sumAmounts(external.filter((s) => s.toUnit === u.id));
     // Paying a settlement raises your balance; receiving one lowers it
     const remaining = round2(net + settledOut - settledIn);
-    const row = { ...u, paid: uPaid, share: uShare, net, settledOut, settledIn, remaining, isGroup: u.memberIds.length > 1 };
+    const advancedOut = sumAmounts(advances.filter((s) => s.fromUnit === u.id));
+    const advancedIn = sumAmounts(advances.filter((s) => s.toUnit === u.id));
+    const row = { ...u, paid: uPaid, share: uShare, net, settledOut, settledIn, advancedOut, advancedIn, remaining, isGroup: u.memberIds.length > 1 };
     if (row.isGroup) {
       const inside = walletInside(row, memberRows, settlements);
       row.lead = inside.lead;
@@ -142,7 +198,8 @@ export function computeTripSummary(trip) {
   const transfers = settleTransfers(Object.fromEntries(unitRows.map((u) => [u.id, u.remaining])));
   const unitName = Object.fromEntries(unitRows.map((u) => [u.id, u.name]));
   const outstanding = sumAmounts(transfers);
-  const settledTotal = sumAmounts(external);
+  const settledTotal = sumAmounts(repaid);
+  const collectedTotal = sumAmounts(advances);
   const meUnit = trip?.meMemberId ? unitOfMember[trip.meMemberId] : null;
 
   // Where the money went: by category, by day
@@ -155,7 +212,8 @@ export function computeTripSummary(trip) {
     perHead: members.length ? round2(total / members.length) : 0,
     members: memberRows, units: unitRows, categories,
     transfers: transfers.map((t) => ({ ...t, fromName: unitName[t.from], toName: unitName[t.to] })),
-    outstanding, settledTotal,
+    outstanding, settledTotal, collectedTotal,
+    pools: buildPools(advances, unitRows, usedFrom, memberName),
     isSettled: expenses.length > 0 && transfers.length === 0,
     meUnit,
     myShare: trip?.meMemberId ? share[trip.meMemberId] ?? 0 : null,
@@ -183,16 +241,25 @@ export function tripSummaryText(trip, fmt = (n) => formatMoney(n, trip?.currency
   lines.push('*Paid vs share*');
   s.units.forEach((u) => {
     const tail = u.remaining > 0.004 ? `gets ${fmt(u.remaining)}` : u.remaining < -0.004 ? `owes ${fmt(-u.remaining)}` : 'settled';
-    lines.push(`• ${u.name}${u.isGroup ? ' (one wallet)' : ''}: paid ${fmt(u.paid)} · share ${fmt(u.share)} → ${tail}`);
+    const upfront = `${u.advancedOut > 0 ? ` · gave ${fmt(u.advancedOut)} up front` : ''}${u.advancedIn > 0 ? ` · collected ${fmt(u.advancedIn)}` : ''}`;
+    lines.push(`• ${u.name}${u.isGroup ? ' (one wallet)' : ''}: paid ${fmt(u.paid)} · share ${fmt(u.share)}${upfront} → ${tail}`);
   });
+  if (s.pools.length) {
+    lines.push('', '*Collected up front*');
+    s.pools.forEach((p) => {
+      const left = p.left >= 0 ? `${fmt(p.left)} left` : `${fmt(-p.left)} over`;
+      lines.push(`• ${p.holderName}${p.purpose ? ` (${p.purpose})` : ''}: collected ${fmt(p.collected)} · spent ${fmt(p.spent)} of it → ${left}`);
+      lines.push(`   ${p.givers.map((g) => `${g.name} ${fmt(g.given)}`).join(' · ')}`);
+    });
+  }
   lines.push('');
   if (s.transfers.length) {
     lines.push('*To settle*');
     s.transfers.forEach((t) => lines.push(`→ ${t.fromName} pays ${t.toName} ${fmt(t.amount)}`));
   } else {
-    lines.push(s.count ? '✅ All settled' : 'No expenses yet');
+    lines.push(s.count || s.pools.length ? '✅ All settled' : 'No expenses yet');
   }
-  const external = (trip.settlements ?? []).filter((x) => x.fromUnit !== x.toUnit);
+  const external = (trip.settlements ?? []).filter((x) => x.fromUnit !== x.toUnit && !isAdvance(x));
   if (external.length) {
     lines.push('', '*Already paid*');
     external.forEach((x) => lines.push(`✓ ${unitName[x.fromUnit] ?? '?'} → ${unitName[x.toUnit] ?? '?'} ${fmt(x.amount)}`));

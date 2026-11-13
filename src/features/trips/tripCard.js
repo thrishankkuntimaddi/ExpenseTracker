@@ -2,7 +2,7 @@
 // Everything the group needs in one picture: totals, who pays whom, what's
 // already paid, each wallet's paid vs share (and who owes whom inside a
 // wallet), where the money went, and every row.
-import { computeTripSummary } from '../../utils/split';
+import { computeTripSummary, isAdvance } from '../../utils/split';
 import { categoryMeta } from '../../utils/categories';
 import { formatAmount, formatDateShort } from '../../utils/dateHelpers';
 import { renderShareCard } from '../../utils/shareCard';
@@ -14,7 +14,7 @@ export function tripCard(trip) {
   const unitName = Object.fromEntries(s.units.map((u) => [u.id, u.name]));
   const closed = trip.status === 'closed' || trip.status === 'archived';
   const dates = trip.startDate ? `${formatDateShort(trip.startDate)}${trip.endDate ? ` – ${formatDateShort(trip.endDate)}` : ''}` : null;
-  const external = (trip.settlements ?? []).filter((x) => x.fromUnit !== x.toUnit);
+  const external = (trip.settlements ?? []).filter((x) => x.fromUnit !== x.toUnit && !isAdvance(x));
 
   const sections = [];
   sections.push({
@@ -28,11 +28,25 @@ export function tripCard(trip) {
       rows: external.map((x) => ({ left: `✓ ${unitName[x.fromUnit] ?? '?'} → ${unitName[x.toUnit] ?? '?'}`, sub: x.date ? formatDateShort(x.date) : undefined, right: money(x.amount), tone: 'income' })),
     });
   }
+  if (s.pools.length) {
+    sections.push({
+      title: `Collected up front · ${money(s.collectedTotal)}`,
+      rows: s.pools.flatMap((p) => [
+        {
+          left: `${p.holderName} holds${p.purpose ? ` · ${p.purpose}` : ''}`,
+          sub: `collected ${money(p.collected)} · spent ${money(p.spent)} of it`,
+          right: p.left >= 0 ? `${money(p.left)} left` : `${money(-p.left)} over`,
+          tone: p.left >= 0 ? 'income' : 'expense',
+        },
+        ...p.givers.map((g) => ({ left: `${g.name} gave`, right: money(g.given), dim: true })),
+      ]),
+    });
+  }
   sections.push({
     title: 'Paid vs share',
     rows: s.units.map((u) => ({
       left: `${u.name}${u.isGroup ? ' · one wallet' : ''}`,
-      sub: `paid ${money(u.paid)} · share ${money(u.share)}`,
+      sub: `paid ${money(u.paid)} · share ${money(u.share)}${u.advancedOut > 0 ? ` · gave ${money(u.advancedOut)} up front` : ''}${u.advancedIn > 0 ? ` · collected ${money(u.advancedIn)}` : ''}`,
       right: u.remaining > 0.004 ? `gets ${money(u.remaining)}` : u.remaining < -0.004 ? `owes ${money(-u.remaining)}` : 'settled',
       tone: u.remaining > 0.004 ? 'income' : u.remaining < -0.004 ? 'expense' : 'sub',
     })),

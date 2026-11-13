@@ -119,4 +119,68 @@ describe('inside a pay-together wallet', () => {
     expect(text).toContain('Hanudeep pays Muza ₹2000');
     expect(text).toContain('Thrishank · Fuel · ₹4000');
   });
+  // The bike trip: Shiva takes ₹1,000 a head for food and pays for it; Pradeep pays for bowling.
+  describe('money collected up front', () => {
+    const members = [{ id: 's', name: 'Shiva' }, { id: 'p', name: 'Pradeep' }, { id: 'm', name: 'Mandeep' }, { id: 't', name: 'Thrishank' }];
+    const give = (from, amount = 1000, extra = {}) => ({ id: `a-${from}-${amount}`, kind: 'advance', fromUnit: `m:${from}`, toUnit: 'm:s', fromMember: from, toMember: 's', amount, note: 'Food', ...extra });
+    const trip = {
+      id: 'bike', name: 'Bike trip', members, meMemberId: 't',
+      expenses: [
+        { id: 'e1', title: 'Food day 1', amount: 3600, paidBy: 's', splitAmong: [] },
+        { id: 'e2', title: 'Bowling', amount: 780, paidBy: 'p', splitAmong: [] },
+      ],
+      settlements: [give('p'), give('m'), give('t')],
+    };
+
+    it('counts what was handed over, and what is left of it', () => {
+      const s = computeTripSummary(trip);
+      expect(s.total).toBe(4380);
+      expect(s.collectedTotal).toBe(3000);
+      expect(s.settledTotal).toBe(0);                      // handing money to the holder is not a repayment
+      const [pool] = s.pools;
+      expect(pool).toMatchObject({ holderName: 'Shiva', purpose: 'Food', collected: 3000, spent: 2700, left: 300, paid: 3600 });
+      expect(pool.givers.map((g) => [g.name, g.given, g.left])).toEqual([['Pradeep', 1000, 100], ['Mandeep', 1000, 100], ['Thrishank', 1000, 100]]);
+      // Shiva: paid 3600 − got 3000 − share 1095 = owes 495; Pradeep: 1000 + 780 − 1095 = gets 685
+      const left = Object.fromEntries(s.units.map((u) => [u.name, u.remaining]));
+      expect(left).toEqual({ Shiva: -495, Pradeep: 685, Mandeep: -95, Thrishank: -95 });
+      expect(s.transfers.map((t) => [t.fromName, t.toName, t.amount])).toEqual([['Shiva', 'Pradeep', 495], ['Mandeep', 'Pradeep', 95], ['Thrishank', 'Pradeep', 95]]);
+      expect(s.units.find((u) => u.name === 'Shiva').advancedIn).toBe(3000);
+      expect(s.units.find((u) => u.name === 'Thrishank').advancedOut).toBe(1000);
+    });
+
+    it('says when the kitty has run out, and a second round refills it', () => {
+      const more = { ...trip, expenses: [...trip.expenses, { id: 'e3', title: 'Food day 2', amount: 2000, paidBy: 's', splitAmong: [] }] };
+      expect(computeTripSummary(more).pools[0].left).toBe(-1200);          // 3000 − ¾ of 5600
+      const again = { ...more, settlements: [...more.settlements, give('p', 500), give('m', 500), give('t', 500)] };
+      const pool = computeTripSummary(again).pools[0];
+      expect(pool).toMatchObject({ collected: 4500, left: 300, lastAmount: 500 });
+      expect(pool.givers[0]).toMatchObject({ given: 1500, used: 1400, left: 100 });
+    });
+
+    it('collected with nothing spent yet: the holder owes it all back', () => {
+      const s = computeTripSummary({ ...trip, expenses: [] });
+      expect(s.transfers.map((t) => [t.fromName, t.amount])).toEqual([['Shiva', 1000], ['Shiva', 1000], ['Shiva', 1000]]);
+      expect(s.pools[0].left).toBe(3000);
+    });
+
+    it('families: one handover per wallet, the holder’s own family pays nothing in', () => {
+      const fam = [{ id: 'a1', name: 'Anna', groupId: 'A' }, { id: 'a2', name: 'Vadina', groupId: 'A' }, { id: 'b1', name: 'Ravi', groupId: 'B' }, { id: 'b2', name: 'Sita', groupId: 'B' }];
+      const s = computeTripSummary({
+        members: fam,
+        expenses: [{ id: 'f', title: 'Meals', amount: 4000, paidBy: 'a2', splitAmong: [] }],
+        settlements: [{ id: 'x', kind: 'advance', fromUnit: 'g:B', toUnit: 'g:A', toMember: 'a1', amount: 5000 }],
+      });
+      expect(s.pools[0]).toMatchObject({ holderName: 'Anna', collected: 5000, spent: 2000, left: 3000 });
+      expect(s.transfers.map((t) => [t.fromName, t.toName, t.amount])).toEqual([['Anna & Vadina', 'Ravi & Sita', 3000]]);
+    });
+
+    it('the shared text lists it apart from payments made', () => {
+      const text = tripSummaryText({ ...trip, settlements: [...trip.settlements, { id: 'r', fromUnit: 'm:m', toUnit: 'm:p', amount: 95 }] }, (n) => `₹${n}`);
+      expect(text).toContain('*Collected up front*');
+      expect(text).toContain('Shiva (Food): collected ₹3000 · spent ₹2700 of it → ₹300 left');
+      expect(text).toContain('gave ₹1000 up front');
+      expect(text.split('*Already paid*')[1]).toContain('Mandeep → Pradeep ₹95');
+      expect(text.split('*Already paid*')[1]).not.toContain('→ Shiva');
+    });
+  });
 });

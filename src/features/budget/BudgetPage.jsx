@@ -234,7 +234,8 @@ function PlanCard({ plan, monthKey, budgets, onSave }) {
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>
         {monthName(monthKey, { month: 'long' })} {tr("plan")}
       </div>
-      {row(plan.useExpected ? 'Income (expected)' : 'Income received', round(plan.incomeBase), { color: 'var(--income)' })}
+      {row(plan.useExpected ? tr("Income (expected)") : tr("Income received"), round(plan.incomeBase), { color: 'var(--income)' })}
+      {plan.carried > 0 && row(tr("+ Carried in from last month"), round(plan.carried), { color: 'var(--income)' })}
       <button id="budget-fixed-toggle" onClick={() => setShowFixed((v) => !v)} style={{ width: '100%', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
         {row(<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{tr("− Fixed payments ·")} {plan.fixedItems.length}<ChevronRight size={13} style={{ transform: showFixed ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} /></span>, round(plan.fixed), { color: 'var(--expense)' })}
       </button>
@@ -252,8 +253,15 @@ function PlanCard({ plan, monthKey, budgets, onSave }) {
           {shell && <button onClick={() => shell.goTo('bills')} style={{ padding: '4px 0', border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{tr("Manage in Bills & payments")}</button>}
         </div>
       )}
-      {row('− Spending budget', plan.spendBudget != null ? round(plan.spendBudget) : 'not set', { color: plan.spendBudget != null ? 'var(--text)' : 'var(--text-muted)' })}
-      {row(plan.free >= 0 ? 'Left to save or spare' : 'Short by', round(Math.abs(plan.free)), { top: true, big: true, color: plan.free >= 0 ? 'var(--income)' : 'var(--expense)' })}
+      {plan.spendBudget != null && !plan.overBudget
+        ? row(<>{tr("− Spending budget")} <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>· {round(plan.spent)} {tr("spent so far")}</span></>, round(plan.spendBudget))
+        : row(<>{tr("− Spent so far")} <span style={{ fontWeight: 500, color: plan.overBudget ? 'var(--expense)' : 'var(--text-muted)' }}>· {plan.overBudget ? `${tr("over the")} ${round(plan.spendBudget)} ${tr("budget")}` : tr("no spending budget set")}</span></>, round(plan.spent), { color: plan.overBudget ? 'var(--expense)' : 'var(--text)' })}
+      {row(plan.free >= 0 ? tr("Left to save or spare") : tr("Short by"), round(Math.abs(plan.free)), { top: true, big: true, color: plan.free >= 0 ? 'var(--income)' : 'var(--expense)' })}
+      <div id="budget-plan-how" style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+        {plan.spendBudget != null && !plan.overBudget
+          ? tr("If you spend your whole budget, this much is still free. Set aside some of it in Savings.")
+          : tr("What you still have this month after everything that has gone out.")}
+      </div>
       {plan.incomeBase === 0 && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{tr("Add this month’s income (or a recurring salary in Bills) to see the plan.")}</div>}
 
       {/* Salary deductions — taken before the money reaches you */}
