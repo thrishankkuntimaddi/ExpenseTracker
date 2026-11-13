@@ -36,7 +36,7 @@ public class QuickEntryActivity extends Activity {
     private static final String[] KINDS = { "expense", "income", "savings" };
     private static final String[] LABELS = { "Expense", "Money in", "Savings" };
     private static final String[] HINTS = { "What for? Tea, petrol, groceries…", "From? Salary, a friend…", "Where? SIP, gold, cash…" };
-    private static final int[] TONES = { 0xFFE11D48, 0xFF059669, 0xFF2563EB };
+    private static final int[] TONES = { 0xFFFF3B30, 0xFF1E9E4A, 0xFF007AFF };
 
     private int kind = 0;
     private boolean dark;
@@ -63,8 +63,8 @@ public class QuickEntryActivity extends Activity {
         dark = WidgetRender.dark(this, data);
         String symbol = WidgetRender.symbol(data);
 
-        int surface = dark ? 0xFF161A23 : 0xFFFFFFFF, text = dark ? 0xFFE8ECF4 : 0xFF0F172A, muted = dark ? 0xFF9AA3B5 : 0xFF64748B;
-        int field = dark ? 0xFF1F2430 : 0xFFF1F5F9, line = dark ? 0x22FFFFFF : 0x1A0F172A;
+        int surface = dark ? 0xFF1C1C1E : 0xFFFFFFFF, text = dark ? 0xFFF5F5F7 : 0xFF0A0A0C, muted = dark ? 0xFFAEAEB2 : 0xFF6C6C70;
+        int field = dark ? 0xFF2C2C2E : 0xFFF2F2F7, line = dark ? 0x22FFFFFF : 0x1A0A0A0C;
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
         getWindow().setDimAmount(0.55f);

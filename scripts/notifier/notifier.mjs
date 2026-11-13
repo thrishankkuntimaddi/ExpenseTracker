@@ -139,20 +139,37 @@ function describe(e) {
 }
 const ALERT_EMAIL_TYPES = new Set([...ALERT_TYPES, 'new_device']);
 
+/* Email look (4.1): the app's colourless Liquid Glass, as far as email clients
+   allow — Apple grey page, one white rounded card with a hairline, the app icon,
+   SF / system type, graphite text, black capsule buttons. No purple. */
+const MAIL_ICON = new URL('icon-192.png', APP_URL).href;
+const MAIL_FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+const mailButton = (href, label, big = false) =>
+  `<a href="${href}" style="display:inline-block;background:#0A0A0C;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:${big ? 16 : 15}px;padding:${big ? '14px 30px' : '12px 24px'};border-radius:999px">${label}</a>`;
+const mailHead = (label) =>
+  `<table role="presentation" cellspacing="0" cellpadding="0"><tr><td><img src="${MAIL_ICON}" width="40" height="40" alt="Expense Tracker" style="display:block;border:0;border-radius:10px"></td><td style="padding-left:12px;font-size:13px;font-weight:600;color:#6C6C70">${label}</td></tr></table>`;
+
 function emailOf(text, e, extra, tz) {
   const when = new Date(e.at).toLocaleString('en-IN', { timeZone: tz || 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
   const lines = [text.body, ...extra, '', `When: ${when}`, `Device: ${e.device ?? 'unknown'}`, '', text.act, 'If this was you, there’s nothing to do.', '', `Open Expense Tracker: ${APP_URL}`];
   const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-  const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1a1a2e">
-  <div style="font-size:13px;font-weight:700;color:#6d5df6;letter-spacing:.04em;text-transform:uppercase">Expense Tracker · Security</div>
-  <h1 style="font-size:20px;margin:10px 0 12px">${esc(text.title)}</h1>
-  <p style="font-size:15px;line-height:1.5;margin:0 0 6px">${esc(text.body)}</p>
-  ${extra.map((x) => `<p style="font-size:15px;line-height:1.5;margin:0 0 6px">${esc(x)}</p>`).join('')}
-  <table style="font-size:14px;color:#555;margin:14px 0"><tr><td style="padding:2px 12px 2px 0">When</td><td>${esc(when)}</td></tr><tr><td style="padding:2px 12px 2px 0">Device</td><td>${esc(e.device ?? 'unknown')}</td></tr></table>
+  const html = `<!doctype html><html><body style="margin:0;background:#F2F2F7;padding:24px 12px;font-family:${MAIL_FONT};color:#0A0A0C">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;margin:0 auto;background:#FFFFFF;border:1px solid #E5E5EA;border-radius:24px">
+<tr><td style="padding:24px 26px 26px">
+  ${mailHead('Expense Tracker · Security')}
+  <h1 style="font-size:22px;font-weight:700;letter-spacing:-.01em;margin:18px 0 10px">${esc(text.title)}</h1>
+  <p style="font-size:15px;line-height:1.55;margin:0 0 6px;color:#1C1C1E">${esc(text.body)}</p>
+  ${extra.map((x) => `<p style="font-size:15px;line-height:1.55;margin:0 0 6px;color:#1C1C1E">${esc(x)}</p>`).join('')}
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F2F2F7;border-radius:14px;margin:16px 0;font-size:14px">
+    <tr><td style="padding:12px 14px 4px;color:#6C6C70;width:70px">When</td><td style="padding:12px 14px 4px">${esc(when)}</td></tr>
+    <tr><td style="padding:4px 14px 12px;color:#6C6C70">Device</td><td style="padding:4px 14px 12px">${esc(e.device ?? 'unknown')}</td></tr>
+  </table>
   <p style="font-size:14px;line-height:1.5;margin:0 0 4px"><b>${esc(text.act)}</b></p>
-  <p style="font-size:14px;color:#666;margin:0 0 20px">If this was you, there’s nothing to do.</p>
-  <a href="${esc(APP_URL)}" style="display:inline-block;background:#6d5df6;color:#fff;text-decoration:none;padding:11px 18px;border-radius:10px;font-weight:700;font-size:14px">Open Expense Tracker</a>
-  <p style="font-size:12px;color:#999;margin-top:24px">Security emails are sent once per event, at most once an hour of each kind.</p></div>`;
+  <p style="font-size:14px;color:#6C6C70;margin:0 0 22px">If this was you, there’s nothing to do.</p>
+  ${mailButton(esc(APP_URL), 'Open Expense Tracker')}
+</td></tr></table>
+<p style="max-width:520px;margin:14px auto 0;font-size:12px;color:#8E8E93;text-align:center">Security emails are sent once per event, at most once an hour of each kind.</p>
+</body></html>`;
   return { subject: `Expense Tracker: ${text.title}`, text: lines.join('\n'), html };
 }
 
@@ -252,33 +269,33 @@ function inviteEmail({ fromName, trip, link }) {
     '', `Join the trip: ${link}`, 'Sign in, or create a free account in a few seconds — then pick your name on the trip.',
     '', `Get Expense Tracker (web, Android, Mac, Windows, Linux): ${LANDING_URL}`,
   ].join('\n');
-  const feature = (icon, title, body) => `<td style="width:33%;padding:8px;vertical-align:top"><div style="font-size:22px">${icon}</div><div style="font-weight:700;font-size:13px;margin:6px 0 2px;color:#1a1a2e">${title}</div><div style="font-size:12px;color:#666;line-height:1.45">${body}</div></td>`;
-  const html = `<!doctype html><html><body style="margin:0;background:#f2f3f7;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(20,20,60,.08)">
-<tr><td style="background:linear-gradient(135deg,#5b4cf0,#9a4fe0);padding:28px 26px 24px;color:#fff">
-  <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.85">Expense Tracker · Trip invite</div>
-  <div style="font-size:24px;font-weight:800;margin-top:10px;line-height:1.25">${esc(who)} invited you to join</div>
+  const feature = (icon, title, body) => `<td style="width:33%;padding:8px;vertical-align:top"><div style="font-size:22px">${icon}</div><div style="font-weight:700;font-size:13px;margin:6px 0 2px;color:#0A0A0C">${title}</div><div style="font-size:12px;color:#6C6C70;line-height:1.45">${body}</div></td>`;
+  const html = `<!doctype html><html><body style="margin:0;background:#F2F2F7;padding:24px 12px;font-family:${MAIL_FONT};color:#0A0A0C">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;margin:0 auto;background:#FFFFFF;border:1px solid #E5E5EA;border-radius:24px;overflow:hidden">
+<tr><td style="padding:24px 26px 4px">
+  ${mailHead('Expense Tracker · Trip invite')}
+  <div style="font-size:24px;font-weight:700;letter-spacing:-.015em;margin-top:18px;line-height:1.25">${esc(who)} invited you to join</div>
 </td></tr>
-<tr><td style="padding:22px 26px 6px">
-  <table role="presentation" width="100%" style="border:1px solid #e7e7f0;border-radius:16px"><tr>
-    <td style="width:52px;padding:14px 0 14px 14px"><div style="width:44px;height:44px;border-radius:13px;background:#0ea5a4;color:#fff;font-size:22px;line-height:44px;text-align:center">✈️</div></td>
-    <td style="padding:14px"><div style="font-size:18px;font-weight:800;color:#1a1a2e">${esc(trip.name)}</div>${meta ? `<div style="font-size:13px;color:#666;margin-top:3px">${esc(meta)}</div>` : ''}</td>
+<tr><td style="padding:16px 26px 6px">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F2F2F7;border-radius:18px"><tr>
+    <td style="width:52px;padding:14px 0 14px 14px"><div style="width:44px;height:44px;border-radius:13px;background:#D9F2F6;font-size:22px;line-height:44px;text-align:center">✈️</div></td>
+    <td style="padding:14px"><div style="font-size:18px;font-weight:700;color:#0A0A0C">${esc(trip.name)}</div>${meta ? `<div style="font-size:13px;color:#6C6C70;margin-top:3px">${esc(meta)}</div>` : ''}</td>
   </tr></table>
-  <p style="font-size:15px;line-height:1.55;color:#333;margin:18px 0 6px">Add what you spend on the trip — fuel, food, tolls, tickets — and everyone sees who owes whom, live. When it ends, one tap shows the simplest way to settle up.</p>
-  <div style="text-align:center;margin:22px 0 8px"><a href="${esc(link)}" style="display:inline-block;background:#5b4cf0;color:#ffffff;text-decoration:none;font-weight:800;font-size:16px;padding:14px 30px;border-radius:14px">Join “${esc(trip.name)}”</a></div>
-  <p style="font-size:12.5px;color:#888;text-align:center;margin:0 0 22px">Sign in, or create a free account in a few seconds — then pick your name.</p>
+  <p style="font-size:15px;line-height:1.55;color:#1C1C1E;margin:18px 0 6px">Add what you spend on the trip — fuel, food, tolls, tickets — and everyone sees who owes whom, live. When it ends, one tap shows the simplest way to settle up.</p>
+  <div style="text-align:center;margin:22px 0 8px">${mailButton(esc(link), `Join “${esc(trip.name)}”`, true)}</div>
+  <p style="font-size:12.5px;color:#8E8E93;text-align:center;margin:0 0 22px">Sign in, or create a free account in a few seconds — then pick your name.</p>
 </td></tr>
-<tr><td style="background:#f8f8fc;padding:18px 18px 8px;border-top:1px solid #eee">
-  <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a8aa0;padding:0 8px">More than trips</div>
+<tr><td style="background:#F9F9FB;padding:18px 18px 8px;border-top:1px solid #E5E5EA">
+  <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#8E8E93;padding:0 8px">More than trips</div>
   <table role="presentation" width="100%"><tr>
     ${feature('🎯', 'Budgets that pace you', 'A daily “safe to spend” and a projected month end.')}
     ${feature('🧾', 'Bills that remind you', 'Rent, EMIs and SIPs on schedule — never missed.')}
     ${feature('🔒', 'Private by design', 'App lock, encrypted backups in your own Drive.')}
   </tr></table>
-  <div style="text-align:center;padding:10px 0 16px"><a href="${esc(LANDING_URL)}" style="font-size:13px;font-weight:700;color:#5b4cf0;text-decoration:none">Get the app — web, Android, Mac, Windows, Linux →</a></div>
+  <div style="text-align:center;padding:10px 0 16px"><a href="${esc(LANDING_URL)}" style="font-size:13px;font-weight:700;color:#0A0A0C;text-decoration:underline">Get the app — web, Android, Mac, Windows, Linux →</a></div>
 </td></tr>
 </table>
-<p style="max-width:520px;margin:14px auto 0;font-size:11px;color:#9a9aae;text-align:center;line-height:1.5">You got this because ${esc(who)} entered your address to invite you to a trip. No account was created for you, and you won’t get more emails unless you’re invited again.</p>
+<p style="max-width:520px;margin:14px auto 0;font-size:11px;color:#8E8E93;text-align:center;line-height:1.5">You got this because ${esc(who)} entered your address to invite you to a trip. No account was created for you, and you won’t get more emails unless you’re invited again.</p>
 </body></html>`;
   return { subject, text, html };
 }

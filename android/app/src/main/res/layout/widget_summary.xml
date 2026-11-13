@@ -26,7 +26,7 @@
             android:background="@drawable/widget_plus"
             android:gravity="center"
             android:text="+"
-            android:textColor="#FFFFFFFF"
+            android:textColor="#FF0A0A0C"
             android:textSize="20sp"
             android:textStyle="bold" />
     </LinearLayout>

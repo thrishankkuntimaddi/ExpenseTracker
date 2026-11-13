@@ -19,7 +19,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="−₹"
-                android:textColor="#FFE11D48"
+                android:textColor="#FFFF3B30"
                 android:textSize="18sp"
                 android:textStyle="bold" />
             <TextView
@@ -43,7 +43,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="+₹"
-                android:textColor="#FF059669"
+                android:textColor="#FF1E9E4A"
                 android:textSize="18sp"
                 android:textStyle="bold" />
             <TextView
@@ -67,7 +67,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="₹↑"
-                android:textColor="#FF2563EB"
+                android:textColor="#FF007AFF"
                 android:textSize="18sp"
                 android:textStyle="bold" />
             <TextView
@@ -91,7 +91,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="◷"
-                android:textColor="#FF4F46E5"
+                android:textColor="#FFFF9500"
                 android:textSize="18sp"
                 android:textStyle="bold" />
             <TextView

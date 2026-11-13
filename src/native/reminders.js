@@ -103,7 +103,7 @@ async function ensureChannel() {
   }).catch(() => {});
   await LocalNotifications.createChannel({
     id: ALERT_CHANNEL, name: 'Reminders', importance: 4,     // HIGH: heads-up with sound
-    description: 'Bills due, daily log, budget and report reminders', vibration: true, visibility: 1, lights: true, lightColor: '#12995A',
+    description: 'Bills due, daily log, budget and report reminders', vibration: true, visibility: 1, lights: true, lightColor: '#1E9E4A',
   }).catch(() => {});
   await LocalNotifications.createChannel({
     id: 'security', name: 'Security alerts', importance: 5,
@@ -123,7 +123,7 @@ const toAndroid = (item) => ({
   isExactNotification: exactTiming.get(),
   channelId: channel(),
   smallIcon: 'ic_stat_expensetracker',
-  iconColor: '#12995A',
+  iconColor: '#1E9E4A',
   autoCancel: true,
   extra: { route: item.route },
 });
@@ -173,7 +173,7 @@ export async function notifyNow({ id, title, body, route = 'profile' }) {
     if (isAndroid) {
       if ((await notificationPermission()) !== 'granted') return false;
       await ensureChannel();
-      await LocalNotifications.schedule({ notifications: [{ id: numeric, title, body, channelId: 'security', smallIcon: 'ic_stat_expensetracker', iconColor: '#12995A', autoCancel: true, extra: { route } }] });
+      await LocalNotifications.schedule({ notifications: [{ id: numeric, title, body, channelId: 'security', smallIcon: 'ic_stat_expensetracker', iconColor: '#1E9E4A', autoCancel: true, extra: { route } }] });
       return true;
     }
     if (platform === 'desktop') return await invoke('show_notification', { title, body }).then(() => true, () => false);

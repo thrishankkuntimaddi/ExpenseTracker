@@ -99,7 +99,7 @@ final class WidgetRender {
         boolean dk = dark(ctx, d);
         RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.widget_quick);
         v.setInt(R.id.w_root, "setBackgroundResource", dk ? R.drawable.widget_bg_dark : R.drawable.widget_bg_light);
-        int text = dk ? 0xFFE8ECF4 : 0xFF0F172A;
+        int text = dk ? 0xFFF5F5F7 : 0xFF0A0A0C;
         int[] labels = { R.id.w_q_expense_label, R.id.w_q_income_label, R.id.w_q_savings_label, R.id.w_q_bills_label };
         for (int id : labels) v.setTextColor(id, text);
         v.setOnClickPendingIntent(R.id.w_q_expense, entry(ctx, "expense", 11));
@@ -189,7 +189,7 @@ final class WidgetRender {
         boolean dk = dark(ctx, d);
         RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.widget_bills);
         v.setInt(R.id.w_root, "setBackgroundResource", dk ? R.drawable.widget_bg_dark : R.drawable.widget_bg_light);
-        int text = dk ? 0xFFE8ECF4 : 0xFF0F172A, muted = dk ? 0xFFA3ABBD : 0xFF64748B, late = dk ? 0xFFFB7185 : 0xFFE11D48;
+        int text = dk ? 0xFFF5F5F7 : 0xFF0A0A0C, muted = dk ? 0xFFAEAEB2 : 0xFF6C6C70, late = dk ? 0xFFFF453A : 0xFFFF3B30;
         v.setTextColor(R.id.w_b_title, text);
         JSONArray list = d.optJSONArray("bills");
         int[][] rows = {
