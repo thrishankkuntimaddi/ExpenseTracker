@@ -5,6 +5,8 @@ import './styles/glass.css'
 import './styles/layout.css'
 import './motion/motion.css'
 import './styles/liquid.css'
+import './styles/lens.css'
+import { startGlassChrome } from './app/glassChrome.js'
 import App from './app/App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { confirmBundleBoots, startAutoUpdates } from './native/updates.js'
@@ -26,6 +28,7 @@ function bootstrap() {
     return;
   }
   startAutoUpdates();
+  startGlassChrome();
   createRoot(rootEl).render(
     <StrictMode>
       <ErrorBoundary>

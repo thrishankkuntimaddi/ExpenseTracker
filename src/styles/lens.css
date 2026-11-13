@@ -1,0 +1,186 @@
+/* ══════════════════════════════════════════════════════════════════
+   LENS — authentic Liquid Glass optics (4.1). Loaded last.
+
+   Studied against macOS Control Center and the volume HUD:
+   • The glass is nearly clear. It has almost no colour or fill of its
+     own; it frosts, brightens and saturates whatever is behind it, so
+     the same glass reads light over light content and dark over dark —
+     light and dark mode differ by the content, not by the material.
+   • Thickness comes from the edge: a bright specular bevel on the
+     top-left and bottom-right, a soft glow just inside the rim, a faint
+     outer line, and (Chromium) the backdrop bending at the rim.
+   • Glass is the floating layer: the dock, page headers, toolbars,
+     sheets, toasts. Content scrolls under it (src/app/glassChrome.js).
+     Cards in the page are clear lens tiles (no live blur: over the
+     static wallpaper a blur is invisible and only costs frames).
+══════════════════════════════════════════════════════════════════ */
+
+/* ── Optics ─────────────────────────────────────────────────────── */
+:root, [data-theme="light"] {
+  --lens-tile:  rgba(255, 255, 255, 0.24);    /* cards: nearly clear */
+  --lens-bar:   rgba(255, 255, 255, 0.16);    /* floating bars over moving content */
+  --lens-ctl:   rgba(255, 255, 255, 0.34);    /* buttons, circles */
+  --lens-dense: rgba(255, 255, 255, 0.66);    /* sheets over a dimmed page */
+  --lens-frost: blur(9px) saturate(190%) brightness(1.05);
+  --lens-frost-dense: blur(30px) saturate(180%) brightness(1.06);
+  --lens-hi:    rgba(255, 255, 255, 0.95);    /* top-left light catch */
+  --lens-hi2:   rgba(255, 255, 255, 0.55);    /* bottom-right caustic */
+  --lens-line:  rgba(255, 255, 255, 0.30);    /* the rim itself */
+  --lens-glow:  rgba(255, 255, 255, 0.22);    /* light scattered inside the edge */
+  --lens-out:   rgba(0, 0, 0, 0.05);          /* hairline that separates it from a light backdrop */
+  --lens-drop:  0 10px 28px -12px rgba(0, 0, 0, 0.24);
+}
+[data-theme="monoflow"] {
+  --lens-tile:  rgba(255, 255, 255, 0.055);
+  --lens-bar:   rgba(28, 28, 32, 0.22);
+  --lens-ctl:   rgba(255, 255, 255, 0.10);
+  --lens-dense: rgba(34, 34, 38, 0.66);
+  --lens-frost: blur(9px) saturate(180%) brightness(0.94);
+  --lens-frost-dense: blur(30px) saturate(170%);
+  --lens-hi:    rgba(255, 255, 255, 0.55);
+  --lens-hi2:   rgba(255, 255, 255, 0.26);
+  --lens-line:  rgba(255, 255, 255, 0.12);
+  --lens-glow:  rgba(255, 255, 255, 0.07);
+  --lens-out:   rgba(0, 0, 0, 0.35);
+  --lens-drop:  0 12px 32px -12px rgba(0, 0, 0, 0.7);
+}
+:root {
+  /* the bevel: light catch on two edges, a rim line, an inner glow */
+  --lens-bevel:
+    inset 1.5px 1.5px 0 -0.5px var(--lens-hi),
+    inset -1.5px -1.5px 0 -0.5px var(--lens-hi2),
+    inset 0 0 0 1px var(--lens-line),
+    inset 0 0 22px 0 var(--lens-glow),
+    0 0 0 0.5px var(--lens-out);
+  --lens-bevel-sm:
+    inset 1px 1px 0 -0.25px var(--lens-hi),
+    inset -1px -1px 0 -0.25px var(--lens-hi2),
+    inset 0 0 0 1px var(--lens-line),
+    inset 0 0 10px 0 var(--lens-glow),
+    0 0 0 0.5px var(--lens-out);
+}
+
+/* ── Content tiles: clear lens (cards, panels, the Home card) ───── */
+:is(.card, .overview-stat, .hist-row, .home-hero,
+    [style*="background: var(--surface)"],
+    [style*="background: var(--glass-bg)"],
+    [style*="background: var(--tooltip-bg)"]):not(.card *):not([style*="background: var(--surface)"] *):not(.tab-header) {
+  background: var(--lens-tile) !important;
+  border: 1px solid transparent !important;
+  box-shadow: var(--lens-bevel), var(--lens-drop) !important;
+}
+.home-hero::before { opacity: .55; }
+/* the "living card" light that follows the pointer: a soft sheen on clear glass */
+.home-hero.tilt-live::after { opacity: .35; }
+[data-theme="monoflow"] .home-hero.tilt-live::after { opacity: .12; }
+
+/* ── The floating layer: real lens (frost + bevel + refraction) ─── */
+/* (:root:root lifts these above glass.css's tile rule) */
+:root:root :is(#phone-bar, .tab-header.lg-floating, [style*="position: sticky"][style*="top: 0"], .demo-banner, [style*="var(--toast-bg"]) {
+  background: var(--lens-bar) !important;
+  -webkit-backdrop-filter: var(--lens-frost) !important;
+  backdrop-filter: var(--lens-frost) !important;
+  border: 1px solid transparent !important;
+  box-shadow: var(--lens-bevel), var(--lens-drop) !important;
+}
+html.lg-refract :is(#phone-bar, .tab-header.lg-floating, [style*="position: sticky"][style*="top: 0"], .demo-banner) {
+  backdrop-filter: var(--lens-frost) url(#lg-refract) !important;
+}
+/* Toast keeps its inverted contrast, but as glass */
+:root:root [style*="var(--toast-bg"] { background: color-mix(in srgb, var(--toast-bg) 72%, transparent) !important; }
+
+/* Page headers float over the page; the body starts under them */
+.lg-float-root { position: relative; }
+.lg-float-root > .tab-header.lg-floating {
+  position: absolute !important;
+  top: 0; left: 0; right: 0;
+  z-index: 30;
+  margin: 8px 10px 0 !important;
+  border-radius: 26px !important;
+  border-bottom: 1px solid transparent !important;
+}
+.lg-float-root > .lg-under {
+  padding-top: calc(var(--hdr-h, 76px) + 12px) !important;
+  scroll-padding-top: calc(var(--hdr-h, 76px) + 12px);
+}
+.desktop-main .lg-float-root > .tab-header.lg-floating { margin: 12px 20px 0 !important; }
+@media (max-width: 1279px) { .desktop-main .lg-float-root > .tab-header.lg-floating { margin: 10px 16px 0 !important; } }
+@media (min-width: 600px) { .mobile-page .lg-float-root > .tab-header.lg-floating { margin: 8px 24px 0 !important; } }
+
+/* The desktop sidebar: a clear pane over the wallpaper (nothing moves
+   beneath it, so no live blur) */
+.desktop-sidebar {
+  background: var(--lens-tile) !important;
+  border: 1px solid transparent !important;
+  box-shadow: var(--lens-bevel), var(--lens-drop) !important;
+}
+
+/* Sheets & dialogs: a denser lens so text stays crisp over the dim */
+[style*="position: fixed"][style*="inset: 0"] { --lens-tile: var(--lens-dense); }
+[style*="position: fixed"][style*="inset: 0"] > :is([style*="background: var(--surface)"], [style*="background: var(--glass-bg)"], .add-sheet, [role="dialog"]) {
+  background: var(--lens-dense) !important;
+  -webkit-backdrop-filter: var(--lens-frost-dense) !important;
+  backdrop-filter: var(--lens-frost-dense) !important;
+  box-shadow: var(--lens-bevel), 0 30px 70px -20px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* ── Controls: glass capsules and circles ───────────────────────── */
+button:is([style*="background: var(--surface2)"], [style*="background: var(--surface3)"], [style*="background: var(--surface)"]),
+.help-button, .month-switcher button:not(#month-now), .tour-x, #btn-page-back, .lg-close,
+.add-paid-opt, .header-action {
+  background: var(--lens-ctl) !important;
+  border: 1px solid transparent !important;
+  box-shadow: var(--lens-bevel-sm), 0 2px 8px -4px rgba(0, 0, 0, 0.18) !important;
+}
+/* Selected = solid white glass with a dark glyph, in both themes
+   (like the active circles in Control Center) */
+:root:root #phone-bar button.nav-add,
+:root:root .add-paid-opt.on {
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: #0A0A0C !important;
+  box-shadow: inset 0 1px 0 #fff, inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 8px 20px -8px rgba(0, 0, 0, 0.35) !important;
+}
+#phone-bar button.nav-add svg, .add-paid-opt.on svg { color: #0A0A0C !important; }
+
+/* The dock's sliding lens: a brighter pane of the same glass */
+.dock-pill {
+  background: rgba(255, 255, 255, 0.5) !important;
+  border: none !important;
+  box-shadow: var(--lens-bevel-sm), 0 4px 12px -6px rgba(0, 0, 0, 0.25) !important;
+}
+[data-theme="monoflow"] .dock-pill { background: rgba(255, 255, 255, 0.14) !important; }
+.desktop-nav-item.on {
+  background: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: var(--lens-bevel-sm) !important;
+}
+[data-theme="monoflow"] .desktop-nav-item.on { background: rgba(255, 255, 255, 0.12) !important; }
+
+/* ── Touch devices: the same look, lighter work ─────────────────── */
+@media (pointer: coarse) {
+  :root { --lens-frost: blur(9px) saturate(180%) brightness(1.05); }
+  [data-theme="monoflow"] { --lens-frost: blur(9px) saturate(170%) brightness(0.94); }
+  [style*="position: fixed"][style*="inset: 0"] > :is([style*="background: var(--surface)"], [style*="background: var(--glass-bg)"], .add-sheet, [role="dialog"]) {
+    -webkit-backdrop-filter: blur(18px) saturate(170%) !important;
+    backdrop-filter: blur(18px) saturate(170%) !important;
+  }
+}
+@media (pointer: coarse) and (max-resolution: 1.5dppx) {
+  html.lg-refract :is(#phone-bar, .tab-header.lg-floating, [style*="position: sticky"][style*="top: 0"], .demo-banner) {
+    backdrop-filter: var(--lens-frost) !important;
+  }
+}
+
+/* ── Accessibility ──────────────────────────────────────────────── */
+@media (prefers-reduced-transparency: reduce) {
+  :root, [data-theme="light"] { --lens-tile: #FFFFFF; --lens-bar: #F2F2F7; --lens-ctl: #E5E5EA; --lens-dense: #F2F2F7; }
+  [data-theme="monoflow"]     { --lens-tile: #1C1C1E; --lens-bar: #1C1C1E; --lens-ctl: #2C2C2E; --lens-dense: #1C1C1E; }
+  #phone-bar, .tab-header.lg-floating, [style*="position: sticky"], .demo-banner { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}
+@media (prefers-contrast: more) {
+  :root, [data-theme="light"] { --lens-tile: rgba(255,255,255,.85); --lens-bar: rgba(255,255,255,.88); --lens-out: rgba(0,0,0,.35); }
+  [data-theme="monoflow"]     { --lens-tile: rgba(28,28,30,.9);     --lens-bar: rgba(28,28,30,.92);    --lens-out: rgba(255,255,255,.4); }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root, [data-theme="light"] { --lens-bar: rgba(255,255,255,.9); }
+  [data-theme="monoflow"]     { --lens-bar: rgba(28,28,30,.92); }
+}
