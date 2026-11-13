@@ -108,3 +108,16 @@ export function formatMonthLabel(yyyyMM) {
   return new Date(Number(y), Number(m) - 1, 1)
     .toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 }
+
+/**
+ * Finished trips belong to the months they ran in: a trip from 30 Sep to
+ * 2 Oct shows in September and in October. Running trips aren't filtered —
+ * they carry on until closed (like debts and drafts).
+ * Dates are 'YYYY-MM-DD' keys; a trip without an end date counts its start month.
+ */
+export function tripInMonth(trip, monthKey) {
+  const start = String(trip?.startDate || trip?.closedAt || '').slice(0, 7);
+  if (!start) return false;
+  const end = String(trip?.endDate || '').slice(0, 7) || start;
+  return monthKey >= start && monthKey <= (end < start ? start : end);
+}

@@ -2,6 +2,7 @@ import { Plus, Loader2, ArrowLeft, Share2 } from 'lucide-react';
 import ProfileButton from '../../../components/ProfileButton';
 import HelpButton from '../../../tour/HelpButton';
 import BackButton from '../../../components/BackButton';
+import MonthSwitcher from '../../../components/MonthSwitcher';
 
 import { t as tr } from '../../../i18n';
 export default function BillingsHeader({ currentSession, saving, onBack, onShare, onNew, extra }) {
@@ -79,6 +80,7 @@ export default function BillingsHeader({ currentSession, saving, onBack, onShare
           {!currentSession && <ProfileButton />}
         </div>
       </div>
+      {!currentSession && <div className="page-month" style={{ marginTop: 10 }}><MonthSwitcher /></div>}
       {extra}
     </div>
   );

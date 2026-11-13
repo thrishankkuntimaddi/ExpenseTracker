@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useExternalTransactions } from '../../hooks/useExternalTransactions';
 import { todayInputValue, dateInputToISO, isoToDateInput, isoToMonth } from '../../utils/dateHelpers';
-import { filterItemsByPeriod } from '../../utils/periodHelpers';
+import { filterItemsByPeriod, getPeriodLabel } from '../../utils/periodHelpers';
+import { useViewMonth } from '../../app/month';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import ShareBillingModal from './ShareBillingModal';
 import { calcTotals } from './components/billingHelpers';
@@ -29,6 +30,8 @@ export default function ExternalTab({
   showModeToggle = true,      // phones show Trips and Billings as separate pages
 }) {
   const [mode, setMode] = useState(initialMode === 'trips' ? 'trips' : 'billings');   // 'billings' | 'trips'
+  // Finished billings belong to their month (the switcher on top); open ones and drafts carry on
+  const { period: viewPeriod } = useViewMonth(selectedPeriod);
   const {
     sessions, saving,
     createSession, updateSession, saveDraftSession,
@@ -219,9 +222,8 @@ export default function ExternalTab({
   const activeSessions   = sessions.filter(s => s.status === 'open');
   const draftSessions    = sessions.filter(s => s.status === 'draft');
   const archivedSessions = sessions.filter(s => s.status === 'archived');
-  const closedSessions   = selectedPeriod
-    ? filterItemsByPeriod(sessions.filter(s => s.status === 'closed'), selectedPeriod)
-    : sessions.filter(s => s.status === 'closed');
+  const allClosed        = sessions.filter(s => s.status === 'closed');
+  const closedSessions   = filterItemsByPeriod(allClosed, viewPeriod);
 
   const hasItems    = items.some(i => i.name?.trim() && parseFloat(i.amount) > 0);
   const hasReceived = received.some(r => r.person?.trim() && parseFloat(r.amount) > 0);
@@ -237,6 +239,7 @@ export default function ExternalTab({
         onAddTransaction={onAddTransaction}
         onDeleteTransaction={onDeleteTransaction}
         reportError={reportError}
+        selectedPeriod={selectedPeriod}
         tripPlans={settings?.tripPlans}
         onSavePlan={onPatchSettings ? (id, plan) => onPatchSettings((cur) => ({ tripPlans: { ...(cur.tripPlans ?? {}), [id]: plan } })) : null}
         headerExtra={showModeToggle ? <ModeToggle mode={mode} onChange={setMode} /> : null}
@@ -316,6 +319,8 @@ export default function ExternalTab({
             archiveSession={archiveSession}
             unarchiveSession={unarchiveSession}
             allSessions={sessions}
+            periodLabel={getPeriodLabel(viewPeriod)}
+            otherClosed={allClosed.length - closedSessions.length}
             onNew={() => setShowNewModal(true)}
           />
         )}

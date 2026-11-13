@@ -7,6 +7,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Plus, ArrowLeft, Unlock, LogIn } from 'lucide-react';
 import { useTrips } from '../../hooks/useTrips';
 import { computeTripSummary } from '../../utils/split';
+import { tripInMonth } from '../../utils/periodHelpers';
+import { useViewMonth, monthName } from '../../app/month';
+import MonthSwitcher from '../../components/MonthSwitcher';
 import { dateInputToISO, isoToMonth, todayInputValue } from '../../utils/dateHelpers';
 import { toKey } from '../../utils/recurring';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
@@ -25,7 +28,7 @@ import HelpButton from '../../tour/HelpButton';
 import { pendingInvite, clearPendingInvite, parseInvite } from './invite';
 
 import { t as tr } from '../../i18n';
-export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction, reportError, headerExtra, tripPlans, onSavePlan }) {
+export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction, reportError, headerExtra, tripPlans, onSavePlan, selectedPeriod }) {
   const { trips, saveTrip, removeTrip, opsFor, shareTrip, join, linkFriend, friends, me } = useTrips(user, reportError);
   const [activeId, setActiveId] = useState(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -46,8 +49,11 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
   const active = useMemo(() => trips.find((t) => t.id === activeId) ?? null, [trips, activeId]);
   const inviting = useMemo(() => trips.find((t) => t.id === invitingId) ?? null, [trips, invitingId]);
   const activeTrips   = trips.filter((t) => t.status !== 'closed' && t.status !== 'archived');
-  const closedTrips   = trips.filter((t) => t.status === 'closed');
-  const archivedTrips = trips.filter((t) => t.status === 'archived');
+  // Running trips carry on whatever the month; finished ones belong to the months they ran in
+  const { month: viewMonth } = useViewMonth(selectedPeriod);
+  const allClosed     = trips.filter((t) => t.status === 'closed');
+  const closedTrips   = allClosed.filter((t) => tripInMonth(t, viewMonth));
+  const archivedTrips = trips.filter((t) => t.status === 'archived' && tripInMonth(t, viewMonth));
 
   async function deleteTripById(id) { await removeTrip(id); if (activeId === id) setActiveId(null); }
   const archiveTrip   = (t) => saveTrip({ ...t, status: 'archived', archivedFrom: t.status ?? 'open' });
@@ -146,6 +152,7 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
             </div>
           )}
         </div>
+        {!active && <div className="page-month" style={{ marginTop: 10 }}><MonthSwitcher /></div>}
         {headerExtra}
       </div>
 
@@ -162,6 +169,7 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
         ) : (
           <TripsList
             trips={trips} activeTrips={activeTrips} closedTrips={closedTrips} archivedTrips={archivedTrips}
+            monthLabel={monthName(viewMonth, { month: 'long', year: 'numeric' })} otherClosed={allClosed.length - closedTrips.length}
             showHistory={showHistory} setShowHistory={setShowHistory}
             showArchived={showArchived} setShowArchived={setShowArchived}
             canManage={canManage}

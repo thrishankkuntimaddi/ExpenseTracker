@@ -31,7 +31,7 @@ function Overview({ trips, activeTrips, closedTrips }) {
 
   return (
     <div className="overview-stats">
-      <div className="overview-stat"><div className="k">{tr("Running")}</div><div className="v">{activeTrips.length}</div><div className="s">{closedTrips.length} {tr("in history")}</div></div>
+      <div className="overview-stat"><div className="k">{tr("Running")}</div><div className="v">{activeTrips.length}</div><div className="s">{closedTrips.length} {tr("this month")}</div></div>
       <div className="overview-stat">
         <div className="k">{bal == null ? tr("Your balance") : bal > 0.004 ? tr("You get back") : bal < -0.004 ? tr("You owe") : tr("Your balance")}</div>
         <div className="v" style={{ color: bal > 0.004 ? 'var(--income)' : bal < -0.004 ? 'var(--expense)' : 'var(--text)' }}>{bal == null ? '—' : Math.abs(bal) < 0.005 ? tr("Square") : formatAmount(Math.abs(bal), cur || undefined)}</div>
@@ -46,9 +46,9 @@ function Overview({ trips, activeTrips, closedTrips }) {
 export default function TripsList({
   trips = [], activeTrips, closedTrips, archivedTrips,
   showHistory, setShowHistory, showArchived, setShowArchived, canManage = () => true,
-  onOpen, onShare, onEdit, onDelete, onArchive, onUnarchive, onNew, onJoin,
+  onOpen, onShare, onEdit, onDelete, onArchive, onUnarchive, onNew, onJoin, monthLabel, otherClosed = 0,
 }) {
-  const nothing = activeTrips.length + closedTrips.length + archivedTrips.length === 0;
+  const nothing = trips.length === 0 && activeTrips.length + closedTrips.length + archivedTrips.length === 0;
   if (nothing) {
     return (
       <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 10 }}>
@@ -128,13 +128,13 @@ export default function TripsList({
       <div>
         <button onClick={() => setShowHistory((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', borderRadius: 12, background: showHistory ? 'var(--surface2)' : 'transparent', border: '1px dashed var(--border)', cursor: 'pointer', fontFamily: 'inherit', marginBottom: showHistory ? 10 : 0, transition: 'all 0.15s' }}>
           <Clock size={13} style={{ color: 'var(--text-muted)' }} />
-          <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>{tr("Trip History (")}{closedTrips.length})</span>
+          <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>{monthLabel ? `${tr("Trips in")} ${monthLabel} (${closedTrips.length})` : <>{tr("Trip History (")}{closedTrips.length})</>}</span>
           <span style={{ marginLeft: 'auto' }}>{showHistory ? <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} /> : <ChevronRight size={13} style={{ color: 'var(--text-muted)' }} />}</span>
         </button>
         {showHistory && (closedTrips.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 20px', gap: 10, textAlign: 'center' }}>
             <Map size={26} style={{ color: 'var(--text-muted)' }} />
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>{tr("No closed trips yet")}</p>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>{otherClosed > 0 ? `${tr("No trips in")} ${monthLabel} · ${otherClosed} ${tr("in other months — switch the month above")}` : tr("No closed trips yet")}</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

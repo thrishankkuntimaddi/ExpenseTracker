@@ -2,26 +2,23 @@
 import { ChevronDown, ChevronRight, Clock, ReceiptText, Archive, Share2, Plus } from 'lucide-react';
 import { formatAmount, formatDate } from '../../../utils/dateHelpers';
 import HistoryCard from './HistoryCard';
+import { billingTotals } from './billingHelpers';
 
 import { t as tr } from '../../../i18n';
-/* What Billings adds up to. Only CLOSED billings count as spent / got back:
+/* What Billings adds up to, for the month on screen — the same billings
+   the history list below shows. Only CLOSED ones count as spent / got back:
    a draft or an open one isn't in the ledger yet and its rows can still
-   change — those are shown apart, as "in progress". */
-function Overview({ sessions }) {
-  const live = sessions.filter(s => s.status !== 'archived');
-  const done = live.filter(s => s.status === 'closed');
-  const pending = live.filter(s => s.status === 'open' || s.status === 'draft');
-  const sum = (list, k) => list.reduce((t, s) => t + (Number(s[k]) || 0), 0);
-  const spent = sum(done, 'total_spent');
-  const back = sum(done, 'total_received');
-  const out = done.reduce((t, s) => t + Math.max(0, -(Number(s.net_balance) || 0)), 0);
-  const pendingSpent = sum(pending, 'total_spent');
+   change, so it is shown apart as "not counted yet" (whatever its date). */
+function Overview({ closed, pending, periodLabel }) {
+  const { spent, back, out, pendingSpent, open } = billingTotals(closed, pending);
+  const when = periodLabel || tr("closed billings");
+  const recovered = !spent ? '—' : back > spent ? `${formatAmount(back - spent)} ${tr("more than spent")}` : `${Math.round((back / spent) * 100)}% ${tr("recovered")}`;
   return (
     <div className="overview-stats" id="billings-overview">
-      <div className="overview-stat"><div className="k">{tr("Open")}</div><div className="v">{pending.length}</div><div className="s">{pendingSpent > 0 ? `${formatAmount(pendingSpent)} ${tr("not counted yet")}` : `${done.length} ${tr("closed")}`}</div></div>
-      <div className="overview-stat"><div className="k">{tr("Spent for others")}</div><div className="v" style={{ color: 'var(--expense)' }}>{formatAmount(spent)}</div><div className="s">{tr("closed billings")}</div></div>
-      <div className="overview-stat"><div className="k">{tr("Got back")}</div><div className="v" style={{ color: 'var(--income)' }}>{formatAmount(back)}</div><div className="s">{spent ? `${Math.round(Math.min(1, back / spent) * 100)}% recovered` : '—'}</div></div>
-      <div className="overview-stat"><div className="k">{tr("Not recovered")}</div><div className="v" style={{ color: out > 0 ? 'var(--expense)' : 'var(--text)' }}>{out > 0 ? formatAmount(out) : '—'}</div><div className="s">{tr("on closed billings")}</div></div>
+      <div className="overview-stat"><div className="k">{tr("Open")}</div><div className="v">{open}</div><div className="s">{pendingSpent > 0 ? `${formatAmount(pendingSpent)} ${tr("not counted yet")}` : `${closed.length} ${tr("closed")}`}</div></div>
+      <div className="overview-stat"><div className="k">{tr("Spent for others")}</div><div className="v" style={{ color: 'var(--expense)' }}>{formatAmount(spent)}</div><div className="s">{when}</div></div>
+      <div className="overview-stat"><div className="k">{tr("Got back")}</div><div className="v" style={{ color: 'var(--income)' }}>{formatAmount(back)}</div><div className="s">{recovered}</div></div>
+      <div className="overview-stat"><div className="k">{tr("Not recovered")}</div><div className="v" style={{ color: out > 0 ? 'var(--expense)' : 'var(--text)' }}>{out > 0 ? formatAmount(out) : '—'}</div><div className="s">{when}</div></div>
     </div>
   );
 }
@@ -31,7 +28,7 @@ export default function SessionsList({
   showHistory, setShowHistory, showArchived, setShowArchived,
   setActiveSessionId, setSharingSession, setDeletingId,
   handleEditSession, archiveSession, unarchiveSession,
-  allSessions = [], onNew,
+  allSessions = [], onNew, periodLabel, otherClosed = 0,
 }) {
   if (!allSessions.length) {
     return (
@@ -47,7 +44,7 @@ export default function SessionsList({
   }
   return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <Overview sessions={allSessions} />
+        <Overview closed={closedSessions} pending={[...activeSessions, ...draftSessions]} periodLabel={periodLabel} />
 
         {activeSessions.length + draftSessions.length === 0 && (
           <div className="card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
@@ -202,7 +199,7 @@ export default function SessionsList({
             closedSessions.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', gap: 12, textAlign: 'center' }}>
                 <ReceiptText size={28} style={{ color: 'var(--text-muted)' }} />
-                <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>{tr("No closed sessions yet")}</p>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>{otherClosed > 0 ? `${tr("No billings closed in")} ${periodLabel} · ${otherClosed} ${tr("in other months — switch the month above")}` : tr("No closed sessions yet")}</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
