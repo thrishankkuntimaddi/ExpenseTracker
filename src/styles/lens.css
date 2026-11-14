@@ -256,3 +256,17 @@ button:is([style*="background: var(--surface2)"], [style*="background: var(--sur
    wheel, keyboard), but no grey bar is drawn over the glass. */
 * { scrollbar-width: none; }
 *::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none; background: transparent; }
+
+/* ── Touch press (src/app/glassChrome.js): sink on touch, spring back ── */
+:root:root .lg-press:not(:disabled) {
+  transform: translate3d(0, 0, 0) scale(0.95) !important;
+  filter: brightness(1.04) !important;
+  transition: transform .12s cubic-bezier(.2, .8, .3, 1), filter .12s ease !important;
+}
+:root:root :is(.explore-card, .home-tile, .reminder-tile, .add-kind, .hist-row, .dcard).lg-press { background: var(--lens-press) !important; }
+:root:root :is(.explore-card, .home-tile).lg-press :is(.explore-icon, .tile-icon) { transform: scale(0.9) !important; }
+:root:root #phone-bar .lg-press:not(:disabled) { transform: scale(0.88) !important; }
+/* letting go: a soft overshoot (a little zoom past 1, then settle) */
+:root:root .lg-release {
+  transition: transform .5s cubic-bezier(.3, 1.6, .45, 1), filter .3s ease, background-color .3s ease !important;
+}
