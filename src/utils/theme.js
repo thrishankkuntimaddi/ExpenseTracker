@@ -1,5 +1,5 @@
 // ─── Theme ───────────────────────────────────────────────────────
-// Light / Dark / System, chosen per device (never synced). The choice
+// Light / Dark / System, chosen per device (never synced). Light by default. The choice
 // resolves to <html data-theme="light" | "monoflow"> — "monoflow" is the
 // app's dark theme. index.html applies the same logic before first paint.
 import { useState, useEffect, useCallback } from 'react';
@@ -26,26 +26,17 @@ export function resolveTheme(pref, prefersDark = systemPrefersDark()) {
 }
 
 /**
- * The saved preference. Devices that predate the setting keep what they
- * had (the old synced theme cached in et_theme); new devices follow the system.
+ * The saved preference. Light by default — only an explicit choice in
+ * Profile → Appearance (Light / Dark / Auto) changes it. (The last applied
+ * theme, et_theme, is a paint cache for index.html, never a choice.)
  */
 export function getThemePref() {
   try {
     const pref = localStorage.getItem(THEME_PREF_KEY);
     if (pref === 'light' || pref === 'dark' || pref === 'system') return pref;
-    const legacy = localStorage.getItem(RESOLVED_KEY);
-    if (legacy === 'monoflow') return 'dark';
-    if (legacy === 'light') return 'light';
   } catch { /* storage unavailable */ }
-  return 'system';
+  return 'light';
 }
-
-/* Whether this device had stored any theme before this page load. If not,
-   the account's old synced theme (settings.theme) is adopted once. */
-export const HAD_LOCAL_THEME_CHOICE = (() => {
-  try { return !!(localStorage.getItem(THEME_PREF_KEY) || localStorage.getItem(RESOLVED_KEY)); }
-  catch { return true; }
-})();
 
 let switchTimer = null;
 export function applyTheme(theme) {

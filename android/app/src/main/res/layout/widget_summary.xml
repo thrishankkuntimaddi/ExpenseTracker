@@ -62,8 +62,10 @@
             android:textColor="#E6FFFFFF"
             android:textSize="12sp" />
     </LinearLayout>
-    <!-- pushes the chart to the bottom; the chart keeps its own size (drawn to fit, never stretched) -->
-    <View
+    <!-- pushes the chart to the bottom; the chart keeps its own size (drawn to fit, never stretched).
+         A FrameLayout, not a plain View: widgets (RemoteViews) only allow certain
+         view classes, and a View made the whole widget "Can't load widget". -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />

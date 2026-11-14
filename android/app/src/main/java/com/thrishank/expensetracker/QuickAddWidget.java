@@ -9,5 +9,6 @@ public class QuickAddWidget extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
         for (int id : ids) manager.updateAppWidget(id, WidgetRender.quick(context));
+        WidgetRender.scheduleMidnight(context);
     }
 }

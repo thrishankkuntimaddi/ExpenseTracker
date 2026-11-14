@@ -51,7 +51,7 @@ const BankLinkCard = lazy(() => import('../settings/BankLinkCard'));
 const REMINDER_NAMES = { recurring: 'bills', daily: 'log the day', budget: 'budget', report: 'report', goals: 'goals', weekly: 'weekly' };
 
 export default function ProfilePage(props) {
-  const { user, transactions = [], income = [], devices, securityEvents, drive, settings, themePref = 'system', theme, onThemePrefChange, onPatchSettings, onBack, recurring, openGroup } = props;
+  const { user, transactions = [], income = [], devices, securityEvents, drive, settings, themePref = 'light', theme, onThemePrefChange, onPatchSettings, onBack, recurring, openGroup } = props;
   const desktop = useShell()?.desktop;
   const twoPane = useTwoPane(desktop);   // list and setting side by side only when there's room
   const ui = useMemo(() => normaliseUi(settings?.ui), [settings?.ui]);

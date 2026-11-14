@@ -27,6 +27,9 @@ export function startGlassChrome() {
   const chromium = brands.some((b) => /Chromium|Google Chrome|Microsoft Edge/.test(b.brand));
   const reduce = window.matchMedia?.('(prefers-reduced-transparency: reduce)').matches;
   if (chromium && !reduce) html.classList.add('lg-refract');
+  // iOS Safari only shows :active (the press on tiles and buttons) when the
+  // page listens for touches; a passive no-op listener turns it on.
+  document.addEventListener('touchstart', () => {}, { passive: true });
 
   const measure = (header) => {
     const root = header.parentElement;

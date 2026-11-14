@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect, useMemo, lazy, Suspense } from 'react';
 import { Plus, Settings2 } from 'lucide-react';
 import { useFirestoreData } from '../hooks/useFirestoreData';
 import { useRecurring } from '../hooks/useRecurring';
@@ -25,7 +25,7 @@ import { getDefaultPeriod, getCurrentMonthValue } from '../utils/periodHelpers';
 import { formatAmount } from '../utils/dateHelpers';
 import { clearLegacyDataCache } from '../utils/storage';
 import { learnCategoryRule } from '../utils/categories';
-import { useTheme, HAD_LOCAL_THEME_CHOICE } from '../utils/theme';
+import { useTheme } from '../utils/theme';
 import AuthGate from '../features/auth/AuthGate';
 import TodayTab         from '../features/transactions/TodayTab';
 // Home shows the Add form inline, so AddSheet is part of the first screen anyway.
@@ -182,15 +182,8 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
     </div>
   );
 
-  // Theme is per device. A device that never stored one adopts the theme
-  // this account used to sync (settings.theme, written by older versions).
+  // Theme is per device and light until the person picks Dark or Auto
   const { pref: themePref, theme, setPref: setThemePref } = useTheme();
-  const adoptedTheme = useRef(HAD_LOCAL_THEME_CHOICE);
-  useEffect(() => {
-    if (adoptedTheme.current || !settings?.theme) return;
-    adoptedTheme.current = true;
-    setThemePref(settings.theme === 'monoflow' ? 'dark' : 'light');
-  }, [settings?.theme, setThemePref]);
 
   /**
    * smartAddEntry — routes entries to the right store.

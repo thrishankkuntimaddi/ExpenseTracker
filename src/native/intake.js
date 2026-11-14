@@ -35,12 +35,27 @@ export async function readPicture(dataUrl) {
 }
 
 let pending = null, timer = null;
-/** Hand the latest summary to the widgets (debounced). */
+const flush = () => {
+  clearTimeout(timer); timer = null;
+  if (pending) { const d = pending; pending = null; Widgets.update({ data: d }).catch(() => {}); }
+};
+/** Hand the latest summary to the widgets (debounced; sent at once when the app goes to the background). */
 export function pushWidgets(data) {
   if (!widgetsAvailable()) return;
   pending = data;
   clearTimeout(timer);
-  timer = setTimeout(() => { Widgets.update({ data: pending }).catch(() => {}); }, 800);
+  timer = setTimeout(flush, 800);
+}
+// Add an entry and go straight to the home screen: Android pauses the app
+// before the debounce fires — send what's waiting as the app is hidden.
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && pending) flush(); });
+}
+/** Signed out / account deleted: the widgets forget this account's figures. */
+export async function clearWidgets() {
+  if (!widgetsAvailable()) return;
+  clearTimeout(timer); timer = null; pending = null;
+  try { await Widgets.update({ data: {} }); } catch { /* an older app */ }
 }
 
 /** Entries typed on the home screen (quick-entry card): [{ id, kind, amount, name, at }]. */

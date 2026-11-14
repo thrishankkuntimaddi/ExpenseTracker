@@ -34,8 +34,10 @@ describe('widget data', () => {
       { id: 'r2', kind: 'income', name: 'Salary', amount: 60000, frequency: 'monthly', dayOfMonth: 1, startDate: '2026-01-01', active: true },
     ];
     const w = widgetData({ transactions: txns, settings: {}, rules, now, money });
-    expect(w.bills).toEqual([{ name: 'Electricity bill', when: 'In 3 days', amount: '₹1200', late: false }, expect.objectContaining({ name: 'Electricity bill' })].slice(0, w.bills.length));
+    expect(w.bills).toEqual([{ name: 'Electricity bill', when: 'In 3 days', due: '2026-11-15', amount: '₹1200', late: false }, expect.objectContaining({ name: 'Electricity bill' })].slice(0, w.bills.length));
     expect(w.bills[0].name).toBe('Electricity bill');
+    // the day the figures are for, so the widget can roll on by itself after midnight
+    expect(w).toMatchObject({ day: '2026-11-12', monthKey: '2026-11' });
   });
   it('balance counts income and what was carried in; spent as the headline puts balance beside it', () => {
     const income = [{ id: 'i', type: 'income', name: 'Salary', amount: 30000, date: iso('2026-11-01') }, { id: 'o', type: 'income', name: 'Oct', amount: 2000, date: iso('2026-10-02') }];

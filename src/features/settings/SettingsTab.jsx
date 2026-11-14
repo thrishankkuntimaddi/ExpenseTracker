@@ -27,7 +27,7 @@ import { Section, Group } from './SettingsGroup';
 
 import { t as tr } from '../../i18n';
 export default function SettingsTab({
-  themePref = 'system', onThemePrefChange, onSignOut,
+  themePref = 'light', onThemePrefChange, onSignOut,
   settings, theme, user,
   transactions = [], income = [],
   recentlyDeleted = [],

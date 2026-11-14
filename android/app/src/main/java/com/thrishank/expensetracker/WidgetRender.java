@@ -21,6 +21,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Locale;
 
 /** Draws the three home-screen widgets from the summary the app saved. */
@@ -37,7 +40,7 @@ final class WidgetRender {
     }
 
     static boolean dark(Context ctx, JSONObject d) {
-        String theme = d.optString("theme", "auto");
+        String theme = d.optString("theme", "light");
         if ("dark".equals(theme)) return true;
         if ("light".equals(theme)) return false;
         int mode = ctx.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
@@ -73,6 +76,36 @@ final class WidgetRender {
         return (v < 0 ? "−" : "") + symbol + f.format(Math.round(Math.abs(v)));
     }
 
+    /* ── Dates: the widgets roll on by themselves when the day changes ── */
+    static String key(Calendar c) {
+        return String.format(Locale.US, "%04d-%02d-%02d", c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH));
+    }
+    static String todayKey() { return key(Calendar.getInstance()); }
+    static Calendar cal(String k) {
+        try {
+            Calendar c = Calendar.getInstance();
+            c.clear();
+            c.set(Integer.parseInt(k.substring(0, 4)), Integer.parseInt(k.substring(5, 7)) - 1, Integer.parseInt(k.substring(8, 10)), 12, 0);
+            return c;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    /** Whole days from a to b (b later: positive). Noon to noon, so daylight saving can't shift it. */
+    static int daysBetween(String a, String b) {
+        Calendar x = cal(a), y = cal(b);
+        if (x == null || y == null) return 0;
+        return (int) Math.round((y.getTimeInMillis() - x.getTimeInMillis()) / 86400000.0);
+    }
+    /** Same words as the app (utils/bills.js dueLabel). */
+    static String dueLabel(String due, String today) {
+        int diff = daysBetween(today, due);
+        if (diff == 0) return "Due today";
+        if (diff == 1) return "Tomorrow";
+        if (diff > 1) return "In " + diff + " days";
+        return diff == -1 ? "1 day late" : (-diff) + " days late";
+    }
+
     /** A figure the app sent, moved by what was entered from the home screen since. */
     private static String moved(JSONObject raw, String key, String fallback, String symbol, double delta) {
         if (raw == null || !raw.has(key) || delta == 0) return fallback;
@@ -86,7 +119,27 @@ final class WidgetRender {
             + m.getAppWidgetIds(new ComponentName(ctx, BillsWidget.class)).length;
     }
 
+    static final String MIDNIGHT = "com.thrishank.expensetracker.WIDGETS_MIDNIGHT";
+
+    /** Redraw every widget just after midnight, so "Today", the week and the
+        bill labels move on without the app (inexact, never wakes the phone). */
+    static void scheduleMidnight(Context ctx) {
+        try {
+            android.app.AlarmManager am = (android.app.AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+            if (am == null || placedCount(ctx) == 0) return;
+            Calendar c = Calendar.getInstance();
+            c.add(Calendar.DAY_OF_MONTH, 1);
+            c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 1); c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0);
+            Intent i = new Intent(ctx, SummaryWidget.class).setAction(MIDNIGHT);
+            PendingIntent pi = PendingIntent.getBroadcast(ctx, 41, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            am.set(android.app.AlarmManager.RTC, c.getTimeInMillis(), pi);
+        } catch (Exception ignored) {
+            // The hourly widget update still redraws them
+        }
+    }
+
     static void refreshAll(Context ctx) {
+        scheduleMidnight(ctx);
         AppWidgetManager m = AppWidgetManager.getInstance(ctx);
         for (int id : m.getAppWidgetIds(new ComponentName(ctx, QuickAddWidget.class))) m.updateAppWidget(id, quick(ctx));
         for (int id : m.getAppWidgetIds(new ComponentName(ctx, SummaryWidget.class))) m.updateAppWidget(id, summary(ctx, m, id));
@@ -117,19 +170,25 @@ final class WidgetRender {
         double[] p = WidgetQueue.pending(ctx);          // expense, income, savings, today's expense, count
         RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.widget_summary);
         boolean empty = d.length() == 0;
-        String month = empty ? "Expense Tracker" : d.optString("month", "");
+        String today = todayKey(), day = d.optString("day", "");
+        int gap = day.isEmpty() ? 0 : Math.max(0, daysBetween(day, today));     // days since the app last sent figures
+        String sentMonth = d.optString("monthKey", "");
+        boolean newMonth = gap > 0 && !sentMonth.isEmpty() && !today.startsWith(sentMonth);
+        String month = empty ? "Expense Tracker" : newMonth ? new SimpleDateFormat("MMMM", Locale.ENGLISH).format(new Date()) : d.optString("month", "");
         if (p[4] > 0) month += " · " + (int) p[4] + " new, opens in the app";
         v.setTextViewText(R.id.w_s_month, month);
-        v.setTextViewText(R.id.w_s_big_label, empty ? "Open the app once to fill this in" : d.optString("bigLabel", ""));
+        v.setTextViewText(R.id.w_s_big_label, empty ? "Open the app once to fill this in"
+            : newMonth ? "Open the app to start " + month : d.optString("bigLabel", ""));
         // How the big number and the side figure move with a new entry: spent rises, left / safe / balance fall
         String bigMode = raw == null ? "" : raw.optString("bigMode", "");
         double bigDelta = "spent".equals(bigMode) ? p[0] : "left".equals(bigMode) ? -p[0] : "balance".equals(bigMode) ? p[1] - p[0] - p[2] : 0;
-        v.setTextViewText(R.id.w_s_big, empty ? "—" : moved(raw, "big", d.optString("bigValue", ""), sym, bigDelta));
-        v.setTextViewText(R.id.w_s_today, "Today " + moved(raw, "today", d.optString("today", "—"), sym, p[3]));
+        v.setTextViewText(R.id.w_s_big, empty || newMonth ? "—" : moved(raw, "big", d.optString("bigValue", ""), sym, bigDelta));
+        // A new day: today starts again from what was typed on the home screen today
+        v.setTextViewText(R.id.w_s_today, "Today " + (gap > 0 ? money(sym, p[3]) : moved(raw, "today", d.optString("today", "—"), sym, p[3])));
         String sideMode = raw == null ? "" : raw.optString("sideMode", "");
         double sideDelta = "spent".equals(sideMode) ? p[0] : "balance".equals(sideMode) ? p[1] - p[0] - p[2] : 0;
         String sideLabel = d.optString("sideLabel", "Spent");
-        v.setTextViewText(R.id.w_s_spent, sideLabel + " " + moved(raw, "side", d.optString("sideValue", d.optString("spent", "—")), sym, sideDelta));
+        v.setTextViewText(R.id.w_s_spent, sideLabel + " " + (newMonth ? "—" : moved(raw, "side", d.optString("sideValue", d.optString("spent", "—")), sym, sideDelta)));
 
         // The chart is drawn at the size it is shown — never stretched
         DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
@@ -137,14 +196,38 @@ final class WidgetRender {
         boolean land = ctx.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
         int wDp = o.getInt(land ? AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH : AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0);
         int hDp = o.getInt(land ? AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT : AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0);
+        if (wDp <= 0) wDp = 250;                          // first placement: some launchers report no size yet
+        if (hDp <= 0) hDp = 180;
         int roomDp = hDp - 132;                          // what the text above it and the padding take
-        JSONArray week = d.optJSONArray("week");
+        JSONArray week = rollWeek(d.optJSONArray("week"), gap);
         boolean chart = d.optBoolean("chart", true) && week != null && wDp >= 150 && roomDp >= 48;
         v.setViewVisibility(R.id.w_s_chart, chart ? View.VISIBLE : View.GONE);
         if (chart) v.setImageViewBitmap(R.id.w_s_chart, weekChart(week, p[3], wDp - 28, Math.min(roomDp, 140), dm));
         v.setOnClickPendingIntent(R.id.w_root, open(ctx, "page/today", 21));
         v.setOnClickPendingIntent(R.id.w_s_add, entry(ctx, "expense", 22));
         return v;
+    }
+
+    /** The seven days the app sent, moved on by `gap` days: older days drop off, new ones start at 0. */
+    static JSONArray rollWeek(JSONArray week, int gap) {
+        if (week == null || gap <= 0) return week;
+        JSONArray out = new JSONArray();
+        int n = week.length();
+        Calendar c = Calendar.getInstance();
+        c.add(Calendar.DAY_OF_MONTH, -(n - 1));
+        for (int i = 0; i < n; i++) {
+            JSONObject day = i + gap < n ? week.optJSONObject(i + gap) : null;
+            if (day == null) {
+                day = new JSONObject();
+                try {
+                    day.put("label", String.valueOf("SMTWTFS".charAt(c.get(Calendar.DAY_OF_WEEK) - 1)));
+                    day.put("value", 0);
+                } catch (Exception ignored) { }
+            }
+            out.put(day);
+            c.add(Calendar.DAY_OF_MONTH, 1);
+        }
+        return out;
     }
 
     /** Seven bars, today's the bright one, the day's letter under each. Sizes in dp. */
@@ -189,7 +272,7 @@ final class WidgetRender {
         boolean dk = dark(ctx, d);
         RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.widget_bills);
         v.setInt(R.id.w_root, "setBackgroundResource", dk ? R.drawable.widget_bg_dark : R.drawable.widget_bg_light);
-        int text = dk ? 0xFFF5F5F7 : 0xFF0A0A0C, muted = dk ? 0xFFAEAEB2 : 0xFF6C6C70, late = dk ? 0xFFFF453A : 0xFFFF3B30;
+        int text = dk ? 0xFFF5F5F7 : 0xFF0A0A0C, muted = dk ? 0xFFAEAEB2 : 0xFF6C6C70, lateColor = dk ? 0xFFFF453A : 0xFFFF3B30;
         v.setTextColor(R.id.w_b_title, text);
         JSONArray list = d.optJSONArray("bills");
         int[][] rows = {
@@ -198,15 +281,18 @@ final class WidgetRender {
             { R.id.w_b_row3, R.id.w_b_name3, R.id.w_b_when3, R.id.w_b_amt3 },
         };
         int count = list == null ? 0 : Math.min(3, list.length());
+        String today = todayKey();
         for (int i = 0; i < 3; i++) {
             if (i >= count) { v.setViewVisibility(rows[i][0], View.GONE); continue; }
             JSONObject b = list.optJSONObject(i);
             v.setViewVisibility(rows[i][0], View.VISIBLE);
             v.setTextViewText(rows[i][1], b.optString("name", ""));
-            v.setTextViewText(rows[i][2], b.optString("when", ""));
+            String due = b.optString("due", "");
+            boolean late = due.isEmpty() ? b.optBoolean("late", false) : daysBetween(today, due) < 0;
+            v.setTextViewText(rows[i][2], due.isEmpty() ? b.optString("when", "") : dueLabel(due, today));
             v.setTextViewText(rows[i][3], b.optString("amount", ""));
             v.setTextColor(rows[i][1], text);
-            v.setTextColor(rows[i][2], b.optBoolean("late", false) ? late : muted);
+            v.setTextColor(rows[i][2], late ? lateColor : muted);
             v.setTextColor(rows[i][3], text);
         }
         v.setViewVisibility(R.id.w_b_empty, count == 0 ? View.VISIBLE : View.GONE);

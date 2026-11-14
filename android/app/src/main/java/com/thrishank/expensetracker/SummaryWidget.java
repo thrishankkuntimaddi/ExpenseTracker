@@ -10,6 +10,14 @@ public class SummaryWidget extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
         for (int id : ids) manager.updateAppWidget(id, WidgetRender.summary(context, manager, id));
+        WidgetRender.scheduleMidnight(context);
+    }
+
+    /** Just after midnight: every widget moves on to the new day. */
+    @Override
+    public void onReceive(Context context, android.content.Intent intent) {
+        if (WidgetRender.MIDNIGHT.equals(intent.getAction())) { WidgetRender.refreshAll(context); return; }
+        super.onReceive(context, intent);
     }
 
     /** Resized on the home screen: the chart is redrawn for the new size. */

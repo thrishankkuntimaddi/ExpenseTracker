@@ -1,5 +1,6 @@
 // ─── useAuth hook ────────────────────────────────────────────────
 import { useState, useEffect, useCallback, useRef } from "react";
+import { clearWidgets } from '../native/intake';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -169,6 +170,7 @@ export function useAuth() {
     } catch (err) {
       console.warn("[signOut] Could not clear offline cache:", err);
     }
+    await clearWidgets();   // no other account's figures on the home screen
     window.location.reload();
     return { ok: true };
   }, []);
@@ -186,6 +188,7 @@ export function useAuth() {
     }
     clearLegacyDataCache();
     try { await clearLocalFirestoreCache(); } catch { /* best effort */ }
+    await clearWidgets();   // no other account's figures on the home screen
     window.location.reload();
   }, []);
 

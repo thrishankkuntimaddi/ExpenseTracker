@@ -12,7 +12,7 @@ import { toKey, fromKey } from './recurring';
 import { computeStats } from './finance';
 import { computeCarryForward } from './carryForward';
 
-export const WIDGET_DEFAULTS = { headline: 'safe', chart: true, theme: 'auto' };
+export const WIDGET_DEFAULTS = { headline: 'safe', chart: true, theme: 'light' };
 
 export function widgetData({ transactions = [], income = [], settings = {}, rules = [], now = new Date(), money, symbol = '₹' }) {
   const prefs = { ...WIDGET_DEFAULTS, ...(settings?.widgets ?? {}) };
@@ -49,11 +49,13 @@ export function widgetData({ transactions = [], income = [], settings = {}, rule
 
   const ids = new Set([...transactions, ...income].map((e) => e.id));
   const bills = upcomingBills(rules, ids, todayKey, 30).slice(0, 3).map((b) => ({
-    name: String(b.rule.name).slice(0, 28), when: dueLabel(b.dateKey, todayKey), amount: money(b.amount), late: b.status === 'overdue',
+    name: String(b.rule.name).slice(0, 28), when: dueLabel(b.dateKey, todayKey), due: b.dateKey, amount: money(b.amount), late: b.status === 'overdue',
   }));
 
   return {
-    v: 1, updatedAt: now.getTime(), theme: prefs.theme, chart: !!prefs.chart,
+    // day / monthKey: the widgets roll "Today", the chart and bill labels on
+    // by themselves when the date changes before the app is opened again
+    v: 1, updatedAt: now.getTime(), day: todayKey, monthKey, theme: prefs.theme, chart: !!prefs.chart,
     month: now.toLocaleDateString('en-IN', { month: 'long' }),
     bigLabel: big.label, bigValue: big.value,
     sideLabel: side.label, sideValue: side.n < 0 ? `−${money(-side.n)}` : money(side.n),

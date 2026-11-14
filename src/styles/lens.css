@@ -142,6 +142,72 @@ button:is([style*="background: var(--surface2)"], [style*="background: var(--sur
 }
 #phone-bar button.nav-add svg, .add-paid-opt.on svg { color: #0A0A0C !important; }
 
+/* Primary and selected buttons (filled with the accent) in light mode: the
+   same bright white glass, never a black slab — the selected planner tab,
+   "Make it a goal", Save, range pills, the tour button. Dark mode already
+   shows them near-white. */
+:root:root:not([data-theme="monoflow"]) :is(button[style*="background: var(--accent)"], .tl-ranges button.on, .tour-btn:not(.tour-btn-ghost)) {
+  background: rgba(255, 255, 255, 0.92) !important;
+  background-image: linear-gradient(180deg, rgba(255,255,255,.6), rgba(255,255,255,0) 60%) !important;
+  color: #0A0A0C !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow: inset 0 1px 0 #fff, inset -1px -1px 0 -0.25px rgba(255, 255, 255, 0.6),
+              0 0 0 0.5px rgba(0, 0, 0, 0.07), 0 6px 16px -8px rgba(0, 0, 0, 0.3) !important;
+}
+:root:root:not([data-theme="monoflow"]) :is(button[style*="background: var(--accent)"], .tl-ranges button.on, .tour-btn:not(.tour-btn-ghost)) :is(svg, [style*="color: rgb(255, 255, 255)"], [style*="color: #fff"]) {
+  color: #0A0A0C !important;
+}
+
+/* ── Tappable tiles respond like glass: lift on hover, sink on press ──
+   (Explore, Home tiles, Add kinds, reminders). The tile rule pins a
+   transform for its GPU layer, which used to swallow every press. */
+:root { --lens-hover: rgba(255, 255, 255, 0.42); --lens-press: rgba(255, 255, 255, 0.5); }
+[data-theme="monoflow"] { --lens-hover: rgba(255, 255, 255, 0.1); --lens-press: rgba(255, 255, 255, 0.14); }
+:root:root :is(.explore-card, .home-tile, .add-kind, .reminder-tile) {
+  position: relative;
+  transform: translateZ(0);
+  transition: transform .5s cubic-bezier(.3, 1.45, .45, 1), box-shadow .35s ease, background-color .3s ease !important;
+  -webkit-tap-highlight-color: transparent;
+  will-change: transform;
+}
+/* a soft light that sweeps across the glass */
+:root:root :is(.explore-card, .reminder-tile)::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(120% 140% at 0% 0%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 55%);
+  opacity: 0; transition: opacity .35s ease;
+}
+[data-theme="monoflow"] :is(.explore-card, .reminder-tile)::after { background: radial-gradient(120% 140% at 0% 0%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 55%); }
+:root:root :is(.explore-icon, .tile-icon) { transition: transform .5s cubic-bezier(.3, 1.45, .45, 1) !important; }
+@media (hover: hover) and (pointer: fine) {
+  :root:root :is(.explore-card, .home-tile, .add-kind, .reminder-tile):not(:disabled):hover {
+    transform: translate3d(0, -3px, 0) scale(1.025) !important;
+    background: var(--lens-hover) !important;
+    box-shadow: var(--lens-bevel), 0 18px 36px -16px rgba(0, 0, 0, 0.32) !important;
+    filter: none !important;
+  }
+  :root:root :is(.explore-card, .reminder-tile):hover::after { opacity: 1; }
+  :root:root :is(.explore-card, .home-tile):hover :is(.explore-icon, .tile-icon) { transform: scale(1.1) rotate(-3deg); }
+}
+:root:root :is(.explore-card, .home-tile, .add-kind, .reminder-tile):not(:disabled):active {
+  transform: translate3d(0, 0, 0) scale(0.96) !important;
+  background: var(--lens-press) !important;
+  box-shadow: var(--lens-bevel), 0 4px 12px -8px rgba(0, 0, 0, 0.3) !important;
+  transition-duration: .14s !important;
+}
+:root:root :is(.explore-card, .reminder-tile):active::after { opacity: 1; transition-duration: .1s; }
+:root:root :is(.explore-card, .home-tile):active :is(.explore-icon, .tile-icon) { transform: scale(0.92); transition-duration: .14s !important; }
+@media (prefers-reduced-motion: reduce) {
+  :root:root :is(.explore-card, .home-tile, .add-kind, .reminder-tile, .explore-icon, .tile-icon) { transition: background-color .2s ease, box-shadow .2s ease !important; }
+  :root:root :is(.explore-card, .home-tile, .add-kind, .reminder-tile):is(:hover, :active) { transform: translateZ(0) !important; }
+}
+
+/* Chart bars drawn with the accent (Planner year by year): a soft glass grey
+   with a lit top edge in light mode, not dark slabs */
+:root:root:not([data-theme="monoflow"]) div[title][style*="background: var(--accent)"] {
+  background: linear-gradient(180deg, rgba(120, 120, 128, 0.62), rgba(120, 120, 128, 0.42)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
 /* The dock's sliding lens: a brighter pane of the same glass */
 .dock-pill {
   background: rgba(255, 255, 255, 0.5) !important;
@@ -184,3 +250,9 @@ button:is([style*="background: var(--surface2)"], [style*="background: var(--sur
   :root, [data-theme="light"] { --lens-bar: rgba(255,255,255,.9); }
   [data-theme="monoflow"]     { --lens-bar: rgba(28,28,30,.92); }
 }
+
+/* ── No visible scrollbars ──────────────────────────────────────────
+   Like iOS / macOS: every list and page still scrolls (touch, trackpad,
+   wheel, keyboard), but no grey bar is drawn over the glass. */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none; background: transparent; }

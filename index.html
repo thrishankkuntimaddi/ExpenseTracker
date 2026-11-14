@@ -172,10 +172,7 @@
       (function() {
         try {
           var pref = localStorage.getItem('et_theme_pref');
-          if (pref !== 'light' && pref !== 'dark' && pref !== 'system') {
-            var legacy = localStorage.getItem('et_theme');
-            pref = legacy === 'monoflow' ? 'dark' : legacy === 'light' ? 'light' : 'system';
-          }
+          if (pref !== 'light' && pref !== 'dark' && pref !== 'system') pref = 'light';   // light by default
           var dark = pref === 'dark' || (pref === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
           var t = dark ? 'monoflow' : 'light';
           document.documentElement.setAttribute('data-theme', t);

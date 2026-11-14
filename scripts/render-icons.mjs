@@ -46,7 +46,7 @@ for (const d of fs.readdirSync(RES)) {
   }
   if (d.startsWith('drawable') && fs.existsSync(`${dir}/splash.png`)) {
     const [w, h] = sizeOf(`${dir}/splash.png`)
-    jobs.push([`${dir}/splash.png`, w, h, 'splash', d.includes('night') ? DARK : LIGHT])
+    jobs.push([`${dir}/splash.png`, w, h, 'splash', LIGHT])   // light by default, even in system dark mode
   }
 }
 

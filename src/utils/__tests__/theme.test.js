@@ -20,20 +20,19 @@ describe('resolveTheme', () => {
 
 describe('getThemePref', () => {
   beforeEach(() => store.clear());
-  it('new devices follow the system', () => {
-    expect(getThemePref()).toBe('system');
+  it('is light by default, even when the device is in dark mode', () => {
+    expect(getThemePref()).toBe('light');
   });
-  it('keeps what an existing device had (old synced theme cache)', () => {
+  it('ignores the last applied theme (a paint cache, not a choice)', () => {
     store.set('et_theme', 'monoflow');
-    expect(getThemePref()).toBe('dark');
-    store.set('et_theme', 'light');
     expect(getThemePref()).toBe('light');
   });
   it('an explicit choice wins, junk is ignored', () => {
-    store.set('et_theme', 'monoflow');
+    store.set(THEME_PREF_KEY, 'dark');
+    expect(getThemePref()).toBe('dark');
     store.set(THEME_PREF_KEY, 'system');
     expect(getThemePref()).toBe('system');
     store.set(THEME_PREF_KEY, 'purple');
-    expect(getThemePref()).toBe('dark');
+    expect(getThemePref()).toBe('light');
   });
 });
