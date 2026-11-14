@@ -18,11 +18,13 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Reads notifications from UPI apps and SMS apps (bank messages) — only
- * when the user turned on "Auto-capture payments" in the app AND granted
- * notification access in Android settings. Anything that looks like money
- * is kept on this phone for the app to offer as "Add this payment?".
- * Nothing is sent anywhere from here; other apps' notifications are ignored.
+ * Reads notifications from payment and banking apps only — when the user turned
+ * on "Auto-capture payments" in the app (after the disclosure screen) AND
+ * granted notification access in Android settings. Anything that looks like
+ * money is kept on this phone for the app to offer as "Add this payment?".
+ * Nothing is sent anywhere from here. Every other app's notifications —
+ * messaging apps, SMS apps, shopping apps — are ignored without being read.
+ * Bank SMS come only through BankSmsReceiver (the SMS permission).
  */
 public class PaymentListenerService extends NotificationListenerService {
     static final String PREFS = "payment_capture";
@@ -32,10 +34,22 @@ public class PaymentListenerService extends NotificationListenerService {
     private static final long KEEP_MS = 30L * 24 * 3600 * 1000;
 
     static final Set<String> SOURCES = new HashSet<>(Arrays.asList(
-        "com.google.android.apps.nbu.paisa.user", "com.phonepe.app", "net.one97.paytm", "in.org.npci.upiapp",
-        "com.dreamplug.androidapp", "in.amazon.mShop.android.shopping", "com.mobikwik_new", "com.whatsapp",
-        "com.google.android.apps.messaging", "com.samsung.android.messaging", "com.android.mms",
-        "com.oneplus.mms", "com.android.messaging"
+        // UPI and wallet apps
+        "com.google.android.apps.nbu.paisa.user",   // Google Pay
+        "com.phonepe.app",                          // PhonePe
+        "net.one97.paytm",                          // Paytm
+        "in.org.npci.upiapp",                       // BHIM
+        "com.dreamplug.androidapp",                 // CRED
+        "com.mobikwik_new",                         // MobiKwik
+        // Bank apps
+        "com.sbi.lotusintouch",                     // SBI YONO
+        "com.snapwork.hdfc",                        // HDFC Bank
+        "com.csam.icici.bank.imobile",              // ICICI iMobile Pay
+        "com.axis.mobile",                          // Axis Mobile
+        "com.msf.kbank.mobile",                     // Kotak
+        "com.bankofbaroda.mconnect",                // Bank of Baroda bob World
+        "com.idfcfirstbank.optimus",                // IDFC FIRST
+        "com.canarabank.mobility"                   // Canara Bank
     ));
     private static final Pattern MONEY = Pattern.compile("(₹|\\brs\\.?\\s*\\d|\\binr\\b|debited|credited)", Pattern.CASE_INSENSITIVE);
 

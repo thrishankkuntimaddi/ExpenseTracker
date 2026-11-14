@@ -77,6 +77,27 @@ service cloud.firestore {
           && after.members.size() <= before.members.size() + 1;
       }
 
+      // Leaving (account deletion): a member who isn't the creator takes only
+      // themselves off — their account, name and photo. Their trip person and
+      // rows stay (others' balances depend on them) and are retired, so nobody
+      // can take them over; nothing else changes.
+      function isLeave() {
+        let before = resource.data;
+        let after = request.resource.data;
+        let me = request.auth.uid;
+        return me in before.memberUids
+          && me != before.ownerUid
+          && after.diff(before).affectedKeys().hasOnly(['memberUids', 'uidMember', 'people', 'removedUids', 'retiredMembers', 'updatedAt'])
+          && after.memberUids.toSet() == before.memberUids.toSet().difference([me].toSet())
+          && !(me in after.uidMember) && !(me in after.people)
+          && after.uidMember.diff(before.uidMember).affectedKeys().hasOnly([me])
+          && after.people.diff(before.people).affectedKeys().hasOnly([me])
+          && after.get('removedUids', []).toSet().difference(before.get('removedUids', []).toSet()).hasOnly([me])
+          && before.get('removedUids', []).toSet().difference(after.get('removedUids', []).toSet()).size() == 0
+          && after.get('retiredMembers', []).toSet().difference(before.get('retiredMembers', []).toSet()).hasOnly([before.uidMember.get(me, '')])
+          && before.get('retiredMembers', []).toSet().difference(after.get('retiredMembers', []).toSet()).size() == 0;
+      }
+
       allow get: if signedIn();
       allow list: if signedIn() && request.auth.uid in resource.data.memberUids;
       allow create: if signedIn()
@@ -85,7 +106,7 @@ service cloud.firestore {
         && validTrip(request.resource.data);
       allow update: if signedIn() && validTrip(request.resource.data)
         && request.resource.data.ownerUid == resource.data.ownerUid
-        && (isTripOwner(resource.data) || isJoin());
+        && (isTripOwner(resource.data) || isJoin() || isLeave());
       allow delete: if isTripOwner(resource.data);
 
       // A row says who wrote it (`by`) — always the account writing it
@@ -234,6 +255,9 @@ service cloud.firestore {
         && !('activeAt' in resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeAt'])
         && request.resource.data.activeAt == request.time;
+      // Removed with the account (Delete account). A new account has a new id,
+      // so this can't be used to be credited twice.
+      allow delete: if isOwner(userId);
     }
     // supporters/{userId}: paid support (Play Billing / Razorpay), written
     // only by the server after it verifies a payment — never by the app.

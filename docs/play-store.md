@@ -20,7 +20,7 @@ Everything the app needs for Play is in place. What's left needs **your** Google
 2. **Create app** — name *Expense Tracker*, default language English (India), App, Free.
 3. **Play App Signing** — when asked, choose *“Use my upload key”* … or simply upload the `.aab`: Play generates its app-signing key and treats the key the AAB was signed with as the **upload key**. (Keep using the same CI secret — nothing changes.)
 4. **App content** (left menu → Policy → App content) — answers below.
-5. **Store listing** — texts below; screenshots: take 4–8 phone screenshots (Home, Add, Stats, Trips, Debts) at 1080×1920 or larger; feature graphic 1024×500.
+5. **Store listing** — texts below; graphics are ready in `docs/play/`: `feature-graphic.png` (1024×500) and six phone screenshots at 1080×1920 (`screenshot-*.png`). Re-render with `scripts/render-play-assets.mjs` after a UI change.
 6. **Testing → Closed testing** — create a track, add testers by email (or a Google Group), upload `ExpenseTracker-Play.aab` from the latest GitHub release, roll out. After 14 days with 12+ testers, apply for production.
 
 > Friends who already use the APK: a Play install is the same app, same signature only if Play signs with *your* key. Usually Play re-signs with its own key, so Android treats it as a different signer — they must **uninstall the APK and install from Play once** (their data is in the cloud; nothing is lost).
@@ -78,9 +78,9 @@ No ads. No selling data. Open source.
 - **SMS permission declaration** (Policy → App content → *Sensitive permissions*; Play asks when the first `.aab` with `RECEIVE_SMS` is uploaded):
   - Core functionality: **“SMS-based money management”** (the listed exception for SMS permissions).
   - Text: *“Expense Tracker is a personal expense tracker. With the user's permission it reads incoming bank transaction SMS (debits and credits from business senders such as AD-HDFCBK) on the device and offers each as an expense or income entry the user can add with one tap. Messages from people (phone numbers) are ignored. SMS content is processed on the device only and never uploaded; nothing is saved to the user's account unless they tap Add. Only RECEIVE_SMS is used — the inbox is never read.”*
-  - Video (Play asks for one): Profile → Auto-capture payments → switch on → Android's SMS prompt → Allow → a bank SMS arrives → it appears on Home → Add. 30–60 s screen recording is enough.
+  - Video (Play asks for one): Profile → Auto-capture payments → switch on → **the app's disclosure screen “Allow reading bank SMS?” (what is read, why, stays on the phone) → Agree and continue** → Android's SMS prompt → Allow → a bank SMS arrives → it appears on Home → Add. 30–60 s screen recording is enough. The disclosure shows every time, so the flow can be recorded again by switching the source off and on.
   - **If Play rejects SMS** (it can — the exception is reviewed by people): delete the `<uses-permission … RECEIVE_SMS>` line and the `BankSmsReceiver` block from `android/app/src/play/AndroidManifest.xml`, release again. The app hides the *Bank SMS* row by itself; UPI-app notifications (and bank SMS via the SMS app's notifications) keep working.
-- **Notification access declaration**: the app uses `BIND_NOTIFICATION_LISTENER_SERVICE` (Notification access, granted by the user in Settings). Justification: *“Optional feature that detects payments from UPI apps and bank SMS notifications on the device so users can add them to their expense log with one tap. Only allow-listed payment and SMS apps are read; data stays on the device unless the user adds an entry.”* Record a short screen video of Profile → Auto-capture → Notification access → a payment appearing on Home; Play may ask for it.
+- **Notification access declaration**: the app uses `BIND_NOTIFICATION_LISTENER_SERVICE` (Notification access, granted by the user in Settings). Justification: *“Optional feature that detects payments from payment and banking apps on the device so users can add them to their expense log with one tap. Only an allow-list of payment apps (Google Pay, PhonePe, Paytm, BHIM, CRED, MobiKwik) and bank apps is read — never messaging apps, SMS apps or shopping apps. A disclosure screen explains this before the user is sent to Notification access. Data stays on the device unless the user adds an entry.”* Record a short screen video of Profile → Auto-capture → Allow → the disclosure screen → Agree and continue → Notification access → a payment appearing on Home; Play may ask for it.
 - `SCHEDULE_EXACT_ALARM` (On-time reminders, user-enabled): justification *“User-requested reminders for bills and recurring payments at an exact time.”*
 
 ## Notes
@@ -100,3 +100,20 @@ Nothing needs to be given to anyone in chat. When the Play account is ready:
 | *(Optional, later)* Service-account JSON with “Release manager” on the app | GitHub secret `PLAY_SERVICE_ACCOUNT_JSON` | Uploading each release to Play automatically instead of by hand |
 
 Build locally without the CI: `npm run android:sync`, then `android/gradlew -p android :app:bundlePlay` (with the keystore env vars set, it's signed with the upload key; without them it's a debug-signed test build).
+
+## Review fixes (4.2.0)
+
+What was asked before review, and what changed:
+
+| Asked | Done |
+|---|---|
+| Read notifications only from bank and payment apps | The listener reads only Google Pay, PhonePe, Paytm, BHIM, CRED, MobiKwik and major bank apps (`PaymentListenerService.SOURCES`). WhatsApp, SMS apps and Amazon were removed. Bank SMS come only through `RECEIVE_SMS` from business senders. |
+| Clear in-app consent before the SMS permission | A disclosure screen (“Allow reading bank SMS?” / “Allow reading payment notifications?”) opens every time, right before Android's SMS prompt or the Notification access screen, with *Not now* / *Agree and continue*. Video steps are above. |
+| Remove FOREGROUND_SERVICE, BROADCAST_SMS, DUMP | `FOREGROUND_SERVICE` (pulled in by AndroidX WorkManager, never used) is stripped from the merged manifest. `DUMP` was not requested by the app: it guarded two AndroidX debugging receivers (WorkManager diagnostics, the adb profile installer); both are removed, so `DUMP` no longer appears. **`BROADCAST_SMS` is not a permission the app requests** — it is the `android:permission` guard on the SMS receiver, which Android's documentation requires so that only the system can deliver SMS to it. Removing it would let any app inject fake bank messages, so it stays (it is not listed under the app's requested permissions). |
+| `allowBackup=true` | `allowBackup="false"`, `fullBackupContent="false"` and `dataExtractionRules` that exclude everything from cloud backup and device-to-device transfer (Android 12+). Captured SMS never leave the phone. |
+| Account deletion leaves data | Delete account now also deletes shared trips the user created (rows, settlements, invite preview), takes them off trips they joined, deletes their invite code and referral record, their mail outbox and the account document, and forgets captured SMS on the phone. Needs the Firestore rules in this release (deploy: `firebase deploy --only firestore:rules`; checked by `scripts/test-rules-account-delete.mjs` on the emulator). |
+| Shared trips in the privacy policy | New “Shared trips” section: what is stored, who sees it, invite emails, leaving and deleting. |
+| Old support email | `public/privacy.html` → kuntimaddithrishank@gmail.com. |
+| Feature graphic, screenshots | `docs/play/` (see step 5). |
+| Reviewer test account | Create it yourself in the app (a fresh email + password, add a few entries), then paste it in Play Console → App content → App access. Never commit it to the repo. Guest mode (“Try it without an account”) also shows every screen except shared trips. |
+

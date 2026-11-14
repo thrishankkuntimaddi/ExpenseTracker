@@ -6,6 +6,7 @@ import {
   Cloud, CloudOff, RefreshCw, AlertTriangle, Laptop, X, UserX, Eraser,
 } from 'lucide-react';
 import { deleteAllUserData, bulkImport, exportAllUserData, restoreBackup } from '../../services/firestore';
+import { deleteAccountFootprint, deleteAccountDoc } from '../../services/accountDeletion';
 import { parseBackup, describeBackup } from '../../utils/backup';
 import { useSyncStatus, describeSync } from '../../services/sync';
 import { platform, isNative, engineVersion, webviewOutdated, WEBVIEW_PLAY_URL } from '../../native';
@@ -73,8 +74,17 @@ export default function SettingsTab({
     if (!user?.uid) { showFeedback('You must be logged in.', true); return; }
     setBusyReset(true);
     try {
+      if (andAccount) {
+        // Shared trips, invite codes, outbox … — everything outside the account's own ledger
+        const failed = await deleteAccountFootprint(user.uid);
+        if (failed.length) throw new Error(`Couldn’t remove: ${failed.join(', ')}. Check your connection and try again — your account was not deleted.`);
+      }
       await deleteAllUserData(user.uid);
-      if (andAccount) { await onDeleteAccount(); return; }   // reloads to the sign-in screen
+      if (andAccount) {
+        await deleteAccountDoc(user.uid).catch((err) => console.warn('[delete account] account doc', err));
+        await onDeleteAccount();   // reloads to the sign-in screen
+        return;
+      }
       showFeedback('All your data was deleted from your account and every device.');
     } catch (err) {
       showFeedback(err.message, true);
@@ -457,7 +467,7 @@ export default function SettingsTab({
       )}
       {confirming === 'account' && (
         <ConfirmDeleteModal title={tr("Delete your account?")}
-          message="All your data is deleted, then your sign-in. This can't be undone — export a backup first if you might need it."
+          message="All your data is deleted, then your sign-in: your entries and settings, shared trips you created (for everyone on them), your place on trips you joined, your invite code and anything waiting to be sent. Rows you added to other people's trips stay under the trip's name for that person so their balances still add up. This can't be undone — export a backup first if you might need it."
           confirmLabel="Delete account" ConfirmIcon={UserX}
           onConfirm={() => { setConfirming(null); handleDeleteAll({ andAccount: true }); }} onCancel={() => setConfirming(null)} />
       )}

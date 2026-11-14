@@ -1,6 +1,6 @@
 [package]
 name = "expensetracker"
-version = "4.1.1"
+version = "4.2.0"
 description = "Expense Tracker — personal finance, synced across devices"
 authors = ["Thrishank Kuntimaddi"]
 edition = "2021"

@@ -21,7 +21,7 @@
   <header><img src="icon-192.png" width="44" height="44" alt=""><strong>Expense Tracker</strong></header>
   <div class="card">
     <h1>Privacy policy</h1>
-    <p class="muted">Last updated 12 November 2026 · applies to the website, the Android app and the desktop apps.</p>
+    <p class="muted">Last updated 14 November 2026 · applies to the website, the Android app and the desktop apps.</p>
 
     <p>Expense Tracker is an open-source personal finance app. It has no ads, does not sell or share your data, and uses it only to run the app for you.</p>
 
@@ -40,12 +40,21 @@
     <p>Expense Tracker’s use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
 
     <h2>Auto-capture payments (Android app from Google Play)</h2>
-    <p>This is off until you turn it on in Profile → Auto-capture payments, and each source needs your permission in Android:</p>
+    <p>This is off until you turn it on in Profile → Auto-capture payments. Before Android asks for either permission, the app shows a screen explaining exactly what will be read, why, and that it stays on your phone; nothing happens unless you choose “Agree and continue”. Each source then needs your permission in Android:</p>
     <ul>
-      <li><strong>UPI app notifications</strong> (Android “Notification access”): the app looks only at notifications from payment apps (Google Pay, PhonePe, Paytm, BHIM, CRED, Amazon Pay, MobiKwik, WhatsApp) and SMS apps. Other apps’ notifications are ignored.</li>
+      <li><strong>Payment app notifications</strong> (Android “Notification access”): the app looks only at notifications from payment and banking apps — Google Pay, PhonePe, Paytm, BHIM, CRED, MobiKwik and the apps of major Indian banks. Notifications from every other app, including messaging apps such as WhatsApp and SMS apps, are ignored and never read or stored.</li>
       <li><strong>Bank SMS</strong> (Android’s SMS permission, <code>RECEIVE_SMS</code>): the app looks only at new messages from business senders (like “AD-HDFCBK”) that mention an amount. Messages from people (phone numbers) are ignored, and your SMS inbox is never read.</li>
     </ul>
     <p>Messages that look like a completed payment are kept <em>on your phone only</em>, for up to 30 days, and shown on Home as “Add this payment?”. OTPs, requests and reminders are skipped. Nothing is uploaded or saved to your account unless you tap Add — then only the entry (amount, name, date), not the message. Turning the feature off deletes everything it kept. The app from the website does not include this feature.</p>
+
+    <h2>Shared trips</h2>
+    <p>A shared trip is a trip you create and invite friends to, so everyone can add what they spend and see who owes whom.</p>
+    <ul>
+      <li><strong>What is stored</strong> — the trip’s name, dates and status; the people on it (the names the creator or each person typed); for each person who joined with an account, that account’s id, name and profile photo; and the trip’s rows (what was spent, the amount, who paid and who it was split between, the date) and settlements. It is stored in Google Cloud Firestore.</li>
+      <li><strong>Who can see it</strong> — only the accounts on that trip. Anyone you send the invite link to can see a short preview (the trip’s name, dates, the number of people and the creator’s name and photo) before joining. Nobody else can read a trip.</li>
+      <li><strong>Invite emails</strong> — if you type a friend’s email address to invite them, the app sends them one email with the link. The address is used only for that email and is not kept afterwards.</li>
+      <li><strong>Leaving and deleting</strong> — the creator can delete a trip at any time; this deletes it, its rows, settlements and the invite preview for everyone. When you delete your account, trips you created are deleted for everyone, and you are taken off trips you joined (your account, name and photo are removed). Rows you added to someone else’s trip stay there under the name used for you on that trip, so the other people’s balances still add up.</li>
+    </ul>
 
     <h2>Invites</h2>
     <p>Your invite code is stored with your account id. If you make an account from a friend’s invite link, a record says which account invited yours and when you added your first entry — so your friend can get supporter days. Your friend sees only how many people joined, never who or anything about your money.</p>
@@ -54,7 +63,7 @@
     <p>When you import a statement (History → import), the file is read on your device. It is never uploaded; only the entries you choose to add are saved to your account.</p>
 
     <h2>Emails</h2>
-    <p>If app lock is on, you may get an email at your account address about security events on your account (for example, repeated wrong PINs). There is no marketing email.</p>
+    <p>If app lock is on, you may get an email at your account address about security events on your account (for example, repeated wrong PINs). If a friend invites you to a shared trip, you get one email with the invite. There is no marketing email.</p>
 
     <h2>Services used</h2>
     <ul>
@@ -66,13 +75,14 @@
     <h2>Your choices</h2>
     <ul>
       <li>Export everything as JSON or CSV at any time (Profile → Your data).</li>
-      <li>Delete all your data, or your whole account, from Profile → Your data. Deletion from the database is immediate; backups in your Google Drive stay until you delete them.</li>
+      <li>Delete all your data, or your whole account, from Profile → Your data. Deleting your account removes your entries and settings, your devices and security records, your usage activity, shared trips you created, your place on trips you joined, your invite code and invite record, and anything waiting to be sent — then your sign-in. Deletion from the database is immediate. Backups in your Google Drive stay until you delete them. If you were a paid supporter, the payment record is kept as long as the law requires.</li>
+      <li><strong>Android backups</strong> — the Android app is excluded from Android’s cloud backup and phone-to-phone transfer, so nothing it keeps on your phone (including captured payment messages) is copied anywhere.</li>
       <li><strong>Unused accounts.</strong> If you haven’t opened the app for 25 days or more, the app’s maintainer may contact you (by phone or email) and, with your agreement, close your account. Closing switches off sign-in and moves your data aside; it is kept for 90 days so it can be restored if you ask, and is then deleted for good. Nobody reads the kept data. Write to the address below to have it restored.</li>
       <li>Sign out any device from Profile → Security.</li>
     </ul>
 
     <h2>Contact</h2>
-    <p>Questions or requests: <a href="mailto:thrishankkuntimaddi@gmail.com">thrishankkuntimaddi@gmail.com</a>. Source code: <a href="https://github.com/thrishankkuntimaddi/ExpenseTracker">github.com/thrishankkuntimaddi/ExpenseTracker</a>.</p>
+    <p>Questions or requests: <a href="mailto:kuntimaddithrishank@gmail.com">kuntimaddithrishank@gmail.com</a>. Source code: <a href="https://github.com/thrishankkuntimaddi/ExpenseTracker">github.com/thrishankkuntimaddi/ExpenseTracker</a>.</p>
   </div>
 </main>
 </body>

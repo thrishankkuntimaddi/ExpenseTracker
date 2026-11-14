@@ -220,6 +220,7 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 - Paid support (Razorpay / Google Play) is written in `server/functions` and switched off until the server plan is upgraded — see [server/README.md](server/README.md)
 
 ### 📲 Auto-capture payments (Google Play app)
+- **Ready for Play review (4.2)**: notifications are read only from payment and bank apps (Google Pay, PhonePe, Paytm, BHIM, CRED, MobiKwik, major banks) — never messaging, SMS or shopping apps; a disclosure screen explains what is read before Android asks for the SMS permission or Notification access; nothing the app keeps on the phone goes into Android backups; unused permissions are gone; **Delete account** also removes shared trips you created, your place on trips you joined, your invite code and referral record (`src/services/accountDeletion.js`). Store graphics: `docs/play/`; review notes: `docs/play-store.md`
 - **UPI app notifications and bank SMS** — Google Pay, PhonePe, Paytm, BHIM, CRED and your banks' debit/credit messages show up on Home as “Add this payment?” with the name, category and account filled in
 - One switch, then each source with its own Android permission; only business senders are read (never messages from people, never the SMS inbox), OTPs and requests skipped, kept on the phone until you tap Add
 - **One ledger, no doubles**: the same payment from the UPI app and the bank SMS shows once, and anything you already typed or imported is not offered again
