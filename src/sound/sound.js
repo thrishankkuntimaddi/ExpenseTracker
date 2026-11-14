@@ -142,7 +142,8 @@ export function wireTapSounds() {
   if (tapsWired || typeof document === 'undefined') return;
   tapsWired = true;
   document.addEventListener('click', (e) => {
-    if (e.button !== 0) return;
+    // e.lgReplay: a tile's tap replayed after its press spring (app/glassChrome.js) — already heard
+    if (e.button !== 0 || e.lgReplay) return;
     const el = e.target?.closest?.(PRESSABLE);
     if (!el || el.disabled || el.getAttribute('aria-disabled') === 'true' || el.closest('[data-no-tap-sound]')) return;
     play('tap');
