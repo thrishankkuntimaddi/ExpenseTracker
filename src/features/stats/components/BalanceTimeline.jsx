@@ -32,8 +32,8 @@ export default function BalanceTimeline({ transactions = [], incomeWithCarry = [
   const shown = point ? point.value : today;
   const change = !point && tl.lastMonth != null ? Math.round((today - tl.lastMonth) * 100) / 100 : null;
   const up = (change ?? 0) >= 0;
-  // The app's indigo, fading into a soft fill under the line
-  const line = dark ? '#A5B4FC' : '#4F46E5';
+  // Colourless like the glass: graphite (light) / near-white (dark), fading into a soft fill under the line
+  const line = dark ? '#E5E5EA' : '#3A3A3C';
   const last = tl.points[tl.points.length - 1];
 
   return (

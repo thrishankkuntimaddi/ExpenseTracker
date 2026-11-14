@@ -24,7 +24,7 @@ export default function LockScreen({ lock, user, onSignOut }) {
     <div className="lock-root" role="dialog" aria-label={tr("Expense Tracker is locked")}
       style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 'max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom))' }}>
       <div className="card" style={{ width: '100%', maxWidth: 360, padding: '24px 20px 18px', textAlign: 'center' }}>
-        <img src={import.meta.env.BASE_URL + 'icon-192.png'} alt="" width={48} height={48} style={{ borderRadius: 14, boxShadow: '0 8px 24px rgba(99,102,241,0.3)' }} />
+        <img src={import.meta.env.BASE_URL + 'icon-192.png'} alt="" width={48} height={48} style={{ borderRadius: 14, boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }} />
         {mode === 'pin' && <PinEntry lock={lock} user={user} onForgot={() => setMode('forgot')} />}
         {mode === 'forgot' && <Forgot lock={lock} user={user} onBack={lock.needsSignIn ? null : () => setMode('pin')} onDone={() => { lock.afterReauth(); setMode('newpin'); }} />}
         {mode === 'newpin' && <NewPin lock={lock} />}

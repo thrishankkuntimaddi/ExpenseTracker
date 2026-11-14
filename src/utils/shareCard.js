@@ -11,9 +11,11 @@
 //   footer,
 // }
 const W = 720, PAD = 32, SCALE = 2, MAX_ROWS = 40;
+// Light Liquid Glass, like the app: Apple grey with a soft wallpaper tint,
+// white cards, graphite text; colour only for money in / out.
 const C = {
-  bg: '#0A0C11', card: '#161A23', line: '#262C3A', text: '#E8ECF4', sub: '#A3ABBD', muted: '#6B7385',
-  expense: '#F87171', income: '#4ADE80', accent: '#A78BFA', gold: '#FBBF24',
+  bg: '#EEF0F6', card: '#FFFFFF', line: '#E5E5EA', text: '#0A0A0C', sub: '#6C6C70', muted: '#8E8E93',
+  expense: '#FF3B30', income: '#1E9E4A', accent: '#3A3A3C', gold: '#D97A00',
 };
 const FONT = '"Inter", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const tone = (t) => C[t] ?? C.text;
@@ -58,11 +60,13 @@ export function renderShareCard(card) {
       ctx.scale(SCALE, SCALE);
       ctx.textBaseline = 'alphabetic';
 
-      // Background with a soft accent glow
+      // Background: the app's wallpaper — Apple grey with soft sky / peach / mint light
       ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
-      const glow = ctx.createRadialGradient(W - 80, 40, 10, W - 80, 40, 360);
-      glow.addColorStop(0, 'rgba(167,139,250,0.22)'); glow.addColorStop(1, 'rgba(167,139,250,0)');
-      ctx.fillStyle = glow; ctx.fillRect(0, 0, W, 360);
+      for (const [x, yy, r, col] of [[40, 0, 420, '122,178,255'], [W, 120, 380, '255,184,150'], [0, H, 420, '132,226,196']]) {
+        const g = ctx.createRadialGradient(x, yy, 10, x, yy, r);
+        g.addColorStop(0, `rgba(${col},0.45)`); g.addColorStop(1, `rgba(${col},0)`);
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      }
 
       // Header
       let y = PAD + 14;
@@ -72,7 +76,7 @@ export function renderShareCard(card) {
         ctx.font = `800 10.5px ${FONT}`;
         const bw = ctx.measureText(card.badge.text.toUpperCase()).width + 20;
         roundRect(ctx, W - PAD - bw, y - 14, bw, 22, 11);
-        ctx.fillStyle = card.badge.tone === 'income' ? 'rgba(74,222,128,0.14)' : card.badge.tone === 'expense' ? 'rgba(248,113,113,0.14)' : 'rgba(167,139,250,0.16)';
+        ctx.fillStyle = card.badge.tone === 'income' ? 'rgba(52,199,89,0.14)' : card.badge.tone === 'expense' ? 'rgba(255,59,48,0.12)' : 'rgba(120,120,128,0.14)';
         ctx.fill();
         ctx.fillStyle = tone(card.badge.tone ?? 'accent'); ctx.textAlign = 'center';
         ctx.fillText(card.badge.text.toUpperCase(), W - PAD - bw / 2, y + 1); ctx.textAlign = 'left';

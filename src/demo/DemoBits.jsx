@@ -6,7 +6,7 @@ import { PageHeader, EmptyState, PrimaryPill } from '../components/Page';
 import { t as tr } from '../i18n';
 export function DemoBanner() {
   return (
-    <div id="demo-banner" className="demo-banner" role="status" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px 8px 14px', background: 'var(--accent)', color: '#fff', fontSize: 12.5, fontWeight: 600, boxShadow: '0 10px 28px -10px rgba(79,70,229,.6)' }}>
+    <div id="demo-banner" className="demo-banner" role="status" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px 8px 14px', background: 'var(--accent)', color: '#fff', fontSize: 12.5, fontWeight: 600, boxShadow: '0 10px 28px -10px rgba(0,0,0,0.18)' }}>
       <Sparkles size={14} style={{ flexShrink: 0 }} />
       <span style={{ flex: 1, minWidth: 0 }}>{tr("Demo · sample data, nothing is saved")}</span>
       <button id="demo-signup" onClick={() => endDemo(true)} style={{ padding: '5px 10px', border: '1px solid rgba(255,255,255,.6)', background: 'rgba(255,255,255,.16)', color: '#fff', fontSize: 12, fontWeight: 750, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>

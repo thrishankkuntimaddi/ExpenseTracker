@@ -6,11 +6,16 @@
 <title>Expense Tracker — Privacy policy</title>
 <link rel="icon" href="favicon-32x32.png">
 <style>
-  :root { --bg: #F4F5F8; --text: #1A1D24; --muted: #5B6170; --card: #fff; --accent: #4F46E5; }
-  @media (prefers-color-scheme: dark) { :root { --bg: #0A0C11; --text: #E7E9EF; --muted: #9AA1B2; --card: #161A23; --accent: #8B8CF8; } }
+  /* Light Liquid Glass, like the app (light by default, no violet) */
+  :root { --bg: #EEF0F6; --text: #0A0A0C; --muted: rgba(10,10,12,.6); --card: rgba(255,255,255,.55); --accent: #0A0A0C; color-scheme: light; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background:
+    radial-gradient(55vmax 42vmax at 8% 0%, rgba(122,178,255,.5), transparent 64%),
+    radial-gradient(50vmax 40vmax at 100% 18%, rgba(255,184,150,.45), transparent 64%),
+    radial-gradient(48vmax 42vmax at -6% 82%, rgba(132,226,196,.4), transparent 66%); }
   main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
-  .card { background: var(--card); border-radius: 18px; padding: 24px 22px; }
+  .card { background: var(--card); border-radius: 28px; padding: 24px 22px; box-shadow: inset 1.5px 1.5px 0 -.5px rgba(255,255,255,.95), inset -1.5px -1.5px 0 -.5px rgba(255,255,255,.55), inset 0 0 22px rgba(255,255,255,.22), 0 0 0 .5px rgba(0,0,0,.05), 0 12px 30px -14px rgba(0,0,0,.2); }
+  a { text-decoration-color: rgba(10,10,12,.3); text-underline-offset: 2px; }
   h1 { font-size: 28px; margin: 0 0 4px; } h2 { font-size: 18px; margin: 28px 0 6px; }
   p, li { color: var(--text); } .muted { color: var(--muted); font-size: 14px; } a { color: var(--accent); }
   header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; } header img { border-radius: 12px; }
