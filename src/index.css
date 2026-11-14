@@ -220,11 +220,7 @@ html.theme-switching *, html.theme-switching *::before, html.theme-switching *::
 body { overflow: hidden; }
 #root { display: flex; flex-direction: column; overflow: hidden; }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar              { width: 4px; height: 4px; }
-::-webkit-scrollbar-track        { background: transparent; }
-::-webkit-scrollbar-thumb        { background: var(--border-dark); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover  { background: var(--text-muted); }
+/* Scrollbars: none drawn anywhere (styles/lens.css) */
 
 /* ── Number input ── */
 input[type=number]::-webkit-inner-spin-button,

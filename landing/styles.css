@@ -244,3 +244,7 @@ textarea:focus { outline: 2px solid rgba(139,123,255,.5); outline-offset: 1px; }
 .gh-count:not(:empty) { margin-left: 4px; }
 @media (max-width: 920px) { .tour { grid-template-columns: 1fr 1fr; } .section { padding: 48px 0; } }
 @media (max-width: 600px) { .tour { grid-template-columns: 1fr; } .closing-actions .btn { flex: 1 1 100%; } }
+
+/* No visible scrollbars (pages still scroll) — same as the app */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { width: 0; height: 0; display: none; }

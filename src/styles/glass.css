@@ -529,8 +529,6 @@ div:has(> nav[style*="flex-shrink: 0"]) > div[style*="overflow: auto"]:not(:has(
 }
 
 /* Scrollbars: thin, floating */
-::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.2); border-radius: 99px; }
-[data-theme="monoflow"] ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.22); }
 
 /* Charts: hairline grid, muted labels in both themes */
 .recharts-cartesian-axis-tick text { fill: var(--text-muted) !important; }
