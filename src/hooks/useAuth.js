@@ -13,6 +13,9 @@ import {
   sendPasswordResetEmail,
   sendEmailVerification,
   deleteUser,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
+  EmailAuthProvider,
   signOut as fbSignOut,
 } from "firebase/auth";
 import { auth, clearLocalFirestoreCache } from "../services/firebase";
@@ -175,24 +178,63 @@ export function useAuth() {
     return { ok: true };
   }, []);
 
-  /** Delete the sign-in account itself (call after deleting the data). */
-  const deleteAccount = useCallback(async () => {
+  /**
+   * Prove it's you again, right before deleting the account — Firebase only
+   * deletes a sign-in made in the last few minutes. Done FIRST, so the data
+   * is never deleted while the sign-in stays (what happened before 4.3).
+   *   { password } for email accounts; Google opens its account picker.
+   * Resolves true when confirmed, false when cancelled.
+   */
+  const reauthenticate = useCallback(async ({ password } = {}) => {
+    const u = auth?.currentUser;
+    if (!u) throw new Error("You're signed out — sign in again first.");
     try {
-      await deleteActivity(auth.currentUser?.uid).catch(() => {});
-      await deleteUser(auth.currentUser);
-    } catch (err) {
-      if (err?.code === "auth/requires-recent-login") {
-        throw new Error("For safety, Firebase needs a fresh sign-in before deleting an account. Sign out, sign in again, then delete it right away.");
+      if (password != null) {
+        await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, password));
+        return true;
       }
+      if (platform !== "web") {
+        const idToken = await nativeGoogleIdToken();
+        if (!idToken) return false;
+        await reauthenticateWithCredential(u, GoogleAuthProvider.credential(idToken));
+        return true;
+      }
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account", login_hint: u.email ?? "" });
+      await reauthenticateWithPopup(u, provider);
+      return true;
+    } catch (err) {
+      if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") return false;
+      if (err?.code === "auth/user-mismatch") throw new Error(`Pick the same Google account you're signed in with (${u.email}).`);
       throw new Error(friendlyError(err));
     }
+  }, []);
+
+  /** After the account is gone (or handed to the server to delete): leave nothing on this device. */
+  const finishSignedOut = useCallback(async () => {
+    try { await fbSignOut(auth); } catch { /* already gone */ }
     clearLegacyDataCache();
     try { await clearLocalFirestoreCache(); } catch { /* best effort */ }
     await clearWidgets();   // no other account's figures on the home screen
     window.location.reload();
   }, []);
 
-  return { user, loading, signIn, signUp, signInWithGoogle, resetPassword, resendVerification, signOut, deleteAccount, error, setError };
+  /** Delete the sign-in account itself (call after deleting the data). */
+  const deleteAccount = useCallback(async () => {
+    try {
+      await deleteActivity(auth.currentUser?.uid).catch(() => {});
+      await deleteUser(auth.currentUser);
+    } catch (err) {
+      const e = new Error(err?.code === "auth/requires-recent-login"
+        ? "For safety, Firebase needs a fresh sign-in before deleting an account."
+        : friendlyError(err));
+      e.code = err?.code;
+      throw e;
+    }
+    await finishSignedOut();
+  }, [finishSignedOut]);
+
+  return { user, loading, signIn, signUp, signInWithGoogle, resetPassword, resendVerification, signOut, deleteAccount, reauthenticate, finishSignedOut, error, setError };
 }
 
 /* ── Map Firebase error codes to friendly messages ── */

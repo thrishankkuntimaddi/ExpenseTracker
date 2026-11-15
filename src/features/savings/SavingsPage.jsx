@@ -2,10 +2,9 @@
 // Where the money you put away goes: the month on screen vs income (savings
 // rate), all-time by kind (SIP, mutual fund, trading, cash …), six months,
 // your goals (where each one's money is kept), and that month's entries.
-import BigAmount from '../../components/BigAmount';
 import { useMemo, useState } from 'react';
 import { Plus, PiggyBank } from 'lucide-react';
-import { PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill } from '../../components/Page';
+import { PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill, SummaryCard } from '../../components/Page';
 import GoalsCard from '../plan/components/GoalsCard';
 import Sign from '../../motion/Sign';
 
@@ -71,19 +70,17 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
             text={tr("Log SIPs, mutual funds, trading and cash savings. See your savings rate, where it goes, and how close your goals are.")}
             action={<PrimaryPill id="savings-empty-add" Icon={Plus} tone="savings" onClick={() => shell?.openAdd('savings')}>{tr("Add savings")}</PrimaryPill>} />
         ) : (
-          <div className="card" style={{ padding: 16 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{tr("Saved in")} {monthName(monthKey, { month: 'long' })}</span>
-            <div style={{ margin: '8px 0 0' }}><BigAmount value={thisMonth} size={40} color="var(--savings)" /></div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-              <Figure label={tr("Savings rate")} value={rate != null ? `${rate}% of income` : '—'} />
-              <Figure label={takenOut > 0 ? tr("Saved in total (after use)") : tr("Saved in total")} value={formatAmount(allTime)} />
-            </div>
+          <SummaryCard id="savings-summary" label={`${tr("Saved in")} ${monthName(monthKey, { month: 'long' })}`} value={thisMonth} color="var(--savings)"
+            figures={[
+              { label: tr("Savings rate"), value: rate != null ? `${rate}% of income` : '—' },
+              { label: takenOut > 0 ? tr("In total, after use") : tr("Saved in total"), value: formatAmount(allTime) },
+            ]}>
             {takenOut > 0 && (
               <div id="savings-taken-out" style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
                 {formatAmount(takenOut)} {tr("taken out of savings to pay for things (shown in your expenses as “from savings”).")}
               </div>
             )}
-          </div>
+          </SummaryCard>
         )}
 
         <div style={{ marginTop: 12 }}>
@@ -157,12 +154,4 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
   );
 }
 
-function Figure({ label, value }) {
-  return (
-    <div style={{ minWidth: 0 }}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>{label}</div>
-      <div style={{ fontSize: 15, fontWeight: 750, color: 'var(--text)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
-    </div>
-  );
-}
 

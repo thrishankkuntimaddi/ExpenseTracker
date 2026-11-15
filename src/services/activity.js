@@ -8,6 +8,7 @@
 import { doc, setDoc, getDocs, collection, deleteDoc, increment } from 'firebase/firestore';
 import { db } from './firebase';
 import { platform } from '../native';
+import { getLang } from '../i18n';
 
 const COLL = 'user_activity';
 const OPEN_EVERY = 15 * 60 * 1000;    // count an "open" at most every 15 minutes
@@ -34,11 +35,38 @@ export function lastEntryTime(entries = [], now = Date.now()) {
   return best || null;
 }
 
+/** How they use the app — sign-in method, devices, switches. Never amounts or entries. */
+function details(user, { devices, rules, theme, lockOn } = {}) {
+  const ids = user.providerData?.map((p) => p.providerId) ?? [];
+  const out = {
+    provider: ids.map((p) => (p === 'google.com' ? 'google' : p === 'password' ? 'email' : p)).join('+').slice(0, 40) || 'unknown',
+    verified: !!user.emailVerified || ids.includes('google.com'),
+    lang: String(getLang() ?? 'en').slice(0, 8),
+  };
+  if (Number.isFinite(devices)) out.devices = Math.max(0, Math.min(50, Math.round(devices)));
+  if (Number.isFinite(rules)) out.rules = Math.max(0, Math.round(rules));
+  if (typeof theme === 'string') out.theme = theme.slice(0, 12);
+  if (typeof lockOn === 'boolean') out.lockOn = lockOn;
+  return out;
+}
+
+const DETAILS_EVERY = 60 * 1000;
+export async function recordDetails(user, extra) {
+  if (!db || !user?.uid) return;
+  if (Date.now() - since(user.uid, 'details') < DETAILS_EVERY) return;
+  mark(user.uid, 'details');
+  await setDoc(doc(db, COLL, user.uid), details(user, extra), { merge: true });
+}
+
 /** On opening the app (with data loaded): who, when, how many entries. */
-export async function recordOpen(user, { entries, lastEntryAt }) {
+export async function recordOpen(user, { entries, lastEntryAt, ...extra }) {
   if (!db || !user?.uid) return;
   if (Date.now() - since(user.uid, 'open') < OPEN_EVERY) return;
   mark(user.uid, 'open');
+  // A new day it was opened on (this device's count; enough to see habits)
+  const day = new Date().toDateString();
+  let newDay = false;
+  try { newDay = localStorage.getItem(lastKey(user.uid, 'day')) !== day; localStorage.setItem(lastKey(user.uid, 'day'), day); } catch { /* storage unavailable */ }
   const created = Date.parse(user.metadata?.creationTime ?? '') || null;
   await setDoc(doc(db, COLL, user.uid), {
     email: String(user.email ?? '').slice(0, 200),
@@ -50,6 +78,8 @@ export async function recordOpen(user, { entries, lastEntryAt }) {
     opens: increment(1),
     platform,
     version: String(import.meta.env.VITE_APP_VERSION ?? '').slice(0, 20),
+    ...details(user, extra),
+    ...(newDay ? { activeDays: increment(1) } : {}),
   }, { merge: true });
 }
 
@@ -80,8 +110,8 @@ export async function listAccountAdmin() {
 }
 
 /** state: 'delete_requested' | 'restore_requested' | 'purge_requested' | 'cancelled' */
-export async function askAccount(uid, state, note) {
-  const data = { state, requestedAt: Date.now(), ...(note ? { note: String(note).slice(0, 300) } : {}) };
+export async function askAccount(uid, state, note, { force = false } = {}) {
+  const data = { state, requestedAt: Date.now(), force: !!force, ...(note ? { note: String(note).slice(0, 300) } : {}) };
   await setDoc(doc(db, 'account_admin', uid), data, { merge: true });
   return data;
 }

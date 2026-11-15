@@ -8,7 +8,7 @@
 //     full screen on phones (Back — or the Android back button — returns)
 import { useMotionPref, setMotionPref } from '../../motion/motion';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Compass, PlayCircle, ChevronRight, Eye, Gift, ScanLine, Heart, Landmark } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Eye, Palette, LifeBuoy, Gift, ScanLine, Heart, Landmark } from 'lucide-react';
 import Avatar from '../../components/Avatar';
 import { displayNameOf } from '../../app/shellContext';
 import { PAGE_META } from '../../app/pages';
@@ -28,7 +28,9 @@ import { normaliseReminders, REMINDER_TYPES } from '../../utils/reminders';
 import { CURRENCY_NAMES, isCurrency, DEFAULT_CURRENCY } from '../../utils/money';
 import { FREQUENCIES } from '../../services/drive';
 import { timeAgo } from '../../services/sync';
-import { startTour, GUIDE_PAGES } from '../../tour/tour';
+import HelpCenter from './HelpCenter';
+import CarryForwardGroup from '../settings/CarryForwardGroup';
+import { checkTrustee } from '../../services/adminTeam';
 import { isAdmin } from '../../config/admin';
 import { t, LANGS, getLang, setLang } from '../../i18n';
 import InviteFriendCard from '../settings/InviteFriendCard';
@@ -60,7 +62,7 @@ export default function ProfilePage(props) {
   /* Which setting is open: phones show the list until one is picked; wide
      screens always show one beside the list */
   const [chosen, setChosen] = useState(openGroup ?? null);
-  const active = chosen ?? (twoPane ? 'reminders' : null);
+  const active = chosen ?? (twoPane ? 'appearance' : null);
   const [panelEl, setPanelEl] = useState(null);
   const [openTitle, setOpenTitle] = useState('');
   const [openSummary, setOpenSummary] = useState('');
@@ -100,6 +102,15 @@ export default function ProfilePage(props) {
   const [capture, setCapture] = useCaptureStatus();
   const supporter = useSupporter(user?.isDemo ? null : user?.uid);
   const currency = isCurrency(settings?.currency) ? settings.currency : DEFAULT_CURRENCY;
+  const owner = isAdmin(user);
+  const [trustee, setTrustee] = useState(false);
+  useEffect(() => { if (!owner && !user?.isDemo) checkTrustee(user).then(setTrustee, () => {}); }, [owner, user]);
+  const motion = useMotionPref();
+  const appearanceSummary = [
+    themePref === 'system' ? tr('Auto') : themePref === 'dark' ? tr('Dark') : tr('Light'),
+    motion === 'off' ? tr('animations off') : tr('animations on'),
+    LANGS.find((l) => l.key === getLang())?.native ?? 'English',
+  ].join(' · ');
   const driveSummary = drive?.cfg?.enabled
     ? `On · ${(FREQUENCIES.find((f) => f.key === drive.cfg.frequency)?.label ?? 'Every week').toLowerCase()}${drive.state?.lastAt ? ` · last ${timeAgo(drive.state.lastAt)}` : ''}`
     : 'Off — copies to your own Google Drive';
@@ -115,7 +126,7 @@ export default function ProfilePage(props) {
         )}
         <div style={{ minWidth: 0 }}>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>{phonePanel ? openTitle || t('Profile') : t('Profile')}</h1>
-          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{phonePanel ? openSummary || t('Profile') : t('Account, look & layout, settings')}</p>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{phonePanel ? openSummary || t('Profile') : t('Your account and how the app works for you')}</p>
         </div>
       </div>
 
@@ -150,92 +161,50 @@ export default function ProfilePage(props) {
                 )}
               </div>
 
-              {/* ── Appearance: two quick switches in one card ── */}
-              <section style={{ marginBottom: 18 }}>
-                <p className="section-label" style={{ padding: '0 6px' }}>{t('Appearance')}</p>
-                <div className="card settings-section">
-                  <ThemeRow themePref={themePref} theme={theme} onChange={onThemePrefChange} />
-                  <MotionRow />
-                  <LanguageRow onPatchSettings={onPatchSettings} />
-                </div>
-              </section>
-
-              {/* ── Owner only: who uses the app (read only) ── */}
-              {isAdmin(user) && (
-                <Section title={tr("Owner")}>
-                  <Group id="admin" title={tr("Admin sees")} Icon={Eye} color="var(--lent)" summary={tr("Who uses the app · read only")}>
+              {/* ── Owner (and trustees): who uses the app, inbox, health ── */}
+              {(owner || trustee) && (
+                <Section title={owner ? tr("Owner") : tr("Trustee")}>
+                  <Group id="admin" title={tr("Admin sees")} Icon={Eye} color="var(--lent)" summary={owner ? tr("People · inbox · health · team") : tr("People · inbox · health — read only")}>
                     <Suspense fallback={<div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>{tr("Loading…")}</div>}>
-                      <AdminCard me={user?.uid} />
+                      <AdminCard me={user?.uid} user={user} readOnly={!owner} />
                     </Suspense>
                   </Group>
                 </Section>
               )}
 
-              {BANK_LINK && !user?.isDemo && (
-                <Section title={tr("Bank accounts")}>
-                  <Group id="bank" title={tr("Link your bank")} Icon={Landmark} color="var(--income)" summary={tr("Account Aggregator · review before adding")}>
-                    <Suspense fallback={<div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>{tr("Loading…")}</div>}>
-                      <BankLinkCard uid={user?.uid} transactions={transactions} income={income} settings={settings} />
-                    </Suspense>
-                  </Group>
-                </Section>
-              )}
-
-              {/* ── Help: the app tour and a guide per page ── */}
-              <Section title={tr("Help")}>
-                <Group id="help" title={tr("App tour & guides")} Icon={Compass} color="var(--accent)" summary={tr("Walk through the app · a guide for every page")}>
-                  <HelpCard />
+              {/* ── Preferences: how the app looks, sounds and reminds ── */}
+              <Section title={tr("Preferences")}>
+                <Group id="appearance" title={tr("Appearance")} Icon={Palette} color="var(--accent)" summary={appearanceSummary}>
+                  <div className="appearance-panel">
+                    <ThemeRow themePref={themePref} theme={theme} onChange={onThemePrefChange} />
+                    <MotionRow />
+                    <LanguageRow onPatchSettings={onPatchSettings} />
+                  </div>
                 </Group>
-                <Group id="invite" title={tr("Invite a friend")} Icon={Gift} color="var(--expense)" summary={tr("Send them the app — free, no ads")}>
-                  <InviteFriendCard name={user?.displayName?.split(' ')[0]} uid={user?.isDemo ? null : user?.uid} />
-                </Group>
-                <Group id="supporter" title={tr("Supporter")} Icon={Heart} color="var(--accent)" summary={supporterSummary(supporter)}>
-                  <SupporterCard status={supporter} settings={settings} onPatchSettings={onPatchSettings} onInvite={() => openSetting('invite')} />
-                </Group>
-                <Group id="privacy" title={tr("Your privacy")} Icon={ShieldCheck} color="var(--income)" summary={tr("No ads · never sold · no bank access")}>
-                  <PrivacyPromise />
-                </Group>
-              </Section>
-
-              {/* ── Sounds: taps, money, rolling totals… ── */}
-              <Section title={tr("Sounds")}>
                 <Group id="sounds" title={tr("Sounds")} Icon={Music} color="var(--savings)" summary={soundsSummary(sounds)}>
                   <SoundsCard />
                 </Group>
-              </Section>
-
-              {/* ── Security: app lock, devices, alerts ── */}
-              <SecurityCard user={user} devices={devices} events={securityEvents} />
-
-              {/* ── Notifications ── */}
-              <Section title={tr("Notifications")}>
-                <Group id="reminders" title={tr("Reminders")} Icon={Bell} color="var(--accent)" summary={remSummary}>
+                <Group id="reminders" title={tr("Reminders")} Icon={Bell} color="var(--expense)" summary={remSummary}>
                   <RemindersCard uid={user?.uid} settings={settings} onPatchSettings={onPatchSettings} transactions={transactions} income={income} recurringRules={recurring?.rules ?? []} />
                 </Group>
-                {platform === 'android' && captureUsable(capture) && (
-                  <Group id="capture" title={tr("Auto-capture payments")} Icon={ScanLine} color="var(--accent)" summary={captureSummary(capture)}>
-                    <CaptureCard bare status={capture} onStatus={setCapture} />
-                  </Group>
-                )}
+                <Group id="currency" title={tr("Currency")} Icon={Coins} color="var(--income)" summary={`${currency} · ${CURRENCY_NAMES[currency]}`}>
+                  <CurrencyCard bare settings={settings} transactions={transactions} income={income} onPatchSettings={onPatchSettings} />
+                </Group>
+                <CarryForwardGroup settings={settings} onPatchSettings={onPatchSettings} />
               </Section>
 
-              {/* ── Customize ── */}
-              <Section title={tr("Customize")}>
-                {platform === 'android' && (
-                  <Group id="widgets" title={tr("Home-screen widgets")} Icon={LayoutGrid} color="var(--accent)" summary={widgetsAvailable() ? tr("Quick add · This month · Bills due") : tr("Needs the newest Android app")}>
-                    <WidgetsCard settings={settings} onPatchSettings={onPatchSettings} />
-                  </Group>
-                )}
+              {/* ── Personalize: what you see first and where ── */}
+              <Section title={tr("Personalize")}>
+                <Group id="custom-home" title={tr("Home screen")} Icon={HomeIcon} color="var(--expense)"
+                  summary={ui.home.filter((s) => s.visible).map((s) => HOME_SECTIONS.find((h) => h.key === s.key).label).join(' · ')}>
+                  <HomeEditor home={ui.home} onChange={(home) => save({ home })} />
+                </Group>
                 {!desktop && (
                   <Group id="custom-bar" title={tr("Bottom bar")} Icon={LayoutGrid} color="var(--savings)"
                     summary={['Home', ...ui.tabs.map((k) => PAGE_META[k].label)].join(' · ')}>
                     <BarEditor tabs={ui.tabs} onChange={(tabs) => save({ tabs })} />
                   </Group>
                 )}
-                <Group id="custom-home" title={tr("Home screen")} Icon={HomeIcon} color="var(--expense)"
-                  summary={ui.home.filter((s) => s.visible).map((s) => HOME_SECTIONS.find((h) => h.key === s.key).label).join(' · ')}>
-                  <HomeEditor home={ui.home} onChange={(home) => save({ home })} />
-                </Group>
                 <Group id="custom-start" title={tr("Open the app on")} Icon={Rocket} color="var(--income)" summary={PAGE_META[ui.start].label}>
                   <div role="radiogroup" aria-label={tr("Start page")} style={{ padding: '12px 16px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {PAGE_KEYS.map((k) => (
@@ -243,15 +212,49 @@ export default function ProfilePage(props) {
                     ))}
                   </div>
                 </Group>
+                {platform === 'android' && (
+                  <Group id="widgets" title={tr("Home-screen widgets")} Icon={LayoutGrid} color="var(--accent)" summary={widgetsAvailable() ? tr("Quick add · This month · Bills due") : tr("Needs the newest Android app")}>
+                    <WidgetsCard settings={settings} onPatchSettings={onPatchSettings} />
+                  </Group>
+                )}
               </Section>
 
-              {/* ── Money · Backup & sync · App · Account ── */}
+              {/* ── Privacy & security: lock, devices, alerts, the promise ── */}
+              <SecurityCard user={user} devices={devices} events={securityEvents} title="Privacy & security">
+                <Group id="privacy" title={tr("Your privacy")} Icon={ShieldCheck} color="var(--income)" summary={tr("No ads · never sold · no bank access")}>
+                  <PrivacyPromise />
+                </Group>
+              </SecurityCard>
+
+              {/* ── Help & support ── */}
+              <Section title={tr("Help & support")}>
+                <Group id="help" title={tr("Help center")} Icon={LifeBuoy} color="var(--accent)" summary={tr("Answers, the tour · report a problem")}>
+                  <HelpCenter />
+                </Group>
+                <Group id="invite" title={tr("Invite a friend")} Icon={Gift} color="var(--expense)" summary={tr("Send them the app — free, no ads")}>
+                  <InviteFriendCard name={user?.displayName?.split(' ')[0]} uid={user?.isDemo ? null : user?.uid} />
+                </Group>
+                <Group id="supporter" title={tr("Supporter")} Icon={Heart} color="var(--accent)" summary={supporterSummary(supporter)}>
+                  <SupporterCard status={supporter} settings={settings} onPatchSettings={onPatchSettings} onInvite={() => openSetting('invite')} />
+                </Group>
+              </Section>
+
+              {/* ── Your data · About · Account ── */}
               <SettingsTab {...props} embedded
-                moneyExtra={
-                  <Group id="currency" title={tr("Currency")} Icon={Coins} color="var(--income)" summary={`${currency} · ${CURRENCY_NAMES[currency]}`}>
-                    <CurrencyCard bare settings={settings} transactions={transactions} income={income} onPatchSettings={onPatchSettings} />
-                  </Group>
-                }
+                dataTop={<>
+                  {platform === 'android' && captureUsable(capture) && (
+                    <Group id="capture" title={tr("Auto-capture payments")} Icon={ScanLine} color="var(--accent)" summary={captureSummary(capture)}>
+                      <CaptureCard bare status={capture} onStatus={setCapture} />
+                    </Group>
+                  )}
+                  {BANK_LINK && !user?.isDemo && (
+                    <Group id="bank" title={tr("Link your bank")} Icon={Landmark} color="var(--income)" summary={tr("Account Aggregator · review before adding")}>
+                      <Suspense fallback={<div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)' }}>{tr("Loading…")}</div>}>
+                        <BankLinkCard uid={user?.uid} transactions={transactions} income={income} settings={settings} />
+                      </Suspense>
+                    </Group>
+                  )}
+                </>}
                 dataExtra={drive && (
                   <Group id="drive" title={tr("Google Drive backup")} Icon={HardDriveUpload} color="var(--savings)" summary={driveSummary}>
                     <DriveBackupCard bare user={user} onPatchSettings={onPatchSettings} drive={drive} />
@@ -465,39 +468,6 @@ function LanguageRow({ onPatchSettings }) {
             <button key={l.key} id={`lang-${l.key}`} role="radio" aria-checked={on} lang={l.key} onClick={() => { onPatchSettings?.({ lang: l.key }); setLang(l.key); }}
               style={{ padding: '7px 11px', border: 'none', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: on ? 'var(--shadow-sm)' : 'none' }}>
               {l.native}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ── Help: start the full tour, or the guide of one page ── */
-function HelpCard() {
-  return (
-    <div style={{ padding: '14px 16px 12px' }}>
-      <button id="help-start-tour" onClick={() => startTour('app')}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', border: 'none', borderRadius: 14, background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 750, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
-        <PlayCircle size={18} />
-        <span style={{ flex: 1 }}>{tr("Take the app tour")}</span>
-        <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.85 }}>{tr("about a minute")}</span>
-      </button>
-      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '12px 2px 8px', lineHeight: 1.5 }}>
-        {tr("Or a short guide to one page — the same one the")} <strong>?</strong> {tr("at the top of each page opens:")}
-      </p>
-      <div>
-        {GUIDE_PAGES().map((k, i) => {
-          const { label, description, Icon, tone } = PAGE_META[k];
-          return (
-            <button key={k} id={`help-guide-${k}`} onClick={() => startTour(k)}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 2px', border: 'none', borderTop: i ? '1px solid var(--border)' : 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-              <span style={{ width: 28, height: 28, borderRadius: 8, background: `var(--${tone}-bg)`, color: `var(--${tone})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon size={14} /></span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{label}</span>
-                <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{description}</span>
-              </span>
-              <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
             </button>
           );
         })}

@@ -32,12 +32,12 @@ jobs:
     name: Android
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -91,7 +91,7 @@ jobs:
           fi
           "$AAPT" dump badging ExpenseTracker-Android.apk | grep -o "versionCode='[0-9]*' versionName='[^']*'"
           echo "APK is clean"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ExpenseTracker-Android
           path: |
@@ -131,8 +131,8 @@ jobs:
             output: ExpenseTracker-Linux.AppImage
             update: ExpenseTracker-Linux.AppImage
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -173,7 +173,7 @@ jobs:
           [ "${{ matrix.update }}" = "${{ matrix.output }}" ] || cp "$upd" "${{ matrix.update }}"
           cp "$upd.sig" "${{ matrix.update }}.sig"
           ls -la ExpenseTracker-*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.output }}
           path: |
@@ -187,8 +187,8 @@ jobs:
     needs: [android, desktop]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
         with:
           path: out
           merge-multiple: true

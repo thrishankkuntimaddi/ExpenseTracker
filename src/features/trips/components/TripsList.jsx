@@ -4,6 +4,7 @@ import { formatAmount, formatDateShort } from '../../../utils/dateHelpers';
 import { computeTripSummary } from '../../../utils/split';
 import TripHistoryCard from './TripHistoryCard';
 import Sign from '../../../motion/Sign';
+import { tripTiming, budgetPace } from '../../../utils/tripInsights';
 
 import { t as tr } from '../../../i18n';
 const smallBtn = (bg, border, color) => ({
@@ -91,6 +92,7 @@ export default function TripsList({
                       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                         {t.startDate ? `${formatDateShort(t.startDate)}${t.endDate ? ` – ${formatDateShort(t.endDate)}` : ''} · ` : ''}{(t.members ?? []).length} {tr("people ·")} {s.count} {tr("expense")}{s.count === 1 ? '' : 's'}
                       </div>
+                      <TimingChip trip={t} total={s.total} />
                     </div>
                     <ChevronRight size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                   </div>
@@ -173,6 +175,26 @@ function Stat({ label, value, tone = 'text' }) {
     <div>
       <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>{label}</div>
       <div style={{ fontSize: 14, fontWeight: 750, color: `var(--${tone})` }}>{value}</div>
+    </div>
+  );
+}
+
+/* "In 5 days" / "Day 2 of 4", and the budget as a thin bar */
+function TimingChip({ trip, total }) {
+  const timing = tripTiming(trip);
+  const pace = budgetPace(trip, total);
+  const text = timing.phase === 'upcoming' ? (timing.inDays === 1 ? tr('Tomorrow') : `${tr('In')} ${timing.inDays} ${tr('days')}`)
+    : timing.phase === 'on' ? `${tr('Day')} ${timing.day} ${tr('of')} ${timing.length}` : null;
+  if (!text && !pace) return null;
+  const tone = pace ? { ok: 'income', tight: 'lent', over: 'expense' }[pace.tone] : 'external';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+      {text && <span style={{ fontSize: 10.5, fontWeight: 750, padding: '2px 8px', borderRadius: 99, background: 'var(--external-bg)', color: 'var(--external)', flexShrink: 0 }}>{text}</span>}
+      {pace && (
+        <span title={`${Math.round(pace.used * 100)}% of the budget`} style={{ flex: 1, maxWidth: 160, height: 5, borderRadius: 99, background: 'var(--surface2)', overflow: 'hidden' }}>
+          <span style={{ display: 'block', width: `${Math.min(100, pace.used * 100)}%`, height: '100%', background: `var(--${tone})` }} />
+        </span>
+      )}
     </div>
   );
 }

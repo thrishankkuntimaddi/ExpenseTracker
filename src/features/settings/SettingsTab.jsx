@@ -6,7 +6,7 @@ import {
   Cloud, CloudOff, RefreshCw, AlertTriangle, Laptop, X, UserX, Eraser,
 } from 'lucide-react';
 import { deleteAllUserData, bulkImport, exportAllUserData, restoreBackup } from '../../services/firestore';
-import { deleteAccountFootprint, deleteAccountDoc } from '../../services/accountDeletion';
+import DeleteAccountModal from './DeleteAccountModal';
 import { parseBackup, describeBackup } from '../../utils/backup';
 import { useSyncStatus, describeSync } from '../../services/sync';
 import { platform, isNative, engineVersion, webviewOutdated, WEBVIEW_PLAY_URL } from '../../native';
@@ -15,8 +15,6 @@ import { pickDownload, downloadUrl, detectArch, RELEASES } from '../../utils/dow
 const SHELL_LABEL = { web: 'Web app', android: 'Android app', ios: 'iOS app', desktop: 'Desktop app' };
 import { csvToRecords } from '../../utils/importHelpers';
 import { recordsToCSV } from '../../utils/exportHelpers';
-import { getCarrySettings } from '../../utils/carryForward';
-import { formatMonthLabel } from '../../utils/periodHelpers';
 import { todayInputValue } from '../../utils/dateHelpers';
 import RecentlyDeletedModal from '../../components/RecentlyDeletedModal';
 import LoadMonthlyData from '../../components/LoadMonthlyData';
@@ -24,6 +22,7 @@ import { useUpdateState, checkForUpdates, restartToUpdate, THIS_BUILD, APK_URL }
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import PWAInstallModal from '../../components/PWAInstallModal';
 import { Section, Group } from './SettingsGroup';
+import CarryForwardGroup from './CarryForwardGroup';
 
 import { t as tr } from '../../i18n';
 export default function SettingsTab({
@@ -37,15 +36,13 @@ export default function SettingsTab({
   isStandalone,
   onTriggerInstall,
   onPatchSettings,
-  onResetPassword, onResendVerification, onDeleteAccount,
+  onResetPassword, onResendVerification, onDeleteAccount, onReauthenticate, onFinishSignedOut,
   devices,
   embedded = false,   // inside the phone Profile page: no page header, Appearance lives up there
-  moneyExtra = null,  // Profile adds its own rows to these sections (Currency; Drive backup)
-  dataExtra = null,
+  dataTop = null,     // Profile adds its own rows to Your data (auto-capture, bank link …)
+  dataExtra = null,   // … and Drive backup
 }) {
   const [feedback, setFeedback]       = useState(null);
-  const carry = getCarrySettings(settings);
-  const setCarry = (patch) => onPatchSettings?.({ carryForward: { ...carry, ...patch } });
   const [importing, setImporting]     = useState(false);
   const [exporting, setExporting]     = useState(false);
   const [showTrashModal, setShowTrashModal] = useState(false);
@@ -69,22 +66,12 @@ export default function SettingsTab({
     setTimeout(() => setFeedback(null), 4000);
   }
 
-  /* ── Reset ── */
-  async function handleDeleteAll({ andAccount = false } = {}) {
+  /* ── Reset (the account itself: DeleteAccountModal) ── */
+  async function handleDeleteAll() {
     if (!user?.uid) { showFeedback('You must be logged in.', true); return; }
     setBusyReset(true);
     try {
-      if (andAccount) {
-        // Shared trips, invite codes, outbox … — everything outside the account's own ledger
-        const failed = await deleteAccountFootprint(user.uid);
-        if (failed.length) throw new Error(`Couldn’t remove: ${failed.join(', ')}. Check your connection and try again — your account was not deleted.`);
-      }
       await deleteAllUserData(user.uid);
-      if (andAccount) {
-        await deleteAccountDoc(user.uid).catch((err) => console.warn('[delete account] account doc', err));
-        await onDeleteAccount();   // reloads to the sign-in screen
-        return;
-      }
       showFeedback('All your data was deleted from your account and every device.');
     } catch (err) {
       showFeedback(err.message, true);
@@ -219,8 +206,8 @@ export default function SettingsTab({
               </div>
             )}
 
+            {!embedded && (
             <Section title={tr("Money")}>
-            {moneyExtra}
             {/* ── Theme (per device) ── */}
             {!embedded && <Group id="appearance" color="var(--accent)" title={tr("Appearance")} Icon={Palette} summary={themePref === 'system' ? `System (${isMonoflow ? 'dark' : 'light'} now)` : isMonoflow ? tr("Dark") : tr("Light")}>
               <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -241,52 +228,13 @@ export default function SettingsTab({
               </div>
             </Group>}
 
-            {/* ── Carry forward ── */}
-            <Group id="month-carry-forward" color="var(--repayment-rec)" title={tr("Month Carry Forward")} Icon={ArrowRightLeft} summary={carry.enabled ? tr("On") : tr("Off")}>
-              <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <ArrowRightLeft size={16} style={{ color: 'var(--accent)' }} />
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{tr("Roll leftover into next month")}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                      {carry.enabled
-                        ? `From ${formatMonthLabel(carry.startMonth)}: each month's remaining balance appears as income in the next`
-                        : tr("Off — every month starts from zero")}
-                    </div>
-                  </div>
-                </div>
-                <button className={`toggle-track ${carry.enabled ? 'on' : ''}`} onClick={() => setCarry({ enabled: !carry.enabled })} aria-label={tr("Toggle carry forward")}>
-                  <span className="toggle-thumb" />
-                </button>
-              </div>
-              {carry.enabled && (
-                <div style={{ padding: '10px 16px 14px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>
-                    <span>{tr("First month that receives a carry")}</span>
-                    <input
-                      id="settings-carry-start"
-                      type="month"
-                      value={carry.startMonth}
-                      onChange={e => { if (/^\d{4}-\d{2}$/.test(e.target.value)) setCarry({ startMonth: e.target.value }); }}
-                      style={{ padding: '6px 10px', borderRadius: 9, fontSize: 12, fontWeight: 600, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }}
-                    />
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer' }}>
-                    <span>{tr("Also carry a deficit (negative leftover)")}</span>
-                    <input type="checkbox" checked={!!carry.includeNegative} onChange={e => setCarry({ includeNegative: e.target.checked })} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-                  </label>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.55 }}>
-                    {tr("The carried amount is computed live from the previous month, so a late edit to")} {formatMonthLabel(carry.startMonth === '2026-11' ? '2026-10' : carry.startMonth)} {tr("updates it automatically. It is shown as an")} <strong>{tr("auto")}</strong> {tr("line on the Income tab and counted in that month's income and balance.")}
-                  </div>
-                </div>
-              )}
-            </Group>
+            <CarryForwardGroup settings={settings} onPatchSettings={onPatchSettings} />
             </Section>
+            )}
 
             {/* ── Sync & devices ── */}
-            <Section title={tr("Backup & sync")}>
+            <Section title={embedded ? tr("Your data") : tr("Backup & sync")}>
+            {dataTop}
             {dataExtra}
             <Group id="sync" color="var(--savings)" title={tr("Sync")} Icon={Cloud} summary={`${syncLine.label} · ${devices?.devices?.length ?? 0} device${(devices?.devices?.length ?? 0) === 1 ? '' : 's'}`}>
               <div id="sync-status" data-tone={syncLine.tone} style={{ padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, borderBottom: '1px solid var(--border)' }}>
@@ -329,7 +277,7 @@ export default function SettingsTab({
           <div style={{ flex: 1, minWidth: 0 }}>
 
             {/* ── Get the app (website only) ── */}
-            <Section title={tr("App")}>
+            <Section title={embedded ? tr("About") : tr("App")}>
             {!isNative && (
               <>
                 <Group id="get-the-app" color="var(--accent)" title={tr("Get the app")} Icon={Smartphone} summary={download ? `Download the ${download.label}` : tr("Downloads and install")}>
@@ -466,10 +414,8 @@ export default function SettingsTab({
           onConfirm={() => { setConfirming(null); handleDeleteAll(); }} onCancel={() => setConfirming(null)} />
       )}
       {confirming === 'account' && (
-        <ConfirmDeleteModal title={tr("Delete your account?")}
-          message="All your data is deleted, then your sign-in: your entries and settings, shared trips you created (for everyone on them), your place on trips you joined, your invite code and anything waiting to be sent. Rows you added to other people's trips stay under the trip's name for that person so their balances still add up. This can't be undone — export a backup first if you might need it."
-          confirmLabel="Delete account" ConfirmIcon={UserX}
-          onConfirm={() => { setConfirming(null); handleDeleteAll({ andAccount: true }); }} onCancel={() => setConfirming(null)} />
+        <DeleteAccountModal user={user} onReauthenticate={onReauthenticate} onDeleteAccount={onDeleteAccount}
+          onFinishSignedOut={onFinishSignedOut} onClose={() => setConfirming(null)} />
       )}
       {confirming === 'signout' && (
         <ConfirmDeleteModal title={tr("Sign out?")} message="Your data stays safe in your account. This device's offline copy is cleared."

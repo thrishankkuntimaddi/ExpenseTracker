@@ -12,7 +12,7 @@
 //   • on Android: captured payment notifications / bank SMS on this phone
 // Payment records of paid supporters (supporters/{uid}) are written by the
 // server and kept as long as the law requires; see the privacy policy.
-import { collection, deleteDoc, deleteField, doc, getDocs, query, where, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, where, updateDoc, setDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { SHARED_TRIPS, deleteSharedTrip } from './sharedTrips';
 import { codeFor } from '../utils/supporter';
@@ -33,8 +33,11 @@ export async function leaveSharedTrip(tripId, uid, trip) {
 
 /**
  * Remove what lives outside users/{uid}. Runs before the account's own data
- * and sign-in are deleted. Returns the steps that failed (each is retried by
- * deleting again); an empty list means everything is gone.
+ * and sign-in are deleted. Returns the steps that failed — none of them
+ * stops the deletion any more: whatever is left, the server finishes
+ * (requestServerDeletion). Before 4.3 a missing invite code (most people
+ * never opened Invite) or a sent trip-invite mail made the rules refuse a
+ * step, and "Delete account" stopped with "your account was not deleted".
  */
 export async function deleteAccountFootprint(uid) {
   const failed = [];
@@ -49,8 +52,9 @@ export async function deleteAccountFootprint(uid) {
     }
   });
   await step('invite code', async () => {
-    const code = await codeFor(uid);
-    await deleteDoc(doc(db, 'referral_codes', code)).catch((err) => { if (err?.code !== 'not-found') throw err; });
+    const ref = doc(db, 'referral_codes', await codeFor(uid));
+    const snap = await getDoc(ref);
+    if (snap.exists() && snap.data().uid === uid) await deleteDoc(ref);   // never made one: nothing to remove
   });
   await step('referral', () => deleteDoc(doc(db, 'referrals', uid)));
   await step('outbox', async () => {
@@ -59,6 +63,19 @@ export async function deleteAccountFootprint(uid) {
   });
   await step('captured payments', () => setCaptureEnabled(false));
   return failed;
+}
+
+/**
+ * The fallback: ask the server (the notifier, every ~10 minutes) to finish
+ * deleting this account — the sign-in and anything the app couldn't remove.
+ * The owner sees it in Admin sees too.
+ */
+export function requestServerDeletion(uid, reason = '') {
+  return setDoc(doc(db, 'account_admin', uid), {
+    state: 'self_delete_requested',
+    requestedAt: Date.now(),
+    reason: String(reason).slice(0, 300),
+  });
 }
 
 /** The account document itself — last, after every sub-collection. */

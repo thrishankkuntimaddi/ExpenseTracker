@@ -13,6 +13,11 @@
 //      when it was created and last signed in. Nothing about anyone's money.
 //   0b. Closing, restoring and purging accounts for the owner (Profile → Admin
 //      sees writes the request in account_admin/{uid}; see accounts()).
+//   0c. Finishing account deletions people asked for themselves
+//      (account_admin/{uid}.state = self_delete_requested — the app does
+//      most of it; the server removes what's left and the sign-in).
+//   0d. Feedback & problem reports (feedback/{id}): each new one is pushed to
+//      the owner's devices and mailed to the owner — see feedbackAlerts().
 //   2. Security alerts. New users/{uid}/security_events (wrong PINs, lock
 //      changes, a sign-in on a new device) are pushed to the account's other
 //      devices and emailed to the account's address (when SMTP is
@@ -23,7 +28,7 @@
 //   SMTP_URL                  e.g. smtps://you%40gmail.com:app-password@smtp.gmail.com:465 (optional)
 //   MAIL_FROM                 "Expense Tracker <you@gmail.com>" (optional)
 //   APP_URL                   link in emails (default: the GitHub Pages site)
-//   JOIN_URL / LANDING_URL    trip invite links: the app (?trip=…) and the product page
+//   JOIN_URL / LANDING_URL    trip invite links: the app (/join?trip=…) and the product page
 //   DRY_RUN=1                 log only
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
@@ -253,7 +258,7 @@ async function alerts() {
    alerts), at most 20 a day per account, and only for a trip that account
    organises. */
 const INVITES_PER_DAY = 20;
-const JOIN_BASE = process.env.JOIN_URL || APP_URL;          // where the app runs (?trip=<id>)
+const JOIN_BASE = process.env.JOIN_URL || `${APP_URL.replace(/\/?$/, '/')}join`;   // /join?trip=<id> opens the Android app when installed
 const LANDING_URL = process.env.LANDING_URL || 'https://thrishankkuntimaddi.github.io/ExpenseTracker/';
 
 function inviteEmail({ fromName, trip, link }) {
@@ -411,6 +416,30 @@ async function hasData(ref) {
   return (await ref.listCollections()).length > 0;
 }
 
+/** What an account leaves outside users/{uid}: shared trips, invite code, referral. */
+async function removeEverywhere(uid) {
+  const trips = await db.collection('shared_trips').where('memberUids', 'array-contains', uid).get();
+  for (const d of trips.docs) {
+    const t = d.data();
+    if (t.ownerUid === uid) {
+      await db.recursiveDelete(d.ref);
+      await db.collection('trip_invites').doc(d.id).delete().catch(() => {});
+    } else {
+      const memberId = t.uidMember?.[uid];
+      await d.ref.update({
+        memberUids: FieldValue.arrayRemove(uid),
+        [`uidMember.${uid}`]: FieldValue.delete(),
+        [`people.${uid}`]: FieldValue.delete(),
+        removedUids: FieldValue.arrayUnion(uid),
+        ...(memberId ? { retiredMembers: FieldValue.arrayUnion(memberId) } : {}),
+      });
+    }
+  }
+  const codes = await db.collection('referral_codes').where('uid', '==', uid).get();
+  await Promise.all(codes.docs.map((c) => c.ref.delete()));
+  await db.collection('referrals').doc(uid).delete().catch(() => {});
+}
+
 async function accounts() {
   const reqs = (await db.collection('account_admin').get()).docs;
   for (const d of reqs) {
@@ -424,7 +453,7 @@ async function accounts() {
         const act = (await db.collection('user_activity').doc(uid).get()).data() ?? {};
         const seen = Math.max(Number(act.lastOpenedAt) || 0, Date.parse(user?.metadata?.lastRefreshTime ?? '') || 0, Date.parse(user?.metadata?.lastSignInTime ?? '') || 0);
         if (user?.email && OWNER_EMAILS.includes(user.email.toLowerCase())) { await report({ state: 'refused', error: 'This is the owner’s account.' }); continue; }
-        if (now - seen < INACTIVE_DAYS * DAY_MS) { await report({ state: 'refused', error: `Used ${Math.floor((now - seen) / DAY_MS)} days ago — only accounts quiet for ${INACTIVE_DAYS}+ days can be closed.` }); continue; }
+        if (!r.force && now - seen < INACTIVE_DAYS * DAY_MS) { await report({ state: 'refused', error: `Used ${Math.floor((now - seen) / DAY_MS)} days ago — only accounts quiet for ${INACTIVE_DAYS}+ days can be closed.` }); continue; }
         if (DRY) { console.log('would close', uid); continue; }
         const w = db.bulkWriter();
         const copied = await copyTree(live, archive, w);
@@ -433,6 +462,18 @@ async function accounts() {
         if (user) { await getAuth().updateUser(uid, { disabled: true }); await getAuth().revokeRefreshTokens(uid); }
         await report({ state: 'deleted', deletedAt: now, purgeAfter: now + KEEP_DAYS * DAY_MS, docs: copied, error: null });
         stats.closed = (stats.closed ?? 0) + 1;
+      } else if (r.state === 'self_delete_requested') {
+        // The person asked (in the app) and couldn't finish: remove it all for good
+        const user = await getAuth().getUser(uid).catch(() => null);
+        if (user?.email && OWNER_EMAILS.includes(user.email.toLowerCase())) { await report({ state: 'refused', error: 'This is the owner’s account.' }); continue; }
+        if (DRY) { console.log('would delete (asked by the person)', uid); continue; }
+        await removeEverywhere(uid);
+        await db.recursiveDelete(live);
+        await db.recursiveDelete(archive).catch(() => {});
+        await getAuth().deleteUser(uid).catch((err) => { if (err.code !== 'auth/user-not-found') throw err; });
+        await db.collection('user_activity').doc(uid).delete().catch(() => {});
+        await report({ state: 'purged', purgedAt: now, by: 'user', error: null });
+        stats.selfDeleted = (stats.selfDeleted ?? 0) + 1;
       } else if (r.state === 'restore_requested') {
         const user = await getAuth().getUser(uid).catch(() => null);
         // Only a closed account: sign-in off, or data waiting in the archive
@@ -463,10 +504,117 @@ async function accounts() {
   }
 }
 
+/* ── Feedback & problems → the owner ──
+   feedback/{id} { kind, text, email, name, page, platform, version, device }
+   written by the apps (Help → Report a problem / Share an idea, crashes, an
+   account deletion the app couldn't finish). Each new one is pushed to the
+   owner's devices and mailed to the owner — at most 20 a run; the rest wait. */
+const FEEDBACK_LABEL = { bug: 'Problem report', idea: 'New idea', question: 'Question', crash: 'App crash', deletion: 'Account deletion', other: 'Feedback' };
+let ownerCache;
+async function owners() {
+  if (ownerCache) return ownerCache;
+  ownerCache = [];
+  for (const email of OWNER_EMAILS) {
+    try { const u = await getAuth().getUserByEmail(email); ownerCache.push({ uid: u.uid, email }); } catch { ownerCache.push({ uid: null, email }); }
+  }
+  return ownerCache;
+}
+async function feedbackAlerts() {
+  let docs;
+  try { docs = (await db.collection('feedback').where('notified', '==', false).limit(20).get()).docs; }
+  catch (err) { console.warn('feedback query failed:', err.message); return; }
+  if (!docs.length) return;
+  const to = await owners();
+  for (const d of docs) {
+    const f = d.data();
+    if (!DRY && !(await claim(d.ref))) continue;
+    const label = FEEDBACK_LABEL[f.kind] ?? 'Feedback';
+    const who = f.name || f.email || 'Someone';
+    const title = `${label} from ${who}`;
+    const body = String(f.text ?? '').slice(0, 180);
+    try {
+      for (const o of to) {
+        if (o.uid) stats.feedbackPushes = (stats.feedbackPushes ?? 0) + await push(await tokensFor(o.uid, (t) => t.security !== false), { title, body, route: 'profile', type: 'security', tag: `feedback-${d.id}` });
+        const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+        const facts = [['From', `${f.name ?? ''} <${f.email ?? ''}>`], ['Where', f.page || '—'], ['App', `${f.platform ?? ''} ${f.version ?? ''}`], ['Device', f.device ?? '—']];
+        await mail(o.email, {
+          id: `feedback-${d.id}`,
+          subject: `Expense Tracker · ${title}`,
+          text: [title, '', f.text ?? '', '', ...facts.map(([k, v]) => `${k}: ${v}`), '', `Answer it in Profile → Admin sees → Inbox: ${APP_URL}`].join('\n'),
+          html: `<!doctype html><html><body style="margin:0;background:#F2F2F7;padding:24px 12px;font-family:${MAIL_FONT};color:#0A0A0C">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background:#FFFFFF;border:1px solid #E5E5EA;border-radius:24px"><tr><td style="padding:24px 26px 26px">
+${mailHead('Expense Tracker · Admin sees')}
+<h1 style="font-size:20px;font-weight:700;margin:18px 0 10px">${esc(title)}</h1>
+<p style="font-size:15px;line-height:1.55;white-space:pre-wrap;margin:0 0 14px">${esc(f.text)}</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F2F2F7;border-radius:14px;margin:0 0 18px;font-size:13px">${facts.map(([k, v]) => `<tr><td style="padding:6px 14px;color:#6C6C70;width:70px">${k}</td><td style="padding:6px 14px">${esc(v)}</td></tr>`).join('')}</table>
+${mailButton(esc(APP_URL), 'Open the Inbox')}
+</td></tr></table></body></html>`,
+        }).catch((err) => console.warn('feedback mail failed', err.message));
+      }
+      if (!DRY) await d.ref.update({ notified: true });
+      stats.feedback = (stats.feedback ?? 0) + 1;
+    } catch (err) {
+      console.error('feedback alert failed', d.id, err.message);
+      if (!DRY) await d.ref.update({ notified: false }).catch(() => {});
+    }
+  }
+}
+
+/* ── System health for Profile → Admin sees → Health ──
+   system_health/notifier: this run — each job's time and error, the counts —
+   plus the last 48 runs. system_health/usage: Firestore reads, writes and
+   deletes per day for the last 7 days, from Cloud Monitoring (hourly; needs
+   the "Monitoring Viewer" role on the service account — without it the
+   Health tab says so and shows the rest). */
+const PROJECT = JSON.parse(sa).project_id;
+const USAGE_EVERY = 3600e3;
+const METRICS = { reads: 'document/read_count', writes: 'document/write_count', deletes: 'document/delete_count' };
+
+async function usage() {
+  const ref = db.collection('system_health').doc('usage');
+  const last = (await ref.get()).data()?.at ?? 0;
+  if (now - last < USAGE_EVERY) return;
+  const { access_token: token } = await cert(JSON.parse(sa)).getAccessToken();
+  // Days in Pacific time — that's when Firebase's free daily quota resets
+  const end = new Date(now), start = new Date(now - 7 * 86400e3);
+  const days = {};
+  let error = null;
+  for (const [key, metric] of Object.entries(METRICS)) {
+    const q = new URLSearchParams({
+      filter: `metric.type="firestore.googleapis.com/${metric}"`,
+      'interval.startTime': start.toISOString(), 'interval.endTime': end.toISOString(),
+      'aggregation.alignmentPeriod': '3600s', 'aggregation.perSeriesAligner': 'ALIGN_SUM', 'aggregation.crossSeriesReducer': 'REDUCE_SUM',
+    });
+    const res = await fetch(`https://monitoring.googleapis.com/v3/projects/${PROJECT}/timeSeries?${q}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) { error = res.status === 403 ? 'Give the service account the “Monitoring Viewer” role to see reads and writes.' : `Cloud Monitoring said ${res.status}`; break; }
+    const body = await res.json();
+    for (const series of body.timeSeries ?? []) {
+      for (const pt of series.points ?? []) {
+        const day = new Date(pt.interval.endTime).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+        days[day] = days[day] ?? { reads: 0, writes: 0, deletes: 0 };
+        days[day][key] += Number(pt.value.int64Value ?? pt.value.doubleValue ?? 0);
+      }
+    }
+  }
+  if (!DRY) await ref.set({ at: now, error, days: error ? {} : days, quota: { reads: 50000, writes: 20000, deletes: 20000 } });
+  stats.usage = error ? 'unavailable' : Object.keys(days).length;
+}
+
 // Each part on its own: a failure in one (e.g. a quota error) must not stop the other
 let failed = false;
-for (const [name, run] of [['reminders', reminders], ['alerts', alerts], ['invites', invites], ['roster', roster], ['accounts', accounts]]) {
-  try { await run(); } catch (err) { failed = true; console.error(`${name} failed:`, err); }
+const jobs = {};
+for (const [name, run] of [['reminders', reminders], ['alerts', alerts], ['invites', invites], ['roster', roster], ['accounts', accounts], ['feedback', feedbackAlerts], ['usage', usage]]) {
+  const t0 = Date.now();
+  try { await run(); jobs[name] = { ok: true, ms: Date.now() - t0 }; }
+  catch (err) { failed = name !== 'usage' || failed; jobs[name] = { ok: false, ms: Date.now() - t0, error: String(err?.message ?? err).slice(0, 300) }; console.error(`${name} failed:`, err); }
 }
 console.log('done', JSON.stringify(stats));
+if (!DRY) {
+  try {
+    const ref = db.collection('system_health').doc('notifier');
+    const prev = (await ref.get()).data()?.history ?? [];
+    const run = { at: now, ok: !failed, ms: Date.now() - now, errors: Object.entries(jobs).filter(([, j]) => !j.ok).map(([n]) => n) };
+    await ref.set({ ...run, jobs, stats, history: [run, ...prev].slice(0, 48) });
+  } catch (err) { console.warn('health record failed:', err.message); }
+}
 if (failed) process.exit(1);

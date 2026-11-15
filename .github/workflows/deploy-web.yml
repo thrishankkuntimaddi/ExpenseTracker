@@ -22,10 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'npm'
@@ -88,6 +88,31 @@ jobs:
       # GitHub Pages: the product page + app update files (dist-pages/)
       - name: Assemble the product page
         run: node scripts/build-pages.mjs
+
+      # Android App Links: the website vouches for the app, so invite links
+      # (/join?trip=…) open the installed app instead of the browser. The
+      # fingerprint comes from the release signing key; add the Play app
+      # signing key's SHA-256 (Play Console → App integrity) as the
+      # ANDROID_CERT_SHA256 repository variable — comma-separate several.
+      - name: Write assetlinks.json (Android App Links)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          EXTRA_SHA256: ${{ vars.ANDROID_CERT_SHA256 }}
+        run: |
+          fps=""
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            fp=$(keytool -list -v -keystore "$RUNNER_TEMP/release.jks" -storepass "$KEYSTORE_PASSWORD" ${KEY_ALIAS:+-alias "$KEY_ALIAS"} 2>/dev/null | grep -m1 'SHA256:' | sed 's/.*SHA256: *//' | tr -d ' ')
+            rm -f "$RUNNER_TEMP/release.jks"
+            [ -n "$fp" ] && fps="$fp"
+          fi
+          for f in $(echo "$EXTRA_SHA256" | tr ',' ' '); do fps="$fps $f"; done
+          if [ -z "$(echo $fps | tr -d ' ')" ]; then echo "::warning::No Android signing fingerprint — invite links will open the website, not the app"; exit 0; fi
+          mkdir -p dist/.well-known
+          node -e 'const fps=process.argv.slice(1).filter(Boolean);require("fs").writeFileSync("dist/.well-known/assetlinks.json",JSON.stringify([{relation:["delegate_permission/common.handle_all_urls"],target:{namespace:"android_app",package_name:"com.thrishank.expensetracker",sha256_cert_fingerprints:fps}}],null,2))' $fps
+          cat dist/.well-known/assetlinks.json
 
       # The web app → Firebase Hosting. Needs the FIREBASE_SERVICE_ACCOUNT
       # secret with the "Firebase Hosting Admin" role (README → Hosting).

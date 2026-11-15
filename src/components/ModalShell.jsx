@@ -65,9 +65,9 @@ export function Field({ label, hint, children }) {
   );
 }
 
-export function PrimaryButton({ children, onClick, disabled, color = 'var(--accent)', style }) {
+export function PrimaryButton({ children, onClick, disabled, color = 'var(--accent)', style, id, type = 'button' }) {
   return (
-    <button onClick={onClick} disabled={disabled} style={{
+    <button id={id} type={type} onClick={onClick} disabled={disabled} style={{
       flex: 2, padding: '11px', borderRadius: 11, fontSize: 13, fontWeight: 700,
       background: disabled ? 'var(--surface2)' : color, color: disabled ? 'var(--text-muted)' : '#fff',
       border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
@@ -76,9 +76,9 @@ export function PrimaryButton({ children, onClick, disabled, color = 'var(--acce
   );
 }
 
-export function GhostButton({ children, onClick, danger, style }) {
+export function GhostButton({ children, onClick, danger, style, id }) {
   return (
-    <button onClick={onClick} style={{
+    <button id={id} type="button" onClick={onClick} style={{
       flex: 1, padding: '11px', borderRadius: 11, fontSize: 13, fontWeight: 700,
       background: danger ? 'var(--expense-bg)' : 'var(--surface2)',
       color: danger ? 'var(--expense)' : 'var(--text-secondary)',

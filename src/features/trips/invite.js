@@ -1,6 +1,8 @@
 // ─── Trip invites ─────────────────────────────────────────────────
 // An invite is a link to the web app with the trip's id:
-//   https://<the web app>/?trip=<id>   (config/sites.js)
+//   https://<the web app>/join?trip=<id>   (config/sites.js)
+// /join is what Android hands to the installed app (App Links); older links
+// (/?trip=<id>) keep working on the website and in "Join a trip".
 // Opened anywhere (QR scan, WhatsApp, email), it signs the person in — or
 // lets them create an account — and then asks which person on the trip
 // they are. The apps take the same link (or just the code) in "Join a trip".
@@ -18,7 +20,7 @@ function appUrl() {
   return origin + (import.meta.env.BASE_URL || '/');
 }
 
-export const inviteLink = (tripId) => `${appUrl()}?trip=${tripId}`;
+export const inviteLink = (tripId) => `${appUrl()}join?trip=${tripId}`;
 
 /** A pasted link or a bare code → the trip id, or null. */
 export function parseInvite(text) {
@@ -54,9 +56,14 @@ export function captureInviteFromUrl() {
     if (!id) return pendingInvite();
     localStorage.setItem(PENDING_KEY, id);
     url.searchParams.delete('trip');
-    window.history.replaceState(null, '', url.pathname + (url.search || '') + url.hash);
+    const path = url.pathname.replace(/\/join\/?$/, '/');
+    window.history.replaceState(null, '', path + (url.search || '') + url.hash);
     return id;
   } catch { return null; }
+}
+/** An invite that came another way (a link opened in the app). */
+export function rememberInvite(id) {
+  try { localStorage.setItem(PENDING_KEY, id); } catch { /* storage unavailable */ }
 }
 export function pendingInvite() {
   try { return localStorage.getItem(PENDING_KEY); } catch { return null; }

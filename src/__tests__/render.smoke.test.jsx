@@ -155,8 +155,10 @@ describe('screens render with planning features', () => {
     expect(html).toContain('>Yesterday<');
     expect(html).toContain('Swiggy');
     expect(html).toContain('Food &amp; Dining');
-    expect(html).not.toContain('Petrol');
-    expect(html).not.toContain('Netflix');
+    // Days are open by default now (4.3) — no tapping each day open
+    expect(html).toContain('Petrol');
+    expect(html).toContain('Netflix');
+    expect(html).not.toContain('>Done<');               // only debts show a status
   });
 
   it('History: money in and out in one list — kind, signed amount, status, edit and delete', () => {
@@ -351,15 +353,25 @@ describe('screens render with planning features', () => {
     expect(html).toContain('Asha Rao');
     expect(html).toContain('AR');                            // initials avatar
     expect(html).toContain('Member since February 2025');
-    // One pattern: quick switches, then sections of rows that open their setting
-    for (const t of ['Appearance', 'Theme', 'Animations', 'Notifications', 'Reminders', 'Customize', 'Bottom bar', 'Home screen', 'Open the app on',
-      'Money', 'Currency', 'Month Carry Forward', 'Backup &amp; sync', 'Sync', 'Data Management', 'App', 'Account', 'Reset']) expect(html).toContain(t);
-    for (const id of ['reminders', 'custom-bar', 'custom-home', 'custom-start', 'currency', 'month-carry-forward', 'sync', 'data-management', 'account', 'reset']) expect(html).toContain(`id="group-${id}"`);
+    // One pattern: a few sections of rows; each row opens its setting.
+    // Appearance is one row (Theme, Animations, Language open inside it).
+    for (const t of ['Preferences', 'Appearance', 'Light · animations on', 'Sounds', 'Reminders', 'Currency', 'Month Carry Forward',
+      'Personalize', 'Bottom bar', 'Home screen', 'Open the app on', 'Help &amp; support', 'Help center',
+      'Your data', 'Sync', 'Data Management', 'About', 'Account', 'Reset']) expect(html).toContain(t);
+    for (const id of ['appearance', 'reminders', 'custom-bar', 'custom-home', 'custom-start', 'currency', 'month-carry-forward', 'help', 'sync', 'data-management', 'account', 'reset']) expect(html).toContain(`id="group-${id}"`);
     expect(html).toContain('INR · Indian rupee');           // row summaries say what's set
     expect(html).not.toContain('id="reminder-daily"');       // settings open on tap, not all at once
+    expect(html).not.toContain('id="theme-light"');          // theme lives inside Appearance now
     expect(html).toContain('class="profile-detail"');        // the panel beside (wide) / instead of (phone) the list
     expect(html).toContain('Home · Bills · Stats · Money in');  // bar summary follows settings.ui (Home fixed first; Plan → Bills)
-    expect(html.match(/id="theme-(light|dark|system)"/g)).toHaveLength(3);   // one theme picker, not two
+  });
+
+  it('Help center: search, talk to us, guides, gestures and answers', async () => {
+    const { default: HelpCenter } = await import('../features/profile/HelpCenter');
+    const html = render(<HelpCenter />);
+    for (const id of ['help-search', 'help-talk-bug', 'help-talk-idea', 'help-talk-question', 'help-start-tour']) expect(html).toContain(`id="${id}"`);
+    expect(html).toContain('Swipe an entry to the left');
+    expect(html).toContain('How do I delete my account?');
   });
 
   it('the + sheet: four kinds, each with an amount field and a save button', () => {

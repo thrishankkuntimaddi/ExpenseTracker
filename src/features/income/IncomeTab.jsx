@@ -8,12 +8,14 @@ import { useViewMonth, monthName } from '../../app/month';
 import EditIncomeModal from '../../components/EditIncomeModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { useStats } from '../../hooks/useStats';
-import { PageHeader, HeaderAction } from '../../components/Page';
+import { PageHeader, HeaderAction, SummaryCard } from '../../components/Page';
 import { Plus } from 'lucide-react';
 import { useShell } from '../../app/shellContext';
 import EntryAmount from '../../components/EntryAmount';
 
 import { t as tr } from '../../i18n';
+import SwipeRow from '../../components/SwipeRow';
+import { formatMoneyCompact } from '../../utils/money';
 export default function IncomeTab({
   income: rawIncome = [], onUpdateIncome, onDeleteIncome,
   selectedPeriod: periodProp,
@@ -108,15 +110,12 @@ export default function IncomeTab({
 
           {/* Summary: period total, this month, where it comes from */}
           <div className="income-left" style={{ padding: '16px 16px 4px' }}>
-            <div className="hero-card hero-income" style={{ borderRadius: 22, padding: '16px 18px', color: '#fff' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.8 }}>{tr("Received ·")} {periodLabel}</div>
-              <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 2 }}>{formatAmount(totalIncome)}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-                <HeroFigure label={tr("Earned")} value={formatAmount(kindTotals.income)} />
-                <HeroFigure label={tr("Borrowed")} value={formatAmount(kindTotals.borrowed)} />
-                <HeroFigure label={tr("Paid back to you")} value={formatAmount(kindTotals.repayment)} />
-              </div>
-            </div>
+            <SummaryCard id="income-summary" label={`${tr("Received ·")} ${periodLabel}`} value={totalIncome} color="var(--income)"
+              figures={[
+                { label: tr("Earned"), value: formatMoneyCompact(kindTotals.income) },
+                { label: tr("Borrowed"), value: formatMoneyCompact(kindTotals.borrowed) },
+                { label: tr("Paid back"), value: formatMoneyCompact(kindTotals.repayment) },
+              ]} />
 
             {bySource.length > 0 && (
               <>
@@ -166,10 +165,16 @@ export default function IncomeTab({
                       </span>
                     </div>
                     <div className="card">
-                      {group.entries.map((entry, i) => (
-                        <div key={entry.id} style={{
+                      {group.entries.map((entry, i) => {
+                        const askDelete = () => {
+                          if (income.some(x => x.id === entry.id)) setDeletingId(entry.id);
+                          else if (transactions.some(x => x.id === entry.id)) setDeletingTxnId(entry.id);
+                          else setDeletingId(entry.id);
+                        };
+                        const row = (
+                        <div style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '12px 14px',
+                          padding: '12px 14px', background: 'var(--surface)',
                           borderBottom: i < group.entries.length - 1 ? '1px solid var(--border)' : 'none',
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -216,15 +221,7 @@ export default function IncomeTab({
                               </button>
                             )}
                             {!isCarryForward(entry) && <button
-                              onClick={() => {
-                                if (income.some(i => i.id === entry.id)) {
-                                  setDeletingId(entry.id);
-                                } else if (transactions.some(t => t.id === entry.id)) {
-                                  setDeletingTxnId(entry.id);
-                                } else {
-                                  setDeletingId(entry.id);
-                                }
-                              }}
+                              onClick={askDelete}
                               style={{ width: 24, height: 24, borderRadius: 6, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.15s, background 0.15s' }}
                               onMouseEnter={e => { e.currentTarget.style.color = 'var(--expense)'; e.currentTarget.style.background = 'var(--expense-bg)'; }}
                               onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
@@ -232,7 +229,11 @@ export default function IncomeTab({
                             </button>}
                           </div>
                         </div>
-                      ))}
+                        );
+                        return isCarryForward(entry)
+                          ? <div key={entry.id}>{row}</div>
+                          : <SwipeRow key={entry.id} label={entry.name} onEdit={onUpdateIncome ? () => setEditingEntry(entry) : undefined} onDelete={askDelete}>{row}</SwipeRow>;
+                      })}
                     </div>
                   </div>
                 ))}
@@ -257,11 +258,3 @@ export default function IncomeTab({
   );
 }
 
-function HeroFigure({ label, value }) {
-  return (
-    <div style={{ minWidth: 0 }}>
-      <div style={{ fontSize: 10, fontWeight: 600, opacity: 0.75 }}>{label}</div>
-      <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
-    </div>
-  );
-}

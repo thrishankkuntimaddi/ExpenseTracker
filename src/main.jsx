@@ -13,12 +13,15 @@ import { confirmBundleBoots, startAutoUpdates } from './native/updates.js'
 import { takeQuickBoot } from './app/quickBoot.js'
 import { play, wireTapSounds } from './sound/sound.js'
 import { rememberRefFromUrl } from './app/refLink.js'
+import { initDeepLinks } from './native/deepLinks.js'
 
 // Android: tell the over-the-air updater this bundle boots, before anything
 // else (a bundle that never gets here is rolled back automatically).
 confirmBundleBoots()
 // An invite link (?ref=CODE): keep the code for when an account is made
 rememberRefFromUrl()
+// Android: an invite link opened the app (or arrives while it runs)
+initDeepLinks()
 
 function bootstrap() {
   const rootEl = document.getElementById('root');

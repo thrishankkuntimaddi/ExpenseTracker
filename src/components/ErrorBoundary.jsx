@@ -2,6 +2,7 @@ import { Component } from 'react';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
 
 import { t as tr } from '../i18n';
+import { reportProblem } from '../services/feedback';
 /* Last line of defence: a crash anywhere below shows a way out instead of
    a blank page. Your data is safe in your account (and the offline cache),
    so reloading is always the right move. */
@@ -10,7 +11,12 @@ export default class ErrorBoundary extends Component {
 
   static getDerivedStateFromError(error) { return { error }; }
 
-  componentDidCatch(error, info) { console.error('[ErrorBoundary]', error, info?.componentStack); }
+  componentDidCatch(error, info) {
+    console.error('[ErrorBoundary]', error, info?.componentStack);
+    // Tell the owner (Admin sees → Inbox): the message and where, never any data
+    const where = String(info?.componentStack ?? '').split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 4).join(' ← ');
+    reportProblem('crash', `${error?.name ?? 'Error'}: ${error?.message ?? error}${where ? `\n${where}` : ''}`);
+  }
 
   render() {
     if (!this.state.error) return this.props.children;

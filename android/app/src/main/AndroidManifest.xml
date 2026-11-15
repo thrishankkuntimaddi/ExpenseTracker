@@ -32,6 +32,16 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
             </intent-filter>
+            <!-- Trip invite links open the app when it's installed (Android App Links).
+                 Verified with https://expensetracker-in.web.app/.well-known/assetlinks.json,
+                 written at deploy time (.github/workflows/deploy-web.yml). Without the
+                 app, the same link simply opens the website. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="expensetracker-in.web.app" android:pathPrefix="/join" />
+            </intent-filter>
             <!-- Widget taps: expensetracker://add/expense, …/page/bills -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

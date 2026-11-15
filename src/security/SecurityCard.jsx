@@ -9,32 +9,33 @@ import { useAppLockContext } from './useAppLock';
 import { LOCK_AFTER, DEFAULT_LOCK_AFTER, pinProblem, PIN_MIN, PIN_MAX } from './pin';
 import { biometricStatus, biometricEnrolled, enrollBiometric, forgetBiometric } from './biometric';
 import { PinInput } from './LockScreen';
-import { isLive } from '../hooks/useDevices';
+import { isLive, MAX_DEVICES } from '../hooks/useDevices';
 import { timeAgo } from '../services/sync';
 import { Section, Group } from '../features/settings/SettingsGroup';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import { eventText } from './events';
 
 import { t as tr } from '../i18n';
-export default function SecurityCard({ user, devices, events = [] }) {
+export default function SecurityCard({ user, devices, events = [], title = 'Security', children = null }) {
   const lock = useAppLockContext();
   if (!lock) return null;
   const list = devices?.devices ?? [];
   const live = list.filter((d) => d.id !== devices.thisId && isLive(d)).length;
   return (
-    <Section title={tr("Security")}>
+    <Section title={tr(title)}>
       <Group id="app-lock" title={tr("App lock")} Icon={lock.enabled ? Lock : LockOpen} color={lock.enabled ? 'var(--income)' : 'var(--text-muted)'}
         summary={lock.enabled ? `On · PIN on all devices · ${LOCK_AFTER.find((o) => o.key === (lock.cfg.lockAfter ?? DEFAULT_LOCK_AFTER))?.label.toLowerCase()}` : tr("Off — anyone holding this device can open the app")}>
         <AppLockSettings lock={lock} user={user} />
       </Group>
       <Group id="devices" title={tr("Your devices")} Icon={Laptop} color="var(--savings)"
-        summary={`${list.length} signed in${live ? ` · ${live} live now` : ''}`}>
+        summary={`${list.length} of ${MAX_DEVICES} signed in${live ? ` · ${live} live now` : ''}`}>
         <DeviceList devices={devices} lockOn={lock.enabled} />
       </Group>
       <Group id="security-alerts" title={tr("Security alerts")} Icon={Bell} color="var(--lent)"
         summary={events.length ? `${eventText(events[0]).title} · ${timeAgo(events[0].at)}` : tr("Nothing unusual")}>
         <EventList events={events} />
       </Group>
+      {children}
     </Section>
   );
 }

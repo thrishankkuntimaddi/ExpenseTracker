@@ -7,6 +7,7 @@ import ProfileButton from './ProfileButton';
 import HelpButton from '../tour/HelpButton';
 import MonthSwitcher from './MonthSwitcher';
 import { t } from '../i18n';
+import BigAmount from './BigAmount';
 
 /* `month`: show the app-wide month switcher under the title */
 export function PageHeader({ title, subtitle, actions, month = false, children }) {
@@ -28,13 +29,39 @@ export function PageHeader({ title, subtitle, actions, month = false, children }
   );
 }
 
-/* A compact pill action for page headers ("+ Add", "Edit") */
-export function HeaderAction({ id, Icon, label, onClick }) {
+/* A page-header action ("+ Add", "Edit"): a labelled pill on wide screens;
+   on phones a round icon button like ? and the avatar beside it, so every
+   page's header looks the same and long titles aren't cut short. */
+export function HeaderAction({ id, Icon, label, onClick, active = false }) {
+  const text = t(label);
   return (
-    <button id={id} onClick={onClick} className="header-action"
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '8px 12px', border: 'none', background: 'var(--accent-bg)', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', flexShrink: 0 }}>
-      {Icon && <Icon size={14} />}{t(label)}
+    <button id={id} onClick={onClick} className={`header-action${Icon ? ' has-icon' : ''}${active ? ' is-active' : ''}`} aria-label={text} title={text}
+      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '8px 12px', border: 'none', background: 'var(--accent-bg)', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', flexShrink: 0 }}>
+      {Icon && <Icon size={15} />}<span className="header-action-label">{text}</span>
     </button>
+  );
+}
+
+/* The summary at the top of a page — the same on every page: a small
+   uppercase label, the headline figure, then up to three figures under a
+   hairline. `children` go at the bottom (a progress bar, a note). */
+export function SummaryCard({ id, label, value, color, figures = [], currency, children }) {
+  return (
+    <div className="card hist-summary summary-card" id={id}>
+      <div className="tl-title">{t(label)}</div>
+      <BigAmount value={value} size={38} color={color} currency={currency} />
+      {figures.length > 0 && (
+        <div className="hist-summary-strip" style={{ gridTemplateColumns: `repeat(${figures.length}, minmax(0, 1fr))` }}>
+          {figures.map((f) => (
+            <div key={f.label} style={{ minWidth: 0 }}>
+              <div className="tl-fig-value" style={{ ...(f.color ? { color: f.color } : {}), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.value}</div>
+              <div className="tl-fig-label">{t(f.label)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {children}
+    </div>
   );
 }
 

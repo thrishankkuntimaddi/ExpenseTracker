@@ -19,7 +19,7 @@ import { background } from '../services/sync';
 import { displayNameOf } from '../app/shellContext';
 
 // Fields of a shared trip only its creator writes
-const META = ['name', 'startDate', 'endDate', 'currency', 'status', 'members', 'closedAt', 'archivedFrom', 'postedEntryIds'];
+const META = ['name', 'startDate', 'endDate', 'currency', 'status', 'members', 'closedAt', 'archivedFrom', 'postedEntryIds', 'budget'];
 const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
 export function useTrips(user, reportError) {

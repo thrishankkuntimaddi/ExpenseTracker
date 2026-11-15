@@ -32,17 +32,19 @@ export function adminStateOf(rec) {
     case 'restore_requested': return 'restoring';
     case 'purge_requested': return 'purging';
     case 'refused': return 'refused';
+    case 'self_delete_requested': return 'leaving';   // they deleted their account; the server finishes it
+    case 'purged': return 'purged';
     default: return 'none';
   }
 }
-const inDeleted = (s) => ['closing', 'closed', 'restoring', 'purging'].includes(s);
+const inDeleted = (s) => ['closing', 'closed', 'restoring', 'purging', 'leaving', 'purged'].includes(s);
 
 export const daysQuiet = (u, now = Date.now()) => Math.floor((now - (Number(u?.lastOpenedAt) || 0)) / DAY);
 
 /** Active: opened in the last INACTIVE_DAYS. Inactive: quieter than that (or never). */
 export const TABS = [
   { key: 'active',   label: 'Active',       test: (u, now, a) => !inDeleted(a) && daysQuiet(u, now) < INACTIVE_DAYS },
-  { key: 'inactive', label: 'Inactive',     hint: `Not opened for ${INACTIVE_DAYS}+ days — you can close these accounts`, test: (u, now, a) => !inDeleted(a) && daysQuiet(u, now) >= INACTIVE_DAYS },
+  { key: 'inactive', label: 'Inactive',     hint: `Not opened for ${INACTIVE_DAYS}+ days — tap someone to see details or close the account`, test: (u, now, a) => !inDeleted(a) && daysQuiet(u, now) >= INACTIVE_DAYS },
   { key: 'deleted',  label: 'Closed',       hint: `Sign-in is off and the data is kept ${KEEP_DAYS} days — restore it any time before then`, test: (u, now, a) => inDeleted(a) },
   { key: 'all',      label: 'All accounts', test: () => true },
 ];

@@ -65,8 +65,10 @@ import { displayNameOf } from './shellContext';
 import { normaliseUi } from '../utils/uiPrefs';
 import { flyCoin } from '../motion/motion';
 import Sign from '../motion/Sign';
-import { useAppLock, AppLockContext } from '../security/useAppLock';
+import { useAppLock, AppLockContext, cachedLockConfig } from '../security/useAppLock';
+import { reportProblem } from '../services/feedback';
 import LockScreen from '../security/LockScreen';
+import DeviceLimitScreen from '../security/DeviceLimitScreen';
 import SecurityBanners from '../security/SecurityBanners';
 import { useSecurityEvents } from '../security/events';
 import { pendingInvite } from '../features/trips/invite';
@@ -100,7 +102,7 @@ function useIsDesktop() {
 clearLegacyDataCache();
 
 /* ── Inner app rendered when user is authenticated ── */
-function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendVerification }) {
+function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finishSignedOut, resetPassword, resendVerification }) {
   const [chosenTab, setActiveTab]           = useState(null);     // null until the user moves: show the start page
   const [backStack, setBackStack]           = useState([]);       // pages opened from tiles / the avatar return here
   const [slideDir, setSlideDir]             = useState(null);   // 'left' | 'right' | null — page transition
@@ -134,8 +136,6 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
   // The language chosen on any device (settings.lang) — applied here too
   useEffect(() => { if (settings?.lang) setLang(settings.lang); }, [settings?.lang]);
 
-  // Usage activity for the app's owner (Profile → Admin sees): when, never what
-  useActivity(isDemo ? null : user, transactions, income, loaded);
 
   // Your data has arrived (from the device cache or the server): end the splash
   useEffect(() => { if (loaded) markAppReady(); }, [loaded]);
@@ -184,6 +184,18 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
 
   // Theme is per device and light until the person picks Dark or Auto
   const { pref: themePref, theme, setPref: setThemePref } = useTheme();
+
+  // Usage activity for the app's owner (Profile → Admin sees): when and how
+  // (counts and switches), never what — no amounts, no entries
+  useActivity(isDemo ? null : user, transactions, income, loaded, {
+    devices: devices.devices.length,
+    rules: recurring.rules?.length ?? 0,
+    theme: themePref,
+    lockOn: !!cachedLockConfig(uid)?.enabled,
+  });
+
+  // A save the server refused: the owner hears about it (Admin sees → Inbox)
+  useEffect(() => { if (writeError && !isDemo) reportProblem('bug', `Save failed: ${writeError}`, chosenTab ?? ''); }, [writeError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * smartAddEntry — routes entries to the right store.
@@ -235,6 +247,12 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
 
   // Opened from a trip invite link: go to Trips, which asks "which one are you?"
   useEffect(() => { if (pendingInvite()) goTo('trips'); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // An invite link opened the app while it was running → Trips asks "which one are you?"
+  useEffect(() => {
+    const h = () => goTo('trips');
+    window.addEventListener('et:invite', h);
+    return () => window.removeEventListener('et:invite', h);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The app tour, once per device: a new account gets the whole tour; an
   // account that already has entries just hears that the guides exist.
@@ -461,6 +479,8 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
         openGroup={pageOpts.openGroup}
         onSignOut={signOut}
         onDeleteAccount={deleteAccount}
+        onReauthenticate={reauthenticate}
+        onFinishSignedOut={finishSignedOut}
         onResetPassword={resetPassword}
         onResendVerification={resendVerification}
         onAddTransaction={addTransaction}
@@ -503,6 +523,11 @@ function AuthenticatedApp({ user, signOut, deleteAccount, resetPassword, resendV
       )}
     </>
   );
+
+  /* ── A 4th device: sign one out first (at most 3 at once) ── */
+  if (!isDemo && devices.overLimit) {
+    return <DeviceLimitScreen devices={devices} onSignOutHere={() => signOut({ force: true })} />;
+  }
 
   /* ── DESKTOP / WEB: sidebar + the same pages ── */
   if (isDesktop) {

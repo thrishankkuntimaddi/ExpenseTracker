@@ -14,7 +14,7 @@ use reminders::{Reminder, SharedReminders};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, RunEvent, State, WindowEvent,
+    AppHandle, Manager, State, WindowEvent,
 };
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
@@ -157,7 +157,7 @@ pub fn run() {
     app.run(|_app, event| {
         // macOS: clicking the Dock icon brings the hidden window back
         #[cfg(target_os = "macos")]
-        if let RunEvent::Reopen { .. } = event {
+        if let tauri::RunEvent::Reopen { .. } = event {
             show_main(_app);
         }
         #[cfg(not(target_os = "macos"))]

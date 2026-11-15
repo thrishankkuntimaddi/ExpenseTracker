@@ -5,8 +5,9 @@
 // from a preset. Built on the recurring rules.
 import { useMemo, useState } from 'react';
 import { Plus, Check, Zap, Pause, Play, Pencil, CalendarClock, ReceiptText, SkipForward, ShieldCheck } from 'lucide-react';
-import { PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill } from '../../components/Page';
+import { SummaryCard, PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill } from '../../components/Page';
 import RecurringRuleModal from '../plan/RecurringRuleModal';
+import { formatMoneyCompact } from '../../utils/money';
 import DueRecurringCard from '../plan/components/DueRecurringCard';
 import { formatAmount } from '../../utils/dateHelpers';
 import { monthBills, dueLabel, BILL_PRESETS, insurancePolicies, insuranceTypeLabel } from '../../utils/bills';
@@ -69,19 +70,20 @@ export default function BillsPage({ transactions = [], income = [], recurring, s
 
       <div className="tab-body">
         {/* ── Month summary ── */}
-        <div className="card" style={{ padding: '14px 16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            <Figure label={isThisMonth ? tr("This month") : monthLabel.split(' ')[0]} value={formatAmount(month.total)} />
-            <Figure label={tr("Paid")} value={formatAmount(month.paid)} color="var(--income)" />
-            <Figure label={month.overdueCount ? `${month.overdueCount} late` : tr("To pay")} value={formatAmount(month.remaining)} color={month.overdueCount ? 'var(--expense)' : 'var(--text)'} />
-          </div>
+        <SummaryCard id="bills-summary" label={`${month.overdueCount ? `${month.overdueCount} late · ` : ''}${tr("Left to pay")} · ${isThisMonth ? tr("this month") : monthLabel}`}
+          value={month.remaining} color={month.overdueCount ? 'var(--expense)' : undefined}
+          figures={[
+            { label: tr("Due in all"), value: formatMoneyCompact(month.total) },
+            { label: tr("Paid"), value: formatMoneyCompact(month.paid), color: 'var(--income)' },
+            { label: tr("Payments"), value: String(month.items.length) },
+          ]}>
           <div style={{ height: 6, borderRadius: 99, background: 'var(--surface2)', marginTop: 12, overflow: 'hidden' }}>
             <div style={{ width: `${paidPct}%`, height: '100%', borderRadius: 99, background: 'var(--income)' }} />
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
             {rules.some((r) => r.kind !== 'income') ? `${formatAmount(committed)} a month goes to regular payments` : tr("Add the payments you make every month")}
           </div>
-        </div>
+        </SummaryCard>
 
         {earlierDue.length > 0 && (
           <>
@@ -217,14 +219,6 @@ export default function BillsPage({ transactions = [], income = [], recurring, s
   );
 }
 
-function Figure({ label, value, color = 'var(--text)' }) {
-  return (
-    <div style={{ minWidth: 0 }}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{label}</div>
-      <div style={{ fontSize: 15, fontWeight: 750, color, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-    </div>
-  );
-}
 
 const roundBtn = { width: 30, height: 30, borderRadius: '50%', background: 'var(--surface2)', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
 const pillBtn = { padding: '7px 13px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };

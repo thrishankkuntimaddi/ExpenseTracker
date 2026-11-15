@@ -76,7 +76,7 @@
 
 /* ── The floating layer: real lens (frost + bevel + refraction) ─── */
 /* (:root:root lifts these above glass.css's tile rule) */
-:root:root :is(#phone-bar, .tab-header.lg-floating, [style*="position: sticky"][style*="top: 0"], .demo-banner, [style*="var(--toast-bg"]) {
+:root:root :is(#phone-bar, .tab-header.lg-floating, [style*="position: sticky"][style*="top: 0"], .demo-banner) {
   background: var(--lens-bar) !important;
   -webkit-backdrop-filter: var(--lens-frost) !important;
   backdrop-filter: var(--lens-frost) !important;
@@ -86,8 +86,17 @@
 html.lg-refract :is(#phone-bar, .tab-header.lg-floating, [style*="position: sticky"][style*="top: 0"], .demo-banner) {
   backdrop-filter: var(--lens-frost) url(#lg-refract) !important;
 }
-/* Toast keeps its inverted contrast, but as glass */
-:root:root [style*="var(--toast-bg"] { background: color-mix(in srgb, var(--toast-bg) 72%, transparent) !important; }
+/* Toast keeps its inverted contrast, but as glass. Its own rule: inside the
+   :is() above, #phone-bar's id specificity made the light bar background win
+   over this one — white text on light glass, an empty-looking bar. */
+:root:root .app-toast, :root:root [style*="var(--toast-bg"] {
+  background: color-mix(in srgb, var(--toast-bg) 88%, transparent) !important;
+  color: var(--toast-text) !important;
+  -webkit-backdrop-filter: var(--lens-frost) !important;
+  backdrop-filter: var(--lens-frost) !important;
+  border: 1px solid transparent !important;
+  box-shadow: var(--lens-bevel), var(--lens-drop) !important;
+}
 
 /* Page headers float over the page; the body starts under them */
 .lg-float-root { position: relative; }

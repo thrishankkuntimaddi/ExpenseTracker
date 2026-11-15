@@ -103,17 +103,19 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 8 }}>
-          <Field label={tr("Name")}>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === 'income' ? tr("Salary") : kind === 'savings' ? tr("Nifty 50 SIP") : tr("House rent")} style={fieldStyle} autoFocus />
-          </Field>
-          <Field label={tr("Amount")}>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <CurrencySelect compact value={currency} onChange={setCurrency} />
-              <input type="text" inputMode="decimal" value={amount} placeholder="0" onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }} style={{ ...fieldStyle, fontWeight: 700, minWidth: 0 }} />
-            </div>
-          </Field>
-        </div>
+        {/* Name on its own line, then the amount — big, with its currency beside it.
+            (Side by side they were squeezed into a 160px column on phones.) */}
+        <Field label={tr("Name")}>
+          <input id="rule-name" type="text" value={name} maxLength={200} onChange={(e) => setName(e.target.value)} placeholder={kind === 'income' ? tr("Salary") : kind === 'savings' ? tr("Nifty 50 SIP") : tr("House rent")} style={fieldStyle} autoFocus />
+        </Field>
+        <Field label={tr("Amount")}>
+          <div style={{ display: 'flex', alignItems: 'stretch', gap: 8 }}>
+            <CurrencySelect compact value={currency} onChange={setCurrency} />
+            <input id="rule-amount" type="text" inputMode="decimal" value={amount} placeholder="0" aria-label={tr("Amount")}
+              onChange={(e) => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }}
+              style={{ ...fieldStyle, flex: 1, minWidth: 0, fontSize: 20, fontWeight: 800, letterSpacing: '-0.01em', fontVariantNumeric: 'tabular-nums', color: sel.color }} />
+          </div>
+        </Field>
 
         {kind === 'expense' && (
           <CategoryPicker size="sm" value={effectiveCategory} suggested={suggested} onChange={(c) => { setCategory(c); setCategoryTouched(true); }} />
@@ -164,7 +166,7 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
         )}
 
         {/* Schedule */}
-        <div style={{ display: 'grid', gridTemplateColumns: frequency === 'monthly' || frequency === 'weekly' ? '1fr 1fr' : '1fr', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: frequency === 'monthly' || frequency === 'weekly' ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)', gap: 8 }}>
           <Field label={tr("Repeats")}>
             <select value={frequency} onChange={(e) => setFrequency(e.target.value)} style={fieldStyle}>
               {FREQUENCIES.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
@@ -184,12 +186,13 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
           )}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {/* minmax(0, 1fr) + min-width 0: date inputs have a wide built-in minimum and spilled out of the dialog */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
           <Field label={tr("Starts")}>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={fieldStyle} />
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ ...fieldStyle, minWidth: 0, width: '100%', boxSizing: 'border-box' }} />
           </Field>
           <Field label={tr("Ends (optional)")}>
-            <input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} style={fieldStyle} />
+            <input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} style={{ ...fieldStyle, minWidth: 0, width: '100%', boxSizing: 'border-box' }} />
           </Field>
         </div>
 

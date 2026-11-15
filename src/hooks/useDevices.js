@@ -27,6 +27,28 @@ export const COMMAND_TTL_MS = 7 * 24 * 3600 * 1000;
     its doc stays so the sign-out still reaches it if it opens again. */
 export const isSignedOut = (d) => d?.command?.type === 'signout';
 
+/* At most 3 devices signed in at once. The 3 that signed in first keep
+   working; a 4th is asked to sign one of them out (or itself) before it can
+   use the app — see DeviceLimitScreen. A device signed out from elsewhere,
+   or unseen for 30 days, no longer counts. */
+export const MAX_DEVICES = 3;
+const sinceKey = (uid) => `et_device_since_${uid}`;
+function firstSeenHere(uid) {
+  try {
+    let v = Number(localStorage.getItem(sinceKey(uid)));
+    if (!v) { v = Date.now(); localStorage.setItem(sinceKey(uid), String(v)); }
+    return v;
+  } catch { return Date.now(); }
+}
+
+/** Is this device one of the first MAX_DEVICES (by when each signed in)? */
+export function overDeviceLimit(devices, thisId, now = Date.now()) {
+  const counted = devices.filter((d) => !isSignedOut(d) && (d.id === thisId || !d.lastSeen || now - d.lastSeen < FORGET_AFTER_MS));
+  if (counted.length <= MAX_DEVICES || !counted.some((d) => d.id === thisId)) return false;
+  const order = counted.slice().sort((a, b) => (Number(a.since) || 0) - (Number(b.since) || 0) || String(a.id).localeCompare(String(b.id)));
+  return order.findIndex((d) => d.id === thisId) >= MAX_DEVICES;
+}
+
 export function getDeviceId() {
   try {
     let id = localStorage.getItem(DEVICE_ID_KEY);
@@ -53,6 +75,7 @@ export function useDevices(uid) {
   const [all, setDevices] = useState([]);
   const thisId = getDeviceId();
   const devices = useMemo(() => all.filter((d) => d.id === thisId || !isSignedOut(d)), [all, thisId]);
+  const overLimit = useMemo(() => !!uid && overDeviceLimit(devices, thisId), [uid, devices, thisId]);
 
   useEffect(() => (uid ? subscribeToDevices(uid, setDevices) : undefined), [uid]);
 
@@ -84,7 +107,7 @@ export function useDevices(uid) {
     const beat = () => {
       const visible = document.visibilityState === 'visible';
       if (!visible && !navigator.onLine) return;
-      background(touchDevice(uid, thisId, { name: describeDevice(), kind, platform, visible }));
+      background(touchDevice(uid, thisId, { name: describeDevice(), kind, platform, visible, since: firstSeenHere(uid) }));
     };
     const tick = () => { if (document.visibilityState === 'visible') beat(); };
     beat();
@@ -110,5 +133,5 @@ export function useDevices(uid) {
     if (uid) background(patchDevice(uid, id, { unlockApproval: { nonce, approved, at: Date.now(), by: describeDevice() } }));
   }, [uid]);
 
-  return { devices, thisId, command, answerUnlock };
+  return { devices, thisId, command, answerUnlock, overLimit };
 }

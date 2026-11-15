@@ -432,3 +432,52 @@ nav.desktop-nav button { margin: 0; }
 /* Indian scripts: no tracking (it breaks conjuncts) and no forced capitals */
 html[lang^="hi"] *, html[lang^="te"] *, html[lang^="ta"] * { letter-spacing: normal !important; }
 html[lang^="hi"] .section-label, html[lang^="te"] .section-label, html[lang^="ta"] .section-label { text-transform: none; }
+
+/* ── Swipe actions on entries (components/SwipeRow) ── */
+.swipe-row { position: relative; border-radius: 16px; touch-action: pan-y; }
+.swipe-front { position: relative; z-index: 1; will-change: transform; }
+.swipe-under { position: absolute; top: 0; bottom: 0; display: flex; align-items: stretch; border-radius: 16px; overflow: hidden; z-index: 0; }
+.swipe-under-left { left: 0; right: 0; justify-content: flex-start; align-items: center; gap: 6px; padding-left: 18px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 750; }
+.swipe-under-right { right: 0; justify-content: flex-end; }
+.swipe-action { flex: 0 0 68px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: none; color: #fff; font-size: 11px; font-weight: 750; font-family: inherit; cursor: pointer; }
+.swipe-edit { background: var(--accent); }
+.swipe-delete { background: var(--expense); }
+.swipe-under-right.full .swipe-delete { flex: 1 1 auto; align-items: flex-end; padding-right: 22px; }
+/* On touch screens the swipe replaces the row's small buttons */
+@media (hover: none) and (pointer: coarse) { .swipe-row .hist-btn { display: none; } }
+
+/* ── History on phones: compact (4.3) — the net card, day headers and
+   entry cards were sized for a desktop and filled the screen ── */
+@media (max-width: 767px) {
+  .hist-summary { padding: 12px 14px 10px; margin-bottom: 12px; }
+  .hist-summary .tl-title { font-size: 10px; }
+  .hist-summary-strip { margin-top: 8px; padding-top: 8px; gap: 6px; }
+  .hist-summary-strip .tl-fig-value { font-size: 14px; }
+  .hist-summary-strip .tl-fig-label { font-size: 9px; }
+  .hist-group { padding: 6px 2px 5px; margin-bottom: 6px; border-bottom-width: 1px; }
+  .hist-group-title { font-size: 12.5px; font-weight: 750; }
+  .hist-group-side { font-size: 11px; gap: 8px; }
+  .hist-group-count { display: none; }   /* the day's total says enough on a phone */
+  .hist-cards { gap: 6px; }
+  .hist-row { padding: 8px 8px 8px 12px; gap: 10px; border-radius: 16px !important; }
+  .hist-row::before { top: 8px; bottom: 8px; width: 3px; }
+  .hist-tile { width: 32px; height: 32px; border-radius: 10px; }
+  .hist-tile svg { width: 15px; height: 15px; }
+  .hist-name { font-size: 13.5px; }
+  .hist-main { gap: 1px; }
+  .hist-meta { font-size: 11px; }
+  .hist-amount { font-size: 15px; font-weight: 800; }
+  .hist-status { font-size: 10px; }
+  .swipe-row, .swipe-under { border-radius: 16px; }
+}
+
+/* ── One header on every phone page (4.3) ──
+   Header actions become round icon buttons the size of ? and the avatar;
+   the label stays for screen readers and as a tooltip. */
+@media (max-width: 767px) {
+  .header-action.has-icon { width: 36px; height: 36px; padding: 0 !important; border-radius: 50% !important; }
+  .header-action.has-icon .header-action-label { display: none; }
+  .tab-header .help-button { width: 36px; height: 36px; }
+  /* The headline figure: one size on every page (Stats, Savings, History, People …) */
+  .tl-big { font-size: 32px !important; }
+}

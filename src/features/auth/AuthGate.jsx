@@ -8,6 +8,7 @@ import { googleSignInAvailable } from '../../native/googleSignIn';
 import { isNative } from '../../native';
 import { DOWNLOADS_URL } from '../../config/sites';
 import { captureInviteFromUrl } from '../trips/invite';
+import OpenInAppBanner from './OpenInAppBanner';
 import { demoOn, startDemo, endDemo, afterDemo, DEMO_USER } from '../../demo/demo';
 
 import { t as tr } from '../../i18n';
@@ -81,7 +82,7 @@ function LoadingScreen() {
  * - user     → children
  */
 export default function AuthGate({ children }) {
-  const { user, loading, signIn, signUp, signInWithGoogle, resetPassword, resendVerification, signOut, deleteAccount, error, setError } = useAuth();
+  const { user, loading, signIn, signUp, signInWithGoogle, resetPassword, resendVerification, signOut, deleteAccount, reauthenticate, finishSignedOut, error, setError } = useAuth();
   const [authLoading, setAuthLoading] = useState(false);
   const [startMode] = useState(() => afterDemo());
 
@@ -90,7 +91,7 @@ export default function AuthGate({ children }) {
 
   // Demo: sample data in memory, no account (until the tab closes)
   if (!user && demoOn()) {
-    return children({ user: DEMO_USER, signOut: async () => { endDemo(false); return { ok: true }; }, deleteAccount: async () => {}, resetPassword: async () => {}, resendVerification: async () => {} });
+    return children({ user: DEMO_USER, signOut: async () => { endDemo(false); return { ok: true }; }, deleteAccount: async () => {}, reauthenticate: async () => true, finishSignedOut: async () => {}, resetPassword: async () => {}, resendVerification: async () => {} });
   }
 
   if (!user) {
@@ -102,6 +103,8 @@ export default function AuthGate({ children }) {
       finally { setAuthLoading(false); }
     };
     return (
+      <>
+      <OpenInAppBanner tripId={inviteAtStart} />
       <AuthScreen
         onSignIn={busy(signIn)}
         onSignUp={busy(signUp)}
@@ -117,9 +120,15 @@ export default function AuthGate({ children }) {
         invited={!!inviteAtStart}
         inviteId={inviteAtStart}
       />
+      </>
     );
   }
 
   // Inject signOut into children via cloneElement
-  return children({ user, signOut, deleteAccount, resetPassword, resendVerification });
+  return (
+    <>
+      <OpenInAppBanner tripId={inviteAtStart} />
+      {children({ user, signOut, deleteAccount, reauthenticate, finishSignedOut, resetPassword, resendVerification })}
+    </>
+  );
 }

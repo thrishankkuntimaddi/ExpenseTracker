@@ -41,7 +41,7 @@ export default function CategoryPicker({ value, suggested, onChange, size = 'md'
     <div>
       {label && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>{label}</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
           {suggested && value !== suggested && (
             <button type="button" onClick={() => onChange(suggested)} style={{
               fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'transparent',

@@ -27,6 +27,7 @@ import { toKey } from '../../utils/recurring';
 import { currencySymbol } from '../../utils/money';
 import TripPlan from './TripPlan';
 import TripPool from './TripPool';
+import TripInsights from './TripInsights';
 
 import { t as tr } from '../../i18n';
 const newRow = (paidBy = '', date) => ({ id: generateId(), title: '', amount: '', paidBy, splitAmong: [], date });
@@ -336,6 +337,9 @@ export default function TripDetail({ trip, ops, onChange, onShare, onInvite, onC
           <ConfirmDeleteModal title={`Delete “${trip.name}”?`} message={shared ? 'It disappears for everyone on it. Entries already posted to ledgers stay.' : 'All its rows and settlements are removed. Entries already posted to your ledger stay.'}
             onConfirm={() => { setConfirmDelete(false); onDelete(trip.id); }} onCancel={() => setConfirmDelete(false)} />
         )}
+
+        <TripInsights trip={trip} summary={s} money={money} canEdit={isOwner}
+          onSetBudget={(budget) => onChange({ ...latest.current.trip, budget })} />
 
         <TripPool summary={s} trip={trip} members={members} unitOf={unitOf} myId={myId} myUnit={myUnit} isOwner={isOwner} closed={closed}
           money={money} advances={advances} onCollect={collect} onUndo={removeSettlement} />

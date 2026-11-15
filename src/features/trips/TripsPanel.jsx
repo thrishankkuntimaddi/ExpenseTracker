@@ -45,6 +45,12 @@ export default function TripsPanel({ user, onAddTransaction, onDeleteTransaction
   const [joinId, setJoinId] = useState(() => pendingInvite());
   const [askCode, setAskCode] = useState(false);
   useEffect(() => { if (joinId) clearPendingInvite(); }, [joinId]);
+  // A link opened while the app was already running
+  useEffect(() => {
+    const h = (e) => setJoinId(e.detail);
+    window.addEventListener('et:invite', h);
+    return () => window.removeEventListener('et:invite', h);
+  }, []);
 
   const active = useMemo(() => trips.find((t) => t.id === activeId) ?? null, [trips, activeId]);
   const inviting = useMemo(() => trips.find((t) => t.id === invitingId) ?? null, [trips, invitingId]);
@@ -200,7 +206,7 @@ function JoinCodeModal({ onJoin, onClose }) {
       </>}
     >
       <input type="text" autoFocus value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && id) onJoin(id); }}
-        placeholder={tr("https://…/ExpenseTracker/?trip=…")} aria-label={tr("Invite link or code")} style={fieldStyle} />
+        placeholder={tr("https://…/join?trip=…")} aria-label={tr("Invite link or code")} style={fieldStyle} />
       <div style={{ fontSize: 11, color: text && !id ? 'var(--expense)' : 'var(--text-muted)' }}>
         {text && !id ? tr("That doesn’t look like a trip invite.") : tr("Got a QR code instead? Scan it with your phone’s camera — it opens the same page.")}
       </div>

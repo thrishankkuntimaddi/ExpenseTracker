@@ -172,8 +172,35 @@ service cloud.firestore {
         && request.auth.token.email_verified == true
         && request.auth.token.email in ['thrishankkuntimaddi@gmail.com'];
     }
+    // Trustees: people the owner lets SEE Admin sees (read only — they can't
+    // close accounts, answer the inbox or change the team). Listed in
+    // admin_config/team { viewers: [emails] }, written by the owner only.
+    function isAppViewer() {
+      return isAppAdmin()
+        || (request.auth != null && request.auth.token.email_verified == true
+            && request.auth.token.email in get(/databases/$(database)/documents/admin_config/team).data.get('viewers', []));
+    }
+    match /admin_config/team {
+      allow get: if isAppAdmin()
+        || (request.auth != null && request.auth.token.email_verified == true
+            && resource != null && request.auth.token.email in resource.data.get('viewers', []));
+      allow create, update: if isAppAdmin()
+        && request.resource.data.keys().hasOnly(['viewers', 'updatedAt'])
+        && request.resource.data.viewers is list && request.resource.data.viewers.size() <= 10;
+    }
+    // system_health/{doc}: written by the notifier (server) each run — jobs,
+    // errors, Firestore reads / writes / deletes. Read by the owner and trustees.
+    match /system_health/{docId} {
+      allow get, list: if isAppViewer();
+    }
+    // A tiny doc the owner's Health check writes and reads back (round trip)
+    match /admin_ping/{uid} {
+      allow read, write: if isAppAdmin() && request.auth.uid == uid;
+    }
+
     function validActivity(d) {
-      return d.keys().hasOnly(['email', 'name', 'createdAt', 'lastOpenedAt', 'lastEntryAt', 'entries', 'opens', 'platform', 'version'])
+      return d.keys().hasOnly(['email', 'name', 'createdAt', 'lastOpenedAt', 'lastEntryAt', 'entries', 'opens', 'platform', 'version',
+                               'provider', 'verified', 'devices', 'trips', 'rules', 'lang', 'theme', 'lockOn', 'activeDays', 'lastPage'])
         && (!('email' in d) || (d.email is string && (d.email == '' || d.email == request.auth.token.email)))
         && (!('name' in d) || (d.name is string && d.name.size() <= 120))
         && (!('createdAt' in d) || d.createdAt == null || d.createdAt is int)
@@ -182,11 +209,22 @@ service cloud.firestore {
         && (!('entries' in d) || (d.entries is int && d.entries >= 0))
         && (!('opens' in d) || (d.opens is int && d.opens >= 0))
         && (!('platform' in d) || (d.platform is string && d.platform.size() <= 20))
-        && (!('version' in d) || (d.version is string && d.version.size() <= 20));
+        && (!('version' in d) || (d.version is string && d.version.size() <= 20))
+        // How they use the app — counts and switches, never amounts or entries
+        && (!('provider' in d) || (d.provider is string && d.provider.size() <= 40))
+        && (!('verified' in d) || d.verified is bool)
+        && (!('devices' in d) || (d.devices is int && d.devices >= 0 && d.devices <= 50))
+        && (!('trips' in d) || (d.trips is int && d.trips >= 0))
+        && (!('rules' in d) || (d.rules is int && d.rules >= 0))
+        && (!('lang' in d) || (d.lang is string && d.lang.size() <= 8))
+        && (!('theme' in d) || (d.theme is string && d.theme.size() <= 12))
+        && (!('lockOn' in d) || d.lockOn is bool)
+        && (!('activeDays' in d) || (d.activeDays is int && d.activeDays >= 0))
+        && (!('lastPage' in d) || (d.lastPage is string && d.lastPage.size() <= 30));
     }
     match /user_activity/{userId} {
-      allow get: if isOwner(userId) || isAppAdmin();
-      allow list: if isAppAdmin();
+      allow get: if isOwner(userId) || isAppViewer();
+      allow list: if isAppViewer();
       allow create, update: if isOwner(userId) && validActivity(request.resource.data);
       allow delete: if isOwner(userId);
     }
@@ -197,14 +235,30 @@ service cloud.firestore {
     // states) or cancel a request that hasn't run; never for their own
     // account. deleted_accounts/** (the archive) has no client access at all.
     match /account_admin/{userId} {
+      // A person asks the server to finish deleting their own account (the
+      // app does it itself; this is the fallback when that couldn't finish)
+      function selfAsk(d) {
+        return d.state == 'self_delete_requested' && d.requestedAt is int
+          && (!('reason' in d) || (d.reason is string && d.reason.size() <= 300));
+      }
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && !isAppAdmin()
+        && request.resource.data.keys().hasOnly(['state', 'requestedAt', 'reason'])
+        && selfAsk(request.resource.data);
+      allow update: if isOwner(userId) && !isAppAdmin()
+        && !(resource.data.state in ['deleted', 'purged'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'requestedAt', 'reason'])
+        && selfAsk(request.resource.data);
+
       function asks(d) {
         return d.state in ['delete_requested', 'restore_requested', 'purge_requested', 'cancelled']
           && d.requestedAt is int
-          && (!('note' in d) || (d.note is string && d.note.size() <= 300));
+          && (!('note' in d) || (d.note is string && d.note.size() <= 300))
+          && (!('force' in d) || d.force is bool);
       }
-      allow get, list: if isAppAdmin();
+      allow get, list: if isAppViewer();
       allow create: if isAppAdmin() && userId != request.auth.uid
-        && request.resource.data.keys().hasOnly(['state', 'requestedAt', 'note'])
+        && request.resource.data.keys().hasOnly(['state', 'requestedAt', 'note', 'force'])
         && asks(request.resource.data)
         && request.resource.data.state == 'delete_requested';
       // Which request fits where the account is: close an open one (again
@@ -216,9 +270,35 @@ service cloud.firestore {
           || (after == 'cancelled' && before == 'delete_requested');
       }
       allow update: if isAppAdmin() && userId != request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'requestedAt', 'note'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'requestedAt', 'note', 'force'])
         && asks(request.resource.data)
         && fits(resource.data.state, request.resource.data.state);
+    }
+
+    // ─── Feedback & problems (Help → Report / Ideas; crashes) ─────────
+    // feedback/{id}: anyone signed in sends one about themselves; only the
+    // owner reads them and marks them done. Never amounts or entries — the
+    // text is what the person typed, or an error message for a crash.
+    match /feedback/{id} {
+      function validFeedback(d) {
+        return d.keys().hasOnly(['uid', 'email', 'name', 'kind', 'text', 'page', 'platform', 'version', 'createdAt', 'status', 'notified', 'device'])
+          && d.uid == request.auth.uid
+          && d.kind in ['bug', 'idea', 'question', 'crash', 'deletion', 'other']
+          && d.text is string && d.text.size() > 0 && d.text.size() <= 4000
+          && (!('email' in d) || (d.email is string && (d.email == '' || d.email == request.auth.token.email)))
+          && (!('name' in d) || (d.name is string && d.name.size() <= 120))
+          && (!('page' in d) || (d.page is string && d.page.size() <= 40))
+          && (!('platform' in d) || (d.platform is string && d.platform.size() <= 20))
+          && (!('version' in d) || (d.version is string && d.version.size() <= 20))
+          && (!('device' in d) || (d.device is string && d.device.size() <= 80))
+          && d.status == 'new' && d.notified == false
+          && d.createdAt == request.time;
+      }
+      allow create: if request.auth != null && validFeedback(request.resource.data);
+      allow get, list: if isAppViewer();
+      allow update: if isAppAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reply', 'doneAt']);
+      allow delete: if isAppAdmin();
     }
 
     // ─── Invite a friend → supporter days ─────────────────────────────
@@ -232,7 +312,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.createdAt == request.time;
-      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && (resource == null || resource.data.uid == request.auth.uid);
     }
     // referrals/{newUserId}: who invited this account — written once, by the
     // new account itself, naming the real owner of an existing code (never
@@ -317,7 +397,7 @@ service cloud.firestore {
       // Emails the notifier sends for you (trip invites): one address each,
       // unsent; the notifier caps how many go out a day
       match /outbox/{mailId} {
-        allow read: if isOwner(userId);
+        allow read, delete: if isOwner(userId);
         allow create: if isOwner(userId)
           && request.resource.data.type == 'trip_invite'
           && request.resource.data.sent == false

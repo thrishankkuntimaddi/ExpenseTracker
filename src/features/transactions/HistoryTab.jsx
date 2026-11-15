@@ -26,12 +26,15 @@ import EditIncomeModal from '../../components/EditIncomeModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import ProfileButton from '../../components/ProfileButton';
 import BackButton from '../../components/BackButton';
+import { HeaderAction } from '../../components/Page';
 import EntryAmount from '../../components/EntryAmount';
 import HelpButton from '../../tour/HelpButton';
 import BigAmount from '../../components/BigAmount';
 import { formatMoneyCompact } from '../../utils/money';
 
 import { t as tr } from '../../i18n';
+import { useShell } from '../../app/shellContext';
+import SwipeRow from '../../components/SwipeRow';
 import StatementImport from '../import/StatementImport';
 const ALL_TIME = { type: 'all' };
 const norm = (s) => String(s ?? '').trim().toLowerCase();
@@ -41,6 +44,7 @@ export default function HistoryTab({
   onUpdateTransaction, onDeleteTransaction, onUpdateIncome, onDeleteIncome,
   settings, onLearnCategory, onAddTransaction, onAddIncome,
 }) {
+  const phone = !useShell()?.desktop;
   const [importing, setImporting] = useState(false);
   const { period: monthPeriod, month: viewMonth } = useViewMonth(selectedPeriod);
   const [allMonths, setAllMonths] = useState(false);   // search every month, not just the one on screen
@@ -96,7 +100,8 @@ export default function HistoryTab({
   // day something happened); the rest are collapsed. "Expand all" opens them,
   // and a search or filter opens everything so the matches show.
   const latest = grouped[0]?.label;
-  const effectiveExpandAll = (expandAll ?? false) || hasFilter;
+  // Days open by default (a day holds a few entries; tapping each open was busywork)
+  const effectiveExpandAll = (expandAll ?? grouping === 'day') || hasFilter;
   const isGroupExpanded = (label) => customToggles[label] ?? (effectiveExpandAll || label === latest);
   const toggleGroup = (label) => setCustomToggles((prev) => ({ ...prev, [label]: !isGroupExpanded(label) }));
 
@@ -209,7 +214,7 @@ export default function HistoryTab({
         {(flow.in > 0 || flow.out > 0) && (
           <div className="card hist-summary" id="history-summary">
             <div className="tl-title">{tr("Net ·")} {searchAll ? 'all months' : monthName(viewMonth, { month: 'long', year: 'numeric' })}</div>
-            <BigAmount value={flow.in - flow.out} size={38} color={flow.in - flow.out < 0 ? 'var(--expense)' : undefined} />
+            <BigAmount value={flow.in - flow.out} size={phone ? 26 : 38} color={flow.in - flow.out < 0 ? 'var(--expense)' : undefined} />
             <div className="hist-summary-strip">
               <div><div className="tl-fig-value" style={{ color: 'var(--income)' }}>+{formatMoneyCompact(flow.in)}</div><div className="tl-fig-label">{tr("Money in")}</div></div>
               <div><div className="tl-fig-value">−{formatMoneyCompact(flow.out)}</div><div className="tl-fig-label">{tr("Money out")}</div></div>
@@ -244,9 +249,11 @@ export default function HistoryTab({
               {!collapsed && (
                 <div className="hist-cards">
                   {group.entries.map((row) => (
-                    <HistoryRow key={`${row._src}-${row.id}`} row={row} theme={theme} rules={categoryRules}
-                      settled={settledByName.get(norm(row.name))}
-                      onEdit={() => setEditing(row)} onDelete={() => setDeleting(row)} />
+                    <SwipeRow key={`${row._src}-${row.id}`} label={row.name} onEdit={() => setEditing(row)} onDelete={() => setDeleting(row)}>
+                      <HistoryRow row={row} theme={theme} rules={categoryRules}
+                        settled={settledByName.get(norm(row.name))}
+                        onEdit={() => setEditing(row)} onDelete={() => setDeleting(row)} />
+                    </SwipeRow>
                   ))}
                 </div>
               )}
@@ -278,9 +285,10 @@ function HistoryRow({ row, theme, rules, settled, onEdit, onDelete }) {
   else if (neutral) detail = <span className="hist-bit">{tr("Account → wallet")}</span>;
   else if (row.note) detail = <span className="hist-bit">{row.note}</span>;
 
+  // Only debts have a status worth showing (open / settled); "Done" on every expense was noise
   const status = debt
     ? (settled ? { label: tr("Settled"), Icon: CheckCircle2, color: 'var(--income)' } : { label: tr("Open"), Icon: Clock3, color: 'var(--borrowed)' })
-    : { label: tr("Done"), Icon: CheckCircle2, color: 'var(--text-muted)' };
+    : null;
 
   // A card per entry: a colour edge for what it is, its icon, what it was
   // for with kind · category beneath; the signed amount large on the right
@@ -307,9 +315,11 @@ function HistoryRow({ row, theme, rules, settled, onEdit, onDelete }) {
           <EntryAmount entry={row} prefix={neutral ? '' : incoming ? '+' : '−'} />
         </span>
         <span className="hist-foot">
-          <span className="hist-status" style={{ color: status.color }} title={debt ? (settled ? tr("This person’s balance is back to zero") : tr("Still to be returned")) : tr("Recorded")}>
-            <status.Icon size={11} />{status.label}
-          </span>
+          {status && (
+            <span className="hist-status" style={{ color: status.color }} title={settled ? tr("This person’s balance is back to zero") : tr("Still to be returned")}>
+              <status.Icon size={11} />{status.label}
+            </span>
+          )}
           <button aria-label={`Edit ${row.name}`} title={tr("Edit")} className="hist-btn hist-edit" onClick={(e) => { e.stopPropagation(); onEdit(); }}><Pencil size={13} /></button>
           <button aria-label={`Delete ${row.name}`} title={tr("Delete")} className="hist-btn hist-del" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Trash2 size={13} /></button>
         </span>
@@ -328,10 +338,5 @@ function dayName(iso) {
 }
 
 function IconAction({ id, label, Icon, onClick }) {
-  return (
-    <button id={id} onClick={onClick} aria-label={label} title={label}
-      style={{ width: 34, height: 34, borderRadius: 10, border: '1.5px solid var(--accent-border)', background: 'var(--accent-bg)', color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Icon size={15} />
-    </button>
-  );
+  return <HeaderAction id={id} label={label} Icon={Icon} onClick={onClick} />;
 }
