@@ -133,10 +133,18 @@ export async function addTransaction(uid, txn) {
   await setDoc(txnRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() });
 }
 
-export async function updateTransaction(uid, txn) {
+/* Fields the edit took away (paidWith after leaving Cash, category after an
+   expense became savings …): updateDoc only sets what it's given, so they
+   are removed explicitly — otherwise the old value stays in the database. */
+const KEEP = new Set(['id', 'updatedAt', 'wasteAmount']);   // wasteAmount is handled on its own
+const removals = (data, removed = []) => Object.fromEntries(
+  removed.filter((k) => !KEEP.has(k) && data[k] === undefined).map((k) => [k, deleteField()]));
+
+export async function updateTransaction(uid, txn, removed = []) {
   const { id, wasteAmount, ...data } = txn;
   // Use deleteField() when wasteAmount is undefined so Firestore removes the field (not just skips it)
   await updateDoc(txnRef(uid, id), {
+    ...removals(data, removed),
     ...clean(data),
     wasteAmount: wasteAmount === undefined ? deleteField() : roundMoney(wasteAmount),
     updatedAt: serverTimestamp(),
@@ -153,9 +161,9 @@ export async function addIncome(uid, entry) {
   await setDoc(incDocRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() });
 }
 
-export async function updateIncome(uid, entry) {
+export async function updateIncome(uid, entry, removed = []) {
   const { id, ...data } = entry;
-  await updateDoc(incDocRef(uid, id), { ...clean(data), updatedAt: serverTimestamp() });
+  await updateDoc(incDocRef(uid, id), { ...removals(data, removed), ...clean(data), updatedAt: serverTimestamp() });
 }
 
 export async function deleteIncome(uid, entryId) {

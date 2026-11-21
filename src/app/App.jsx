@@ -26,7 +26,7 @@ import { formatAmount } from '../utils/dateHelpers';
 import { clearLegacyDataCache } from '../utils/storage';
 import { learnCategoryRule } from '../utils/categories';
 import { useTheme } from '../utils/theme';
-import { useUnslop } from '../utils/unslop';
+import { useUnslop, useLook } from '../utils/unslop';
 import AuthGate from '../features/auth/AuthGate';
 import TodayTab         from '../features/transactions/TodayTab';
 // Home shows the Add form inline, so AddSheet is part of the first screen anyway.
@@ -62,6 +62,7 @@ import UpdateBanner from '../components/UpdateBanner';
 import { ShellContext } from './shellContext';
 import { markAppReady } from './ready';
 import { PAGE_META, PAGE_COLOR, DESKTOP_NAV } from './pages';
+import { accountsSetUp } from '../utils/accounts';
 import Avatar from '../components/Avatar';
 import { displayNameOf } from './shellContext';
 import { normaliseUi } from '../utils/uiPrefs';
@@ -127,7 +128,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finish
   const liveData = useFirestoreData(uid, user.email);
   const demoData = useDemoData(isDemo);
   const {
-    transactions, income, settings, recentlyDeleted, loaded,
+    transactions, income, settings, recentlyDeleted, loaded, settingsLoaded,
     writeError, clearWriteError, reportError,
     addTransaction, updateTransaction, deleteTransaction,
     addIncome, updateIncome, deleteIncome,
@@ -187,6 +188,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finish
   // Theme is per device and light until the person picks Dark or Auto
   const { pref: themePref, theme, setPref: setThemePref } = useTheme();
   const unslop = useUnslop();   // Profile → Appearance → Unslop (per device)
+  const look = useLook();       // 'glass' | 'unslop' | 'unsloped' — for Admin sees → Insights
 
   // Usage activity for the app's owner (Profile → Admin sees): when and how
   // (counts and switches), never what — no amounts, no entries
@@ -195,6 +197,15 @@ function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finish
     rules: recurring.rules?.length ?? 0,
     theme: themePref,
     lockOn: !!cachedLockConfig(uid)?.enabled,
+    look,
+    // Which features are set up — only once the saved settings are here
+    ...(settingsLoaded ? {
+      accounts: accountsSetUp(settings) ? settings.accounts.filter((a) => !a.archived).length : 0,
+      budget: !!(settings?.budgets?.total || Object.keys(settings?.budgets?.categories ?? {}).length),
+      goals: Array.isArray(settings?.goals) ? settings.goals.length : 0,
+      carry: !!settings?.carryForward?.enabled,
+      settingsKeys: Object.keys(settings ?? {}).length,
+    } : {}),
   });
 
   // A save the server refused: the owner hears about it (Admin sees → Inbox)

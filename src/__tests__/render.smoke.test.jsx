@@ -582,3 +582,15 @@ describe('accounts', async () => {
     }
   });
 });
+
+describe('Admin sees → Insights', () => {
+  it('renders adoption, versions and data health from activity', async () => {
+    const users = [
+      { uid: 'a', email: 'a@x.com', version: '4.5.3', platform: 'android', accounts: 3, budget: true, goals: 1, look: 'glass', settingsKeys: 12, entries: 50, lastOpenedAt: Date.now() },
+      { uid: 'b', email: 'b@x.com', version: '4.4.0', platform: 'web', accounts: 0, settingsKeys: 1, entries: 80, lastOpenedAt: Date.now(), lastErrAt: Date.now(), lastErr: 'save: settings · unavailable' },
+    ];
+    const html = render(<AdminCard users={users} initialView="insights" />);
+    expect(html).toContain('id="admin-insights"');
+    for (const s of ['Set up accounts', '1 of 2', 'newest 4.5.3', 'Settings look wiped', 'b@x.com', 'save: settings · unavailable']) expect(html).toContain(s);
+  });
+});

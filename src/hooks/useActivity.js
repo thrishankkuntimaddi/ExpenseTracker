@@ -23,7 +23,7 @@ export function useActivity(user, transactions, income, loaded, extra = {}) {
   }, [loaded, count]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // How many devices / rules: kept current when they change (cheap, rare)
-  const sig = `${extra.devices ?? ''}|${extra.rules ?? ''}|${extra.theme ?? ''}|${extra.lockOn ?? ''}`;
+  const sig = ['devices', 'rules', 'theme', 'lockOn', 'look', 'accounts', 'budget', 'goals', 'carry', 'settingsKeys'].map((k) => extra[k] ?? '').join('|');
   useEffect(() => {
     if (!loaded || !user?.uid || prev.current == null) return;
     recordDetails(user, extra).catch(() => {});

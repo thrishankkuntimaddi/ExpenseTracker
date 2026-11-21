@@ -154,3 +154,27 @@ describe('accounts — helpers', () => {
     expect(accountLabel({ bank: 'HDFC', last4: '4521' })).toBe('HDFC ••4521');
   });
 });
+
+describe('accounts — matching by last 4 digits', async () => {
+  const { accountByLast4 } = await import('../accounts');
+  const { parsePayment, detectionToEntry } = await import('../paymentCapture');
+  const S = { accounts: [
+    { id: 'ib', name: 'Indian Bank', kind: 'bank', last4: '3889', color: 1, opening: 0, openingDate: '2026-11-01' },
+    { id: 'hd', name: 'HDFC', kind: 'bank', last4: '0098', color: 2, opening: 0, openingDate: '2026-11-01' },
+    { id: 'c1', name: 'Card A', kind: 'card', last4: '1111', color: 3, opening: 0, openingDate: '2026-11-01' },
+    { id: 'c2', name: 'Card B', kind: 'card', last4: '1111', color: 4, opening: 0, openingDate: '2026-11-01' },
+  ] };
+  it('finds the one account ending in those digits', () => {
+    expect(accountByLast4(S, '••3889')).toBe('ib');
+    expect(accountByLast4(S, 'XX098')).toBe('hd');
+    expect(accountByLast4(S, '1111')).toBe(null);   // two match: don't guess
+    expect(accountByLast4(S, '42')).toBe(null);
+    expect(accountByLast4({}, '3889')).toBe(null);
+  });
+  it('a bank SMS lands on that account', () => {
+    const d = parsePayment({ pkg: 'com.google.android.apps.messaging', title: 'IndBnk', text: 'Rs.250.00 debited from A/c XX3889 on 21-11-26 to VPA swiggy@icici UPI Ref 1234', time: Date.parse('2026-11-21T10:00:00Z') });
+    expect(d?.account).toBe('••3889');
+    const { entry } = detectionToEntry({ ...d, ids: ['n1'] }, { accountFor: (x) => (accountByLast4(S, x) ? { accountId: accountByLast4(S, x) } : null) });
+    expect(entry.accountId).toBe('ib');
+  });
+});

@@ -120,3 +120,22 @@ export function convertSettingsMoney(settings, rate) {
   }
   return patch;
 }
+
+/**
+ * Money you HAVE, re-stated in a new display currency — always, unlike plans:
+ * account balances (and card limits) and what you added to Net worth by hand.
+ * Without this "SBI ₹42,300" would read "$42,300" after switching to dollars.
+ */
+export function convertHoldings(settings, rate) {
+  if (!(rate > 0) || rate === 1) return {};
+  const conv = (v) => (typeof v === 'number' && isFinite(v) ? round2(v * rate) : v);
+  const patch = {};
+  if (Array.isArray(settings?.accounts) && settings.accounts.length) {
+    patch.accounts = settings.accounts.map((a) => ({ ...a, opening: conv(Number(a.opening) || 0), ...(a.limit ? { limit: conv(Number(a.limit)) } : {}) }));
+  }
+  const items = settings?.netWorth?.items;
+  if (Array.isArray(items) && items.length) {
+    patch.netWorth = { ...settings.netWorth, items: items.map((i) => ({ ...i, value: conv(Number(i.value) || 0) })) };
+  }
+  return patch;
+}

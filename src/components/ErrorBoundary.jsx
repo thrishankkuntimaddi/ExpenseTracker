@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { recordProblem } from '../services/activity';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
 
 import { t as tr } from '../i18n';
@@ -15,6 +16,7 @@ export default class ErrorBoundary extends Component {
     console.error('[ErrorBoundary]', error, info?.componentStack);
     // Tell the owner (Admin sees → Inbox): the message and where, never any data
     const where = String(info?.componentStack ?? '').split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 4).join(' ← ');
+    recordProblem('crash', error?.name ?? 'Error').catch(() => {});
     reportProblem('crash', `${error?.name ?? 'Error'}: ${error?.message ?? error}${where ? `\n${where}` : ''}`);
   }
 

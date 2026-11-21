@@ -203,7 +203,8 @@ service cloud.firestore {
 
     function validActivity(d) {
       return d.keys().hasOnly(['email', 'name', 'createdAt', 'lastOpenedAt', 'lastEntryAt', 'entries', 'opens', 'platform', 'version',
-                               'provider', 'verified', 'devices', 'trips', 'rules', 'lang', 'theme', 'lockOn', 'activeDays', 'lastPage'])
+                               'provider', 'verified', 'devices', 'trips', 'rules', 'lang', 'theme', 'lockOn', 'activeDays', 'lastPage',
+                               'accounts', 'goals', 'budget', 'carry', 'look', 'settingsKeys', 'errCount', 'lastErr', 'lastErrAt'])
         && (!('email' in d) || (d.email is string && (d.email == '' || d.email == request.auth.token.email)))
         && (!('name' in d) || (d.name is string && d.name.size() <= 120))
         && (!('createdAt' in d) || d.createdAt == null || d.createdAt is int)
@@ -223,7 +224,18 @@ service cloud.firestore {
         && (!('theme' in d) || (d.theme is string && d.theme.size() <= 12))
         && (!('lockOn' in d) || d.lockOn is bool)
         && (!('activeDays' in d) || (d.activeDays is int && d.activeDays >= 0))
-        && (!('lastPage' in d) || (d.lastPage is string && d.lastPage.size() <= 30));
+        && (!('lastPage' in d) || (d.lastPage is string && d.lastPage.size() <= 30))
+        // Which features are set up (Admin sees → Insights) — counts and switches
+        && (!('accounts' in d) || (d.accounts is int && d.accounts >= 0 && d.accounts <= 99))
+        && (!('goals' in d) || (d.goals is int && d.goals >= 0 && d.goals <= 999))
+        && (!('budget' in d) || d.budget is bool)
+        && (!('carry' in d) || d.carry is bool)
+        && (!('look' in d) || (d.look is string && d.look.size() <= 12))
+        && (!('settingsKeys' in d) || (d.settingsKeys is int && d.settingsKeys >= 0 && d.settingsKeys <= 999))
+        // Problems on their devices: a count and a short code, never data
+        && (!('errCount' in d) || (d.errCount is int && d.errCount >= 0))
+        && (!('lastErr' in d) || (d.lastErr is string && d.lastErr.size() <= 120))
+        && (!('lastErrAt' in d) || d.lastErrAt is int);
     }
     match /user_activity/{userId} {
       allow get: if isOwner(userId) || isAppViewer();

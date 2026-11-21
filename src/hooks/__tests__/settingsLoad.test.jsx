@@ -6,19 +6,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
 
-const fs = vi.hoisted(() => ({ onData: null, writes: [] }));
+const fs = vi.hoisted(() => ({ onData: null, writes: [], updates: [] }));
 vi.mock('../../services/firestore', () => ({
   subscribeToUserData: (uid, onData) => { fs.onData = onData; return () => {}; },
   subscribeToRecentlyDeleted: () => () => {},
   ensureUserDoc: async () => {},
   updateSettings: async (uid, s) => { fs.writes.push(s); },
-  addTransaction: async () => {}, updateTransaction: async () => {}, trashTransaction: async () => {},
-  addIncome: async () => {}, updateIncome: async () => {}, trashIncome: async () => {},
+  addTransaction: async () => {}, updateTransaction: async (uid, t, removed) => { fs.updates.push({ t, removed }); }, trashTransaction: async () => {},
+  addIncome: async () => {}, updateIncome: async (uid, t, removed) => { fs.updates.push({ t, removed }); }, trashIncome: async () => {},
   restoreFromRecentlyDeleted: async () => {}, permanentlyDeleteFromRecentlyDeleted: async () => {}, emptyRecentlyDeleted: async () => {},
 }));
 vi.mock('../../services/sync', () => ({ background: (p) => p, readableFirestoreError: () => '' }));
 
-const { useFirestoreData } = await import('../useFirestoreData');
+const { useFirestoreData, droppedKeys } = await import('../useFirestoreData');
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let api;
@@ -59,5 +59,20 @@ describe('settings before they load', () => {
     await deliver({});
     await act(async () => { await api.patchSettings({ lang: 'hi' }); });
     expect(fs.writes).toEqual([{ lang: 'hi' }]);
+  });
+});
+
+describe('editing an entry', () => {
+  it('fields the edit took away are removed in the database, not left behind', async () => {
+    fs.updates = [];
+    const root = createRoot(document.createElement('div'));
+    await act(async () => { root.render(<Probe />); });
+    const stored = { id: 'e1', type: 'expense', name: 'Tea', amount: 20, currency: 'INR', paidWith: 'cash', accountId: 'cash', category: 'food', date: '2026-11-21T06:30:00.000Z' };
+    await act(async () => { fs.onData({ transactions: [stored], income: [], settings: {}, source: 'settings' }); });
+    const { paidWith: _p, ...rest } = stored;
+    await act(async () => { await api.updateTransaction({ ...rest, accountId: 'sbi' }); });
+    expect(fs.updates[0].removed).toEqual(['paidWith']);
+    expect(droppedKeys({ a: 1, b: 2 }, { a: 1, b: undefined })).toEqual(['b']);
+    expect(droppedKeys(null, { a: 1 })).toEqual([]);
   });
 });

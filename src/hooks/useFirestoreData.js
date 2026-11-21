@@ -1,4 +1,5 @@
 // ─── useFirestoreData hook ───────────────────────────────────────
+import { recordProblem } from "../services/activity";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { setDisplayCurrency, currencyOf, isCurrency, DEFAULT_CURRENCY } from "../utils/money";
 import { viewEntries, unviewEntry, isMixed } from "../utils/fx";
@@ -38,6 +39,12 @@ const DEFAULT_SETTINGS = {};
  * returned as views in the display currency (settings.currency) — see
  * utils/fx.js. Updates accept views and store the right currency back.
  */
+/** Keys the stored entry had that the edited one no longer has (to remove in Firestore). */
+export function droppedKeys(previous, updated) {
+  if (!previous || !updated) return [];
+  return Object.keys(previous).filter((k) => !(k in updated) || updated[k] === undefined);
+}
+
 export function useFirestoreData(uid, email) {
   const [transactions, setTransactions] = useState([]);   // as stored
   const [income, setIncome]             = useState([]);   // as stored
@@ -45,6 +52,7 @@ export function useFirestoreData(uid, email) {
   const [recentlyDeleted, setRecentlyDeleted] = useState([]);
   const [writeError, setWriteError]     = useState(null);
   const [loaded, setLoaded]             = useState(false); // first ledger snapshot received
+  const [settingsLoaded, setSettingsLoaded] = useState(false); // the saved settings have arrived
 
   // Latest values, readable from stable callbacks without re-creating them
   const uidRef      = useRef(uid);
@@ -85,6 +93,7 @@ export function useFirestoreData(uid, email) {
       if (!settingsReady.current) {
         // The saved settings, with anything changed while they were on their way
         settingsReady.current = true;
+        setSettingsLoaded(true);
         const queued = pendingSettings.current;
         pendingSettings.current = [];
         const next = queued.reduce((acc, fn) => ({ ...acc, ...fn(acc) }), s ?? {});
@@ -95,9 +104,10 @@ export function useFirestoreData(uid, email) {
         }
         return;
       }
-      if (s && Object.keys(s).length) {
-        setSettings(prev => ({ ...prev, ...s }));
-      }
+      // Later snapshots replace settings: something removed on another device
+      // (a budget, a goal) must disappear here too, not be written back
+      settingsRef.current = s ?? {};
+      setSettings(s ?? {});
     });
 
     const unsubRecently = subscribeToRecentlyDeleted(uid, setRecentlyDeleted);
@@ -106,11 +116,13 @@ export function useFirestoreData(uid, email) {
       unsubUser();
       unsubRecently();
       setLoaded(false);
+      setSettingsLoaded(false);
     };
   }, [uid]);
 
   const reportError = useCallback((action, err) => {
     console.error(`[${action}] Firestore write failed:`, err?.code, err?.message, err);
+    recordProblem('save', `${action} · ${err?.code ?? 'error'}`).catch(() => {});
     setWriteError(`${readableFirestoreError(err, action)} Your change was undone.`);
   }, []);
   const clearWriteError = useCallback(() => setWriteError(null), []);
@@ -159,7 +171,7 @@ export function useFirestoreData(uid, email) {
     const updated = unviewEntry(edited, displayRef.current);
     const previous = txnsRef.current.find(t => t.id === updated.id);
     setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t));
-    background(fsUpdateTxn(uidRef.current, updated), (err) => {
+    background(fsUpdateTxn(uidRef.current, updated, droppedKeys(previous, updated)), (err) => {
       reportError('update the transaction', err);
       if (previous) setTransactions(prev => prev.map(t => t.id === updated.id ? previous : t));
     });
@@ -197,7 +209,7 @@ export function useFirestoreData(uid, email) {
     const updated = unviewEntry(edited, displayRef.current);
     const previous = incomeRef.current.find(i => i.id === updated.id);
     setIncome(prev => prev.map(i => i.id === updated.id ? updated : i));
-    background(fsUpdateIncome(uidRef.current, updated), (err) => {
+    background(fsUpdateIncome(uidRef.current, updated, droppedKeys(previous, updated)), (err) => {
       reportError('update the income entry', err);
       if (previous) setIncome(prev => prev.map(i => i.id === updated.id ? previous : i));
     });
@@ -275,7 +287,7 @@ export function useFirestoreData(uid, email) {
   }, [reportError]);
 
   return {
-    transactions: txnView, income: incomeView, settings, recentlyDeleted, loaded, currency: display,
+    transactions: txnView, income: incomeView, settings, recentlyDeleted, loaded, settingsLoaded, currency: display,
     writeError, clearWriteError, reportError,
     addTransaction, updateTransaction, deleteTransaction,
     addIncome, updateIncome, deleteIncome,

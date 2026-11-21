@@ -124,3 +124,19 @@ describe('re-stating plans in a new currency', () => {
     expect(convertSettingsMoney(s, 1)).toEqual({});
   });
 });
+
+describe('re-stating what you hold in a new currency', () => {
+  it('converts account balances, card limits and net-worth items — always', async () => {
+    const { convertHoldings } = await import('../fx');
+    const s = {
+      accounts: [{ id: 'sbi', kind: 'bank', opening: 95000, openingDate: '2026-11-21' }, { id: 'c', kind: 'card', opening: -9500, limit: 190000 }],
+      netWorth: { items: [{ id: 'h', name: 'Gold', value: 950000, kind: 'asset' }] },
+    };
+    const p = convertHoldings(s, 1 / 95);
+    expect(p.accounts[0]).toMatchObject({ opening: 1000, openingDate: '2026-11-21' });
+    expect(p.accounts[1]).toMatchObject({ opening: -100, limit: 2000 });
+    expect(p.netWorth.items[0].value).toBe(10000);
+    expect(convertHoldings(s, 1)).toEqual({});
+    expect(convertHoldings({}, 2)).toEqual({});
+  });
+});

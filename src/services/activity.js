@@ -6,7 +6,7 @@
 // you use the app and when. Only you can write yours; only the owner's
 // account can read them (firestore.rules). Shown in Profile → Admin sees.
 import { doc, setDoc, getDocs, collection, deleteDoc, increment } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import { platform } from '../native';
 import { getLang } from '../i18n';
 
@@ -36,7 +36,8 @@ export function lastEntryTime(entries = [], now = Date.now()) {
 }
 
 /** How they use the app — sign-in method, devices, switches. Never amounts or entries. */
-function details(user, { devices, rules, theme, lockOn } = {}) {
+function details(user, extra = {}) {
+  const { devices, rules, theme, lockOn } = extra;
   const ids = user.providerData?.map((p) => p.providerId) ?? [];
   const out = {
     provider: ids.map((p) => (p === 'google.com' ? 'google' : p === 'password' ? 'email' : p)).join('+').slice(0, 40) || 'unknown',
@@ -47,6 +48,14 @@ function details(user, { devices, rules, theme, lockOn } = {}) {
   if (Number.isFinite(rules)) out.rules = Math.max(0, Math.round(rules));
   if (typeof theme === 'string') out.theme = theme.slice(0, 12);
   if (typeof lockOn === 'boolean') out.lockOn = lockOn;
+  // Which features are in use — counts and switches only (Admin sees → Insights).
+  // Sent once the saved settings have loaded, so an empty start never reads as "wiped".
+  if (Number.isFinite(extra.accounts)) out.accounts = Math.max(0, Math.min(99, Math.round(extra.accounts)));
+  if (Number.isFinite(extra.goals)) out.goals = Math.max(0, Math.min(999, Math.round(extra.goals)));
+  if (typeof extra.budget === 'boolean') out.budget = extra.budget;
+  if (typeof extra.carry === 'boolean') out.carry = extra.carry;
+  if (typeof extra.look === 'string') out.look = extra.look.slice(0, 12);
+  if (Number.isFinite(extra.settingsKeys)) out.settingsKeys = Math.max(0, Math.min(999, Math.round(extra.settingsKeys)));
   return out;
 }
 
@@ -89,6 +98,23 @@ export async function recordEntry(user, entries, lastEntryAt) {
   if (Date.now() - since(user.uid, 'entry') < ENTRY_EVERY) return;
   mark(user.uid, 'entry');
   await setDoc(doc(db, COLL, user.uid), { lastEntryAt: lastEntryAt ?? Date.now(), entries: Math.max(0, Math.round(entries || 0)), lastOpenedAt: Date.now() }, { merge: true });
+}
+
+const PROBLEM_EVERY = 60 * 1000;
+/**
+ * Something went wrong on this device (a save refused, a list that couldn't
+ * load, a crash): count it on the person's activity so the owner sees who is
+ * having trouble (Admin sees → Insights). Only a short code — never data.
+ */
+export async function recordProblem(kind, code) {
+  const uid = auth?.currentUser?.uid;
+  if (!db || !uid) return;
+  if (Date.now() - since(uid, 'problem') < PROBLEM_EVERY) return;
+  mark(uid, 'problem');
+  await setDoc(doc(db, COLL, uid), {
+    errCount: increment(1), lastErrAt: Date.now(),
+    lastErr: `${String(kind).slice(0, 12)}: ${String(code ?? '').slice(0, 100)}`.slice(0, 120),
+  }, { merge: true }).catch(() => {});
 }
 
 /** Owner only (rules refuse anyone else). */

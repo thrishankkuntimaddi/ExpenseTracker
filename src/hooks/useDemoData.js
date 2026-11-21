@@ -29,7 +29,7 @@ export function useDemoData(enabled) {
   const reportError = useCallback((action, err) => console.warn(`[demo] ${action}`, err), []);
 
   return {
-    transactions, income, settings, recentlyDeleted: [], loaded: enabled, currency: display,
+    transactions, income, settings, recentlyDeleted: [], loaded: enabled, settingsLoaded: enabled, currency: display,
     writeError: null, clearWriteError: noop, reportError,
     addTransaction, updateTransaction, deleteTransaction,
     addIncome, updateIncome, deleteIncome,

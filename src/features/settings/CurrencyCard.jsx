@@ -7,7 +7,7 @@ import { CardFrame } from './SettingsGroup';
 import { Coins, RefreshCw } from 'lucide-react';
 import CurrencySelect from '../../components/CurrencySelect';
 import { CURRENCY_NAMES, currencyOf, formatMoney, entryCurrency } from '../../utils/money';
-import { convertSettingsMoney } from '../../utils/fx';
+import { convertSettingsMoney, convertHoldings } from '../../utils/fx';
 import { latestRates, rateBetween, refreshLatest, useRatesVersion } from '../../services/rates';
 import { formatDateShort } from '../../utils/dateHelpers';
 
@@ -31,7 +31,7 @@ export default function CurrencyCard({ settings, transactions = [], income = [],
 
   function apply() {
     const rate = rateBetween(current, pending);
-    onPatchSettings?.({ currency: pending, ...(convertPlans && hasPlans ? convertSettingsMoney(settings, rate) : {}) });
+    onPatchSettings?.({ currency: pending, ...(convertPlans && hasPlans ? convertSettingsMoney(settings, rate) : {}), ...convertHoldings(settings, rate) });
     entryCurrency.set(pending);
     setPending(null);
   }

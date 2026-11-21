@@ -104,6 +104,14 @@ export function accountOf(entry, settings, ids = null) {
   return legacyAccountId(settings);
 }
 
+/** The open account whose last 4 digits match "••3889" / "3889" (SMS, statements), or null. */
+export function accountByLast4(settings, digits) {
+  const d = String(digits ?? '').replace(/\D/g, '').slice(-4);
+  if (d.length < 3) return null;
+  const hits = openAccounts(settings).filter((a) => a.last4 && (a.last4 === d || a.last4.endsWith(d) || d.endsWith(a.last4)));
+  return hits.length === 1 ? hits[0].id : null;   // two cards ending the same: don't guess
+}
+
 /** Fields to store on an entry for an account (keeps paidWith for older screens and exports). */
 export function accountFields(accountId, settings) {
   const acc = listAccounts(settings).find((a) => a.id === accountId);

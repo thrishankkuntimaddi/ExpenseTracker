@@ -49,3 +49,34 @@ describe('admin users', () => {
     expect(isAdmin({ email: 'someone@gmail.com', emailVerified: true })).toBe(false);
   });
 });
+
+describe('Admin sees → Insights', async () => {
+  const { insights, compareVersions } = await import('../adminUsers');
+  const now = Date.parse('2026-11-21T18:00:00Z');
+  const users = [
+    { uid: 'a', version: '4.5.3', platform: 'android', accounts: 3, budget: true, goals: 2, look: 'glass', settingsKeys: 14, entries: 300, lastOpenedAt: now },
+    { uid: 'b', version: '4.4.0', platform: 'web', accounts: 0, budget: false, goals: 0, look: 'unsloped', settingsKeys: 1, entries: 120, lastErrAt: now - 3600e3, lastErr: 'save: settings · permission-denied', errCount: 2 },
+    { uid: 'c', version: '4.5.3', platform: 'android', entries: 3 },
+  ];
+  it('versions: newest first, older ones flagged', () => {
+    expect(compareVersions('4.10.0', '4.9.9')).toBeGreaterThan(0);
+    expect(compareVersions('v4.5.2', '4.5.2')).toBe(0);
+    const i = insights(users, now);
+    expect(i.latest).toBe('4.5.3');
+    expect(i.behind).toBe(1);
+    expect(i.versions[0]).toMatchObject({ version: '4.5.3', platform: 'android', count: 2, behind: false });
+    expect(i.versions.at(-1)).toMatchObject({ version: '4.4.0', behind: true });
+  });
+  it('adoption counts only people whose app reports it', () => {
+    const a = Object.fromEntries(insights(users, now).adoption.map((r) => [r.key, r]));
+    expect(a.accounts).toMatchObject({ count: 1, of: 2, pct: 50 });
+    expect(a.budget).toMatchObject({ count: 1, of: 2 });
+    expect(a.rules.of).toBe(0);
+  });
+  it('flags settings that look wiped and recent problems', () => {
+    const i = insights(users, now);
+    expect(i.wiped.map((u) => u.uid)).toEqual(['b']);
+    expect(i.problems.map((u) => u.uid)).toEqual(['b']);
+    expect(i.looks[0].value).toBeDefined();
+  });
+});

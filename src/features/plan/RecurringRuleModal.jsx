@@ -13,6 +13,9 @@ import CurrencySelect from '../../components/CurrencySelect';
 import { rawOf } from '../../utils/fx';
 import { getDisplayCurrency } from '../../utils/money';
 import { INSURANCE_TYPES } from '../../utils/bills';
+import AccountPicker from '../../components/AccountPicker';
+import { useShell } from '../../app/shellContext';
+import { listAccounts, defaultAccountId } from '../../utils/accounts';
 
 import { t as tr } from '../../i18n';
 const KINDS = [
@@ -39,6 +42,8 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
   const [endDate, setEndDate] = useState(init?.endDate ?? '');
   const [autoPost, setAutoPost] = useState(init?.autoPost ?? false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const settings = useShell()?.settings;
+  const [accountId, setAccountId] = useState(() => (init?.accountId && listAccounts(settings).some((a) => a.id === init.accountId) ? init.accountId : defaultAccountId(settings)));
   // Insurance: what it covers, with whom, and for how much
   const [insuranceType, setInsuranceType] = useState(init?.insuranceType ?? 'health');
   const [insurer, setInsurer] = useState(init?.insurer ?? '');
@@ -60,6 +65,7 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
       kind, name: name.trim(), amount: amt, currency, frequency, startDate,
       endDate: endDate || undefined,
       autoPost,
+      accountId: accountId || null,
       dayOfMonth: frequency === 'monthly' ? dom : undefined,
       weekday: frequency === 'weekly' ? Number(weekday) : undefined,
       category: kind === 'expense' ? effectiveCategory : undefined,
@@ -164,6 +170,8 @@ export default function RecurringRuleModal({ rule, preset = null, categoryRules 
             )}
           </div>
         )}
+
+        <AccountPicker id="rule-acct" label={kind === 'income' ? 'Received in' : 'Paid from'} value={accountId} onChange={setAccountId} settings={settings} />
 
         {/* Schedule */}
         <div style={{ display: 'grid', gridTemplateColumns: frequency === 'monthly' || frequency === 'weekly' ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)', gap: 8 }}>

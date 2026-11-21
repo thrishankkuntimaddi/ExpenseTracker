@@ -51,7 +51,7 @@ export default function TodayTab(props) {
   const { month: monthKey, isNow, period } = useViewMonth(selectedPeriod);
   const { stats } = useStats(transactions, income, period, theme, settings);
   const categoryRules = settings?.categoryRules ?? EMPTY_RULES;
-  const capture = usePaymentCapture({ transactions, income, onAddExpense: onAdd, onAddIncome, rules: categoryRules });   // Play build: UPI / bank SMS payments waiting for a tap
+  const capture = usePaymentCapture({ transactions, income, onAddExpense: onAdd, onAddIncome, rules: categoryRules, settings });   // Play build: UPI / bank SMS payments waiting for a tap
   const [quick, setQuick] = useState('');
 
   const budgetStatus = useMemo(

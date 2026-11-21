@@ -149,12 +149,14 @@ export function withoutKnown(detections, { transactions = [], income = [] } = {}
 }
 
 /** A detected payment as a ledger entry (expense for money out, income for money in). */
-export function detectionToEntry(d, { inferCategory } = {}) {
+export function detectionToEntry(d, { inferCategory, accountFor } = {}) {
   const name = d.payee || (d.direction === 'debit' ? 'UPI payment' : 'Money received');
   // Same shape as entries typed in: noon local time on the day it happened,
   // month by this phone's calendar (not UTC — 1 a.m. IST on the 1st is still the 1st)
   const date = dateInputToISO(localDateKey(new Date(d.time).toISOString()));
-  const base = { id: `cap_${d.ids?.[0] ?? d.time}`.replace(/[^\w-]/g, '_').slice(0, 120), name, amount: d.amount, date, month: isoToMonth(date), captured: d.source };
+  const base = { id: `cap_${d.ids?.[0] ?? d.time}`.replace(/[^\w-]/g, '_').slice(0, 120), name, amount: d.amount, date, month: isoToMonth(date), captured: d.source,
+    // "debited from A/c XX3889" → your account ending 3889 (utils/accounts.accountByLast4)
+    ...(d.account && accountFor ? accountFor(d.account) ?? {} : {}) };
   if (d.direction === 'credit') return { kind: 'income', entry: base };
   return { kind: 'expense', entry: { ...base, type: 'expense', category: inferCategory ? inferCategory(name) : 'other' } };
 }

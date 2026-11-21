@@ -91,3 +91,61 @@ export function agoLabel(ts, now = Date.now()) {
   if (d < 30) return `${d} days ago`;
   return new Date(t).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: d > 300 ? 'numeric' : undefined });
 }
+
+/* ── Insights: what people use, which versions, who needs a look ──
+   From user_activity only — counts and switches, never amounts or entries. */
+const verParts = (v) => String(v ?? '').replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
+/** Compare two "4.5.2" versions: <0, 0, >0. */
+export function compareVersions(a, b) {
+  const x = verParts(a), y = verParts(b);
+  for (let i = 0; i < 3; i += 1) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) - (y[i] ?? 0);
+  return 0;
+}
+
+export function insights(users = [], now = Date.now()) {
+  const n = users.length || 1;
+  const pct = (c) => Math.round((c / n) * 100);
+  const count = (test) => users.filter(test).length;
+  const known = (k) => users.filter((u) => u[k] != null);
+  const row = (key, label, test, base = users) => { const c = base.filter(test).length; return { key, label, count: c, of: base.length, pct: base.length ? Math.round((c / base.length) * 100) : 0 }; };
+
+  const adoption = [
+    row('accounts', 'Set up accounts', (u) => Number(u.accounts) > 0, known('accounts')),
+    row('multi', '2+ bank / card accounts', (u) => Number(u.accounts) > 2, known('accounts')),
+    row('budget', 'Monthly budget', (u) => u.budget === true, known('budget')),
+    row('goals', 'Savings goals', (u) => Number(u.goals) > 0, known('goals')),
+    row('rules', 'Bills & recurring', (u) => Number(u.rules) > 0, known('rules')),
+    row('carry', 'Carry forward', (u) => u.carry === true, known('carry')),
+    row('lock', 'App lock', (u) => u.lockOn === true, known('lockOn')),
+  ];
+  const split = (k, fallback = 'unknown') => {
+    const m = {};
+    users.forEach((u) => { const v = u[k] || fallback; m[v] = (m[v] ?? 0) + 1; });
+    return Object.entries(m).map(([value, c]) => ({ value, count: c, pct: pct(c) })).sort((a, b) => b.count - a.count);
+  };
+
+  // Versions: newest first; everyone behind the newest one seen is flagged
+  const latest = users.map((u) => u.version).filter(Boolean).sort(compareVersions).pop() ?? null;
+  const vm = {};
+  users.forEach((u) => {
+    const key = `${u.version || '—'}|${u.platform || 'unknown'}`;
+    (vm[key] ||= { version: u.version || '—', platform: u.platform || 'unknown', count: 0 }).count += 1;
+  });
+  const versions = Object.values(vm).sort((a, b) => compareVersions(b.version, a.version) || b.count - a.count)
+    .map((v) => ({ ...v, behind: !!latest && v.version !== '—' && compareVersions(v.version, latest) < 0 }));
+  const behind = count((u) => latest && u.version && compareVersions(u.version, latest) < 0);
+
+  // Data health: settings nearly empty for someone with a real history (the
+  // 4.4.0–4.5.0 settings wipe), and problems on their devices this week
+  const wiped = users.filter((u) => u.settingsKeys != null && Number(u.settingsKeys) <= 2 && Number(u.entries) >= 20)
+    .sort((a, b) => (Number(b.lastOpenedAt) || 0) - (Number(a.lastOpenedAt) || 0));
+  const WEEK = 7 * DAY;
+  const problems = users.filter((u) => Number(u.lastErrAt) && now - Number(u.lastErrAt) < WEEK)
+    .sort((a, b) => Number(b.lastErrAt) - Number(a.lastErrAt));
+
+  return {
+    adoption, versions, latest, behind,
+    looks: split('look'), platforms: split('platform'), languages: split('lang', 'en'),
+    wiped, problems,
+  };
+}

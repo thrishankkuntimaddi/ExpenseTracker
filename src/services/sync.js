@@ -11,6 +11,7 @@
 // queued for upload) the moment the call is made, so the UI must not wait:
 // background() lets the caller move on, counts the write as pending, and
 // still reports failures.
+import { recordProblem } from './activity';
 import { useSyncExternalStore } from 'react';
 
 const hasWindow = typeof window !== 'undefined';
@@ -64,6 +65,7 @@ export function noteSnapshot(metadata) {
 /** Called by every live listener when Firestore stops it with an error. */
 export function reportListenError(err, what) {
   console.error(`[Firestore] ${what} listener error`, err);
+  recordProblem('load', `${what} · ${err?.code ?? 'error'}`).catch(() => {});
   set({ connected: false, error: { kind: 'listen', code: err?.code, message: readableFirestoreError(err, `load your ${what}`) } });
 }
 

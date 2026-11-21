@@ -1,22 +1,24 @@
 // ─── Admin sees (owner, and trustees read-only) ──────────────────
-// Four views:
+// Five views:
 //   People  — who uses the app and how (never what they spend). Tap someone
 //             for their account details; actions live there, so the list
 //             stays calm. The owner can close any account — a quiet one, or
 //             (with a stronger confirmation) one that still opens the app.
 //   Inbox   — problems, ideas and questions people send from Help, plus
 //             crashes and deletions the app reports by itself.
+//   Insights — which features people use, which app versions are out there,
+//             whose settings look wiped, and who hit problems this week.
 //   Health  — the server job's last runs, Firestore reads / writes / deletes
 //             against the free daily quota, and live checks from here.
 //   Team    — (owner) trustees: people who may see all this, read only.
 // Closing / restoring is only asked for here (account_admin/{uid}); the
 // notifier carries it out with server rights and reports back.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Search, Lock, Mail, UserX, RotateCcw, Trash2, X, ExternalLink, ChevronDown, Users, Inbox, Activity, ShieldCheck, Check, CircleAlert, CircleCheck, Plus } from 'lucide-react';
+import { RefreshCw, Search, Lock, Mail, UserX, RotateCcw, Trash2, X, ExternalLink, ChevronDown, Users, Inbox, Activity, ShieldCheck, Check, CircleAlert, CircleCheck, Plus, BarChart2 } from 'lucide-react';
 import { listActivity, listAccountAdmin, askAccount } from '../../services/activity';
 import { listFeedback, markFeedback, removeFeedback, FEEDBACK_KINDS } from '../../services/feedback';
 import { getTeam, saveTeam, getHealth, liveChecks } from '../../services/adminTeam';
-import { TABS, SORTS, STATUS, INACTIVE_DAYS, KEEP_DAYS, RUN_NOW_URL, statusOf, viewUsers, summarise, agoLabel, adminStateOf, daysQuiet } from '../../utils/adminUsers';
+import { TABS, SORTS, STATUS, INACTIVE_DAYS, KEEP_DAYS, RUN_NOW_URL, statusOf, viewUsers, summarise, agoLabel, adminStateOf, daysQuiet, insights } from '../../utils/adminUsers';
 import { fieldStyle } from '../../components/formTokens';
 
 const muted = { fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.5 };
@@ -27,12 +29,13 @@ const btn = (tone = 'text-secondary', filled = false) => ({
 const VIEWS = [
   { key: 'people', label: 'People', Icon: Users },
   { key: 'inbox', label: 'Inbox', Icon: Inbox },
+  { key: 'insights', label: 'Insights', Icon: BarChart2 },
   { key: 'health', label: 'Health', Icon: Activity },
   { key: 'team', label: 'Team', Icon: ShieldCheck, owner: true },
 ];
 
-export default function AdminCard({ users: given, admin: givenAdmin, me, user, readOnly = false }) {
-  const [view, setView] = useState('people');
+export default function AdminCard({ users: given, admin: givenAdmin, me, user, readOnly = false, initialView = 'people' }) {
+  const [view, setView] = useState(initialView);
   const [users, setUsers] = useState(given ?? null);
   const [admin, setAdmin] = useState(givenAdmin ?? {});
   const [inbox, setInbox] = useState(null);
@@ -84,6 +87,7 @@ export default function AdminCard({ users: given, admin: givenAdmin, me, user, r
 
       {view === 'people' && users && <People users={users} admin={admin} setAdmin={setAdmin} now={now} me={me} readOnly={readOnly} setError={setError} />}
       {view === 'inbox' && <InboxView items={inbox} setItems={setInbox} now={now} readOnly={readOnly} />}
+      {view === 'insights' && users && <InsightsView users={users} now={now} inbox={inbox} />}
       {view === 'health' && <Health user={user} readOnly={readOnly} />}
       {view === 'team' && !readOnly && <Team />}
     </div>
@@ -397,6 +401,64 @@ function Health({ user, readOnly }) {
           </>
         )}
       </Panel>
+    </div>
+  );
+}
+
+/* ═════ Insights ═════ */
+function InsightsView({ users, now, inbox }) {
+  const i = useMemo(() => insights(users, now), [users, now]);
+  const crashes = (inbox ?? []).filter((f) => (f.kind === 'crash' || f.kind === 'bug') && f.status === 'new').length;
+  const who = (u) => u.name || u.email || u.uid;
+  return (
+    <div id="admin-insights" style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+      <Panel title="Features in use">
+        <div style={muted}>Out of people whose app reports it (4.5.3 and later report all of these).</div>
+        {i.adoption.map((r) => <Bar key={r.key} label={r.label} count={r.count} of={r.of} />)}
+      </Panel>
+
+      <Panel title={`App versions${i.latest ? ` · newest ${i.latest}` : ''}`}>
+        <div style={muted}>{i.behind ? `${i.behind} ${i.behind === 1 ? 'person is' : 'people are'} on an older version — Android and desktop update themselves on the next open; the website on reload.` : 'Everyone is on the newest version.'}</div>
+        <div style={{ display: 'grid', gap: 2, marginTop: 6 }}>
+          {i.versions.map((v) => (
+            <div key={`${v.version}|${v.platform}`} style={{ display: 'flex', gap: 8, fontSize: 12.5, padding: '3px 0' }}>
+              <span style={{ fontWeight: 700, color: v.behind ? 'var(--lent)' : 'var(--text)', fontVariantNumeric: 'tabular-nums', minWidth: 52 }}>{v.version}</span>
+              <span style={{ flex: 1, color: 'var(--text-secondary)' }}>{v.platform}</span>
+              <span style={{ fontWeight: 700, color: 'var(--text)' }}>{v.count}</span>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <Panel title="Looks · platforms · languages">
+        {[['Look', i.looks], ['Platform', i.platforms], ['Language', i.languages]].map(([label, list]) => (
+          <div key={label} style={{ fontSize: 12, marginTop: 4, lineHeight: 1.6 }}>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{label}: </span>
+            <span style={{ color: 'var(--text)' }}>{list.map((x) => `${x.value} ${x.count} (${x.pct}%)`).join(' · ')}</span>
+          </div>
+        ))}
+      </Panel>
+
+      <Panel title="Data health">
+        <Light ok={i.wiped.length === 0} label="Settings look wiped" value={i.wiped.length ? `${i.wiped.length} ${i.wiped.length === 1 ? 'person' : 'people'}` : 'none'} />
+        {i.wiped.length > 0 && <div style={{ ...muted, margin: '2px 0 4px 23px' }}>Almost no settings but a real history — likely lost to the settings wipe in 4.4.0–4.5.0 (fixed in 4.5.1). Their entries are safe; budgets, goals, accounts and layout need setting again.</div>}
+        {i.wiped.slice(0, 20).map((u) => <Light key={u.uid} small ok={false} label={who(u)} value={`${Number(u.entries) || 0} entries · ${agoLabel(u.lastOpenedAt, now)}`} />)}
+        <Light ok={i.problems.length === 0} label="Problems this week" value={i.problems.length ? `${i.problems.length} ${i.problems.length === 1 ? 'person' : 'people'}` : 'none'} />
+        {i.problems.slice(0, 20).map((u) => <Light key={u.uid} small ok={false} label={who(u)} value={`${u.lastErr ?? 'error'} · ${agoLabel(u.lastErrAt, now)}${Number(u.errCount) > 1 ? ` · ${u.errCount}×` : ''}`} />)}
+        <Light ok={crashes === 0} label="Unread crash / problem reports" value={crashes ? `${crashes} in Inbox` : 'none'} />
+      </Panel>
+    </div>
+  );
+}
+function Bar({ label, count, of }) {
+  const pct = of ? Math.round((count / of) * 100) : 0;
+  return (
+    <div style={{ marginTop: 6 }}>
+      <div style={{ display: 'flex', fontSize: 11.5, marginBottom: 3 }}>
+        <span style={{ flex: 1, color: 'var(--text-secondary)', fontWeight: 600 }}>{label}</span>
+        <span style={{ color: 'var(--text)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{of ? `${count} of ${of} · ${pct}%` : 'not reported yet'}</span>
+      </div>
+      <div style={{ height: 6, borderRadius: 3, background: 'var(--surface2)', overflow: 'hidden' }}><div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)' }} /></div>
     </div>
   );
 }

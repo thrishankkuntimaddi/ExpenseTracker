@@ -58,3 +58,11 @@ describe('entryFromRule', () => {
     expect(entry.id).toBe(occurrenceId('r3', '2026-10-01'));
   });
 });
+
+describe('a rule remembers its account', async () => {
+  const { entryFromRule } = await import('../recurring');
+  it('posts on the account the rule is paid from', () => {
+    expect(entryFromRule({ id: 'r', name: 'Rent', amount: 12000, kind: 'expense', accountId: 'sbi' }, '2026-11-01').entry.accountId).toBe('sbi');
+    expect(entryFromRule({ id: 'r', name: 'Rent', amount: 12000, kind: 'expense' }, '2026-11-01').entry).not.toHaveProperty('accountId');
+  });
+});

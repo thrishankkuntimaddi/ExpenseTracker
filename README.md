@@ -113,6 +113,7 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 - **Move money** between your own accounts — SBI → HDFC, an ATM withdrawal, a cash deposit, paying the card bill. It isn't spending or income, so budgets and stats don't count it
 - **Home** shows every account's balance under the month card; **Stats** draws one line per kind (banks · cash · cards) or per account, in each account's colour, over 1M–All; **Net worth** lists each account and each card's due
 - **Settings can't be wiped on open** (4.5.1): a change made while the app is still loading (the looks note counting an open) waits for your saved settings and is applied on top of them — before, it could replace them, so accounts, budgets and goals set up earlier vanished after reopening
+- **Accounts pick themselves** (4.5.3): a payment captured from a bank SMS ("debited from A/c XX3889") lands on your account ending 3889; a bill or recurring entry posts on the account chosen on its rule (rent from SBI, salary into HDFC). Switching the display currency re-states account balances and Net worth items too
 - Older entries need nothing: until you set accounts up they're split into *Bank · UPI* and *Cash* from today's balance (cash-marked entries on Cash), and stay on the account you set up first. Change any one by editing it (`src/utils/accounts.js`)
 
 ### 💱 Currencies
@@ -212,6 +213,7 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 ### 👁️ Admin sees (the owner's account only)
 - Every account, in four tabs: **Active** (the default — opened in the last 25 days), **Inactive** (quiet 25+ days), **Closed** and **All accounts**, with search and sorting; name, email, when they last opened it, entries, app and version — never amounts or entries
 - **Close an unused account** (Inactive only, never your own): *Mail them* opens a ready-written email; confirm that you told them and type their email. Sign-in is switched off and the data moves to an archive for 90 days — **Restore** brings everything back, **Delete forever** (or 90 days) removes it
+- **Insights** (4.5.3): which features people use (accounts, 2+ banks, budget, goals, bills, carry forward, app lock — out of those whose app reports it), **app versions** by platform with everyone behind the newest flagged, looks · platforms · languages, and **data health** — whose settings look wiped (almost no settings but a real history) and who hit problems this week (a failed save, a list that couldn't load, a crash: a short code and when). Counts and switches only, checked by the rules (`scripts/test-rules-data.mjs`)
 - The app only *asks* (`account_admin/{uid}`, owner's verified account only, and only requests that fit — restore / purge just a closed account); the notifier carries it out with server rights, checks the account is really quiet, and reports back. The archive (`deleted_accounts/**`) has no client access. Accounts that signed up but never opened an up-to-date app are added from the sign-in records once a day
 
 ### 🗣️ Languages

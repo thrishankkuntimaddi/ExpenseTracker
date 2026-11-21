@@ -119,6 +119,8 @@ export function entryFromRule(rule, dateKey, paidOnKey = null) {
     date,
     month: isoToMonth(date),
     recurringId: rule.id,
+    // The account it's paid from / into (Accounts) — e.g. rent from SBI, salary into HDFC
+    ...(rule.accountId ? { accountId: rule.accountId } : {}),
   };
   if (rule.kind === 'income') return { entry: { ...base, type: 'income' }, target: 'income' };
   if (rule.kind === 'savings') {

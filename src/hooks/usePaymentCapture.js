@@ -7,9 +7,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { captureSupported, captureStatus, capturedNotifications, forgetCaptured, onCaptured } from '../native/paymentCapture';
 import { parsePayment, mergeDetections, detectionToEntry, withoutKnown } from '../utils/paymentCapture';
+import { accountByLast4, accountFields } from '../utils/accounts';
 import { inferCategory } from '../utils/categories';
 
-export function usePaymentCapture({ transactions = [], income = [], onAddExpense, onAddIncome, rules } = {}) {
+export function usePaymentCapture({ transactions = [], income = [], onAddExpense, onAddIncome, rules, settings } = {}) {
   const [status, setStatus] = useState({ enabled: false, allowed: false });
   const [raw, setRaw] = useState([]);
 
@@ -48,12 +49,13 @@ export function usePaymentCapture({ transactions = [], income = [], onAddExpense
   }, []);
 
   const add = useCallback(async (d, edits = {}) => {
-    const { kind, entry } = detectionToEntry({ ...d, ...edits }, { inferCategory: (n) => inferCategory(n, rules) });
+    const accountFor = (digits) => { const id = accountByLast4(settings, digits); return id ? accountFields(id, settings) : null; };
+    const { kind, entry } = detectionToEntry({ ...d, ...edits }, { inferCategory: (n) => inferCategory(n, rules), accountFor });
     if (kind === 'income') await onAddIncome?.(entry);
     else await onAddExpense?.(entry);
     await dismiss(d);
     return entry;
-  }, [onAddExpense, onAddIncome, dismiss, rules]);
+  }, [onAddExpense, onAddIncome, dismiss, rules, settings]);
 
   return { supported: captureSupported, status, detections, add, dismiss, refresh };
 }
