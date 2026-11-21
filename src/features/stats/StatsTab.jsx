@@ -20,6 +20,8 @@ import { useViewMonth, monthName } from '../../app/month';
 import SpendingCalendar from './components/SpendingCalendar';
 import ReportCard from './components/ReportCard';
 import BalanceTimeline from './components/BalanceTimeline';
+import AccountsTimeline from './components/AccountsTimeline';
+import { cashInHand } from '../../utils/accounts';
 import HeadsUpCard from './components/HeadsUpCard';
 import HabitsCard from './components/HabitsCard';
 import AskModal from './components/AskModal';
@@ -127,13 +129,13 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
     const goals = (goalList ?? []).filter(isGoalOpen).map((g) => computeGoalProgress(g, transactions));
     const resp = respSummary(respList ?? [], transactions, toKey(new Date()));
     const debts = debtTotals(debtLedger(transactions, income));
-    const cash = cashSummary(transactions);
+    const cash = { ...cashSummary(transactions), inHand: cashInHand(transactions, income, settings) };
     return {
       saved,
       goalSaved: goals.reduce((s, g) => s + g.saved, 0), goalTarget: goals.reduce((s, g) => s + g.target, 0), goalCount: goals.length,
       resp, debts, cash,
     };
-  }, [transactions, income, goalList, respList]);
+  }, [transactions, income, goalList, respList, settings]);
 
   const avgIn = series.slice(0, -1).filter((m) => m.in > 0);
   // Earned this month: real income only — not borrowed, not paid back, not carried over from last month
@@ -161,6 +163,9 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
           monthIn={stats.totalIncome}
           monthOut={stats.totalExpense - (stats.paidFromSavings ?? 0) + stats.totalSavings + stats.totalLent + stats.totalRepaidThem + stats.totalGivenGift}
           savedTotal={big.saved} youOwe={big.debts.youOwe} />
+
+        {/* ── Banks · cash · cards, one line each ── */}
+        <AccountsTimeline transactions={transactions} income={income} settings={settings} dark={dark} onOpen={() => shell?.goTo('accounts')} />
 
         <div className="stats-layout">
           <div className="stats-left">
@@ -292,7 +297,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
                   bar={big.resp.total ? big.resp.paid / big.resp.total : null} />
                 <BigRow Icon={ArrowDownLeft} tone="borrowed" label={tr("You owe")} value={big.debts.youOwe} sub={big.debts.youOwe ? 'borrowed, still open' : 'all clear'} onClick={() => shell?.goTo('people')} />
                 <BigRow Icon={ArrowUpRight} tone="lent" label={tr("Owed to you")} value={big.debts.owedToYou} sub={big.debts.owedToYou ? 'lent, not back yet' : 'all returned'} onClick={() => shell?.goTo('people')} />
-                {big.cash.used && <BigRow Icon={Banknote} tone="lent" label={tr("Cash in hand")} value={Math.max(0, big.cash.inHand)} sub="withdrawn minus spent in cash" />}
+                {big.cash.used && <BigRow Icon={Banknote} tone="lent" label={tr("Cash in hand")} value={Math.max(0, big.cash.inHand)} sub="your cash account — see Accounts" onClick={() => shell?.goTo('accounts')} />}
               </div>
             </Card>
 

@@ -7,6 +7,7 @@
 // Given or Billing (utils/entryKinds.js). Status: debts are Open until the
 // person's balance is back to zero, then Settled; everything else is Done.
 // Tap a row (or ✎) to edit it.
+import { accountsSetUp, listAccounts, accountOf, accountLabel, colorOf } from '../../utils/accounts';
 import { useState, useMemo, useCallback } from 'react';
 import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown, CheckCircle2, Clock3, Banknote, Wallet, ArrowDownLeft, ArrowUpRight, Undo2, Receipt, Gift, PiggyBank, FileUp } from 'lucide-react';
 import { formatAmount } from '../../utils/dateHelpers';
@@ -250,7 +251,7 @@ export default function HistoryTab({
                 <div className="hist-cards">
                   {group.entries.map((row) => (
                     <SwipeRow key={`${row._src}-${row.id}`} label={row.name} onEdit={() => setEditing(row)} onDelete={() => setDeleting(row)}>
-                      <HistoryRow row={row} theme={theme} rules={categoryRules}
+                      <HistoryRow row={row} theme={theme} rules={categoryRules} settings={settings}
                         settled={settledByName.get(norm(row.name))}
                         onEdit={() => setEditing(row)} onDelete={() => setDeleting(row)} />
                     </SwipeRow>
@@ -269,7 +270,10 @@ export default function HistoryTab({
    kind and category; on the right the signed amount, its status, edit and delete. */
 const KIND_ICON = { income: Wallet, borrowed: ArrowDownLeft, got_back: Undo2, billing: Receipt, given: Gift, lent: ArrowUpRight, paid_back: Undo2, savings: PiggyBank, withdrawal: Banknote };
 
-function HistoryRow({ row, theme, rules, settled, onEdit, onDelete }) {
+function HistoryRow({ row, theme, rules, settings, settled, onEdit, onDelete }) {
+  // Which account — once there's more than the starter Bank + Cash
+  const acc = accountsSetUp(settings) && row.type !== 'cash' && !(row.type === 'expense' && row.paidFrom === 'savings')
+    ? listAccounts(settings).find((a) => a.id === accountOf(row, settings)) : null;
   const k = ENTRY_KINDS[row._kind];
   const incoming = k.sign > 0;
   const neutral = k.sign === 0;            // cash withdrawn: account → wallet
@@ -306,7 +310,8 @@ function HistoryRow({ row, theme, rules, settled, onEdit, onDelete }) {
         <span className="hist-meta">
           <span className="hist-bit hist-kind" style={{ color: `var(--${k.tone})` }}>{k.label}</span>
           {detail}
-          {row.paidWith === 'cash' && <span className="hist-bit" title={tr("Paid in cash")}><Banknote size={11} /> {tr("Cash")}</span>}
+          {acc ? <span className="hist-bit hist-acct"><span className="acct-dot" aria-hidden style={{ background: colorOf(acc, theme === 'monoflow') }} /> {accountLabel(acc)}</span>
+            : row.paidWith === 'cash' && <span className="hist-bit" title={tr("Paid in cash")}><Banknote size={11} /> {tr("Cash")}</span>}
           {wasted && <span className="hist-bit" style={{ color: 'var(--expense)' }}><Flame size={10} /> {formatAmount(row.wasteAmount)} {tr("wasted")}</span>}
         </span>
       </span>

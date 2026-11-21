@@ -9,6 +9,8 @@ import { generateId } from '../../utils/storage';
 import { formatAmount, todayInputValue, dateInputToISO, isoToMonth, localMonthKey } from '../../utils/dateHelpers';
 import { TRANSACTION_TYPES as TYPES, getDirectionMeta, getSavingsType } from '../../utils/typeConfig';
 import { cashSummary } from '../../utils/cash';
+import { accountBalances, accountLabel, colorOf } from '../../utils/accounts';
+import { KIND_ICON } from '../../components/accountChoice';
 import { useStats } from '../../hooks/useStats';
 import { inferCategory, categoryOf, categoryMeta, EMPTY_RULES } from '../../utils/categories';
 import { parseQuickEntries } from '../../utils/smartInput';
@@ -122,6 +124,9 @@ export default function TodayTab(props) {
   const monthIncome = income.filter((i) => localMonthKey(i.date) === monthKey).reduce((s, i) => s + (Number(i.amount) || 0), 0);
   const debts = debtTotals(debtLedger(transactions, income));
   const cash = cashSummary(transactions, monthKey);
+  const acctB = accountBalances(transactions, income, settings, todayKey);
+  const acctShown = acctB.accounts.filter((a) => !a.archived);
+  const dark = theme === 'monoflow';
   const savedThisMonth = monthTxns.filter((t) => t.type === 'savings').reduce((s, t) => s + (Number(t.amount) || 0), 0);
   const resp = respSummary(settings?.responsibilities ?? [], transactions, todayKey);
   // Borrowed money the app is asking about (unused, or paid back unexplained)
@@ -139,6 +144,7 @@ export default function TodayTab(props) {
     trips: t('Split shared costs'),
     external: t('Spent for others'),
     planner: t('Retirement, FIRE, loans, tax'),
+    accounts: acctB.setUp ? `${rupees(acctB.total)} · ${acctShown.length} ${t('accounts')}` : t('Banks, cash, cards'),
   };
   const explorePages = EXPLORE_ORDER.filter((k) => !ui.tabs.includes(k));
 
@@ -199,10 +205,21 @@ export default function TodayTab(props) {
           {tr("Balance at today’s rates:")} {stats.balanceParts.map((p) => formatAmount(p.amount, p.currency)).join(' + ').replace(/\+ -/g, '− ').replace(/\+ −/g, '− ')}
         </div>
       )}
-      {cash.used && (
-        <div id="home-cash" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, marginTop: 8, opacity: 0.9 }}>
-          <Banknote size={13} />
-          <span>{tr("Cash in hand")} <strong>{formatAmount(Math.max(0, cash.inHand))}</strong>{cash.monthSpent > 0 ? <> · {formatAmount(cash.monthSpent)} {tr("paid in cash in")} {monthAbbr}</> : null}</span>
+      {isNow && (acctB.setUp || cash.used) && (
+        <div id="home-accounts" className="home-accounts" data-no-swipe aria-label={tr("Accounts")}>
+          {acctShown.map((a) => {
+            const Icon = KIND_ICON[a.kind];
+            const due = a.kind === 'card';
+            return (
+              <button key={a.id} type="button" id={a.kind === 'cash' ? 'home-cash' : `home-acct-${a.id}`} className="home-acct"
+                onClick={(e) => { e.stopPropagation(); shell?.goTo('accounts'); }}>
+                <span className="acct-dot" style={{ background: colorOf(a, dark) }} aria-hidden />
+                {a.kind !== 'bank' && Icon && <Icon size={12} />}
+                <span>{accountLabel(a)}</span>
+                <strong>{formatAmount(due ? Math.max(0, -a.balance) : a.balance)}</strong>{due && <span style={{ opacity: 0.75 }}>{tr("due")}</span>}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

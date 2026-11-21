@@ -8,6 +8,7 @@ import { debtLedger, debtTotals } from './debts';
 import { respSummary } from './responsibilities';
 import { computeCarryForward } from './carryForward';
 import { localMonthKey } from './dateHelpers';
+import { accountsSetUp, accountBalances, accountLabel } from './accounts';
 
 const amt = (t) => Number(t?.amount) || 0;
 
@@ -37,14 +38,24 @@ export function netWorth({ transactions = [], income = [], settings = {}, todayK
   const resp = respSummary(settings?.responsibilities ?? [], transactions, todayKey);
   const manual = Array.isArray(settings?.netWorth?.items) ? settings.netWorth.items.filter((i) => i && Number(i.value) > 0) : [];
 
+  // Set up accounts: each bank and your cash as an asset, each card's due as a liability
+  const accts = accountsSetUp(settings) ? accountBalances(transactions, income, settings, todayKey ?? undefined).accounts.filter((a) => Math.abs(a.balance) >= 0.005) : null;
+  const acctHint = (a) => [a.tag, a.last4 ? `••${a.last4}` : ''].filter(Boolean).join(' · ') || 'From Accounts';
+  const moneyRows = accts
+    ? accts.filter((a) => a.balance > 0).map((a) => ({ key: `acct-${a.id}`, label: accountLabel(a), value: a.balance, auto: true, hint: acctHint(a), link: 'accounts' }))
+    : [{ key: 'balance', label: 'Money in hand & bank', value: Math.max(0, stats.balance), auto: true, hint: balanceHint, link: 'today' }];
+  const owedRows = accts
+    ? accts.filter((a) => a.balance < 0).map((a) => ({ key: `acct-${a.id}`, label: a.kind === 'card' ? `${accountLabel(a)} — due` : `${accountLabel(a)} — overdrawn`, value: -a.balance, auto: true, hint: acctHint(a), link: 'accounts' }))
+    : (stats.balance < 0 ? [{ key: 'overdrawn', label: 'Spent more than came in', value: -stats.balance, auto: true, hint: 'This month you are below zero' }] : []);
+
   const assets = [
-    { key: 'balance', label: 'Money in hand & bank', value: Math.max(0, stats.balance), auto: true, hint: balanceHint, link: 'today' },
+    ...moneyRows,
     ...savingsRows.map((r) => ({ ...r, auto: true, hint: r.key === 'sav-used' ? 'Expenses you marked “paid from savings”' : 'Everything you logged as this kind of saving, all time' })),
     ...(debts.owedToYou > 0 ? [{ key: 'owed', label: 'Owed to you', value: debts.owedToYou, auto: true, hint: 'Money you lent that hasn’t come back — see Debts', link: 'people' }] : []),
     ...manual.filter((i) => i.kind !== 'liability').map((i) => ({ key: i.id, label: i.name, value: Number(i.value), id: i.id, hint: 'Added by you' })),
   ];
   const liabilities = [
-    ...(stats.balance < 0 ? [{ key: 'overdrawn', label: 'Spent more than came in', value: -stats.balance, auto: true, hint: 'This month you are below zero' }] : []),
+    ...owedRows,
     ...(debts.youOwe > 0 ? [{ key: 'owe', label: 'You owe people', value: debts.youOwe, auto: true, hint: 'Borrowed and not yet paid back — see Debts', link: 'people' }] : []),
     ...(resp.remaining > 0 ? [{ key: 'resp', label: 'Responsibilities left', value: resp.remaining, auto: true, hint: 'What is still to clear in Responsibilities', link: 'responsibilities' }] : []),
     ...manual.filter((i) => i.kind === 'liability').map((i) => ({ key: i.id, label: i.name, value: Number(i.value), id: i.id })),

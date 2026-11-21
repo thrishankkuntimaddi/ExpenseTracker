@@ -57,6 +57,7 @@ const ProfilePage      = lazyPage(() => import('../features/profile/ProfilePage'
 const DebtsPage        = lazyPage(() => import('../features/debts/DebtsPage'));
 const ResponsibilitiesPage = lazyPage(() => import('../features/responsibilities/ResponsibilitiesPage'));
 const PlannerPage      = lazyPage(() => import('../features/planner/PlannerPage'));
+const AccountsPage     = lazyPage(() => import('../features/accounts/AccountsPage'));
 import UpdateBanner from '../components/UpdateBanner';
 import { ShellContext } from './shellContext';
 import { markAppReady } from './ready';
@@ -317,7 +318,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finish
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [uid, devices.thisId]);
   useEffect(() => {
-    onReminderTap((route) => { if (['today', 'plan', 'bills', 'budget', 'stats', 'history', 'savings', 'responsibilities', 'people', 'planner'].includes(route)) goTo(route === 'plan' ? 'bills' : route); });
+    onReminderTap((route) => { if (['today', 'plan', 'bills', 'budget', 'stats', 'history', 'savings', 'responsibilities', 'people', 'planner', 'accounts'].includes(route)) goTo(route === 'plan' ? 'bills' : route); });
   }, [goTo]);
   useEffect(() => {
     if (!loaded) return undefined;
@@ -470,6 +471,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finish
     {(activeTab === 'bills' || activeTab === 'plan') && <BillsPage {...commonProps} />}
     {activeTab === 'budget' && <BudgetPage {...commonProps} />}
     {activeTab === 'savings' && <SavingsPage {...commonProps} />}
+    {activeTab === 'accounts' && <AccountsPage {...commonProps} onAddTransaction={addTransaction} />}
     {activeTab === 'stats' && <StatsTab {...commonProps} />}
     {activeTab === 'responsibilities' && <ResponsibilitiesPage {...commonProps} onAddTransaction={addTransaction} onDeleteTransaction={deleteTransaction} />}
     {activeTab === 'planner' && <PlannerPage {...commonProps} />}

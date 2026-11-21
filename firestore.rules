@@ -20,7 +20,10 @@ service cloud.firestore {
       return validMoney(d.amount)
         && d.date is string && d.date.size() <= 40
         && d.name is string && d.name.size() > 0 && d.name.size() <= 500
-        && (!('wasteAmount' in d) || validMoney(d.wasteAmount));
+        && (!('wasteAmount' in d) || validMoney(d.wasteAmount))
+        // Which of your accounts (bank, cash, card) — and, moving money, which one it went to
+        && (!('accountId' in d) || (d.accountId is string && d.accountId.size() <= 64))
+        && (!('toAccountId' in d) || (d.toAccountId is string && d.toAccountId.size() <= 64));
     }
 
     // ─── Shared trips (several accounts on one trip) ──────────────────

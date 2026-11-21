@@ -26,7 +26,9 @@ import { incomeKindFlags } from '../utils/finance';
 import { inferCategory, categoryMeta, EMPTY_RULES } from '../utils/categories';
 import { parseQuickEntry, parseQuickEntries } from '../utils/smartInput';
 import { SAVINGS_CHOICES, getSavingsType } from '../utils/typeConfig';
-import { cashSummary } from '../utils/cash';
+import { accountBalances, accountFields, cashAccountId, listAccounts } from '../utils/accounts';
+import AccountPicker from './AccountPicker';
+import { useAccountChoice, rememberAccount } from './accountChoice';
 import { DEBT_MOVES, DEBT_MOVE_KEYS, debtEntryFields, debtLedger } from '../utils/debts';
 import { CHECK_OPTIONS } from '../utils/borrowed';
 import { isGoalOpen } from '../utils/goals';
@@ -204,7 +206,7 @@ export function AddPanel({ initialKind = 'expense', options = {}, onSaved, onAdd
 
       <div key={key} className={`add-form-wrap${slide ? ` add-slide-${slide}` : ''}`}>
         {kind === 'expense' && <ExpenseForm {...common} {...data} onAdd={onAdd} />}
-        {kind === 'income' && <IncomeForm {...common} income={data.income} onAddIncome={onAddIncome} />}
+        {kind === 'income' && <IncomeForm {...common} income={data.income} settings={data.settings} onAddIncome={onAddIncome} />}
         {kind === 'debt' && <DebtForm {...common} {...data} onAdd={onAdd} onAddIncome={onAddIncome} initialMove={options.move} initialName={options.name} />}
         {kind === 'savings' && <SavingsForm {...common} {...data} onAdd={onAdd} initialGoal={options.goalId} />}
       </div>
@@ -310,19 +312,23 @@ const amountOk = (a) => Number(a) > 0;
 const stamp = (dateInput) => { const iso = dateInputToISO(dateInput); return { date: iso, month: isoToMonth(iso) }; };
 
 /* ── Expense: spent, or given to someone ─────────────────────── */
-function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategory, onSaved, startDate }) {
+function ExpenseForm({ transactions = [], income = [], settings, theme, onAdd, onLearnCategory, onSaved, startDate }) {
   const rules = settings?.categoryRules ?? EMPTY_RULES;
   const { currency } = useEntryCurrency();
   const [mode, setMode] = useState('spent');         // 'spent' | 'given' | 'withdraw'
   const [amount, setAmount] = useDraft('amount');
   const [name, setName] = useDraft('name');
   const [category, setCategory] = useState(null);
-  const [paidCash, setPaidCash] = useState(false);    // UPI / card (default) or cash
+  const [acct, setAcct] = useAccountChoice('expense');            // where it was paid from
+  const [fromAcct, setFromAcct] = useAccountChoice('withdraw-from');  // Withdrew cash: from which bank
   const [dateInput, setDateInput] = useState(startDate);
   const onScan = (r) => { if (r.name) setName(r.name); if (r.amount) setAmount(String(r.amount)); if (r.date) setDateInput(r.date); };
   const givenTo = useMemo(() => [...new Set(transactions.filter((t) => t.type === 'person' && t.direction === 'given_gift').map((t) => t.name?.trim()).filter(Boolean))], [transactions]);
-  const cash = useMemo(() => cashSummary(transactions), [transactions]);
   const withdraw = mode === 'withdraw';
+  const cashId = cashAccountId(settings);
+  const balances = useMemo(() => accountBalances(transactions, income, settings), [transactions, income, settings]);
+  const balanceOf = (id) => balances.accounts.find((a) => a.id === id)?.balance ?? 0;
+  const acctKind = listAccounts(settings).find((a) => a.id === acct)?.kind;
 
   // "chai 20" typed in the name also works — and "coffee 250 water 50 tea 150"
   // adds three expenses, each with its own category
@@ -337,22 +343,24 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
   const manyItems = multi ? many.map((m) => ({ ...m, name: m.name.charAt(0).toUpperCase() + m.name.slice(1), currency: m.currency ?? currency, category: inferCategory(m.name, rules) })) : [];
   const manyCurrency = new Set(manyItems.map((m) => m.currency)).size === 1 ? manyItems[0]?.currency : null;
   const manyTotal = manyItems.reduce((s, m) => s + m.amount, 0);
-  const paid = !withdraw && paidCash ? { paidWith: 'cash' } : {};
+  const paid = accountFields(acct, settings);
   const tone = mode === 'given' ? 'given' : withdraw ? 'lent' : 'expense';
 
   function save() {
     if (!can) return;
     if (multi) {
       const at = stamp(dateInput);
+      rememberAccount('expense', acct);
       manyItems.forEach((m) => onAdd({ id: generateId(), type: 'expense', name: m.name, amount: m.amount, currency: m.currency, category: m.category, ...paid, ...at }));
       onSaved({ type: 'expense', name: `${manyItems.length} expenses`, amount: manyTotal, currency: manyItems[0].currency, ...(manyCurrency ? {} : { toast: `Added ${manyItems.length} expenses` }), ...at });
       return;
     }
     const base = { id: generateId(), name: finalName.charAt(0).toUpperCase() + finalName.slice(1), amount: finalAmount, currency: finalCurrency, ...stamp(dateInput) };
-    const entry = withdraw ? { ...base, type: 'cash' }
+    const entry = withdraw ? { ...base, type: 'cash', accountId: fromAcct, ...(cashId ? { toAccountId: cashId } : {}) }
       : mode === 'given' ? { ...base, type: 'person', direction: 'given_gift', ...paid }
       : { ...base, type: 'expense', category: category ?? suggested, ...paid };
     if (mode === 'spent' && category) onLearnCategory?.(finalName, category);
+    if (withdraw) rememberAccount('withdraw-from', fromAcct); else rememberAccount('expense', acct);
     onAdd(entry);
     onSaved(entry);
   }
@@ -383,15 +391,11 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
           <CategoryPicker size="sm" value={category ?? suggested} suggested={suggested} onChange={setCategory} theme={theme} />
         </div>
       )}
-      {!withdraw && (
-        <div role="radiogroup" aria-label={tr("Paid with")} className="add-paid">
-          <span className="add-paid-label">{tr("Paid with")}</span>
-          {[[false, 'UPI / card'], [true, 'Cash']].map(([c, label]) => (
-            <button key={label} type="button" role="radio" aria-checked={paidCash === c} id={`paid-${c ? 'cash' : 'account'}`} onClick={() => setPaidCash(c)}
-              className={`add-paid-opt${paidCash === c ? ' on' : ''}`}>{c && <Banknote size={12} />}{label}</button>
-          ))}
-          {paidCash && cash.used && <span id="paid-cash-left" className="add-paid-left">{formatAmount(cash.inHand)} {tr("in hand")}</span>}
-        </div>
+      {withdraw ? (
+        <AccountPicker id="withdraw-from" label="From" value={fromAcct} onChange={setFromAcct} kinds={['bank']} settings={settings} />
+      ) : (
+        <AccountPicker id="paid" label="Paid from" value={acct} onChange={setAcct} settings={settings}
+          extra={acctKind === 'cash' && balances.cash !== 0 ? <span id="paid-cash-left" className="add-paid-left">{formatAmount(balanceOf(acct))} {tr("in hand")}</span> : null} />
       )}
       {mode === 'given' && (
         <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-4px 2px 12px', lineHeight: 1.5 }}>
@@ -400,8 +404,8 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
       )}
       {withdraw && (
         <p id="withdraw-hint" style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-2px 2px 12px', lineHeight: 1.5 }}>
-          {tr("Not spending, not saving — the money just moves from your account to your wallet. When you spend it, add the expense with")} <strong>{tr("Paid with: Cash")}</strong>.
-          {cash.used && <> {tr("Cash in hand now:")} <strong>{formatAmount(cash.inHand)}</strong>.</>}
+          {tr("Not spending, not saving — the money just moves from your account to your wallet. When you spend it, add the expense with")} <strong>{tr("Paid from: Cash")}</strong>.
+          {cashId && <> {tr("Cash in hand now:")} <strong>{formatAmount(balanceOf(cashId))}</strong>.</>}
         </p>
       )}
       <div className="add-foot">
@@ -419,8 +423,9 @@ function ExpenseForm({ transactions = [], settings, theme, onAdd, onLearnCategor
 /* ── Income ──────────────────────────────────────────────────── */
 const INCOME_SOURCES = ['Salary', 'Parents', 'Freelance', 'Interest', 'Refund', 'Gift'];
 
-function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
+function IncomeForm({ income = [], settings, onAddIncome, onSaved, startDate }) {
   const { currency } = useEntryCurrency();
+  const [acct, setAcct] = useAccountChoice('income');
   const [amount, setAmount] = useDraft('amount');
   const [name, setName] = useDraft('name');
   const [dateInput, setDateInput] = useState(startDate);
@@ -435,7 +440,8 @@ function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
 
   function save() {
     if (!can) return;
-    const entry = { id: generateId(), name: name.trim(), amount: Number(amount), currency, type: 'income', ...incomeKindFlags('income'), ...stamp(dateInput) };
+    const entry = { id: generateId(), name: name.trim(), amount: Number(amount), currency, type: 'income', ...incomeKindFlags('income'), ...accountFields(acct, settings), ...stamp(dateInput) };
+    rememberAccount('income', acct);
     onAddIncome(entry);
     onSaved(entry);
   }
@@ -452,6 +458,7 @@ function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
         ))}
       </div>
       <AmountField value={amount} onChange={setAmount} tone="income" onEnter={save} />
+      <AccountPicker id="income-acct" label="Received in" value={acct} onChange={setAcct} settings={settings} />
       <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-2px 2px 12px', lineHeight: 1.5 }}>{tr("Borrowed money, or money paid back to you? Use")} <strong>{tr("Debt")}</strong> {tr("— it’s counted as money in and tracked per person.")}</p>
       <div className="add-foot">
         <DateField value={dateInput} onChange={setDateInput} />
@@ -462,7 +469,7 @@ function IncomeForm({ income = [], onAddIncome, onSaved, startDate }) {
 }
 
 /* ── Debt: lent · borrowed · got back · paid back ────────────── */
-function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved, startDate, initialMove = 'lent', initialName = '' }) {
+function DebtForm({ transactions = [], income = [], settings, onAdd, onAddIncome, onSaved, startDate, initialMove = 'lent', initialName = '' }) {
   const { currency } = useEntryCurrency();
   const [move, setMove] = useState(DEBT_MOVES[initialMove] ? initialMove : 'lent');
   const [amount, setAmount] = useDraft('amount');
@@ -472,6 +479,11 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
   // Borrowed: when the app checks whether it was used (utils/borrowed.js)
   const [checkOn, setCheckOn] = useState('week');
   const [checkDate, setCheckDate] = useState('');
+  // Money out (lent, paid back) leaves an account; money in (borrowed, got back) lands in one
+  const moneyIn = move === 'borrowed' || move === 'got_back';
+  const [acctOut, setAcctOut] = useAccountChoice('debt-out');
+  const [acctIn, setAcctIn] = useAccountChoice('debt-in');
+  const acct = moneyIn ? acctIn : acctOut;
   const ledger = useMemo(() => debtLedger(transactions, income), [transactions, income]);
   // Who this move is likely about: people who owe you (got back), people you owe (paid back)
   const open = move === 'got_back' ? ledger.filter((p) => p.net > 0) : move === 'paid_back' ? ledger.filter((p) => p.net < 0) : ledger.filter((p) => !p.settled).concat(ledger.filter((p) => p.settled)).slice(0, 8);
@@ -490,7 +502,8 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
     if (!can) return;
     const { store, fields } = debtEntryFields(move);
     const check = move !== 'borrowed' ? {} : { checkOn: checkOn === 'date' && checkDate ? checkDate : checkOn === 'month_end' ? 'month_end' : 'week' };
-    const entry = { id: generateId(), name: name.trim(), amount: Number(amount), currency, ...fields, ...(note.trim() ? { note: note.trim() } : {}), ...check, ...stamp(dateInput) };
+    const entry = { id: generateId(), name: name.trim(), amount: Number(amount), currency, ...fields, ...accountFields(acct, settings), ...(note.trim() ? { note: note.trim() } : {}), ...check, ...stamp(dateInput) };
+    rememberAccount(moneyIn ? 'debt-in' : 'debt-out', acct);
     if (store === 'income') onAddIncome(entry); else onAdd(entry);
     onSaved(entry);
   }
@@ -514,6 +527,7 @@ function DebtForm({ transactions = [], income = [], onAdd, onAddIncome, onSaved,
         </div>
       )}
       <AmountField value={amount} onChange={setAmount} tone={meta.tone} onEnter={save} />
+      <AccountPicker id="debt-acct" label={moneyIn ? 'Received in' : 'Paid from'} value={acct} onChange={moneyIn ? setAcctIn : setAcctOut} settings={settings} />
       <TextField id="debt-note" Icon={StickyNote} value={note} onChange={setNote} onEnter={save} placeholder={move === 'borrowed' ? tr("What’s it for? — e.g. bike repair") : tr("Note (optional) — e.g. for the bike repair")} />
       {move === 'borrowed' && (
         <div id="debt-check" style={{ margin: '-2px 0 12px' }}>
@@ -553,6 +567,7 @@ function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
   const goal = goals.find((g) => g.id === goalId);
   const [heldWith, setHeldWith] = useState(goal?.heldWith ?? '');
   const [dateInput, setDateInput] = useState(startDate);
+  const [acct, setAcct] = useAccountChoice('savings');
   const st = getSavingsType(savingsType);
   const finalName = name.trim() || (goal ? goal.name : st.label);
   const can = amountOk(amount);
@@ -567,11 +582,12 @@ function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
   function save() {
     if (!can) return;
     const entry = {
-      id: generateId(), type: 'savings', name: finalName, amount: Number(amount), currency, savingsType, ...stamp(dateInput),
+      id: generateId(), type: 'savings', name: finalName, amount: Number(amount), currency, savingsType, ...accountFields(acct, settings), ...stamp(dateInput),
       ...(st.hasPlatform && platform.trim() ? { platform: platform.trim() } : {}),
       ...(goalId ? { goalId } : {}),
       ...(heldWith.trim() ? { heldWith: heldWith.trim() } : {}),
     };
+    rememberAccount('savings', acct);
     onAdd(entry);
     onSaved(entry);
   }
@@ -580,6 +596,7 @@ function SavingsForm({ settings, onAdd, onSaved, startDate, initialGoal }) {
     <div className="add-form add-form-savings">
       <TextField id="savings-name" first value={name} onChange={setName} onEnter={() => document.getElementById('add-amount')?.focus()} placeholder={goal ? `${goal.name} (optional name)` : tr("What for? (optional) — e.g. Nifty 50 SIP")} />
       <AmountField value={amount} onChange={setAmount} tone="savings" onEnter={save} />
+      <AccountPicker id="savings-acct" label="Paid from" value={acct} onChange={setAcct} settings={settings} />
       <Choice idPrefix="savings-type" value={savingsType} onChange={setSavingsType} tone="savings"
         options={SAVINGS_CHOICES.map((s) => ({ key: s.key, label: s.label }))} />
       <p id="savings-cash-hint" style={{ fontSize: 11, color: 'var(--text-muted)', margin: '-4px 2px 12px', lineHeight: 1.5 }}>

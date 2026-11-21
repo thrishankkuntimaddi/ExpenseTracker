@@ -13,6 +13,9 @@ import ConfirmDeleteModal from './ConfirmDeleteModal';
 import CategoryPicker from './CategoryPicker';
 import Portal from './Portal';
 import { useEscape } from '../hooks/useEscape';
+import AccountPicker from './AccountPicker';
+import { useShell } from '../app/shellContext';
+import { accountOf, applyAccount, cashAccountId } from '../utils/accounts';
 
 import { t as tr } from '../i18n';
 export default function EditTransactionModal({ txn, onSave, onDelete, onClose, categoryRules = {}, onLearnCategory }) {
@@ -30,9 +33,11 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
   const [savingsType, setSavingsType] = useState(txn.savingsType ?? 'cash');
   const [platform, setPlatform]   = useState(txn.platform ?? '');
   const [waste, setWaste]         = useState(raw.wasteAmount > 0 ? String(raw.wasteAmount) : '');   // how much of it was wasted
-  const [paidCash, setPaidCash]   = useState(txn.paidWith === 'cash');
-  const isWithdrawal = txn.type === 'cash';     // cash taken out of the account: only name, amount, date
-  const canPayCash = type === 'expense' || (type === 'person' && direction === 'given_gift');
+  const settings = useShell()?.settings;
+  const [acct, setAcct]           = useState(() => accountOf(txn, settings));
+  const isWithdrawal = txn.type === 'cash';     // money moved between your accounts: name, amount, date, from → to
+  const [toAcct, setToAcct]       = useState(() => txn.toAccountId ?? cashAccountId(settings));
+  const moneyIn = type === 'person' && (direction === 'borrowed' || direction === 'repayment');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const sel     = TRANSACTION_TYPES.find(t => t.key === type) ?? TRANSACTION_TYPES[0];
@@ -56,7 +61,9 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
       month:   isoToMonth(isoDate),
     };
     if (type === 'person')   updated.direction = direction;
-    if (canPayCash && paidCash) updated.paidWith = 'cash'; else delete updated.paidWith;
+    Object.assign(updated, applyAccount({}, acct, settings));
+    if (!updated.paidWith) delete updated.paidWith;
+    if (isWithdrawal) { delete updated.paidWith; if (toAcct) updated.toAccountId = toAcct; }
     if (type === 'expense') {
       updated.category = effectiveCategory;
       if (categoryTouched) onLearnCategory?.(updated.name, effectiveCategory);
@@ -247,18 +254,11 @@ export default function EditTransactionModal({ txn, onSave, onDelete, onClose, c
               </div>
             )}
 
-            {/* Paid with — cash spent in shops comes out of "cash in hand" */}
-            {canPayCash && (
-              <div role="radiogroup" aria-label={tr("Paid with")} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginRight: 2 }}>{tr("Paid with")}</span>
-                {[[false, 'UPI / card'], [true, 'Cash']].map(([cash, label]) => (
-                  <button key={label} type="button" role="radio" aria-checked={paidCash === cash} id={`edit-paid-${cash ? 'cash' : 'account'}`} onClick={() => setPaidCash(cash)}
-                    style={{ padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1.5px solid ${paidCash === cash ? 'var(--accent)' : 'var(--border)'}`, background: paidCash === cash ? 'var(--accent-bg)' : 'transparent', color: paidCash === cash ? 'var(--accent)' : 'var(--text-secondary)' }}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Which account it came out of / went into */}
+            <div style={{ marginBottom: 10 }}>
+              <AccountPicker id="edit-acct" label={isWithdrawal ? 'From' : moneyIn ? 'Received in' : 'Paid from'} value={acct} onChange={setAcct} settings={settings} exclude={isWithdrawal ? toAcct : undefined} />
+              {isWithdrawal && <AccountPicker id="edit-acct-to" label="To" value={toAcct} onChange={setToAcct} settings={settings} exclude={acct} />}
+            </div>
 
             {/* Date */}
             <div style={{ position: 'relative', marginBottom: 16 }}>

@@ -547,3 +547,38 @@ describe('auth screen', async () => {
     expect(render(<AuthScreen {...props} error="Wrong email or password." />)).toContain('Wrong email or password.');
   });
 });
+
+describe('accounts', async () => {
+  const { default: AccountsPage } = await import('../features/accounts/AccountsPage');
+  const { default: AccountModal } = await import('../features/accounts/AccountModal');
+  const { default: AddSheet } = await import('../components/AddSheet');
+  const { ShellContext } = await import('../app/shellContext');
+  const multi = {
+    ...settings,
+    accounts: [
+      { id: 'sbi', name: 'SBI', bank: 'SBI', kind: 'bank', tag: 'Savings', color: 1, opening: 40000, openingDate: '2026-01-01' },
+      { id: 'hdfc', name: 'HDFC', bank: 'HDFC', last4: '0098', kind: 'bank', tag: 'Salary', color: 2, opening: 10000, openingDate: '2026-01-01' },
+      { id: 'cash', name: 'Cash', kind: 'cash', color: 3, opening: 500, openingDate: '2026-01-01' },
+      { id: 'card', name: 'Millennia', kind: 'card', color: 4, opening: -2000, openingDate: '2026-01-01', limit: 50000 },
+    ],
+    accountsLegacy: 'sbi',
+  };
+  it('the page: starter accounts before set-up, every group after', () => {
+    const before = render(<AccountsPage {...common} onAddTransaction={noop} />);
+    expect(before).toContain('id="accounts-starter"');
+    expect(before).toContain('Bank · UPI');
+    const after = render(<AccountsPage {...common} settings={multi} onAddTransaction={noop} />);
+    expect(after).not.toContain('id="accounts-starter"');
+    for (const s of ['Bank accounts', 'Credit cards', 'Salary', 'Cards due', 'id="acct-row-hdfc"']) expect(after).toContain(s);
+  });
+  it('the editor and every Add form offer accounts', () => {
+    expect(render(<AccountModal account={null} onSave={noop} onClose={noop} />)).toContain('id="acct-tag-Salary"');
+    const shell = { goTo: noop, settings: multi, month: month(iso(0)) };
+    const debt = render(<ShellContext.Provider value={shell}><AddSheet {...common} settings={multi} initialKind="debt" options={{ move: 'got_back' }} onAdd={noop} onAddIncome={noop} onClose={noop} /></ShellContext.Provider>);
+    expect(debt).toContain('Received in');
+    expect(debt).toContain('id="debt-acct-cash"');           // got it back in cash
+    for (const kind of ['expense', 'income', 'savings']) {
+      expect(render(<ShellContext.Provider value={shell}><AddSheet {...common} settings={multi} initialKind={kind} onAdd={noop} onAddIncome={noop} onClose={noop} /></ShellContext.Provider>), kind).toContain('-hdfc"');
+    }
+  });
+});

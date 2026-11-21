@@ -10,6 +10,9 @@ import { isoToDateInput, dateInputToISO, isoToMonth } from '../utils/dateHelpers
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 import Portal from './Portal';
 import { useEscape } from '../hooks/useEscape';
+import AccountPicker from './AccountPicker';
+import { useShell } from '../app/shellContext';
+import { accountOf, applyAccount } from '../utils/accounts';
 
 import { t as tr } from '../i18n';
 export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
@@ -21,6 +24,8 @@ export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
   const [currency, setCurrency]   = useState(currencyOf(raw));
   const [dateInput, setDateInput] = useState(isoToDateInput(entry.date));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const settings = useShell()?.settings;
+  const [acct, setAcct] = useState(() => accountOf(entry, settings));
 
   const amtNum  = parseFloat(amount);
   const canSave = name.trim() && !isNaN(amtNum) && amtNum > 0 && dateInput;
@@ -29,7 +34,7 @@ export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
     if (!canSave) return;
     const isoDate = dateInputToISO(dateInput);
     const { fx, ...base } = raw;
-    onSave({ ...base, ...(currency === currencyOf(raw) && fx ? { fx } : {}), name: name.trim(), amount: amtNum, currency, date: isoDate, month: isoToMonth(isoDate) });
+    onSave({ ...applyAccount(base, acct, settings), ...(currency === currencyOf(raw) && fx ? { fx } : {}), name: name.trim(), amount: amtNum, currency, date: isoDate, month: isoToMonth(isoDate) });
     onClose();
   }
 
@@ -102,6 +107,10 @@ export default function EditIncomeModal({ entry, onSave, onDelete, onClose }) {
                 onFocus={e => e.target.style.borderColor = 'var(--income)'}
                 onBlur={e => e.target.style.borderColor = 'var(--input-border)'}
               />
+            </div>
+
+            <div style={{ marginBottom: 10 }}>
+              <AccountPicker id="edit-income-acct" label="Received in" value={acct} onChange={setAcct} settings={settings} />
             </div>
 
             {/* Date */}

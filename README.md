@@ -101,10 +101,18 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 - **Quick entry**: type `chai 20` or `250 swiggy` and press Enter — the name and amount are split and saved. **Several at once** works too: `coffee 250 water 50 tea 150` saves three expenses, each with its own category. A currency written with the amount is picked up: `coffee $4.50`, `taxi 30 AED`, `€12 museum`, `lunch 400rs`
 - **History** — every entry of the month, money in *and* out, one compact row each: what it was for, the amount (**+ green** for money in, **− red** for money out), its kind (Income, Expense, Borrowed, Lent, Got back, Paid back, Savings…), category, status (debts stay *Open* until settled) and edit / delete. Only the most recent day starts open (tap a day, or *Expand all*, for the rest). Search this month or all months; filter by kind or category. History sits at the far right of the phone bar
 - **Money in** (formerly *Income*) — everything that reached your account: what you earned, what you borrowed and what was paid back to you, with *Earned* shown on its own
-- **Cash** — taking cash out isn't saving or spending: *Expense → Withdrew cash* moves it from your account to your wallet. Pay with it by picking **Paid with: Cash** on an expense; Home shows **cash in hand** (withdrawn − paid in cash) once you use it. Savings no longer offers "Cash Savings" (older entries read *Cash kept aside*)
+- **Cash** — taking cash out isn't saving or spending: *Expense → Withdrew cash* moves it from your account to your wallet. Pay with it by picking **Paid from: Cash** on any entry — and *Received in: Cash* when cash comes back to you; Cash is one of your **Accounts**, so its balance counts every rupee in and out. Savings no longer offers "Cash Savings" (older entries read *Cash kept aside*)
 - **App tour** — runs once for a new account; start it again any time from Profile → Help. Every page has a **?** at the top with a short guide to that page
 - **Load past data**: paste a month of old entries, one per line (`5 groceries 450`)
 - Every write is optimistic and rolls back with a clear message if the server refuses it
+
+### 🏦 Accounts — every bank, your cash, your cards (4.5)
+- **Accounts** page (Home → Explore): add every bank you use — SBI, HDFC, Canara, Indian Bank… with the last 4 digits, a colour and **what it's for** (*Salary*, *Savings*, *Expenses*, *Bills*, *Business*, *Joint*, *Emergency* or your own word) — plus **cash** and **credit cards** (what's due, the limit, what's left). The total across everything sits on top, with banks, cash and cards due under it
+- **Real balances**: enter what the bank app shows today; from then on every entry moves it. *Edit · set balance* re-matches it to the bank any time. Tap an account for its entries
+- **Every entry picks an account** — *Paid from* on expenses, savings, lending and paying back; *Received in* on income, borrowing and money paid back to you. So "lent by PhonePe, got it back in cash" is two taps. Your default (★) is pre-picked, and each form remembers what you used last
+- **Move money** between your own accounts — SBI → HDFC, an ATM withdrawal, a cash deposit, paying the card bill. It isn't spending or income, so budgets and stats don't count it
+- **Home** shows every account's balance under the month card; **Stats** draws one line per kind (banks · cash · cards) or per account, in each account's colour, over 1M–All; **Net worth** lists each account and each card's due
+- Older entries need nothing: until you set accounts up they're split into *Bank · UPI* and *Cash* from today's balance (cash-marked entries on Cash), and stay on the account you set up first. Change any one by editing it (`src/utils/accounts.js`)
 
 ### 💱 Currencies
 - Show money in any of **48 currencies** (Profile → Currency): rupee, dollar, euro, pound, dirham, riyal, Kuwaiti dinar, yuan, Taiwan dollar, dong, yen, Singapore dollar and more
