@@ -409,7 +409,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finish
     toast: setToastMsg,
     attention: sync.error != null,
     month: viewMonth, setMonth: setViewMonth,
-    settings, patchSettings,
+    settings, patchSettings, settingsLoaded,
   };
   // Bar: Home · slot 1 · "+" · slot 2 · slot 3
   const barItems = [

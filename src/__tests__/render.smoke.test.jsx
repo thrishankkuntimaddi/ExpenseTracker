@@ -594,3 +594,15 @@ describe('Admin sees → Insights', () => {
     for (const s of ['Set up accounts', '1 of 2', 'newest 4.5.3', 'Settings look wiped', 'b@x.com', 'save: settings · unavailable']) expect(html).toContain(s);
   });
 });
+
+describe('reset note on Home', async () => {
+  const { default: WipeNote } = await import('../components/WipeNote');
+  const { ShellContext } = await import('../app/shellContext');
+  const wrap = (shell, el) => render(<ShellContext.Provider value={shell}>{el}</ShellContext.Provider>);
+  it('shows once settings have loaded, for an emptied account with history', () => {
+    const el = <WipeNote settings={{ looksIntro: { seen: 1 } }} entryCount={120} onPatchSettings={noop} />;
+    expect(wrap({ settingsLoaded: true, user: {} }, el)).toContain('id="wipe-note"');
+    expect(wrap({ settingsLoaded: false, user: {} }, el)).toBe('');                // never before they load
+    expect(wrap({ settingsLoaded: true, user: {} }, <WipeNote settings={settings} entryCount={120} onPatchSettings={noop} />)).toBe('');
+  });
+});

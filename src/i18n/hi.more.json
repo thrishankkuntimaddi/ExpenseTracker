@@ -1233,5 +1233,8 @@
 "Banks, cash and cards — what’s in each": "बैंक, नकद और कार्ड — हर एक में कितना",
 "Accounts · where your money sits": "खाते · आपका पैसा कहाँ है",
 "Use for new entries by default": "नई एंट्री के लिए यही चुनें",
-"Have more than one bank?": "एक से ज़्यादा बैंक हैं?"
+"Have more than one bank?": "एक से ज़्यादा बैंक हैं?",
+"Some of your settings were reset": "आपकी कुछ सेटिंग्स रीसेट हो गईं",
+"A bug on 21 Nov could reset settings when the app opened — it’s fixed. Your entries are safe. Please check your budget, goals, accounts and layout, and set anything that’s missing again.": "21 नवंबर की एक गड़बड़ी से ऐप खुलते समय सेटिंग्स रीसेट हो सकती थीं — इसे ठीक कर दिया गया है। आपकी एंट्री सुरक्षित हैं। कृपया अपना बजट, लक्ष्य, खाते और लेआउट देख लें, और जो छूट गया हो उसे फिर से सेट करें।",
+"Got it": "ठीक है"
 }

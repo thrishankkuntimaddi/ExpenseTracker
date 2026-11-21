@@ -37,6 +37,8 @@ import { usePaymentCapture } from '../../hooks/usePaymentCapture';
 import CapturedPaymentsCard from '../capture/CapturedPaymentsCard';
 import { useUnslop } from '../../utils/unslop';
 import LooksIntro from '../../components/LooksIntro';
+import WipeNote from '../../components/WipeNote';
+import { wipeNoteDue } from '../../utils/wipeNote';
 
 import { t as tr } from '../../i18n';
 const linkBtn = { padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
@@ -466,7 +468,8 @@ export default function TodayTab(props) {
       </div>
 
       <div className={`home-body${shell?.desktop ? ' home-fit' : ''}`} style={{ flex: 1, overflow: 'auto', padding: '14px 16px 20px' }}>
-        <LooksIntro user={props.user} settings={settings} onPatchSettings={props.onPatchSettings} />
+        <WipeNote settings={settings} entryCount={transactions.length + income.length} onPatchSettings={props.onPatchSettings} />
+        {!(shell?.settingsLoaded && wipeNoteDue(settings, transactions.length + income.length, todayKey)) && <LooksIntro user={props.user} settings={settings} onPatchSettings={props.onPatchSettings} />}
         <CapturedPaymentsCard capture={capture} rules={categoryRules} />
         {shell?.desktop ? (
           // Wide screens, one screen, no scrolling: what you do (overview, entry)
