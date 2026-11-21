@@ -3,7 +3,7 @@ import {
   Download, Upload, Trash2, Info,
   ChevronRight, Moon, Sun, Monitor, FileSpreadsheet,
   Database, Palette, LogOut, RotateCcw, Smartphone, ArrowRightLeft, KeyRound, MailCheck,
-  Cloud, CloudOff, RefreshCw, AlertTriangle, Laptop, X, UserX, Eraser,
+  Cloud, CloudOff, RefreshCw, AlertTriangle, Laptop, X, UserX, Eraser, Wallet,
 } from 'lucide-react';
 import { deleteAllUserData, bulkImport, exportAllUserData, restoreBackup } from '../../services/firestore';
 import DeleteAccountModal from './DeleteAccountModal';
@@ -25,6 +25,7 @@ import { Section, Group } from './SettingsGroup';
 import CarryForwardGroup from './CarryForwardGroup';
 
 import { t as tr } from '../../i18n';
+import { useUnslop } from '../../utils/unslop';
 export default function SettingsTab({
   themePref = 'light', onThemePrefChange, onSignOut,
   settings, theme, user,
@@ -42,6 +43,7 @@ export default function SettingsTab({
   dataTop = null,     // Profile adds its own rows to Your data (auto-capture, bank link …)
   dataExtra = null,   // … and Drive backup
 }) {
+  const notebook = useUnslop();   // Unslop / Unsloped look: the About icon is a drawn tile, not the PNG
   const [feedback, setFeedback]       = useState(null);
   const [importing, setImporting]     = useState(false);
   const [exporting, setExporting]     = useState(false);
@@ -318,11 +320,18 @@ export default function SettingsTab({
 
             {/* About */}
             <div id="about-app" className="settings-group" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img
-                src={import.meta.env.BASE_URL + 'icon-192.png'}
-                alt="Expense Tracker Logo"
-                style={{ width: 38, height: 38, borderRadius: 10, objectFit: 'cover' }}
-              />
+              {notebook ? (
+                // the notebook looks can't recolour a picture: draw the mark like every other row's icon
+                <div className="settings-icon" role="img" aria-label="Expense Tracker Logo" style={{ width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Wallet size={17} />
+                </div>
+              ) : (
+                <img
+                  src={import.meta.env.BASE_URL + 'icon-192.png'}
+                  alt="Expense Tracker Logo"
+                  style={{ width: 38, height: 38, borderRadius: 10, objectFit: 'cover' }}
+                />
+              )}
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{tr("Expense Tracker v")}{import.meta.env.VITE_APP_VERSION}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{SHELL_LABEL[platform] ?? tr("App")} {tr("· build")} {new Date(THIS_BUILD * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {import.meta.env.VITE_APP_COMMIT}</div>

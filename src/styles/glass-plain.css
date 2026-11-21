@@ -1,0 +1,48 @@
+/* ══════════════════════════════════════════════════════════════════
+   GLASS · BACKGROUND COLOUR OFF — Profile → Appearance → Background colour
+
+   The Liquid Glass look with nothing tinted behind it: no colour field,
+   just pure white (light) or pure black (dark) under the glass, like macOS
+   Control Center. The glass itself — rim light, bevel, frost — stays; only
+   its fill is tuned so tiles still read against a plain backdrop.
+
+   Scoped to <html data-glass-plain> on the Glass look only (src/utils/
+   unslop.js). In its own cascade layer, so its !important rules beat the
+   unlayered glass ones; with the colour on, none of this applies.
+══════════════════════════════════════════════════════════════════ */
+
+@layer glassplain {
+
+:root[data-glass-plain]:not([data-unslop]) {
+  --lg-wall-1: transparent !important; --lg-wall-2: transparent !important;
+  --lg-wall-3: transparent !important; --lg-wall-4: transparent !important;
+  --lg-wall-base: #FFFFFF !important;
+  /* on white, clear glass would vanish: a faint grey pane with a crisp edge */
+  --lg-bg-regular: rgba(242, 242, 247, 0.72) !important;
+  --glass-fill: rgba(242, 242, 247, 0.72) !important;
+  --glass-bar: rgba(246, 246, 248, 0.78) !important;
+  --lens-tile: rgba(242, 242, 247, 0.8) !important;
+  --lens-ctl: rgba(120, 120, 128, 0.12) !important;
+  --lens-bar: rgba(255, 255, 255, 0.72) !important;
+  --lens-dense: rgba(250, 250, 252, 0.92) !important;
+  --lens-out: rgba(0, 0, 0, 0.08) !important;
+  --lens-hover: rgba(232, 232, 237, 0.9) !important;
+  --lens-press: rgba(222, 222, 228, 0.95) !important;
+}
+:root[data-glass-plain][data-theme="monoflow"]:not([data-unslop]) {
+  --lg-wall-base: #000000 !important;
+  --lg-bg-regular: rgba(44, 44, 46, 0.6) !important;
+  --glass-fill: rgba(44, 44, 46, 0.6) !important;
+  --glass-bar: rgba(30, 30, 32, 0.72) !important;
+  --lens-tile: rgba(255, 255, 255, 0.08) !important;
+  --lens-ctl: rgba(255, 255, 255, 0.12) !important;
+  --lens-bar: rgba(30, 30, 32, 0.6) !important;
+  --lens-dense: rgba(30, 30, 32, 0.9) !important;
+  --lens-out: rgba(255, 255, 255, 0.06) !important;
+  --lens-hover: rgba(255, 255, 255, 0.12) !important;
+  --lens-press: rgba(255, 255, 255, 0.16) !important;
+}
+:root[data-glass-plain]:not([data-unslop]) body::before { display: none !important; }
+:root[data-glass-plain]:not([data-unslop]) .home-hero { --lg-hero-fill: var(--lens-tile) !important; }
+
+} /* @layer glassplain */

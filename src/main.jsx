@@ -6,7 +6,9 @@ import './styles/layout.css'
 import './motion/motion.css'
 import './styles/liquid.css'
 import './styles/lens.css'
-import './styles/unslop.css'   // Profile → Appearance → Unslop; inert unless <html data-unslop>
+import './styles/unslop.css'     // Profile → Appearance → Look; inert unless <html data-unslop>
+import './styles/unsloped.css'   // …→ Unsloped, on top of unslop.css; inert unless <html data-unsloped>
+import './styles/glass-plain.css' // Glass with its background colour off; inert unless <html data-glass-plain>
 import { startGlassChrome } from './app/glassChrome.js'
 import { applyUnslop } from './utils/unslop.js'
 import App from './app/App.jsx'

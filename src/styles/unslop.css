@@ -1,52 +1,67 @@
 /* ══════════════════════════════════════════════════════════════════
-   UNSLOP — the quiet, solid look (Profile → Appearance → Unslop)
+   UNSLOP — Profile → Appearance → Look: Glass | Unslop
 
-   A layer over the Liquid Glass UI, never a replacement: every rule here
-   is scoped to <html data-unslop="on"> (src/utils/unslop.js). Switch it
-   off and not one of these rules matches — the glass is exactly as it was.
+   Made with the unslop method by Damir Sokolovsky (@heydamir) —
+   github.com/heydamir/unslop, CC BY 4.0. Audit → direction → nine passes
+   (spacing, colour, icons, copy, type, layout, details, visuals, motion).
 
-   What it takes away                     What it puts in its place
-   • the four-colour blob wallpaper        a plain, warm-neutral canvas
-   • bevels, rim light, inner glow,        solid surfaces, one hairline edge,
-     frost on every card                   a shadow only where something floats
-   • a colour per tile, gradient fills     one ink accent; colour only where it
-                                           means money in / out / a category
-   • ALL-CAPS tracked micro labels         sentence case, readable sizes
-   • one card per history entry with a     grouped lists with inset dividers
-     colour edge and two-colour metadata   and quiet metadata
-   • the floating capsule dock + orb       a flush bar, a solid ink "+" button
-   • 26–34px radii everywhere              18 for panels, 16 for tiles, 20 for sheets
-   • springy overshoot, hover lift, tilt   short ease-out presses, nothing else
+   Direction
+   • Product    A daily money diary for people in India — what they spend,
+                earn, owe and pay, logged on the phone in rupees, line by line.
+   • Character  exact, homely, unhurried
+   • World      the household hisaab notebook (bahi-khata): ruled paper,
+                blue ballpoint ink, a sum closed off at the foot of the page
+   • Moments    1. the month card on Home — the month's total set like a
+                   ledger figure on ruled paper, the budget a line of ink
+                2. the balance chart on Stats — one blue-ink line on ruled paper
+   • Signature  the accountant's double rule under totals (month spent, the
+                headline figures, each day's total) — totals only
+
+   A layer, never a replacement: every rule is scoped to
+   <html data-unslop="on"> (src/utils/unslop.js). Off, not one rule matches
+   and the Liquid Glass UI is exactly as it was.
 
    Why a cascade layer: the glass files use !important with stacked
    specificity (:root:root …, ids, attribute selectors). An !important
    declaration inside a layer beats every unlayered !important one,
-   whatever its specificity — so these rules win without touching the
-   glass files, and without a specificity arms race. A browser that
-   doesn't know @layer drops the whole block: the app stays on glass.
+   whatever its specificity, so these rules win without touching the glass
+   files. A browser that doesn't know @layer drops the block: glass stays.
+   Broad lists use :where() (no weight) so the specific rules below them win.
 ══════════════════════════════════════════════════════════════════ */
+
+/* Layer order. For !important declarations the FIRST layer wins, so
+   unsloped (styles/unsloped.css) is named first: its rules beat these. */
+@layer unsloped, unslop;
 
 @layer unslop {
 
-/* ── Tokens: Light ──────────────────────────────────────────────── */
+/* ══ 2 · COLOUR — tokens ════════════════════════════════════════
+   Surfaces near-neutral with a paper warmth; the world shows in the
+   blue-ink accent, the ruled moments and the double rule, not the chrome. */
 :root[data-unslop] {
-  --us-canvas:  #F4F4F2;
-  --us-surface: #FFFFFF;
-  --us-sunken:  #EBEBE8;                      /* wells, tracks, icon tiles */
-  --us-sunken-2:#F0F0EE;
-  --us-line:    rgba(20, 20, 18, 0.08);       /* the one hairline */
-  --us-line-2:  rgba(20, 20, 18, 0.15);
-  --us-ink:     #141413;
-  --us-ink-2:   rgba(20, 20, 19, 0.64);
-  --us-ink-3:   rgba(20, 20, 19, 0.44);
-  --us-on-ink:  #FFFFFF;
-  --us-hover:   color-mix(in srgb, var(--us-surface), var(--us-ink) 3%);
-  --us-press:   color-mix(in srgb, var(--us-surface), var(--us-ink) 7%);
-  --us-ring:    0 0 0 1px var(--us-line);
-  --us-rest:    0 1px 2px rgba(20, 20, 18, 0.04);
-  --us-float:   0 10px 30px -12px rgba(20, 20, 18, 0.22), 0 0 0 1px var(--us-line);
-  --us-sheet:   0 -1px 0 var(--us-line), 0 24px 60px -18px rgba(20, 20, 18, 0.30);
-  --us-ease:    cubic-bezier(0.2, 0.8, 0.2, 1);   /* no overshoot */
+  --us-canvas:   #F7F5F0;
+  --us-surface:  #FDFCF9;
+  --us-sunken:   #EFEAE1;                       /* wells, tracks, active rows */
+  --us-sunken-2: #F3F0E9;
+  --us-line:     rgba(31, 27, 22, 0.08);        /* the one hairline */
+  --us-line-2:   rgba(31, 27, 22, 0.15);
+  --us-ink:      #1F1B16;                       /* primary text */
+  --us-ink-2:    #5E554A;                       /* secondary */
+  --us-ink-3:    #7B7266;                       /* muted, meta, icons */
+  --us-accent:   #2A4BB0;                       /* blue ballpoint ink */
+  --us-accent-bg: rgba(42, 75, 176, 0.08);
+  --us-primary:  #2A4BB0;                       /* the primary action */
+  --us-on-primary: #FFFFFF;
+  --us-rule:     rgba(42, 75, 176, 0.075);      /* notebook ruling */
+  --us-hover:    color-mix(in srgb, var(--us-surface), var(--us-ink) 3%);
+  --us-press:    color-mix(in srgb, var(--us-surface), var(--us-ink) 6%);
+  --us-ring:     0 0 0 1px var(--us-line);
+  --us-rest:     0 1px 2px rgba(31, 27, 22, 0.05);
+  --us-float:    0 8px 24px rgba(31, 27, 22, 0.08), 0 0 0 1px var(--us-line);
+  --us-sheet:    0 -1px 0 var(--us-line), 0 24px 60px -18px rgba(31, 27, 22, 0.28);
+  --us-ease:     cubic-bezier(0.22, 1, 0.36, 1);
+  --us-sans:  "Instrument Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  --us-serif: "Newsreader", "Iowan Old Style", Georgia, "Noto Serif", serif;
 
   /* app tokens */
   --bg: var(--us-canvas) !important;
@@ -57,7 +72,7 @@
   --glass-bg: var(--us-surface) !important;
   --glass-fill: var(--us-surface) !important;
   --glass-fill-dense: var(--us-surface) !important;
-  --glass-bar: color-mix(in srgb, var(--us-canvas) 86%, transparent) !important;
+  --glass-bar: color-mix(in srgb, var(--us-canvas) 88%, transparent) !important;
   --nav-bg: var(--us-surface) !important;
   --nav-border: var(--us-line) !important;
   --tooltip-bg: var(--us-surface) !important;
@@ -75,31 +90,31 @@
   --border: var(--us-line) !important;
   --border-dark: var(--us-line-2) !important;
 
-  --accent: var(--us-ink) !important;
-  --accent-hover: #000000 !important;
-  --accent-bg: rgba(20, 20, 19, 0.06) !important;
-  --accent-border: var(--us-line-2) !important;
+  --accent: var(--us-accent) !important;
+  --accent-hover: #213C8F !important;
+  --accent-bg: var(--us-accent-bg) !important;
+  --accent-border: rgba(42, 75, 176, 0.24) !important;
 
-  /* meaning colours: the same hues, calmer — less neon, more ink */
-  --income: #1A7F45 !important;  --income-bg: rgba(26, 127, 69, 0.08) !important;  --income-border: rgba(26, 127, 69, 0.22) !important;
-  --expense: #C2392E !important; --expense-bg: rgba(194, 57, 46, 0.07) !important; --expense-border: rgba(194, 57, 46, 0.22) !important;
-  --savings: #2F5FC4 !important; --savings-bg: rgba(47, 95, 196, 0.08) !important; --savings-border: rgba(47, 95, 196, 0.22) !important;
-  --lent: #A15E0B !important;    --lent-bg: rgba(161, 94, 11, 0.08) !important;    --lent-border: rgba(161, 94, 11, 0.22) !important;
-  --person: #A15E0B !important;  --person-bg: rgba(161, 94, 11, 0.08) !important;  --person-border: rgba(161, 94, 11, 0.22) !important;
-  --borrowed: #7A4BC1 !important; --borrowed-bg: rgba(122, 75, 193, 0.08) !important; --borrowed-border: rgba(122, 75, 193, 0.22) !important;
-  --external: #7A4BC1 !important; --external-bg: rgba(122, 75, 193, 0.08) !important; --external-border: rgba(122, 75, 193, 0.22) !important;
-  --repayment-rec: #0E7A8C !important; --repayment-rec-bg: rgba(14, 122, 140, 0.08) !important; --repayment-rec-border: rgba(14, 122, 140, 0.22) !important;
-  --given: #5550C2 !important;   --given-bg: rgba(85, 80, 194, 0.08) !important;   --given-border: rgba(85, 80, 194, 0.22) !important;
-  --waste: #B5531B !important;   --waste-bg: rgba(181, 83, 27, 0.08) !important;
-  --heat-rgb: 194, 57, 46 !important;
+  /* meaning colours, toned to sit in the paper: in, out, and the rest */
+  --income: #1E7B45 !important;  --income-bg: rgba(30, 123, 69, 0.08) !important;  --income-border: rgba(30, 123, 69, 0.22) !important;
+  --expense: #C4362C !important; --expense-bg: rgba(196, 54, 44, 0.07) !important; --expense-border: rgba(196, 54, 44, 0.22) !important;
+  --savings: #2F6E8A !important; --savings-bg: rgba(47, 110, 138, 0.08) !important; --savings-border: rgba(47, 110, 138, 0.22) !important;
+  --lent: #9A5B12 !important;    --lent-bg: rgba(154, 91, 18, 0.08) !important;    --lent-border: rgba(154, 91, 18, 0.22) !important;
+  --person: #9A5B12 !important;  --person-bg: rgba(154, 91, 18, 0.08) !important;  --person-border: rgba(154, 91, 18, 0.22) !important;
+  --borrowed: #74508F !important; --borrowed-bg: rgba(116, 80, 143, 0.08) !important; --borrowed-border: rgba(116, 80, 143, 0.22) !important;
+  --external: #74508F !important; --external-bg: rgba(116, 80, 143, 0.08) !important; --external-border: rgba(116, 80, 143, 0.22) !important;
+  --repayment-rec: #2C7A7B !important; --repayment-rec-bg: rgba(44, 122, 123, 0.08) !important; --repayment-rec-border: rgba(44, 122, 123, 0.22) !important;
+  --given: #5B5596 !important;   --given-bg: rgba(91, 85, 150, 0.08) !important;   --given-border: rgba(91, 85, 150, 0.22) !important;
+  --waste: #A8551C !important;   --waste-bg: rgba(168, 85, 28, 0.08) !important;
+  --heat-rgb: 196, 54, 44 !important;
   --toast-bg: var(--us-ink) !important;
-  --toast-text: var(--us-on-ink) !important;
+  --toast-text: var(--us-canvas) !important;
 
   --shadow-sm: var(--us-rest) !important;
   --shadow: var(--us-rest) !important;
   --shadow-md: var(--us-float) !important;
 
-  /* Liquid Glass optics → off: same rules, solid material */
+  /* Liquid Glass optics → off: the same rules now draw solid paper */
   --lg-wall-1: transparent !important; --lg-wall-2: transparent !important;
   --lg-wall-3: transparent !important; --lg-wall-4: transparent !important;
   --lg-wall-base: var(--us-canvas) !important;
@@ -121,14 +136,16 @@
   --lg-lens-specular-sm: var(--us-rest) !important;
   --lg-lens-blur-regular: none !important;
   --lg-lens-blur-clear: none !important;
-  --lg-radius-panel: 18px !important;
+  --lg-radius-panel: 14px !important;
+  --lg-radius-bar: 0px !important;
+  --lg-radius-pill: 10px !important;
   --lg-icon-glow: none !important;
 
   --lens-tile: var(--us-surface) !important;
-  --lens-bar: color-mix(in srgb, var(--us-canvas) 84%, transparent) !important;
+  --lens-bar: color-mix(in srgb, var(--us-canvas) 88%, transparent) !important;
   --lens-ctl: var(--us-surface) !important;
   --lens-dense: var(--us-surface) !important;
-  --lens-frost: blur(20px) saturate(160%) !important;
+  --lens-frost: blur(16px) saturate(140%) !important;
   --lens-frost-dense: none !important;
   --lens-bevel: var(--us-ring) !important;
   --lens-bevel-sm: var(--us-ring) !important;
@@ -137,76 +154,128 @@
   --lens-press: var(--us-press) !important;
 }
 
-/* ── Tokens: Dark ───────────────────────────────────────────────── */
+/* Dark: the warm ramp — a notebook read by lamplight */
 :root[data-unslop][data-theme="monoflow"] {
-  --us-canvas:  #0C0C0D;
-  --us-surface: #161618;
-  --us-sunken:  #222225;
-  --us-sunken-2:#1C1C1F;
-  --us-line:    rgba(255, 255, 255, 0.075);
-  --us-line-2:  rgba(255, 255, 255, 0.14);
-  --us-ink:     #EDEDEC;
-  --us-ink-2:   rgba(237, 237, 236, 0.64);
-  --us-ink-3:   rgba(237, 237, 236, 0.42);
-  --us-on-ink:  #0C0C0D;
-  --us-hover:   color-mix(in srgb, var(--us-surface), #FFFFFF 3%);
-  --us-press:   color-mix(in srgb, var(--us-surface), #FFFFFF 7%);
-  --us-rest:    0 0 0 0 transparent;
-  --us-float:   0 14px 36px -14px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--us-line);
-  --us-sheet:   0 -1px 0 var(--us-line), 0 24px 60px -18px rgba(0, 0, 0, 0.8);
+  --us-canvas:   #161513;
+  --us-surface:  #1C1A18;
+  --us-sunken:   #282623;
+  --us-sunken-2: #22201D;
+  --us-line:     rgba(239, 233, 222, 0.08);
+  --us-line-2:   rgba(239, 233, 222, 0.15);
+  --us-ink:      #EFE9DE;
+  --us-ink-2:    #AAA398;
+  --us-ink-3:    #8A847A;
+  --us-accent:   #93A9F2;
+  --us-accent-bg: rgba(147, 169, 242, 0.12);
+  --us-primary:  #EFE9DE;                       /* off-white, dark text */
+  --us-on-primary: #161513;
+  --us-rule:     rgba(147, 169, 242, 0.07);
+  --us-hover:    color-mix(in srgb, var(--us-surface), #FFFFFF 3%);
+  --us-press:    color-mix(in srgb, var(--us-surface), #FFFFFF 6%);
+  --us-rest:     0 0 0 0 transparent;
+  --us-float:    0 12px 32px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--us-line);
+  --us-sheet:    0 -1px 0 var(--us-line), 0 24px 60px -18px rgba(0, 0, 0, 0.8);
 
-  --accent-hover: #FFFFFF !important;
-  --accent-bg: rgba(255, 255, 255, 0.08) !important;
+  --accent-hover: #B3C3F6 !important;
+  --accent-border: rgba(147, 169, 242, 0.3) !important;
 
-  --income: #5BC48A !important;  --income-bg: rgba(91, 196, 138, 0.12) !important;  --income-border: rgba(91, 196, 138, 0.28) !important;
-  --expense: #EE766A !important; --expense-bg: rgba(238, 118, 106, 0.12) !important; --expense-border: rgba(238, 118, 106, 0.28) !important;
-  --savings: #7EA3F6 !important; --savings-bg: rgba(126, 163, 246, 0.12) !important; --savings-border: rgba(126, 163, 246, 0.28) !important;
-  --lent: #E1A35B !important;    --lent-bg: rgba(225, 163, 91, 0.12) !important;    --lent-border: rgba(225, 163, 91, 0.28) !important;
-  --person: #E1A35B !important;  --person-bg: rgba(225, 163, 91, 0.12) !important;  --person-border: rgba(225, 163, 91, 0.28) !important;
-  --borrowed: #B597F0 !important; --borrowed-bg: rgba(181, 151, 240, 0.12) !important; --borrowed-border: rgba(181, 151, 240, 0.28) !important;
-  --external: #B597F0 !important; --external-bg: rgba(181, 151, 240, 0.12) !important; --external-border: rgba(181, 151, 240, 0.28) !important;
-  --repayment-rec: #5CC3D4 !important; --repayment-rec-bg: rgba(92, 195, 212, 0.12) !important; --repayment-rec-border: rgba(92, 195, 212, 0.28) !important;
-  --given: #A09DF3 !important;   --given-bg: rgba(160, 157, 243, 0.12) !important;   --given-border: rgba(160, 157, 243, 0.28) !important;
-  --waste: #E8935C !important;   --waste-bg: rgba(232, 147, 92, 0.12) !important;
-  --heat-rgb: 238, 118, 106 !important;
+  --income: #4CC38A !important;  --income-bg: rgba(76, 195, 138, 0.12) !important;  --income-border: rgba(76, 195, 138, 0.28) !important;
+  --expense: #E8665C !important; --expense-bg: rgba(232, 102, 92, 0.12) !important; --expense-border: rgba(232, 102, 92, 0.28) !important;
+  --savings: #6FA9C4 !important; --savings-bg: rgba(111, 169, 196, 0.12) !important; --savings-border: rgba(111, 169, 196, 0.28) !important;
+  --lent: #D9A05B !important;    --lent-bg: rgba(217, 160, 91, 0.12) !important;    --lent-border: rgba(217, 160, 91, 0.28) !important;
+  --person: #D9A05B !important;  --person-bg: rgba(217, 160, 91, 0.12) !important;  --person-border: rgba(217, 160, 91, 0.28) !important;
+  --borrowed: #B395D6 !important; --borrowed-bg: rgba(179, 149, 214, 0.12) !important; --borrowed-border: rgba(179, 149, 214, 0.28) !important;
+  --external: #B395D6 !important; --external-bg: rgba(179, 149, 214, 0.12) !important; --external-border: rgba(179, 149, 214, 0.28) !important;
+  --repayment-rec: #5FB8B8 !important; --repayment-rec-bg: rgba(95, 184, 184, 0.12) !important; --repayment-rec-border: rgba(95, 184, 184, 0.28) !important;
+  --given: #A7A2E6 !important;   --given-bg: rgba(167, 162, 230, 0.12) !important;   --given-border: rgba(167, 162, 230, 0.28) !important;
+  --waste: #E08E57 !important;   --waste-bg: rgba(224, 142, 87, 0.12) !important;
+  --heat-rgb: 232, 102, 92 !important;
   color-scheme: dark;
 }
 
-/* ── Canvas & type ──────────────────────────────────────────────── */
-:root[data-unslop], :root[data-unslop] body {
-  background-color: var(--us-canvas) !important;
+/* ══ 5 · TYPE ═══════════════════════════════════════════════════ */
+:root[data-unslop], :root[data-unslop] body { background-color: var(--us-canvas) !important; }
+:root[data-unslop] body::before { display: none !important; }        /* the colour-blob wallpaper */
+:root[data-unslop] :is(html, body, #root, button, input, select, textarea) {
+  font-family: var(--us-sans) !important;
 }
-:root[data-unslop] body::before { display: none !important; }        /* the blob wallpaper */
 :root[data-unslop] body {
-  font-variant-numeric: tabular-nums;          /* amounts line up, digits don't jiggle */
-  letter-spacing: -0.006em !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0 !important;
+  font-weight: 400;
 }
-:root[data-unslop] ::selection { background: color-mix(in srgb, var(--us-ink) 16%, transparent); }
-:root[data-unslop] :focus-visible { outline: 2px solid color-mix(in srgb, var(--us-ink) 45%, transparent) !important; outline-offset: 2px !important; }
+:root[data-unslop] ::selection { background: var(--us-accent-bg); }
 
-/* ALL-CAPS tracked micro labels → sentence case you can read */
-:root[data-unslop] :is(.section-label, .text-label, .desktop-nav-title) {
+/* Weight: hierarchy comes from size and colour — 400 / 500, 600 at most */
+:root[data-unslop] :is([style*="font-weight: 7"], [style*="font-weight: 8"], [style*="font-weight: 9"], b, strong, h1, h2, h3, h4) { font-weight: 600 !important; }
+:root[data-unslop] :is(.hist-name, .hist-group-title, .tl-fig-value, .tl-change, .hist-group-side, .hist-kind, .desktop-nav-item.on, .desktop-brand, .sheet-head > span, .period-badge, .hist-chip, .hist-flow, .chip) { font-weight: 500 !important; }
+/* Small text never gets negative tracking */
+:root[data-unslop] [style*="letter-spacing: -"] { letter-spacing: 0 !important; }
+
+/* Sentence case: SPENT, EXPLORE, MONEY IN → Spent, Explore, Money in */
+:root[data-unslop] :is(.section-label, .text-label, .desktop-nav-title, .tl-title) {
   text-transform: none !important;
-  letter-spacing: -0.005em !important;
+  letter-spacing: 0 !important;
   font-size: 13px !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   color: var(--us-ink-2) !important;
-}
-:root[data-unslop] .tl-title {
-  text-transform: none !important; letter-spacing: -0.005em !important;
-  font-size: 13px !important; font-weight: 600 !important; color: var(--us-ink-2) !important;
 }
 :root[data-unslop] :is(.tl-fig-label, .overview-stat .k, [style*="text-transform: uppercase"]:not(.sheet-head *)) {
   text-transform: none !important;
   letter-spacing: 0 !important;
-  font-size: 12.5px !important;
-  font-weight: 500 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
 }
 :root[data-unslop] :is(.tl-fig-label, .overview-stat .k) { color: var(--us-ink-3) !important; }
-:root[data-unslop] .sheet-head > span { text-transform: none !important; letter-spacing: 0 !important; font-size: 11px !important; }
+:root[data-unslop] .sheet-head > span { text-transform: none !important; letter-spacing: 0 !important; font-size: 12px !important; }
 
-/* ── Surfaces: solid, one hairline, radius by size ──────────────── */
-/* (:where keeps these at the lowest weight, so the specific rules below win) */
+/* Page titles: written in the book — Newsreader, regular weight */
+:root[data-unslop] :is(.tab-header h1, .home-title) {
+  font-family: var(--us-serif) !important;
+  font-size: 26px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.15 !important;
+}
+
+/* Ledger figures: the big numbers in Newsreader, lining tabular digits */
+:root[data-unslop] :is(.tl-big, .home-spent-figure) {
+  font-family: var(--us-serif) !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.02em !important;
+  font-variant-numeric: lining-nums tabular-nums !important;
+}
+:root[data-unslop] .home-spent-figure { font-size: 40px !important; line-height: 1.1 !important; }
+:root[data-unslop] :is(.tl-sym, .tl-paise) { font-weight: 400 !important; color: var(--us-ink-3) !important; letter-spacing: 0 !important; }
+:root[data-unslop] .tl-change { font-size: 15px !important; }
+:root[data-unslop] .tl-change-sub { font-weight: 400 !important; }
+
+/* ══ 7 · DETAILS — the signature: a double rule under totals ═════ */
+:root[data-unslop] :is(.tl-big, .home-spent-figure) {
+  display: inline-flex !important;
+  width: fit-content !important;
+  padding-bottom: 4px !important;
+  border-bottom: 3px double currentColor !important;
+}
+:root[data-unslop] .home-spent-figure { display: block !important; }
+:root[data-unslop] .hist-group-side > span:not(.hist-group-count) {
+  padding-bottom: 1px;
+  border-bottom: 3px double currentColor;
+  font-weight: 500 !important;
+}
+/* a day's spending is written in ink, not shouted in red */
+:root[data-unslop] .hist-group-side > span[style*="var(--expense)"] { color: var(--us-ink) !important; }
+:root[data-unslop] .hist-group-count { font-weight: 400 !important; color: var(--us-ink-3) !important; }
+
+/* ══ 1 · SPACING & radius by size (controls 10, cards 14, sheets 20) ══ */
+:root[data-unslop] button:where(:not([style*="border-radius: 50%"], .toggle-track, .profile-button, .nav-add)) { border-radius: 10px !important; }
+:root[data-unslop] :is(.profile-button, .profile-button .et-avatar, .et-avatar) { border-radius: 50% !important; }
+:root[data-unslop] :is(.chip, .hist-chip, .hist-flow, .period-badge, .trip-chip, .live-tag, .locked-tag) { border-radius: 6px !important; }
+:root[data-unslop] :is([style*="border-radius: 10px"], [style*="border-radius: 12px"])[style*="var(--surface"] { border-radius: 10px !important; }
+:root[data-unslop] :is(.card, .overview-stat, .hist-row, .add-kind, .theme-tile, .reminder-tile, .home-tile) { border-radius: 14px !important; }
+:root[data-unslop] .tab-header { padding-top: 16px !important; padding-bottom: 12px !important; }
+
+/* ══ 2 · COLOUR — surfaces: solid paper, one hairline ════════════ */
 :root[data-unslop] :where(.card, .overview-stat, .home-hero,
     [style*="background: var(--surface)"], [style*="background: var(--glass-bg)"], [style*="background: var(--tooltip-bg)"]):where(:not(.card *):not([style*="background: var(--surface)"] *):not(.tab-header):not(button)) {
   background: var(--us-surface) !important;
@@ -216,33 +285,55 @@
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
-:root[data-unslop] :is([style*="border-radius: 10px"], [style*="border-radius: 12px"])[style*="var(--surface"] { border-radius: 12px !important; }
-:root[data-unslop] :is(.explore-card, .home-tile, .add-kind, .theme-tile, .reminder-tile) { border-radius: 16px !important; }
-:root[data-unslop] :is(.hist-row, .overview-stat) { border-radius: 16px !important; }
+:root[data-unslop] .hero-card { background: var(--us-surface) !important; background-image: none !important; box-shadow: var(--us-ring) !important; border: none !important; }
 
-/* Home month card: plain surface — no gradient, sheen or tilt */
-:root[data-unslop] .home-hero { --lg-hero-fill: var(--us-surface) !important; border-radius: 20px !important; }
+/* ══ 8 · VISUALS — moment 1: the month card, a ledger total ═══════ */
+:root[data-unslop] .home-hero {
+  --lg-hero-fill: var(--us-surface) !important;
+  border-radius: 16px !important;
+  background-color: var(--us-surface) !important;
+  background-image: none !important;
+  padding: 16px 20px !important;
+}
 :root[data-unslop] .home-hero::before,
 :root[data-unslop] .tilt-live::after { display: none !important; }
 :root[data-unslop] .tilt-live { transform: none !important; }
+:root[data-unslop] .liquid-bar { height: 4px !important; }               /* a ruled line that fills with ink */
 
-/* Stats / Income hero cards: one solid colour, no gradient or gloss */
-:root[data-unslop] .hero-card { background-image: none !important; border: none !important; box-shadow: none !important; border-radius: 20px !important; }
-:root[data-unslop] .hero-card.hero-income  { background: #17683B !important; }
-:root[data-unslop] .hero-card.hero-expense { background: #A3322A !important; }
-:root[data-unslop][data-theme="monoflow"] .hero-card.hero-income  { background: #1A4D33 !important; }
-:root[data-unslop][data-theme="monoflow"] .hero-card.hero-expense { background: #5E2621 !important; }
-
-/* Icons in tiles: no glass gloss */
-:root[data-unslop] :is(.tile-icon, .explore-icon, .hist-tile, .settings-icon, .tile-icon-solid) {
-  background-image: none !important;
-  box-shadow: none !important;
+/* moment 2: Stats — one blue-ink line on ruled paper */
+:root[data-unslop] .tl-chart {
+  background-image: repeating-linear-gradient(180deg, transparent 0 27px, var(--us-rule) 27px 28px);
 }
-/* Explore: one ink, not a rainbow — the glyph and the label say where it goes */
-:root[data-unslop] .explore-icon { background: var(--us-sunken) !important; border-radius: 11px !important; }
-:root[data-unslop] .explore-icon svg { color: var(--us-ink) !important; }
+:root[data-unslop] linearGradient[id^="tls-"] stop,
+:root[data-unslop] linearGradient[id^="tl-"] stop:first-child { stop-color: var(--us-accent) !important; }
+:root[data-unslop] .tl-line { filter: none !important; }
+:root[data-unslop] .tl-chart .recharts-reference-dot circle { fill: var(--us-accent) !important; stroke: var(--us-surface) !important; }
+/* chart bars drawn with the accent stay the one accent */
+:root[data-unslop] div[title][style*="background: var(--accent)"] { background: var(--us-accent) !important; background-image: none !important; box-shadow: none !important; }
 
-/* ── Header: flush with the canvas, a hairline under it ─────────── */
+/* ══ 3 · ICONS — one stroke, the colour of their text role ═══════ */
+:root[data-unslop] :is(.tile-icon, .explore-icon, .hist-tile, .settings-icon, .tile-icon-solid) { background-image: none !important; box-shadow: none !important; }
+:root[data-unslop] :is(.settings-icon, .tile-icon) { background: var(--us-sunken) !important; }
+:root[data-unslop] :is(.settings-icon, .tile-icon, .explore-icon) svg { color: var(--us-ink-2) !important; stroke-width: 1.75px; }
+:root[data-unslop] .home-add > div > svg:first-child { color: var(--us-ink-3) !important; }
+:root[data-unslop] .demo-banner > svg:first-child { display: none !important; }       /* the sparkle */
+/* History: a neutral tile, the category as a small dot of its colour */
+:root[data-unslop] .hist-tile {
+  position: relative;
+  width: 36px !important; height: 36px !important;
+  border-radius: 10px !important;
+  background: var(--us-sunken) !important;
+  color: var(--us-ink-2) !important;
+}
+:root[data-unslop] .hist-tile::after {
+  content: ''; position: absolute; right: -2px; bottom: -2px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--edge, var(--us-ink-3));
+  box-shadow: 0 0 0 2px var(--us-surface);
+}
+
+/* ══ 6 · LAYOUT ═════════════════════════════════════════════════ */
+/* Header: flush with the page, a hairline under it */
 :root[data-unslop] .tab-header {
   margin: 0 !important;
   border-radius: 0 !important;
@@ -258,75 +349,97 @@
   backdrop-filter: var(--lens-frost) !important;
 }
 :root[data-unslop] .lg-float-root > .lg-under {
-  padding-top: calc(var(--hdr-h, 76px) + 10px) !important;
-  scroll-padding-top: calc(var(--hdr-h, 76px) + 10px);
+  padding-top: calc(var(--hdr-h, 76px) + 12px) !important;
+  scroll-padding-top: calc(var(--hdr-h, 76px) + 12px);
 }
-/* Desktop toolbar: flush too */
 :root[data-unslop] [style*="position: sticky"][style*="top: 0"] {
-  margin: 0 !important;
-  top: 0 !important;
-  border-radius: 0 !important;
-  border: none !important;
+  margin: 0 !important; top: 0 !important; border-radius: 0 !important; border: none !important;
   background: var(--lens-bar) !important;
   -webkit-backdrop-filter: var(--lens-frost) !important;
   backdrop-filter: var(--lens-frost) !important;
   box-shadow: inset 0 -1px 0 var(--us-line) !important;
 }
 
-/* ── Phone tab bar: flush, quiet; the "+" is the one solid thing ── */
-:root[data-unslop] #phone-bar {
-  margin: 0 !important;
-  border-radius: 0 !important;
+/* Explore: an index, like the contents page of the notebook — not eight
+   equal boxes */
+:root[data-unslop] .home-explore > div { gap: 0 20px !important; }
+:root[data-unslop] .home-explore .explore-card {
+  background: transparent !important;
   border: none !important;
-  height: auto !important;
-  min-height: 58px;
+  border-radius: 0 !important;
+  box-shadow: inset 0 -1px 0 var(--us-line) !important;
+  padding: 12px 2px !important;
+  gap: 10px !important;
+}
+:root[data-unslop] .home-explore .explore-icon { width: 20px !important; height: 20px !important; background: transparent !important; border-radius: 0 !important; }
+:root[data-unslop] .home-explore .explore-card > span:last-child > span:first-child { font-weight: 500 !important; font-size: 14px !important; }
+:root[data-unslop] .home-explore .explore-card:is(:hover, :active, .lg-press) { background: transparent !important; box-shadow: inset 0 -1px 0 var(--us-line-2) !important; }
+:root[data-unslop] .home-explore .explore-card:is(:hover, :active, .lg-press) > span:last-child > span:first-child { color: var(--us-accent) !important; }
+
+/* History: one grouped list per day, inset dividers */
+:root[data-unslop] .hist-cards {
+  display: flex !important; flex-direction: column !important; gap: 0 !important;
+  background: var(--us-surface);
+  border-radius: 14px;
+  box-shadow: var(--us-ring), var(--us-rest);
+  overflow: hidden;
+}
+:root[data-unslop] .hist-row {
+  background: transparent !important; border: none !important; border-radius: 0 !important;
+  box-shadow: none !important; padding: 12px 12px 12px 16px !important; transform: none !important;
+}
+:root[data-unslop] .hist-row::before { display: none !important; }                     /* the colour edge */
+:root[data-unslop] .hist-row + .hist-row::after,
+:root[data-unslop] .hist-cards > * + * .hist-row::after {
+  content: ''; position: absolute; top: 0; right: 0; left: 64px; height: 1px; background: var(--us-line); pointer-events: none;
+}
+:root[data-unslop] .hist-row:is(:hover, :focus-visible) { background: var(--us-hover) !important; }
+:root[data-unslop] .hist-row:is(:active, .lg-press) { background: var(--us-press) !important; }
+:root[data-unslop] .hist-meta :is(.hist-kind, .hist-bit:not([style*="var(--expense)"])) { color: var(--us-ink-3) !important; font-weight: 400 !important; }
+:root[data-unslop] .hist-amount { font-size: 16px !important; font-weight: 500 !important; letter-spacing: 0 !important; }
+
+/* Phone tab bar: flush; the selection is written in blue ink */
+:root[data-unslop] #phone-bar {
+  margin: 0 !important; border-radius: 0 !important; border: none !important;
+  height: auto !important; min-height: 58px;
   padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px)) !important;
-  background: color-mix(in srgb, var(--us-surface) 88%, transparent) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
-  backdrop-filter: blur(20px) saturate(160%) !important;
+  background: color-mix(in srgb, var(--us-surface) 92%, transparent) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
   box-shadow: inset 0 1px 0 var(--us-line) !important;
   overflow: visible !important;
 }
 :root[data-unslop] #phone-bar .dock-pill { opacity: 0 !important; }
-:root[data-unslop] #phone-bar .dock-tab { height: 50px !important; color: var(--us-ink-3) !important; }
-:root[data-unslop] #phone-bar .dock-tab.on { color: var(--us-ink) !important; font-weight: 650; }
-:root[data-unslop] #phone-bar .dock-tab svg,
-:root[data-unslop] #phone-bar .dock-tab.on svg { transform: none !important; filter: none !important; transition: none !important; }
-:root[data-unslop] #phone-bar .dock-tab.on svg { stroke-width: 2.4px; }
+:root[data-unslop] #phone-bar .dock-tab { height: 50px !important; color: var(--us-ink-3) !important; font-weight: 400 !important; }
+:root[data-unslop] #phone-bar .dock-tab.on { color: var(--us-accent) !important; font-weight: 500 !important; }
+:root[data-unslop] #phone-bar .dock-tab :is(svg, svg *) { transform: none !important; filter: none !important; transition: none !important; }
 :root[data-unslop] #phone-bar button.nav-add {
   width: 44px !important; height: 44px !important;
-  background: var(--us-ink) !important;
-  background-image: none !important;
-  color: var(--us-on-ink) !important;
-  border: none !important;
-  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.35) !important;
+  border-radius: 12px !important;
+  background: var(--us-primary) !important; background-image: none !important;
+  color: var(--us-on-primary) !important; border: none !important;
+  box-shadow: 0 4px 12px -4px rgba(31, 27, 22, 0.35) !important;
 }
-:root[data-unslop] #phone-bar button.nav-add svg { color: var(--us-on-ink) !important; }
-/* content clears the shorter bar */
+:root[data-unslop] #phone-bar button.nav-add svg { color: var(--us-on-primary) !important; }
 :root[data-unslop] div:has(> nav[style*="flex-shrink: 0"]) .tab-body,
 :root[data-unslop] div:has(> nav[style*="flex-shrink: 0"]) > div[style*="overflow: auto"]:not(:has(.tab-body)) {
-  padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)) !important;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
 }
 
-/* ── Desktop sidebar: a flush pane, a hairline edge ─────────────── */
+/* Desktop: a flush sidebar with a hairline edge */
 :root[data-unslop] .desktop-sidebar {
-  margin: 0 !important;
-  height: 100% !important;
-  border-radius: 0 !important;
-  background: var(--us-surface) !important;
+  margin: 0 !important; height: 100% !important; border-radius: 0 !important;
+  background: var(--us-canvas) !important;
   box-shadow: inset -1px 0 0 var(--us-line) !important;
+  border: none !important;
 }
-:root[data-unslop] .desktop-nav-item.on,
-:root[data-unslop] .desktop-profile.on {
-  background: var(--us-sunken) !important;
-  box-shadow: none !important;
-}
+:root[data-unslop] :is(.desktop-nav-item.on, .desktop-profile.on) { background: var(--us-sunken) !important; box-shadow: none !important; color: var(--us-ink) !important; }
+:root[data-unslop] .desktop-nav-item.on svg { color: var(--us-accent) !important; }
 :root[data-unslop] .desktop-nav-item:hover { background: var(--us-sunken-2) !important; }
 :root[data-unslop] .desktop-brand img { box-shadow: none !important; }
 :root[data-unslop] .desktop-main .tab-header { margin: 0 !important; border-radius: 0 !important; }
 
-/* ── Controls ───────────────────────────────────────────────────── */
-/* Grey and round icon buttons: a white chip with a hairline */
+/* ══ Controls ═══════════════════════════════════════════════════ */
 :root[data-unslop] :where(button[style*="background: var(--surface2)"], button[style*="background: var(--surface3)"], button[style*="background: var(--surface)"],
     .help-button, .month-switcher button:not(#month-now), .tour-x, button[aria-label="Close"], #btn-page-back, .lg-close, .header-action, .add-paid-opt, .lg-btn, .lg-icon-btn) {
   background: var(--us-surface) !important;
@@ -337,130 +450,72 @@
   backdrop-filter: none !important;
   filter: none !important;
 }
-:root[data-unslop] .tab-header :is(.help-button, .header-action, #btn-page-back, #btn-profile-back) { background: var(--us-surface) !important; }
+:root[data-unslop] .tab-header :is(.help-button, .header-action, #btn-page-back, #btn-profile-back) { background: transparent !important; box-shadow: none !important; color: var(--us-ink-2) !important; }
+/* Initials avatar: a flat ink-tinted disc, not a gradient ball (photos stay) */
+:root[data-unslop] .et-avatar[style*="linear-gradient"] {
+  background: var(--us-sunken) !important;
+  color: var(--us-ink) !important;
+  font-weight: 500 !important;
+}
 
-/* Primary: solid ink, plain text — the same in both themes */
+/* Primary: blue ink with white text (dark: off-white with dark text) */
 :root[data-unslop] :where(button[style*="background: var(--accent)"], .tour-btn:not(.tour-btn-ghost), .add-paid-opt.on, #demo-signup) {
-  background: var(--us-ink) !important;
+  background: var(--us-primary) !important;
   background-image: none !important;
-  color: var(--us-on-ink) !important;
+  color: var(--us-on-primary) !important;
   border: none !important;
   box-shadow: none !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
 }
-:root[data-unslop] :where(button[style*="background: var(--accent)"], .tour-btn:not(.tour-btn-ghost), .add-paid-opt.on, #demo-signup) :where(svg, span, [style*="color"]) {
-  color: var(--us-on-ink) !important;
-}
-/* Colour-filled buttons (Save income, Delete …): flat colour, no sheen */
+:root[data-unslop] :where(button[style*="background: var(--accent)"], .tour-btn:not(.tour-btn-ghost), .add-paid-opt.on, #demo-signup) :where(svg, span, [style*="color"]) { color: var(--us-on-primary) !important; }
 :root[data-unslop] button:is([style*="background: var(--income)"], [style*="background: var(--expense)"], [style*="background: var(--savings)"],
     [style*="background: var(--person)"], [style*="background: var(--lent)"], [style*="background: var(--borrowed)"], [style*="background: var(--external)"],
     [style*="background: var(--repayment-rec)"], [style*="background: var(--given)"]) {
-  background-image: none !important;
-  border: none !important;
-  box-shadow: none !important;
-  font-weight: 600 !important;
+  background-image: none !important; border: none !important; box-shadow: none !important; font-weight: 500 !important;
 }
-:root[data-unslop] button[style*="background: var(--accent-bg)"] {
-  background: var(--accent-bg) !important;
-  color: var(--us-ink) !important;
-  box-shadow: none !important;
-}
-/* Chart bars drawn with the accent: plain ink */
-:root[data-unslop] div[title][style*="background: var(--accent)"] {
-  background: var(--us-ink) !important;
-  background-image: none !important;
-  box-shadow: none !important;
-  opacity: 0.86;
-}
+:root[data-unslop] button[style*="background: var(--accent-bg)"] { background: var(--accent-bg) !important; color: var(--us-accent) !important; box-shadow: none !important; }
 
-/* Segmented controls: a sunken track, the choice a white tab */
+/* Segmented: a sunken track, the choice a raised tab in ink (nested 10 → 7) */
 :root[data-unslop] :is(div:has(> button + button)[style*="background: var(--surface2)"], div:has(> button + button)[style*="background: var(--surface3)"], .segmented, .tl-label, .tl-ranges) {
-  background: var(--us-sunken) !important;
-  border: none !important;
-  box-shadow: none !important;
+  background: var(--us-sunken) !important; border: none !important; box-shadow: none !important; border-radius: 10px !important;
 }
 :root[data-unslop] :is(div:has(> button + button)[style*="background: var(--surface2)"], div:has(> button + button)[style*="background: var(--surface3)"], .segmented, .tl-label, .tl-ranges) > button {
-  background: transparent !important;
-  background-image: none !important;
-  box-shadow: none !important;
-  border: none !important;
-  color: var(--us-ink-2) !important;
+  background: transparent !important; background-image: none !important; box-shadow: none !important; border: none !important;
+  color: var(--us-ink-2) !important; border-radius: 7px !important; font-weight: 500 !important;
 }
 :root[data-unslop] :is(div:has(> button + button)[style*="background: var(--surface2)"], div:has(> button + button)[style*="background: var(--surface3)"], .segmented, .tl-label, .tl-ranges) > :is(button[style*="background: var(--surface)"], button.on, button[aria-checked="true"]) {
-  background: var(--us-surface) !important;
-  color: var(--us-ink) !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), var(--us-ring) !important;
+  background: var(--us-surface) !important; color: var(--us-ink) !important;
+  box-shadow: 0 1px 2px rgba(31, 27, 22, 0.08), var(--us-ring) !important;
 }
 :root[data-unslop][data-theme="monoflow"] :is(div:has(> button + button)[style*="background: var(--surface2)"], div:has(> button + button)[style*="background: var(--surface3)"], .segmented, .tl-label, .tl-ranges) > :is(button[style*="background: var(--surface)"], button.on, button[aria-checked="true"]) {
-  background: #2E2E32 !important;
+  background: #34312D !important;
 }
 :root[data-unslop] :is(.segmented, .tl-ranges) > button[aria-checked="true"] svg { color: var(--us-ink) !important; }
 
-/* Fields: a soft well; focus is a quiet ring, no glow */
+/* Fields: a soft well; focus is one quiet ring in ink */
 :root[data-unslop] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea):not([style*="background: transparent"]) {
   border-color: transparent !important;
   box-shadow: inset 0 0 0 1px var(--us-line) !important;
-  border-radius: 12px !important;
+  border-radius: 10px !important;
 }
 :root[data-unslop] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea):not([style*="background: transparent"]):focus {
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--us-ink) 70%, transparent) !important;
+  box-shadow: inset 0 0 0 1.5px var(--us-accent) !important;
 }
-:root[data-unslop] :is(input, select, textarea):focus-visible { outline: none !important; }   /* the ring above is the focus mark */
-:root[data-unslop] :is(input[type="range"], input[type="checkbox"], input[type="radio"]) { accent-color: var(--us-ink); }
+:root[data-unslop] :is(input, select, textarea):focus-visible { outline: none !important; }
+:root[data-unslop] :focus-visible { outline: 2px solid var(--us-accent) !important; outline-offset: 2px !important; }
+:root[data-unslop] :is(input[type="range"], input[type="checkbox"], input[type="radio"]) { accent-color: var(--us-accent); }
 
-/* Switches: ink when on */
-:root[data-unslop] .toggle-track { background: var(--us-line-2) !important; }
-:root[data-unslop] .toggle-track.on { background: var(--us-ink) !important; }
-:root[data-unslop] .toggle-thumb { background: var(--us-surface) !important; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important; transition: transform .2s var(--us-ease) !important; }
-:root[data-unslop][data-theme="monoflow"] .toggle-track.on .toggle-thumb { background: #0C0C0D !important; }
+/* Switches */
+:root[data-unslop] .toggle-track { background: var(--us-line-2) !important; border-radius: 99px !important; }
+:root[data-unslop] .toggle-track.on { background: var(--us-accent) !important; }
+:root[data-unslop] .toggle-thumb { background: #FFFFFF !important; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important; transition: transform .16s var(--us-ease) !important; }
 
-/* Chips and badges: flat */
+/* Counts and meta: quiet tags, no gloss */
 :root[data-unslop] :is(.period-badge, .chip, .hist-flow, .trip-chip) { box-shadow: none !important; background-image: none !important; }
 :root[data-unslop] .hist-chip { border-width: 1px !important; }
-
-/* Profile avatar: a hairline, not a halo */
 :root[data-unslop] :is(.profile-button .et-avatar, .profile-hero .et-avatar) { box-shadow: 0 0 0 1px var(--us-line-2) !important; }
 
-/* ── History: one grouped list per day, inset dividers ──────────── */
-:root[data-unslop] .hist-cards {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 0 !important;
-  background: var(--us-surface);
-  border-radius: 16px;
-  box-shadow: var(--us-ring), var(--us-rest);
-  overflow: hidden;
-}
-:root[data-unslop] .hist-row {
-  background: transparent !important;
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  padding: 11px 10px 11px 14px !important;
-  transform: none !important;
-}
-:root[data-unslop] .hist-row::before { display: none !important; }              /* the colour edge */
-:root[data-unslop] .hist-row + .hist-row::after {
-  content: ''; position: absolute; top: 0; right: 0; left: 66px; height: 1px; background: var(--us-line); pointer-events: none;
-}
-:root[data-unslop] .hist-row:is(:hover, :focus-visible) { background: var(--us-hover) !important; }
-:root[data-unslop] .hist-row:is(:active, .lg-press) { background: var(--us-press) !important; }
-:root[data-unslop] .hist-tile { width: 38px !important; height: 38px !important; border-radius: 11px !important; }
-:root[data-unslop] .hist-name { font-weight: 600 !important; }
-:root[data-unslop] .hist-meta :is(.hist-kind, .hist-bit:not([style*="var(--expense)"])) { color: var(--us-ink-3) !important; font-weight: 500 !important; }
-:root[data-unslop] .hist-amount { font-size: 16px !important; font-weight: 650 !important; letter-spacing: -0.015em !important; }
-
-/* Big numbers: confident, not shouting */
-:root[data-unslop] .roll { font-weight: inherit; }
-:root[data-unslop] .home-hero > div[style*="font-size: 32px"] { font-weight: 700 !important; letter-spacing: -0.035em !important; }
-
-/* Budget bar on the month card: slim (LiquidGauge draws it flat) */
-:root[data-unslop] .liquid-bar { height: 6px !important; }
-:root[data-unslop] .tl-line { filter: none !important; }
-/* Stats balance line: one ink, not a violet fade */
-:root[data-unslop] linearGradient[id^="tls-"] stop { stop-color: var(--us-ink) !important; }
-
-/* ── Sheets, dialogs, tooltips, toasts ──────────────────────────── */
+/* ══ Sheets, dialogs, tooltips, toasts ═══════════════════════════ */
 :root[data-unslop] [style*="position: fixed"][style*="inset: 0"] {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
@@ -480,59 +535,59 @@
 :root[data-unslop] .sheet-grip { background: var(--us-line-2) !important; }
 :root[data-unslop] :is(.tour-card, .recharts-tooltip-wrapper .custom-tooltip) {
   background: var(--us-surface) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  border: none !important;
-  border-radius: 14px !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  border: none !important; border-radius: 12px !important;
   box-shadow: var(--us-float) !important;
 }
 :root[data-unslop] :is(.app-toast, [style*="var(--toast-bg"]) {
-  background: var(--us-ink) !important;
-  color: var(--us-on-ink) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  border: none !important;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.4) !important;
+  background: var(--us-ink) !important; color: var(--us-canvas) !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  border: none !important; border-radius: 10px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
 }
 :root[data-unslop] .demo-banner {
   background: var(--us-surface) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  border: none !important;
-  border-radius: 16px !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  border: none !important; border-radius: 12px !important;
   box-shadow: var(--us-float) !important;
+  color: var(--us-ink) !important;
 }
 :root[data-unslop] .security-banners .card { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 
-/* ── Motion: short, ease-out, no overshoot, no lift ─────────────── */
+/* ══ 9 · MOTION — one curve, short, no overshoot, no lift ════════ */
 :root[data-unslop] button {
-  transition: transform .14s var(--us-ease), background-color .18s ease, color .18s ease, box-shadow .18s ease, opacity .18s ease !important;
+  transition: transform .14s var(--us-ease), background-color .16s ease, color .16s ease, box-shadow .16s ease, opacity .16s ease !important;
 }
 :root[data-unslop] button:not(:disabled):hover { filter: none !important; transform: none !important; }
 :root[data-unslop] button:not(:disabled):active { transform: scale(0.97) !important; }
 :root[data-unslop] :is(.explore-card, .home-tile, .add-kind, .reminder-tile) {
-  transition: transform .14s var(--us-ease), background-color .18s ease !important;
+  transition: transform .14s var(--us-ease), background-color .16s ease, box-shadow .16s ease !important;
   will-change: auto !important;
 }
 :root[data-unslop] :is(.explore-card, .reminder-tile)::after { display: none !important; }    /* the light sweep */
-:root[data-unslop] :is(.explore-card, .home-tile, .add-kind, .reminder-tile):not(:disabled):hover {
-  transform: none !important;
-  background: var(--us-hover) !important;
-  box-shadow: var(--us-ring), var(--us-rest) !important;
+:root[data-unslop] :is(.home-tile, .add-kind, .reminder-tile):not(:disabled):hover {
+  transform: none !important; background: var(--us-hover) !important; box-shadow: var(--us-ring) !important;
 }
-:root[data-unslop] :is(.explore-card, .home-tile, .add-kind, .reminder-tile):not(:disabled):active {
-  transform: scale(0.98) !important;
-  background: var(--us-press) !important;
-  box-shadow: var(--us-ring) !important;
+:root[data-unslop] :is(.home-tile, .add-kind, .reminder-tile):not(:disabled):active {
+  transform: scale(0.98) !important; background: var(--us-press) !important; box-shadow: var(--us-ring) !important;
 }
-:root[data-unslop] :is(.explore-card, .home-tile):is(:hover, :active, .lg-press) :is(.explore-icon, .tile-icon) { transform: none !important; }
-:root[data-unslop] .lg-press:not(:disabled) {
-  transform: scale(0.97) !important;
-  filter: none !important;
-  transition: transform .1s var(--us-ease) !important;
-}
+:root[data-unslop] :is(.explore-card, .home-tile) :is(.explore-icon, .tile-icon) { transform: none !important; }
+:root[data-unslop] .explore-card:not(:disabled):is(:hover, :active) { transform: none !important; }
+:root[data-unslop] .lg-press:not(:disabled) { transform: scale(0.97) !important; filter: none !important; transition: transform .1s var(--us-ease) !important; }
 :root[data-unslop] #phone-bar .lg-press:not(:disabled) { transform: scale(0.94) !important; }
-:root[data-unslop] :is(.explore-card, .home-tile, .reminder-tile, .add-kind, .dcard).lg-press { background: var(--us-press) !important; }
-:root[data-unslop] .lg-release { transition: transform .22s var(--us-ease), background-color .22s ease !important; }
+:root[data-unslop] :is(.home-tile, .reminder-tile, .add-kind, .dcard).lg-press { background: var(--us-press) !important; }
+:root[data-unslop] .explore-card.lg-press { transform: none !important; }
+:root[data-unslop] .lg-release { transition: transform .2s var(--us-ease), background-color .2s ease !important; }
+
+/* About: the version row reads like every other settings row; Check is a
+   quiet secondary button, not a tinted, outlined one */
+:root[data-unslop] #about-app > div:nth-child(2) > div:first-child { font-size: 14px !important; font-weight: 500 !important; }
+:root[data-unslop] #btn-check-updates {
+  background: var(--us-surface) !important;
+  color: var(--us-ink) !important;
+  border: none !important;
+  box-shadow: var(--us-ring) !important;
+  font-weight: 500 !important;
+}
 
 } /* @layer unslop */

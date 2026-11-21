@@ -176,10 +176,20 @@
           var dark = pref === 'dark' || (pref === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
           var t = dark ? 'monoflow' : 'light';
           document.documentElement.setAttribute('data-theme', t);
-          // Profile → Appearance → Unslop (src/utils/unslop.js): the quiet, solid look
-          var us = localStorage.getItem('et_unslop') === 'on';
-          if (us) document.documentElement.setAttribute('data-unslop', 'on');
-          var bar = us ? (dark ? '#0C0C0D' : '#F4F4F2') : (dark ? '#06070B' : '#EEF0F6');
+          // Profile → Appearance → Look (src/utils/unslop.js): Glass · Unslop · Unsloped
+          var look = localStorage.getItem('et_unslop');   // 'on' = Unslop, 'unsloped' = Unsloped
+          var us = look === 'on' || look === 'unsloped';
+          if (look === 'unsloped') document.documentElement.setAttribute('data-unsloped', '');
+          if (us) {
+            document.documentElement.setAttribute('data-unslop', 'on');
+            var f = document.createElement('link'); f.id = 'us-fonts'; f.rel = 'stylesheet';
+            f.href = 'https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap';
+            document.head.appendChild(f);
+          }
+          // Glass with its background colour off: pure white / black behind the glass
+          var plain = !us && localStorage.getItem('et_glass_colour') === 'off';
+          if (plain) document.documentElement.setAttribute('data-glass-plain', '');
+          var bar = look === 'unsloped' ? (dark ? '#13110E' : '#F2ECE0') : us ? (dark ? '#161513' : '#F7F5F0') : plain ? (dark ? '#000000' : '#FFFFFF') : (dark ? '#06070B' : '#EEF0F6');
           document.body.style.backgroundColor = bar;
           var meta = document.querySelector('meta[name="theme-color"]');
           if (meta) meta.setAttribute('content', bar);

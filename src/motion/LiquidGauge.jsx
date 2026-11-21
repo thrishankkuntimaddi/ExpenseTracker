@@ -45,7 +45,8 @@ export default function LiquidGauge({ fraction = 0, variant = 'capsule', classNa
     const bar = variant === 'bar';
     // Unslop: the theme's own colours (unslop.css) — a live style, so a theme switch shows
     const css = flat ? getComputedStyle(cv) : null;
-    const tone = (p) => css.getPropertyValue(p < 0.7 ? '--income' : p < 0.9 ? '--lent' : '--expense').trim() || '#888';
+    // written in ink; amber close to the limit, red only once it's crossed
+    const tone = (p) => css.getPropertyValue(p < 0.85 ? '--accent' : p < 1 ? '--lent' : '--expense').trim() || '#888';
     const drawFlat = () => {
       g.clearRect(0, 0, W, H);
       const goal = Math.min(1, target.current), p = Math.max(0, Math.min(1, animate ? level : goal));
@@ -123,7 +124,7 @@ export default function LiquidGauge({ fraction = 0, variant = 'capsule', classNa
     ro.observe(cv);
     // flat colours come from the theme: redraw when it changes
     const mo = flat ? new MutationObserver(() => requestAnimationFrame(draw)) : null;
-    mo?.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    mo?.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-unsloped'] });
     return () => { cancelAnimationFrame(raf); io.disconnect(); ro.disconnect(); mo?.disconnect(); document.removeEventListener('visibilitychange', wake); };
   }, [variant, flat]);
 

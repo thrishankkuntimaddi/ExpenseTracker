@@ -1,0 +1,213 @@
+/* ══════════════════════════════════════════════════════════════════
+   UNSLOPED — Profile → Appearance → Look: Glass | Unslop | Unsloped
+
+   The hisaab notebook of unslop.css, taken all the way: the book itself.
+   Made with the unslop method by Damir Sokolovsky (@heydamir) —
+   github.com/heydamir/unslop, CC BY 4.0.
+
+   Direction (builds on unslop.css)
+   • Character  exact, homely, unhurried — and a little ceremonial
+   • World      the red cloth-bound bahi-khata, the account book a family or
+                a shop opens fresh each year: gold foil on the cover, cream
+                ledger paper, a red double margin rule, a ribbon to keep the page
+   • Moment     the month card on Home IS the book's cover — red cloth, a gold
+                foil frame, the month's total stamped in gold. The one bright
+                element; everything around it stays paper and ink.
+   • Signature  the ledger page: History's lists are ruled with the red
+                double margin line, the way account books are
+   • Also       Explore as a numbered contents page, editorial serif titles,
+                a red ribbon bookmark on the current tab, quick entry
+                written on a line
+
+   On top of unslop.css, scoped to <html data-unsloped> (set together with
+   data-unslop="on"). Its layer is named before unslop's (see the
+   @layer statement in unslop.css): for !important rules the first layer
+   wins, so these override unslop.css — and, like it, every unlayered
+   glass rule. Choose Unslop or Glass and none of this applies.
+══════════════════════════════════════════════════════════════════ */
+
+@layer unsloped {
+
+/* ── Paper, ink and the book's materials ────────────────────────── */
+:root[data-unsloped] {
+  --us-canvas:   #F2ECE0 !important;           /* cream ledger paper */
+  --us-surface:  #FAF6EE !important;
+  --us-sunken:   #E9E1D2 !important;
+  --us-sunken-2: #EFE8DB !important;
+  --us-line:     rgba(45, 30, 15, 0.09) !important;
+  --us-line-2:   rgba(45, 30, 15, 0.17) !important;
+  --us-ink:      #1E1A15 !important;
+  --us-ink-2:    #5A4F42 !important;
+  --us-ink-3:    #7D7062 !important;
+  --us-accent:   #24438F !important;           /* the pen */
+  --us-accent-bg: rgba(36, 67, 143, 0.08) !important;
+  --us-primary:  #1E1A15 !important;           /* actions in ink */
+  --us-on-primary: #FAF6EE !important;
+  --us-rule:     rgba(36, 67, 143, 0.08) !important;
+
+  --kh-cloth:    #7A1D1C;                       /* the cover */
+  --kh-cloth-2:  #65171A;
+  --kh-gold:     #DDB866;                       /* foil */
+  --kh-gold-dim: rgba(221, 184, 102, 0.62);
+  --kh-cream:    #F5EAD0;                       /* text on the cover */
+  --kh-margin:   rgba(176, 38, 34, 0.5);        /* the red margin rule */
+  --kh-ribbon:   #A12A27;
+  --kh-numeral:  rgba(160, 40, 36, 0.72);       /* contents-page numbers */
+}
+:root[data-unsloped][data-theme="monoflow"] {
+  --us-canvas:   #13110E !important;           /* the book by lamplight */
+  --us-surface:  #1A1713 !important;
+  --us-sunken:   #27221C !important;
+  --us-sunken-2: #201C17 !important;
+  --us-line:     rgba(238, 229, 211, 0.08) !important;
+  --us-line-2:   rgba(238, 229, 211, 0.15) !important;
+  --us-ink:      #EEE5D3 !important;
+  --us-ink-2:    #B2A792 !important;
+  --us-ink-3:    #8C8170 !important;
+  --us-accent:   #9DB2EE !important;
+  --us-accent-bg: rgba(157, 178, 238, 0.12) !important;
+  --us-primary:  #EEE5D3 !important;
+  --us-on-primary: #13110E !important;
+  --us-rule:     rgba(157, 178, 238, 0.07) !important;
+  --kh-cloth:    #6A1918;
+  --kh-cloth-2:  #561315;
+  --kh-margin:   rgba(214, 92, 80, 0.42);
+  --kh-ribbon:   #C2453E;
+  --kh-numeral:  #CF8074;
+}
+
+/* ── Type: editorial titles, serif section heads ────────────────── */
+:root[data-unsloped] :is(.tab-header h1, .home-title) { font-size: 30px !important; letter-spacing: -0.015em !important; }
+:root[data-unsloped] :is(.section-label, .hist-group-title) {
+  font-family: var(--us-serif) !important;
+  font-size: 18px !important;
+  font-weight: 500 !important;
+  color: var(--us-ink) !important;
+}
+:root[data-unsloped] .hist-amount { font-family: var(--us-serif) !important; font-size: 18px !important; font-variant-numeric: lining-nums tabular-nums !important; }
+:root[data-unsloped] .hist-name { font-size: 15px !important; }
+
+/* ══ The moment: the month card is the khata's cover ═════════════ */
+:root[data-unsloped] .home-hero {
+  /* inside the cover the gauge and text draw in gold and cream */
+  --accent: var(--kh-gold) !important;
+  --lent: #EBC57E !important;
+  --expense: #F3D7A2 !important;
+  --surface2: rgba(0, 0, 0, 0.22) !important;
+  --border: rgba(245, 234, 208, 0.18) !important;
+
+  position: relative;
+  color: var(--kh-cream) !important;
+  background-color: var(--kh-cloth) !important;
+  background-image:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.07), rgba(0, 0, 0, 0.12) 75%),             /* light across the cloth */
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 3px),        /* the weave */
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px) !important;
+  border: none !important;
+  border-radius: 6px 16px 16px 6px !important;                                              /* bound on the left */
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 2px 3px rgba(20, 10, 5, 0.18), 0 16px 32px -16px rgba(20, 10, 5, 0.55) !important;
+  padding: 22px 22px 18px 34px !important;
+  overflow: hidden;
+}
+/* the gold foil frame, stamped a little inside the edge */
+:root[data-unsloped] .home-hero::before {
+  display: block !important;
+  content: '' !important;
+  position: absolute !important;
+  inset: 9px 9px 9px 23px !important;
+  border: 3px double var(--kh-gold-dim) !important;
+  border-radius: 4px 10px 10px 4px !important;
+  background: none !important;
+  opacity: 1 !important;
+  pointer-events: none;
+  z-index: 0;
+}
+/* the spine: the cloth folds round the boards */
+:root[data-unsloped] .home-hero::after {
+  display: block !important;
+  content: '' !important;
+  position: absolute !important;
+  left: 0; top: 0; bottom: 0; width: 15px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.1) 70%, rgba(255, 255, 255, 0.07)) !important;
+  box-shadow: 1px 0 0 rgba(0, 0, 0, 0.18) !important;
+  opacity: 1 !important;
+  pointer-events: none;
+  transform: none !important;
+}
+:root[data-unsloped] .home-hero > * { position: relative; z-index: 1; }
+:root[data-unsloped] .home-hero :is(div, span, strong, svg, p) { color: var(--kh-cream) !important; }
+:root[data-unsloped] .home-hero [style*="text-transform: uppercase"] { color: rgba(245, 234, 208, 0.72) !important; font-size: 13px !important; }
+/* the total, stamped in gold, closed with a gold double rule */
+:root[data-unsloped] .home-hero .home-spent-figure,
+:root[data-unsloped] .home-hero .home-spent-figure * { color: var(--kh-gold) !important; }
+:root[data-unsloped] .home-hero .home-spent-figure { font-size: 46px !important; }
+:root[data-unsloped] .home-hero .home-spent-figure { text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25); }   /* foil pressed into cloth */
+:root[data-unsloped] .home-hero .liquid-bar { height: 3px !important; }
+/* the month switcher sits on the cover as quiet foil-edged buttons */
+:root[data-unsloped] .home-hero .month-switcher button {
+  background: transparent !important;
+  box-shadow: 0 0 0 1px rgba(245, 234, 208, 0.28) !important;
+  color: var(--kh-cream) !important;
+}
+:root[data-unsloped] .home-hero .month-switcher button:disabled { opacity: 0.35; }
+:root[data-unsloped] .home-hero [style*="border-top"] { border-top-color: rgba(245, 234, 208, 0.18) !important; }
+:root[data-unsloped] .home-hero:is(:hover, :active, .lg-press) { transform: none !important; filter: none !important; }
+
+/* ══ The signature: ledger pages with the red double margin ═══════ */
+:root[data-unsloped] .hist-cards {
+  background-color: var(--us-surface) !important;
+  background-image: linear-gradient(90deg,
+    transparent 57px, var(--kh-margin) 57px 58px,
+    transparent 58px 60px, var(--kh-margin) 60px 61px,
+    transparent 61px) !important;
+  border-radius: 4px 14px 14px 4px !important;
+}
+:root[data-unsloped] :is(.hist-row + .hist-row, .hist-cards > * + * .hist-row)::after { left: 61px !important; }
+:root[data-unsloped] .hist-tile { width: 30px !important; height: 30px !important; background: transparent !important; }
+:root[data-unsloped] .hist-tile::after { box-shadow: 0 0 0 2px var(--us-surface) !important; }
+:root[data-unsloped] .hist-row { padding-left: 16px !important; gap: 22px !important; }
+
+/* ══ Explore: the contents page — numbered, no boxes, no icons ════ */
+:root[data-unsloped] .home-explore > div { counter-reset: kh-page; }
+:root[data-unsloped] .home-explore .explore-card { counter-increment: kh-page; padding: 12px 2px !important; }
+:root[data-unsloped] .home-explore .explore-icon { display: none !important; }
+:root[data-unsloped] .home-explore .explore-card::before {
+  content: counter(kh-page, decimal-leading-zero);
+  display: block !important;
+  position: static !important;
+  flex-shrink: 0;
+  width: 22px;
+  padding-top: 1px;
+  font-family: var(--us-serif);
+  font-size: 15px;
+  color: var(--kh-numeral);
+  opacity: 1 !important;
+  background: none !important;
+  align-self: flex-start;
+}
+:root[data-unsloped] .home-explore .explore-card { align-items: flex-start !important; }
+
+/* Quick entry: written on a line, not boxed */
+:root[data-unsloped] form.home-add {
+  background: transparent !important;
+  box-shadow: inset 0 -1px 0 var(--us-line-2) !important;
+  border-radius: 0 !important;
+  padding: 6px 0 8px !important;
+}
+:root[data-unsloped] form.home-add button { box-shadow: none !important; background: transparent !important; color: var(--us-accent) !important; }
+
+/* ══ Tab bar: a ribbon bookmark keeps the page ═══════════════════ */
+:root[data-unsloped] #phone-bar .dock-tab.on { color: var(--us-ink) !important; }
+:root[data-unsloped] #phone-bar .dock-tab.on::before {
+  content: '';
+  position: absolute;
+  top: -4px; left: 50%;
+  width: 12px; height: 15px;
+  margin-left: -6px;
+  background: var(--kh-ribbon);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
+}
+:root[data-unsloped] .desktop-nav-item.on { box-shadow: inset 3px 0 0 var(--kh-ribbon) !important; }
+:root[data-unsloped] .desktop-nav-item.on svg { color: var(--us-ink) !important; }
+
+} /* @layer unsloped */

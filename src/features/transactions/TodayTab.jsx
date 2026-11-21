@@ -33,6 +33,8 @@ import { streak as logStreak, milestoneReached } from '../../utils/engagement';
 import { t } from '../../i18n';
 import { usePaymentCapture } from '../../hooks/usePaymentCapture';
 import CapturedPaymentsCard from '../capture/CapturedPaymentsCard';
+import { useUnslop } from '../../utils/unslop';
+import LooksIntro from '../../components/LooksIntro';
 
 import { t as tr } from '../../i18n';
 const linkBtn = { padding: 0, border: 'none', background: 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
@@ -64,6 +66,12 @@ export default function TodayTab(props) {
   const monthAbbr = monthName(monthKey, { month: 'short' });
   const hour = now.getHours();
   const greeting = t(hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening');
+  // Unslop look: the title names the period, not a greeting
+  const unslop = useUnslop();
+  const title = unslop ? now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : greeting;
+  const overline = unslop
+    ? now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric' })
+    : now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
 
   // Bills: late + the next seven days
   const existingIds = useMemo(() => {
@@ -144,7 +152,7 @@ export default function TodayTab(props) {
     if (!milestone || !shell?.toast) return;
     const key = 'et_streak_cheered', mark = `${todayKey}:${milestone}`;
     try { if (localStorage.getItem(key) === mark) return; localStorage.setItem(key, mark); } catch { return; }
-    shell.toast(`🔥 ${milestone}-day streak — you’ve logged ${milestone} days in a row`);
+    shell.toast(`${unslop ? '' : '🔥 '}${milestone}-day streak — you’ve logged ${milestone} days in a row`);
   }, [milestone, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const overviewSection = (
@@ -166,7 +174,7 @@ export default function TodayTab(props) {
         </span>
       </div>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8, marginTop: 10 }}>{t('Spent')}</div>
-      <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 0, fontVariantNumeric: 'tabular-nums' }}>
+      <div className="home-spent-figure" style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 0, fontVariantNumeric: 'tabular-nums' }}>
         <RollingNumber id="home-spent" value={stats?.totalExpense ?? 0} sound />
       </div>
       {safeToday && (
@@ -427,10 +435,10 @@ export default function TodayTab(props) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>
-              {now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+              {overline}
             </div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', marginTop: 1 }}>
-              {greeting}
+            <div className="home-title" style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', marginTop: 1 }}>
+              {title}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -441,6 +449,7 @@ export default function TodayTab(props) {
       </div>
 
       <div className={`home-body${shell?.desktop ? ' home-fit' : ''}`} style={{ flex: 1, overflow: 'auto', padding: '14px 16px 20px' }}>
+        <LooksIntro user={props.user} settings={settings} onPatchSettings={props.onPatchSettings} />
         <CapturedPaymentsCard capture={capture} rules={categoryRules} />
         {shell?.desktop ? (
           // Wide screens, one screen, no scrolling: what you do (overview, entry)

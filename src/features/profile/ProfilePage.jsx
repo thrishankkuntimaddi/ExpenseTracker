@@ -7,7 +7,7 @@
 //   • a row opens its setting: beside the list on wide screens (two panes),
 //     full screen on phones (Back — or the Android back button — returns)
 import { useMotionPref, setMotionPref } from '../../motion/motion';
-import { useUnslop, setUnslop } from '../../utils/unslop';
+import { useLook, setLook, useGlassColour, setGlassColour } from '../../utils/unslop';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Eye, Palette, LifeBuoy, Gift, ScanLine, Heart, Landmark } from 'lucide-react';
 import Avatar from '../../components/Avatar';
@@ -107,9 +107,10 @@ export default function ProfilePage(props) {
   const [trustee, setTrustee] = useState(false);
   useEffect(() => { if (!owner && !user?.isDemo) checkTrustee(user).then(setTrustee, () => {}); }, [owner, user]);
   const motion = useMotionPref();
-  const unslop = useUnslop();
+  const look = useLook();
+  const glassColour = useGlassColour();
   const appearanceSummary = [
-    ...(unslop ? [tr('Unslop')] : []),
+    ...(look === 'unslop' ? [tr('Unslop')] : look === 'unsloped' ? [tr('Unsloped')] : glassColour ? [] : [tr('Glass, no colour')]),
     themePref === 'system' ? tr('Auto') : themePref === 'dark' ? tr('Dark') : tr('Light'),
     motion === 'off' ? tr('animations off') : tr('animations on'),
     LANGS.find((l) => l.key === getLang())?.native ?? 'English',
@@ -180,6 +181,7 @@ export default function ProfilePage(props) {
                 <Group id="appearance" title={tr("Appearance")} Icon={Palette} color="var(--accent)" summary={appearanceSummary}>
                   <div className="appearance-panel">
                     <LookRow />
+                    <GlassColourRow />
                     <ThemeRow themePref={themePref} theme={theme} onChange={onThemePrefChange} />
                     <MotionRow />
                     <LanguageRow onPatchSettings={onPatchSettings} />
@@ -430,22 +432,56 @@ function ThemeRow({ themePref, theme, onChange }) {
   );
 }
 
-/* The look: Liquid Glass (as shipped) or Unslop — solid, quiet, one ink
-   accent (styles/unslop.css). A layer over the glass, so switching back
-   gives the glass exactly as it was. Per device, like the theme. */
+/* The look, per device: Liquid Glass (as shipped), Unslop — the household
+   hisaab notebook (styles/unslop.css) — or Unsloped, the same book taken
+   further: a red khata cover stamped in gold, ledger pages with the red
+   margin rule (styles/unsloped.css). Each is a layer over the glass, so
+   choosing Glass again gives the glass exactly as it was. */
+const LOOK_NOTES = {
+  glass: 'Unslop and Unsloped: the hisaab notebook · this device only',
+  unslop: 'A hisaab notebook · this device only',
+  unsloped: 'The red khata book, ledger pages · this device only',
+};
 function LookRow() {
-  const on = useUnslop();
+  const look = useLook();
   return (
     <div className="theme-row" id="look-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px 11px 16px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
       <div style={{ flex: '1 1 140px', minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{t('Look')}</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{on ? tr("Solid and quiet · this device only") : tr("Unslop: solid, quiet, no glass · this device only")}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{tr(LOOK_NOTES[look])}</div>
       </div>
       <div role="radiogroup" aria-label={tr("Look")} className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
-        {[{ key: 'glass', label: tr("Glass"), value: false }, { key: 'unslop', label: tr("Unslop"), value: true }].map(({ key, label, value }) => {
+        {[{ key: 'glass', label: tr("Glass") }, { key: 'unslop', label: tr("Unslop") }, { key: 'unsloped', label: tr("Unsloped") }].map(({ key, label }) => {
+          const sel = look === key;
+          return (
+            <button key={key} id={`look-${key}`} role="radio" aria-checked={sel} onClick={() => setLook(key)}
+              style={{ padding: '7px 12px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: sel ? 'var(--surface)' : 'transparent', color: sel ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: sel ? 'var(--shadow-sm)' : 'none' }}>
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* Glass only: the soft colour field behind the glass, or nothing — pure
+   white / black, like macOS Control Center (styles/glass-plain.css). */
+function GlassColourRow() {
+  const look = useLook();
+  const on = useGlassColour();
+  if (look !== 'glass') return null;
+  return (
+    <div className="theme-row" id="glass-colour-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px 11px 16px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+      <div style={{ flex: '1 1 140px', minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{t('Background colour')}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{on ? tr("Soft colours behind the glass") : tr("Only glass · pure white or black")}</div>
+      </div>
+      <div role="radiogroup" aria-label={tr("Background colour")} className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
+        {[{ key: 'on', label: tr("On"), value: true }, { key: 'off', label: tr("Off"), value: false }].map(({ key, label, value }) => {
           const sel = on === value;
           return (
-            <button key={key} id={`look-${key}`} role="radio" aria-checked={sel} onClick={() => setUnslop(value)}
+            <button key={key} id={`glass-colour-${key}`} role="radio" aria-checked={sel} onClick={() => setGlassColour(value)}
               style={{ padding: '7px 13px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: sel ? 'var(--surface)' : 'transparent', color: sel ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: sel ? 'var(--shadow-sm)' : 'none' }}>
               {label}
             </button>
