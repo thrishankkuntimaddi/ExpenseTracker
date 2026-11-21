@@ -6,7 +6,9 @@ import './styles/layout.css'
 import './motion/motion.css'
 import './styles/liquid.css'
 import './styles/lens.css'
+import './styles/unslop.css'   // Profile → Appearance → Unslop; inert unless <html data-unslop>
 import { startGlassChrome } from './app/glassChrome.js'
+import { applyUnslop } from './utils/unslop.js'
 import App from './app/App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { confirmBundleBoots, startAutoUpdates } from './native/updates.js'
@@ -31,6 +33,7 @@ function bootstrap() {
     return;
   }
   startAutoUpdates();
+  applyUnslop();      // index.html already set it before paint; this keeps the bar colour in step
   startGlassChrome();
   createRoot(rootEl).render(
     <StrictMode>

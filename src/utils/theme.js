@@ -3,12 +3,10 @@
 // resolves to <html data-theme="light" | "monoflow"> — "monoflow" is the
 // app's dark theme. index.html applies the same logic before first paint.
 import { useState, useEffect, useCallback } from 'react';
+import { barColor } from './unslop';
 
 export const THEME_PREF_KEY = 'et_theme_pref';   // 'light' | 'dark' | 'system'
 const RESOLVED_KEY = 'et_theme';                  // last applied data-theme (read by index.html)
-
-/* Browser-bar colour per theme — matches glass.css --lg-wall-base. */
-const BAR_COLOR = { light: '#EEF0F6', monoflow: '#06070B' };
 
 /** The active theme as set on <html data-theme>. */
 export function currentTheme() {
@@ -49,7 +47,7 @@ export function applyTheme(theme) {
     switchTimer = setTimeout(() => html.classList.remove('theme-switching'), 320);
   }
   html.setAttribute('data-theme', theme);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', BAR_COLOR[theme] ?? BAR_COLOR.light);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', barColor(theme));   // per look (utils/unslop.js)
   try { localStorage.setItem(RESOLVED_KEY, theme); } catch { /* storage unavailable */ }
 }
 

@@ -1,12 +1,13 @@
 // ─── Profile ─────────────────────────────────────────────────────
 // Opened from the avatar (phone) or the sidebar (desktop). One pattern for
 // everything, like a phone's Settings app:
-//   • who is signed in, then Appearance (theme, animations) as quick switches
+//   • who is signed in, then Appearance (look, theme, animations) as quick switches
 //   • every other setting is a row — icon, title, one-line summary — grouped
 //     into a few sections
 //   • a row opens its setting: beside the list on wide screens (two panes),
 //     full screen on phones (Back — or the Android back button — returns)
 import { useMotionPref, setMotionPref } from '../../motion/motion';
+import { useUnslop, setUnslop } from '../../utils/unslop';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Sun, Moon, Monitor, LayoutGrid, Home as HomeIcon, Rocket, ChevronUp, ChevronDown, RotateCcw, ShieldCheck, Plus, Bell, Coins, HardDriveUpload, MousePointerClick, Music, Eye, Palette, LifeBuoy, Gift, ScanLine, Heart, Landmark } from 'lucide-react';
 import Avatar from '../../components/Avatar';
@@ -106,7 +107,9 @@ export default function ProfilePage(props) {
   const [trustee, setTrustee] = useState(false);
   useEffect(() => { if (!owner && !user?.isDemo) checkTrustee(user).then(setTrustee, () => {}); }, [owner, user]);
   const motion = useMotionPref();
+  const unslop = useUnslop();
   const appearanceSummary = [
+    ...(unslop ? [tr('Unslop')] : []),
     themePref === 'system' ? tr('Auto') : themePref === 'dark' ? tr('Dark') : tr('Light'),
     motion === 'off' ? tr('animations off') : tr('animations on'),
     LANGS.find((l) => l.key === getLang())?.native ?? 'English',
@@ -176,6 +179,7 @@ export default function ProfilePage(props) {
               <Section title={tr("Preferences")}>
                 <Group id="appearance" title={tr("Appearance")} Icon={Palette} color="var(--accent)" summary={appearanceSummary}>
                   <div className="appearance-panel">
+                    <LookRow />
                     <ThemeRow themePref={themePref} theme={theme} onChange={onThemePrefChange} />
                     <MotionRow />
                     <LanguageRow onPatchSettings={onPatchSettings} />
@@ -418,6 +422,32 @@ function ThemeRow({ themePref, theme, onChange }) {
             <button key={key} id={`theme-${key}`} role="radio" aria-checked={on} onClick={() => onChange?.(key)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 11px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: on ? 'var(--shadow-sm)' : 'none' }}>
               <Icon size={13} /> {t(label)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* The look: Liquid Glass (as shipped) or Unslop — solid, quiet, one ink
+   accent (styles/unslop.css). A layer over the glass, so switching back
+   gives the glass exactly as it was. Per device, like the theme. */
+function LookRow() {
+  const on = useUnslop();
+  return (
+    <div className="theme-row" id="look-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px 11px 16px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+      <div style={{ flex: '1 1 140px', minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{t('Look')}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{on ? tr("Solid and quiet · this device only") : tr("Unslop: solid, quiet, no glass · this device only")}</div>
+      </div>
+      <div role="radiogroup" aria-label={tr("Look")} className="segmented" style={{ display: 'flex', gap: 2, padding: 3, background: 'var(--surface2)', flexShrink: 0 }}>
+        {[{ key: 'glass', label: tr("Glass"), value: false }, { key: 'unslop', label: tr("Unslop"), value: true }].map(({ key, label, value }) => {
+          const sel = on === value;
+          return (
+            <button key={key} id={`look-${key}`} role="radio" aria-checked={sel} onClick={() => setUnslop(value)}
+              style={{ padding: '7px 13px', border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: sel ? 'var(--surface)' : 'transparent', color: sel ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: sel ? 'var(--shadow-sm)' : 'none' }}>
+              {label}
             </button>
           );
         })}

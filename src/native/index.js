@@ -8,6 +8,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { invoke } from '@tauri-apps/api/core';
+import { barColor } from '../utils/unslop';
 
 const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
@@ -18,14 +19,11 @@ export const isNative = platform !== 'web';
 /* Our own Android plugin (android/…/SystemThemePlugin.java) */
 const SystemTheme = registerPlugin('SystemTheme');
 
-/* Matches glass.css --backdrop-base, so the system bars blend with the app. */
-const BAR = { light: '#EEF0F6', monoflow: '#06070B' };
-
 /** Android: colour behind the status/navigation bars + icon contrast for the theme. Returns true if applied. */
 export async function setStatusBarTheme(theme) {
   if (platform !== 'android') return false;
   try {
-    const { applied } = await SystemTheme.apply({ color: BAR[theme] ?? BAR.light, dark: theme === 'monoflow' });
+    const { applied } = await SystemTheme.apply({ color: barColor(theme), dark: theme === 'monoflow' });
     return !!applied;
   } catch { return false; }
 }

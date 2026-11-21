@@ -26,6 +26,7 @@ import { formatAmount } from '../utils/dateHelpers';
 import { clearLegacyDataCache } from '../utils/storage';
 import { learnCategoryRule } from '../utils/categories';
 import { useTheme } from '../utils/theme';
+import { useUnslop } from '../utils/unslop';
 import AuthGate from '../features/auth/AuthGate';
 import TodayTab         from '../features/transactions/TodayTab';
 // Home shows the Add form inline, so AddSheet is part of the first screen anyway.
@@ -184,6 +185,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finish
 
   // Theme is per device and light until the person picks Dark or Auto
   const { pref: themePref, theme, setPref: setThemePref } = useTheme();
+  const unslop = useUnslop();   // Profile → Appearance → Unslop (per device)
 
   // Usage activity for the app's owner (Profile → Admin sees): when and how
   // (counts and switches), never what — no amounts, no entries
@@ -288,9 +290,9 @@ function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finish
     const t = setTimeout(() => setToastMsg(null), 2600);
     return () => clearTimeout(t);
   }, [toastMsg]);
-  // Android: status bar follows the theme; hardware back closes the top
-  // dialog, then returns to Expenses, then backgrounds the app.
-  useEffect(() => { setStatusBarTheme(theme); }, [theme]);
+  // Android: status bar follows the theme (and the Unslop look); hardware back
+  // closes the top dialog, then returns to Expenses, then backgrounds the app.
+  useEffect(() => { setStatusBarTheme(theme); }, [theme, unslop]);
   useEffect(() => onBackButton(() => {
     if (overlayOpen()) { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); return true; }
     if (backStack.length || !pageOrder.includes(activeTab)) { goBack(); return true; }

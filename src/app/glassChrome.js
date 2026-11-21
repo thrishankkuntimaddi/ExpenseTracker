@@ -56,6 +56,11 @@ export function startGlassChrome() {
     }
   };
 
+  // The Unslop look (utils/unslop.js) changes the header's margins: re-measure
+  window.addEventListener('et-unslop', () => requestAnimationFrame(() => {
+    for (const h of document.querySelectorAll('.tab-header.lg-floating')) measure(h);
+  }));
+
   let queued = false;
   const rootEl = document.getElementById('root') || document.body;
   new MutationObserver(() => {

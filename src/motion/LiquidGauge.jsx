@@ -6,8 +6,11 @@
 //   variant 'bar'      a slim horizontal tube (the Home month card)
 // The canvas only animates while it's on screen and the app is visible;
 // with animations off it draws one still picture.
+// With the Unslop look (Profile → Appearance) it's a plain, flat bar in
+// the theme's calm colours — no liquid, no rim, no bubbles.
 import { useEffect, useRef } from 'react';
 import { motionOn } from './motion';
+import { useUnslop } from '../utils/unslop';
 
 const GREEN = [61, 220, 151], AMBER = [255, 181, 71], RED = [255, 107, 125];
 const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
@@ -22,6 +25,7 @@ export default function LiquidGauge({ fraction = 0, variant = 'capsule', classNa
   const target = useRef(Math.max(0, fraction));
   const sloshRef = useRef(0);
   const still = useRef(null);   // redraw, when animations are off
+  const flat = useUnslop();
   useEffect(() => {
     if (Math.abs(target.current - fraction) > 0.001) sloshRef.current = 1;
     target.current = Math.max(0, fraction);
@@ -39,7 +43,28 @@ export default function LiquidGauge({ fraction = 0, variant = 'capsule', classNa
     };
     size();
     const bar = variant === 'bar';
+    // Unslop: the theme's own colours (unslop.css) — a live style, so a theme switch shows
+    const css = flat ? getComputedStyle(cv) : null;
+    const tone = (p) => css.getPropertyValue(p < 0.7 ? '--income' : p < 0.9 ? '--lent' : '--expense').trim() || '#888';
+    const drawFlat = () => {
+      g.clearRect(0, 0, W, H);
+      const goal = Math.min(1, target.current), p = Math.max(0, Math.min(1, animate ? level : goal));
+      const rad = bar ? H / 2 : Math.min(W / 2, 18);
+      g.save(); g.beginPath(); g.roundRect(0, 0, W, H, rad); g.clip();
+      g.fillStyle = css.getPropertyValue('--surface2').trim() || 'rgba(127,127,140,.15)'; g.fillRect(0, 0, W, H);
+      g.fillStyle = tone(goal);
+      if (bar) g.fillRect(0, 0, W * p, H); else g.fillRect(0, H * (1 - p), W, H * p);
+      g.restore();
+    };
     const draw = (now) => {
+      if (flat) {
+        // a short ease to the level, then stop — nothing keeps running
+        const goal = Math.min(1, target.current);
+        if (animate) level += (goal - level) * 0.18; else level = goal;
+        drawFlat();
+        if (animate && Math.abs(goal - level) > 0.002 && !document.hidden) raf = requestAnimationFrame(draw);
+        return;
+      }
       // ~30 frames a second is plenty for liquid, and half the battery
       if (animate && now - last < 30) { raf = requestAnimationFrame(draw); return; }
       last = now;
@@ -89,15 +114,18 @@ export default function LiquidGauge({ fraction = 0, variant = 'capsule', classNa
       if (animate && onScreen && !document.hidden) raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    still.current = animate ? null : () => requestAnimationFrame(draw);
+    still.current = animate && !flat ? null : () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); };
     const io = new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; if (onScreen && animate) { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); } });
     io.observe(cv);
     const wake = () => { if (!document.hidden && animate) { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); } };
     document.addEventListener('visibilitychange', wake);
-    const ro = new ResizeObserver(() => { size(); if (!animate) requestAnimationFrame(draw); });
+    const ro = new ResizeObserver(() => { size(); if (!animate || flat) requestAnimationFrame(draw); });
     ro.observe(cv);
-    return () => { cancelAnimationFrame(raf); io.disconnect(); ro.disconnect(); document.removeEventListener('visibilitychange', wake); };
-  }, [variant]);
+    // flat colours come from the theme: redraw when it changes
+    const mo = flat ? new MutationObserver(() => requestAnimationFrame(draw)) : null;
+    mo?.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => { cancelAnimationFrame(raf); io.disconnect(); ro.disconnect(); mo?.disconnect(); document.removeEventListener('visibilitychange', wake); };
+  }, [variant, flat]);
 
   return <canvas id={id} ref={ref} className={`liquid liquid-${variant}${className ? ` ${className}` : ''}`} style={style} role="img" aria-label={label ?? `${Math.round(fraction * 100)}% of budget used`} />;
 }

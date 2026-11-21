@@ -176,9 +176,13 @@
           var dark = pref === 'dark' || (pref === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
           var t = dark ? 'monoflow' : 'light';
           document.documentElement.setAttribute('data-theme', t);
-          document.body.style.backgroundColor = dark ? '#06070B' : '#EEF0F6';
+          // Profile → Appearance → Unslop (src/utils/unslop.js): the quiet, solid look
+          var us = localStorage.getItem('et_unslop') === 'on';
+          if (us) document.documentElement.setAttribute('data-unslop', 'on');
+          var bar = us ? (dark ? '#0C0C0D' : '#F4F4F2') : (dark ? '#06070B' : '#EEF0F6');
+          document.body.style.backgroundColor = bar;
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', dark ? '#06070B' : '#EEF0F6');
+          if (meta) meta.setAttribute('content', bar);
         } catch(e) {}
       })();
     </script>
