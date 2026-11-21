@@ -1,10 +1,10 @@
 // ─── "New looks" note on Home ────────────────────────────────────
 // Tells people about Unslop and Unsloped (Profile → Appearance → Look).
 // People told us a note that comes back on every open is a nuisance, so
-// this one is shown on at most TWO app opens per account — counted in the
-// synced settings (settings.looksIntro), so a second phone doesn't start
-// over — and never again once they try a look, open Appearance from it,
-// or are already on one. Closing it hides it for this open only.
+// this one is shown on ONE app open per account — counted in the synced
+// settings (settings.looksIntro), so a second phone doesn't start over, and
+// marked on the device too — and never again once they try a look, open
+// Appearance from it, close it, or are already on one.
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useLook, setLook } from '../utils/unslop';
@@ -16,6 +16,9 @@ const SESSION_KEY = 'et_looks_intro_open';   // this app open: 'seen' (counted) 
 
 const sessionGet = () => { try { return sessionStorage.getItem(SESSION_KEY); } catch { return null; } };
 const sessionSet = (v) => { try { sessionStorage.setItem(SESSION_KEY, v); } catch { /* storage unavailable */ } };
+const DEVICE_KEY = 'et_looks_intro_done';    // shown on this device once: never again here
+const deviceDone = () => { try { return localStorage.getItem(DEVICE_KEY) === '1'; } catch { return false; } };
+const markDevice = () => { try { localStorage.setItem(DEVICE_KEY, '1'); } catch { /* storage unavailable */ } };
 
 export default function LooksIntro({ user, settings, onPatchSettings }) {
   const look = useLook();
@@ -29,24 +32,26 @@ export default function LooksIntro({ user, settings, onPatchSettings }) {
     if (ready && look !== 'glass' && !record?.done) onPatchSettings((cur) => ({ looksIntro: { ...cur?.looksIntro, done: true } }));
   }, [ready, look]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const due = ready && looksIntroDue(record, look);
+  const [shownBefore] = useState(deviceDone);   // read once: this open still shows it after marking
+  const due = ready && !shownBefore && looksIntroDue(record, look);
   // Count this app open once, the first time the note is actually shown
   // (the session mark also keeps React's double-run in dev from counting twice)
   useEffect(() => {
     if (!due || sessionGet()) return;
     sessionSet('seen');
+    markDevice();
     onPatchSettings((cur) => ({ looksIntro: { ...cur?.looksIntro, seen: (Number(cur?.looksIntro?.seen) || 0) + 1, at: Date.now() } }));
   }, [due]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Once counted, the synced `seen` may already be at the limit: keep it up for this open
-  const countedThisOpen = sessionGet() === 'seen';
-  const visible = ready && !closed && look === 'glass' && !record?.done && (due || countedThisOpen);
+  // Once counted the synced `seen` is at the limit: `shownBefore` (read when Home
+  // opened) keeps it up for this view only — the next time Home opens it's gone
+  const visible = ready && !closed && !shownBefore && look === 'glass' && !record?.done && (due || sessionGet() === 'seen');
   if (!visible) return null;
 
   const finish = () => onPatchSettings((cur) => ({ looksIntro: { ...cur?.looksIntro, done: true } }));
   const tryIt = () => { finish(); setLook('unsloped'); };
   const seeLooks = () => { finish(); shell?.goTo?.('profile', { openGroup: 'appearance' }); };
-  const close = () => { sessionSet('closed'); setClosed(true); };
+  const close = () => { sessionSet('closed'); setClosed(true); finish(); };
 
   return (
     <div className="card looks-intro" id="looks-intro" role="status" style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '14px 12px 14px 14px', marginBottom: 14 }}>

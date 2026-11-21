@@ -24,7 +24,8 @@ export default function AccountModal({ account, isDefault = false, color: newCol
   const editing = !!account;
   const [kind, setKind] = useState(account?.kind ?? 'bank');
   const [bank, setBank] = useState(account?.bank ?? '');
-  const [name, setName] = useState(account?.name ?? '');
+  // The starter "Bank · UPI" isn't a name anyone chose: start empty so the bank becomes it
+  const [name, setName] = useState(account?.starter ? '' : account?.name ?? '');
   const [last4, setLast4] = useState(account?.last4 ?? '');
   const [tag, setTag] = useState(account?.tag ?? '');
   const [color, setColor] = useState(Number(account?.color) || newColor);
@@ -34,7 +35,12 @@ export default function AccountModal({ account, isDefault = false, color: newCol
   const [makeDefault, setMakeDefault] = useState(isDefault);
   const [custom, setCustom] = useState(account?.tag && !ACCOUNT_TAGS.includes(account.tag));
 
-  const finalName = name.trim() || (kind === 'cash' ? 'Cash' : [bank.trim(), last4 ? `••${last4}` : ''].filter(Boolean).join(' '));
+  // "indian bank" → "Indian Bank": the bank as it's usually written
+  const canonical = BANKS.find((b) => b.toLowerCase() === bank.trim().toLowerCase()) ?? bank.trim();
+  const typed = bank.trim().toLowerCase();
+  const suggestions = typed === canonical.toLowerCase() && BANKS.includes(canonical) ? []
+    : (typed ? BANKS.filter((b) => b.toLowerCase().includes(typed)) : BANKS).slice(0, 8);
+  const finalName = name.trim() || (kind === 'cash' ? 'Cash' : [canonical, last4 ? `••${last4}` : ''].filter(Boolean).join(' '));
   const num = balance.trim() === '' ? null : Number(balance.replace(/,/g, ''));
   const can = !!finalName && (num == null || Number.isFinite(num));
   const changed = num != null && (shown == null || Math.abs(num - shown) >= 0.005);
@@ -43,7 +49,7 @@ export default function AccountModal({ account, isDefault = false, color: newCol
     if (!can) return;
     const fields = {
       kind, name: finalName, color,
-      bank: kind === 'cash' ? '' : bank.trim(), last4: kind === 'cash' ? '' : last4, tag: tag.trim(),
+      bank: kind === 'cash' ? '' : canonical, last4: kind === 'cash' ? '' : last4, tag: tag.trim(),
       limit: kind === 'card' && Number(limit) > 0 ? Number(limit) : null,
     };
     // A card's balance is stored negative: what you owe
@@ -73,12 +79,16 @@ export default function AccountModal({ account, isDefault = false, color: newCol
       {kind !== 'cash' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 92px', gap: 8 }}>
           <Field label={tr('Bank')}>
-            <input id="acct-bank" list="acct-banks" value={bank} onChange={(e) => setBank(e.target.value)} placeholder="HDFC, SBI, Canara…" style={fieldStyle} autoFocus={!editing} />
-            <datalist id="acct-banks">{BANKS.map((b) => <option key={b} value={b} />)}</datalist>
+            <input id="acct-bank" value={bank} onChange={(e) => setBank(e.target.value)} placeholder="HDFC, SBI, Canara…" autoComplete="off" style={fieldStyle} autoFocus={!editing} />
           </Field>
           <Field label={tr('Last 4')}>
-            <input id="acct-last4" inputMode="numeric" value={last4} onChange={(e) => setLast4(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="4521" style={fieldStyle} />
+            <input id="acct-last4" inputMode="numeric" value={last4} onChange={(e) => setLast4(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder={tr('Optional')} style={fieldStyle} />
           </Field>
+        </div>
+      )}
+      {kind !== 'cash' && suggestions.length > 0 && (
+        <div id="acct-bank-suggest" style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', marginTop: -4 }}>
+          {suggestions.map((b) => <button key={b} type="button" onClick={() => setBank(b)} style={{ ...chip(false), flexShrink: 0 }}>{b}</button>)}
         </div>
       )}
 

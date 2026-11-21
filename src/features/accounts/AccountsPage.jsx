@@ -131,7 +131,7 @@ export default function AccountsPage({ transactions = [], income = [], settings,
         <AccountSheet a={detail} dark={dark} isDefault={detail.id === defaultId}
           entries={accountEntries(detail.id, transactions, income, settings)}
           onClose={() => setOpen(null)}
-          onEdit={() => setEditing(detail)}
+          onEdit={() => { setEditing(detail); setOpen(null); }}
           onMove={(dir) => setMoving(dir === 'in' ? { to: detail.id } : { from: detail.id })}
           onReopen={() => reopen(detail)} />
       )}
@@ -161,7 +161,7 @@ function AccountRow({ a, dark, isDefault, onOpen }) {
   const due = card ? -a.balance : null;
   // Only what the name doesn't already say
   const name = accountLabel(a);
-  const sub = [a.bank && !name.includes(a.bank) ? a.bank : '', a.last4 && !name.includes(a.last4) ? `••${a.last4}` : ''].filter(Boolean).join(' · ');
+  const sub = [a.bank && !name.toLowerCase().includes(a.bank.toLowerCase()) ? a.bank : '', a.last4 ? `••${a.last4}` : ''].filter(Boolean).join(' · ');
   return (
     <button type="button" id={`acct-row-${a.id}`} className="acct-row" onClick={onOpen}>
       <span className="acct-band" style={{ background: colorOf(a, dark) }} aria-hidden />
@@ -174,7 +174,6 @@ function AccountRow({ a, dark, isDefault, onOpen }) {
         <span className="acct-sub">
           {a.tag && <span className="acct-tag">{tr(a.tag)}</span>}
           {sub}
-          {(a.monthIn > 0 || a.monthOut > 0) && <span>{sub ? ' · ' : ''}+{formatAmount(a.monthIn)} / −{formatAmount(a.monthOut)} {tr('this month')}</span>}
         </span>
       </span>
       <span style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -203,7 +202,7 @@ function AccountSheet({ a, dark, isDefault, entries, onClose, onEdit, onMove, on
             <span className="acct-dot" style={{ width: 12, height: 12, background: colorOf(a, dark) }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>{accountLabel(a)}{isDefault && <Star size={12} style={{ marginLeft: 6, color: 'var(--text-muted)' }} />}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{[a.tag && tr(a.tag), !accountLabel(a).includes(a.bank) && a.bank, a.last4 && !accountLabel(a).includes(a.last4) && `••${a.last4}`, tr(ACCOUNT_KINDS[a.kind]?.label ?? '')].filter(Boolean).join(' · ')}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{[a.tag && tr(a.tag), a.bank && !accountLabel(a).toLowerCase().includes(a.bank.toLowerCase()) && a.bank, a.last4 && `••${a.last4}`, tr(ACCOUNT_KINDS[a.kind]?.label ?? '')].filter(Boolean).join(' · ')}</div>
             </div>
             <button onClick={onClose} aria-label={tr('Close')} style={{ width: 30, height: 30, border: 'none', background: 'var(--surface2)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={15} /></button>
           </div>
@@ -211,6 +210,7 @@ function AccountSheet({ a, dark, isDefault, entries, onClose, onEdit, onMove, on
           <div style={{ margin: '14px 2px 4px' }}>
             <div className="tl-title">{card ? tr('Due now') : tr('Balance now')}</div>
             <div id="acct-sheet-balance" style={{ fontSize: 30, fontWeight: 800, color: (card ? -a.balance > 0 : a.balance < 0) ? 'var(--expense)' : 'var(--text)', letterSpacing: '-0.02em' }}>{formatAmount(card ? Math.max(0, -a.balance) : a.balance)}</div>
+            {(a.monthIn > 0 || a.monthOut > 0) && <div id="acct-sheet-month" style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '2px 0' }}>{tr('This month')}: <strong style={{ color: 'var(--income)' }}>+{formatAmount(a.monthIn)}</strong> · <strong>−{formatAmount(a.monthOut)}</strong></div>}
             {a.openingDate && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tr('Balance set on')} {new Date(`${a.openingDate}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · {tr('entries since then move it')}</div>}
           </div>
 
