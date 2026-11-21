@@ -55,6 +55,12 @@ export function useFirestoreData(uid, email) {
   useEffect(() => { txnsRef.current = transactions; }, [transactions]);
   useEffect(() => { incomeRef.current = income; }, [income]);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
+  // Settings are one map, written whole (updateDoc replaces it). A write made
+  // before the saved settings have arrived would replace them with almost
+  // nothing — so until they arrive, changes are kept here and applied on top
+  // of them when they do.
+  const settingsReady = useRef(false);
+  const pendingSettings = useRef([]);   // [(settings) => patch]
 
   // Repair accounts that never got a user doc
   useEffect(() => {
@@ -67,12 +73,28 @@ export function useFirestoreData(uid, email) {
     if (!uid) return;
 
     let gotTxns = false, gotIncome = false;
+    settingsReady.current = false;
+    pendingSettings.current = [];
     const unsubUser = subscribeToUserData(uid, ({ transactions: t, income: i, settings: s, source }) => {
       setTransactions(t);
       setIncome(i);
       if (source === 'transactions') gotTxns = true;
       if (source === 'income') gotIncome = true;
       if (gotTxns && gotIncome) setLoaded(true);
+      if (source !== 'settings') return;
+      if (!settingsReady.current) {
+        // The saved settings, with anything changed while they were on their way
+        settingsReady.current = true;
+        const queued = pendingSettings.current;
+        pendingSettings.current = [];
+        const next = queued.reduce((acc, fn) => ({ ...acc, ...fn(acc) }), s ?? {});
+        settingsRef.current = next;
+        setSettings(next);
+        if (queued.length) {
+          background(fsUpdateSettings(uid, next), (err) => reportErrorRef.current?.('save settings', err));
+        }
+        return;
+      }
       if (s && Object.keys(s).length) {
         setSettings(prev => ({ ...prev, ...s }));
       }
@@ -92,6 +114,8 @@ export function useFirestoreData(uid, email) {
     setWriteError(`${readableFirestoreError(err, action)} Your change was undone.`);
   }, []);
   const clearWriteError = useCallback(() => setWriteError(null), []);
+  const reportErrorRef = useRef(reportError);
+  useEffect(() => { reportErrorRef.current = reportError; }, [reportError]);
 
   /* ── Currency views ── */
   const display = isCurrency(settings?.currency) ? settings.currency : DEFAULT_CURRENCY;
@@ -195,29 +219,33 @@ export function useFirestoreData(uid, email) {
 
   /* ── Settings ── */
 
-  const saveSettings = useCallback(async (newSettings) => {
-    if (!uidRef.current) return false;
-    const previous = settingsRef.current;
-    setSettings(newSettings);
-    background(fsUpdateSettings(uidRef.current, newSettings), (err) => {
+  /** Apply `fn(settings) → patch` now (and write the whole map), or — before
+      the saved settings have arrived — show it and keep it for when they do. */
+  const writeSettings = useCallback((fn) => {
+    const previous = settingsRef.current ?? {};
+    const next = { ...previous, ...fn(previous) };
+    settingsRef.current = next;          // a second change right after sees this one
+    setSettings(next);
+    if (!uidRef.current) return true;
+    if (!settingsReady.current) { pendingSettings.current.push(fn); return true; }
+    background(fsUpdateSettings(uidRef.current, next), (err) => {
       reportError('save settings', err);
+      settingsRef.current = previous;
       setSettings(previous);
     });
     return true;
   }, [reportError]);
 
+  const saveSettings = useCallback(async (newSettings) => {
+    if (!uidRef.current) return false;
+    return writeSettings(() => newSettings);
+  }, [writeSettings]);
+
   /** Merge a partial update into settings (budgets, categoryRules, goals …). */
   const patchSettings = useCallback(async (patch) => {
-    const previous = settingsRef.current;
     // A function patch reads the latest settings (for merging into a map)
-    const next = { ...previous, ...(typeof patch === 'function' ? patch(previous ?? {}) : patch) };
-    setSettings(next);
-    background(fsUpdateSettings(uidRef.current, next), (err) => {
-      reportError('save settings', err);
-      setSettings(previous);
-    });
-    return true;
-  }, [reportError]);
+    return writeSettings(typeof patch === 'function' ? patch : () => patch);
+  }, [writeSettings]);
 
   /* ── Recently Deleted ── */
 

@@ -26,7 +26,7 @@ export default function LooksIntro({ user, settings, onPatchSettings }) {
 
   // Already on Unslop / Unsloped: they've found it — never show the note
   useEffect(() => {
-    if (ready && look !== 'glass' && !record?.done) onPatchSettings({ looksIntro: { ...record, done: true } });
+    if (ready && look !== 'glass' && !record?.done) onPatchSettings((cur) => ({ looksIntro: { ...cur?.looksIntro, done: true } }));
   }, [ready, look]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const due = ready && looksIntroDue(record, look);
@@ -35,7 +35,7 @@ export default function LooksIntro({ user, settings, onPatchSettings }) {
   useEffect(() => {
     if (!due || sessionGet()) return;
     sessionSet('seen');
-    onPatchSettings({ looksIntro: { ...record, seen: (Number(record?.seen) || 0) + 1, at: Date.now() } });
+    onPatchSettings((cur) => ({ looksIntro: { ...cur?.looksIntro, seen: (Number(cur?.looksIntro?.seen) || 0) + 1, at: Date.now() } }));
   }, [due]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Once counted, the synced `seen` may already be at the limit: keep it up for this open
@@ -43,7 +43,7 @@ export default function LooksIntro({ user, settings, onPatchSettings }) {
   const visible = ready && !closed && look === 'glass' && !record?.done && (due || countedThisOpen);
   if (!visible) return null;
 
-  const finish = () => onPatchSettings({ looksIntro: { ...record, done: true } });
+  const finish = () => onPatchSettings((cur) => ({ looksIntro: { ...cur?.looksIntro, done: true } }));
   const tryIt = () => { finish(); setLook('unsloped'); };
   const seeLooks = () => { finish(); shell?.goTo?.('profile', { openGroup: 'appearance' }); };
   const close = () => { sessionSet('closed'); setClosed(true); };

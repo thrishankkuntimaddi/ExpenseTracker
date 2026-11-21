@@ -65,6 +65,7 @@ export function subscribeToUserData(uid, onData) {
   let txns     = [];
   let incomes  = [];
   let settings = {};
+  let gotSettings = false;   // the first user-doc snapshot always goes out, even with no settings yet
 
   function emit(source) {
     onData({ transactions: txns, income: incomes, settings, source });
@@ -97,7 +98,8 @@ export function subscribeToUserData(uid, onData) {
     (snap) => {
       if (!snap.exists()) return;
       const next = snap.data()?.settings || {};
-      if (JSON.stringify(next) === JSON.stringify(settings)) return; // metadata-only change
+      if (gotSettings && JSON.stringify(next) === JSON.stringify(settings)) return; // metadata-only change
+      gotSettings = true;
       settings = next;
       emit('settings');
     },

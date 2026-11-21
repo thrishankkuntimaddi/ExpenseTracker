@@ -112,6 +112,7 @@ All data is private to your account: `firestore.rules` only lets a signed-in use
 - **Every entry picks an account** — *Paid from* on expenses, savings, lending and paying back; *Received in* on income, borrowing and money paid back to you. So "lent by PhonePe, got it back in cash" is two taps. Your default (★) is pre-picked, and each form remembers what you used last
 - **Move money** between your own accounts — SBI → HDFC, an ATM withdrawal, a cash deposit, paying the card bill. It isn't spending or income, so budgets and stats don't count it
 - **Home** shows every account's balance under the month card; **Stats** draws one line per kind (banks · cash · cards) or per account, in each account's colour, over 1M–All; **Net worth** lists each account and each card's due
+- **Settings can't be wiped on open** (4.5.1): a change made while the app is still loading (the looks note counting an open) waits for your saved settings and is applied on top of them — before, it could replace them, so accounts, budgets and goals set up earlier vanished after reopening
 - Older entries need nothing: until you set accounts up they're split into *Bank · UPI* and *Cash* from today's balance (cash-marked entries on Cash), and stay on the account you set up first. Change any one by editing it (`src/utils/accounts.js`)
 
 ### 💱 Currencies
