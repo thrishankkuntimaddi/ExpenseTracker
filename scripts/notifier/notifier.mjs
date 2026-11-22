@@ -599,7 +599,7 @@ async function usage() {
   // Days in Pacific time — that's when Firebase's free daily quota resets
   const end = new Date(now), start = new Date(now - 7 * 86400e3);
   const days = {};
-  let error = null;
+  let error = null, detail = null;
   for (const [key, metric] of Object.entries(METRICS)) {
     const q = new URLSearchParams({
       filter: `metric.type="firestore.googleapis.com/${metric}"`,
@@ -607,7 +607,16 @@ async function usage() {
       'aggregation.alignmentPeriod': '3600s', 'aggregation.perSeriesAligner': 'ALIGN_SUM', 'aggregation.crossSeriesReducer': 'REDUCE_SUM',
     });
     const res = await fetch(`https://monitoring.googleapis.com/v3/projects/${PROJECT}/timeSeries?${q}`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) { error = res.status === 403 ? 'Give the service account the “Monitoring Viewer” role to see reads and writes.' : `Cloud Monitoring said ${res.status}`; break; }
+    if (!res.ok) {
+      // Say exactly what Google said: a missing role and a switched-off API both answer 403
+      const why = await res.json().then((b) => b?.error?.message ?? '', () => '');
+      const off = /has not been used|is disabled|SERVICE_DISABLED|Enable it by visiting/i.test(why);
+      error = off ? 'The Cloud Monitoring API is switched off for this project.'
+        : res.status === 403 ? 'Give the service account the “Monitoring Viewer” role to see reads and writes.' : `Cloud Monitoring said ${res.status}`;
+      console.warn('usage:', res.status, why.slice(0, 300));
+      detail = `${res.status} · ${why.slice(0, 280)} · as ${JSON.parse(sa).client_email}`;
+      break;
+    }
     const body = await res.json();
     for (const series of body.timeSeries ?? []) {
       for (const pt of series.points ?? []) {
@@ -617,7 +626,7 @@ async function usage() {
       }
     }
   }
-  if (!DRY) await ref.set({ at: now, error, days: error ? {} : days, quota: { reads: 50000, writes: 20000, deletes: 20000 } });
+  if (!DRY) await ref.set({ at: now, error, detail, days: error ? {} : days, quota: { reads: 50000, writes: 20000, deletes: 20000 } });
   stats.usage = error ? 'unavailable' : Object.keys(days).length;
 }
 
