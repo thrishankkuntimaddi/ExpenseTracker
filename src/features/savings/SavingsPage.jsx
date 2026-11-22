@@ -1,18 +1,16 @@
-// ─── Savings & goals (phone) ─────────────────────────────────────
+// ─── Savings (phone) ─────────────────────────────────────────────
 // Where the money you put away goes: the month on screen vs income (savings
 // rate), all-time by kind (SIP, mutual fund, trading, cash …), six months,
-// your goals (where each one's money is kept), and that month's entries.
-import { useMemo, useState } from 'react';
-import { Plus, PiggyBank } from 'lucide-react';
+// and that month's entries. Goals have their own page (4.6.0) — a link here.
+import { useMemo } from 'react';
+import { Plus, PiggyBank, Flag, ChevronRight } from 'lucide-react';
 import { PageHeader, HeaderAction, SectionHeading, EmptyState, PrimaryPill, SummaryCard } from '../../components/Page';
-import GoalsCard from '../plan/components/GoalsCard';
 import Sign from '../../motion/Sign';
 
 const PiggySign = (props) => <Sign kind="piggy" {...props} />;
-import GoalModal from '../plan/GoalModal';
 import { SAVINGS_TYPES, getSavingsType } from '../../utils/typeConfig';
 import { formatAmount, localMonthKey } from '../../utils/dateHelpers';
-import { generateId } from '../../utils/storage';
+import { isGoalOpen } from '../../utils/goals';
 import NetWorthCard from './NetWorthCard';
 import { useShell } from '../../app/shellContext';
 import { useViewMonth, monthName } from '../../app/month';
@@ -23,7 +21,6 @@ const sum = (list) => list.reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
 export default function SavingsPage({ transactions = [], income = [], settings, onPatchSettings, selectedPeriod }) {
   const shell = useShell();
-  const [goalModal, setGoalModal] = useState(null);
   const goals = settings?.goals ?? [];
   const { month: monthKey } = useViewMonth(selectedPeriod);
 
@@ -52,16 +49,11 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
   }, [savings, monthKey]);
   const maxMonth = Math.max(1, ...months.map((m) => m.amount));
 
-  function saveGoal(g) {
-    const list = g.id ? goals.map((x) => (x.id === g.id ? { ...x, ...g } : x)) : [...goals, { ...g, id: generateId() }];
-    onPatchSettings({ goals: list });
-  }
-  const updateGoal = (g) => onPatchSettings({ goals: goals.map((x) => (x.id === g.id ? g : x)) });
   const monthEntries = savings.filter((t) => localMonthKey(t.date) === monthKey);
 
   return (
     <div className="tab-root savings-page">
-      <PageHeader title={tr("Savings & goals")} subtitle={tr("SIPs, funds, cash — and what they're for")} month
+      <PageHeader title={tr("Savings")} subtitle={tr("SIPs, funds, deposits, cash put away")} month
         actions={<HeaderAction id="savings-add" Icon={Plus} label={tr("Save")} onClick={() => shell?.openAdd('savings')} />} />
 
       <div className="tab-body">
@@ -120,9 +112,15 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
           </>
         )}
 
-        <div id="savings-goals" style={{ marginTop: 20 }} />
-        <GoalsCard goals={goals} transactions={transactions} onAdd={() => setGoalModal('new')} onEdit={(g) => setGoalModal(g)}
-          onUpdate={updateGoal} onContribute={(g) => shell?.openAdd('savings', { goalId: g.id })} />
+        <button type="button" id="savings-goals" className="card" onClick={() => shell?.goTo('goals')}
+          style={{ marginTop: 20, width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+          <span style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--income-bg)', color: 'var(--income)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Flag size={16} /></span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: 13.5, fontWeight: 750, color: 'var(--text)' }}>{tr('Goals')}{goals.filter(isGoalOpen).length ? ` · ${goals.filter(isGoalOpen).length}` : ''}</span>
+            <span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-muted)', marginTop: 1 }}>{tr('Things to buy and money goals now have their own page')}</span>
+          </span>
+          <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
+        </button>
 
         {monthEntries.length > 0 && (
           <>
@@ -146,10 +144,6 @@ export default function SavingsPage({ transactions = [], income = [], settings, 
         )}
       </div>
 
-      {goalModal && (
-        <GoalModal goal={goalModal === 'new' ? null : goalModal} onSave={saveGoal}
-          onDelete={(id) => onPatchSettings({ goals: goals.filter((g) => g.id !== id) })} onClose={() => setGoalModal(null)} />
-      )}
     </div>
   );
 }

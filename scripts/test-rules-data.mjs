@@ -47,5 +47,20 @@ await expect('no unknown fields (no amounts sneak in)', false, () => setDoc(act,
 await expect('someone else cannot write my activity', false, () => setDoc(doc(other, 'user_activity/u1'), { lastOpenedAt: Date.now() }, { merge: true }));
 await expect('a normal user cannot list everyone', false, () => getDocs(collection(other, 'user_activity')));
 
+// Entries remember when they were logged (4.6.0: accounts count back-dated ones)
+await expect('an entry with createdAt and via', true, () => setDoc(doc(me, 'users/u1/transactions/f'), { ...entry, type: 'person', direction: 'lent', createdAt: Date.now(), via: 'upi' }));
+
+// Live config (Admin sees → Control)
+const owner = as('own', 'thrishankkuntimaddi@gmail.com');
+const live = { banners: [{ id: 'b1', text: 'Hello', tone: 'info', dismissible: true, at: 1 }], maintenance: { on: false, message: '', until: null }, minVersion: '4.6.0', minMessage: '' };
+await expect('the owner writes the live config', true, () => setDoc(doc(owner, 'app_config/live'), live));
+await expect('anyone signed in reads it', true, () => getDoc(doc(other, 'app_config/live')));
+await expect('a user cannot write it', false, () => setDoc(doc(me, 'app_config/live'), live));
+await expect('no unknown fields in it', false, () => setDoc(doc(owner, 'app_config/live'), { ...live, extra: 1 }));
+await expect('at most five banners', false, () => setDoc(doc(owner, 'app_config/live'), { ...live, banners: Array(6).fill(live.banners[0]) }));
+await expect('the owner keeps a GitHub token', true, () => setDoc(doc(owner, 'admin_secrets/github'), { token: 'x' }));
+await expect('nobody else reads the token', false, () => getDoc(doc(other, 'admin_secrets/github')));
+await expect('nobody else writes the token', false, () => setDoc(doc(me, 'admin_secrets/github'), { token: 'y' }));
+
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
 process.exit(failures ? 1 : 0);

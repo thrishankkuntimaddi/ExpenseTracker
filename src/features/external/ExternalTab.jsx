@@ -13,6 +13,8 @@ import SessionEditor from './components/SessionEditor';
 import BillingsHeader from './components/BillingsHeader';
 import ModeToggle from './components/ModeToggle';
 import TripsPanel from '../trips/TripsPanel';
+import { defaultAccountId, listAccounts } from '../../utils/accounts';
+import { rememberAccount } from '../../components/accountChoice';
 
 
 import { t as tr } from '../../i18n';
@@ -47,6 +49,7 @@ export default function ExternalTab({
   const [showArchived, setShowArchived]       = useState(false);
   const [showHistory, setShowHistory]         = useState(true);
   const [sharingSession, setSharingSession]   = useState(null);
+  const [closeAccount, setCloseAccount]       = useState(null);   // where the settlement lands
 
   // Active session object currently opened in editor
   const currentSession = useMemo(() =>
@@ -166,9 +169,17 @@ export default function ExternalTab({
   }
 
   /* ── Close Session ── */
+  function requestClose() {
+    // The account it was settled on before, else the one last used for billings, else the default
+    let last = null; try { last = JSON.parse(localStorage.getItem('et_account_last') || '{}').billing; } catch { /* none */ }
+    const known = (id) => id && listAccounts(settings).some((a) => a.id === id && !a.archived);
+    setCloseAccount(known(currentSession?.accountId) ? currentSession.accountId : known(last) ? last : defaultAccountId(settings));
+    setShowCloseModal(true);
+  }
   async function handleConfirmClose() {
     if (!activeSessionId) return;
     setClosing(true);
+    if (closeAccount) rememberAccount('billing', closeAccount);
     try {
       const cleanedItems    = items.map(i => ({ ...i, amount: parseFloat(i.amount) || null }));
       const cleanedReceived = received.map(r => ({ ...r, amount: parseFloat(r.amount) || null }));
@@ -182,6 +193,8 @@ export default function ExternalTab({
           total_spent: totalSpent,
           sessionDate: dateInputToISO(sessionDate),
           sessionName,
+          accountId: closeAccount,
+          settings,
         },
         {
           onAddIncome, onUpdateIncome, onDeleteIncome,
@@ -225,10 +238,11 @@ export default function ExternalTab({
   const allClosed        = sessions.filter(s => s.status === 'closed');
   const closedSessions   = filterItemsByPeriod(allClosed, viewPeriod);
 
-  const hasItems    = items.some(i => i.name?.trim() && parseFloat(i.amount) > 0);
+  const hasItems    = items.some(i => i.name?.trim() || parseFloat(i.amount) > 0);
   const hasReceived = received.some(r => r.person?.trim() && parseFloat(r.amount) > 0);
-  // Nobody gave money for it? It still closes — the whole amount is yours to pay
-  const canClose    = hasItems;
+  // Any of it closes: a list you paid for yourself (an expense), money someone
+  // gave you with no list (income), or both (the difference) — or just a list
+  const canClose    = hasItems || hasReceived;
 
 
 
@@ -266,6 +280,10 @@ export default function ExternalTab({
           sessionName={sessionName}
           persons={personsLabel}
           paidByMe={!hasReceived}
+          account={closeAccount}
+          onAccountChange={setCloseAccount}
+          settings={settings}
+          reclosing={!!currentSession?.closedAt}
           onConfirm={handleConfirmClose}
           onCancel={() => setShowCloseModal(false)}
           loading={closing}
@@ -344,7 +362,8 @@ export default function ExternalTab({
             onDiscard={handleDiscard}
             onShare={handleShareCurrentSession}
             onSaveDraft={handleSaveDraft}
-            onRequestClose={() => setShowCloseModal(true)}
+            onRequestClose={requestClose}
+            reclosing={!!currentSession?.closedAt}
           />
         )}
       </div>

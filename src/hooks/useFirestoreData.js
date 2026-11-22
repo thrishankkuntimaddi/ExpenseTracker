@@ -157,7 +157,8 @@ export function useFirestoreData(uid, email) {
 
   const addTransaction = useCallback(async (entry) => {
     if (!uidRef.current) return false;
-    const txn = stamp(entry, displayRef.current);
+    // createdAt: when it was logged — an account counts it even if back-dated (utils/accounts)
+    const txn = { createdAt: Date.now(), ...stamp(entry, displayRef.current) };
     setTransactions(prev => [...prev, txn]);
     background(fsAddTxn(uidRef.current, txn), (err) => {
       reportError('add the transaction', err);
@@ -195,7 +196,7 @@ export function useFirestoreData(uid, email) {
 
   const addIncome = useCallback(async (given) => {
     if (!uidRef.current) return false;
-    const entry = stamp(given, displayRef.current);
+    const entry = { createdAt: Date.now(), ...stamp(given, displayRef.current) };
     setIncome(prev => [...prev, entry]);
     background(fsAddIncome(uidRef.current, entry), (err) => {
       reportError('add the income entry', err);

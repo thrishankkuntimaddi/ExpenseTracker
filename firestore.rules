@@ -191,6 +191,26 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['viewers', 'updatedAt'])
         && request.resource.data.viewers is list && request.resource.data.viewers.size() <= 10;
     }
+    // ─── Live config (Admin sees → Control) ───────────────────────────
+    // app_config/live: banners on Home, maintenance, the minimum version.
+    // Every signed-in app reads it; only the owner writes it, in shape.
+    match /app_config/live {
+      allow get: if request.auth != null;
+      allow create, update: if isAppAdmin()
+        && request.resource.data.keys().hasOnly(['banners', 'maintenance', 'minVersion', 'minMessage', 'updatedAt'])
+        && request.resource.data.banners is list && request.resource.data.banners.size() <= 5
+        && request.resource.data.maintenance is map
+        && request.resource.data.maintenance.keys().hasOnly(['on', 'message', 'until'])
+        && request.resource.data.maintenance.on is bool
+        && request.resource.data.maintenance.message is string && request.resource.data.maintenance.message.size() <= 400
+        && request.resource.data.minVersion is string && request.resource.data.minVersion.size() <= 20
+        && request.resource.data.minMessage is string && request.resource.data.minMessage.size() <= 300;
+    }
+    // admin_secrets/github: the owner's GitHub token for running the server
+    // job from the app. Nobody else can read it — not trustees either.
+    match /admin_secrets/{docId} {
+      allow get, create, update, delete: if isAppAdmin();
+    }
     // system_health/{doc}: written by the notifier (server) each run — jobs,
     // errors, Firestore reads / writes / deletes. Read by the owner and trustees.
     match /system_health/{docId} {

@@ -19,7 +19,7 @@ concurrency:
 jobs:
   notify:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12   # each job has its own limit inside (notifier.mjs); closing a big account can take a few minutes
     steps:
       - uses: actions/checkout@v5
         with:

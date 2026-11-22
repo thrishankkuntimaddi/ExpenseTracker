@@ -11,7 +11,7 @@ export default function SessionEditor({
   sessionName, sessionDate, onNameChange, onDateChange,
   items, received, totalSpent, totalReceived, netBalance,
   onItemsChange, onReceivedChange, knownPeople = [],
-  canClose, onDiscard, onShare, onSaveDraft, onRequestClose,
+  canClose, onDiscard, onShare, onSaveDraft, onRequestClose, reclosing = false,
 }) {
   const isProfit = netBalance > 0;
   const isLoss   = netBalance < 0;
@@ -60,22 +60,22 @@ export default function SessionEditor({
         {/* Goods purchased · money received — two sheets, Enter moves on, paste from Excel */}
         <div>
           <SheetTitle Icon={ShoppingBag} tone="expense" title={tr("Goods purchased")} total={totalSpent} />
-          <Sheet id="bill-items" tone="expense" rows={items} onChange={onItemsChange} makeRow={newItemRow} rowLabel={(r) => r.name}
+          <Sheet id="bill-items" tone="expense" reorderable rows={items} onChange={onItemsChange} makeRow={newItemRow} rowLabel={(r) => r.name}
             columns={[
-              { key: 'name', label: tr("Item"), type: 'text', placeholder: tr("Cement bags, wire…") },
+              { key: 'name', label: tr("Item"), type: 'text', placeholder: tr("Cement bags, wire… (drag # to reorder)") },
               { key: 'amount', label: `Amount ${currencySymbol()}`, type: 'amount', width: '104px', placeholder: '0' },
             ]} />
         </div>
         <div>
           <SheetTitle Icon={User} tone="income" title={tr("Money received")} total={totalReceived} />
-          <Sheet id="bill-received" tone="income" rows={received} onChange={onReceivedChange} makeRow={newReceivedRow} rowLabel={(r) => r.person}
+          <Sheet id="bill-received" tone="income" reorderable rows={received} onChange={onReceivedChange} makeRow={newReceivedRow} rowLabel={(r) => r.person}
             columns={[
               { key: 'person', label: tr("From"), type: 'pick', placeholder: tr("Who paid you?"), options: knownPeople.map((n) => ({ value: n, label: n })), onCreate: (n) => n },
               { key: 'amount', label: `Amount ${currencySymbol()}`, type: 'amount', width: '104px', placeholder: '0' },
             ]} />
           {totalReceived <= 0 && (
             <p id="bill-paid-by-me" style={{ fontSize: 11, color: 'var(--text-muted)', margin: '8px 4px 0', lineHeight: 1.5 }}>
-              {tr("Nobody gave you money for this? Leave it empty — closing adds the whole amount to your own expenses.")}
+              {tr("Nobody gave you money for this? Leave it empty — closing adds the whole amount to your own expenses. Only money in, no list? Fill just this side — it goes to Money in.")}
             </p>
           )}
         </div>
@@ -141,7 +141,7 @@ export default function SessionEditor({
               fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
             }}
           >
-            <CheckCircle2 size={15} /> {tr("Close Billing")}
+            <CheckCircle2 size={15} /> {reclosing ? tr("Update & close") : tr("Close Billing")}
           </button>
         </div>
       </div>

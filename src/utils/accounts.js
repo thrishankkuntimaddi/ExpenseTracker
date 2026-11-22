@@ -7,6 +7,7 @@
 //   color    1–8, a slot of the chart palette (ACCOUNT_COLORS)
 //   opening  balance at the START of openingDate (cards: negative = due)
 //   openingDate 'YYYY-MM-DD'
+//   anchoredAt  ms — when that balance was set (4.6.0+)
 //   limit?   credit limit (cards)
 //   archived?  closed: hidden from pickers, kept for history
 // }]
@@ -21,8 +22,11 @@
 // of every total, so budgets and stats never count it.
 //
 // Balance of an account = opening + every entry on it dated openingDate or
-// later. Days before openingDate are worked out backwards, so the history
-// line still reaches back to the first entry.
+// later — and every entry logged AFTER the balance was set, whatever its
+// date (entry.createdAt > anchoredAt): a billing dated last week but closed
+// today, or a forgotten expense back-dated, still moves the money. Days
+// before openingDate are worked out backwards, so the history line still
+// reaches back to the first entry.
 //
 // Before someone sets up accounts (no settings.accounts) the app shows two:
 // MAIN ("Bank · UPI") and CASH, with today's Home balance split between them
@@ -164,10 +168,32 @@ export function entryEffects(entry, source, settings, ids = null) {
   }
 }
 
-/** Per account, per day: Map(id → Map(dayKey → paise)). */
-function dailyByAccount(transactions, income, settings) {
+/** When an entry was logged (ms), if it says. */
+export const loggedAt = (e) => {
+  const c = e?.createdAt;
+  if (typeof c === 'number') return c;
+  if (c && typeof c.toMillis === 'function') return c.toMillis();
+  if (typeof c === 'string') return Date.parse(c) || 0;
+  return 0;
+};
+
+/** When an account's balance was set: anchoredAt, or (set before 4.6.0) the end of its opening day. */
+export function anchorMoment(a) {
+  if (a?.anchoredAt) return a.anchoredAt;
+  if (!a?.openingDate) return Infinity;
+  const d = fromKey(a.openingDate); d.setHours(23, 59, 59, 999);
+  return d.getTime();
+}
+
+/**
+ * Per account, per day: Map(id → Map(dayKey → paise)).
+ * With `anchors` ({ id: { openingDate, anchoredAt } }) also `late`:
+ * Map(id → paise) of entries dated before the opening but logged after it.
+ */
+function dailyByAccount(transactions, income, settings, anchors = null) {
   const ids = new Set(listAccounts(settings).map((a) => a.id));
   const out = new Map();
+  const late = new Map();
   const bump = (id, key, p) => {
     if (!out.has(id)) out.set(id, new Map());
     const m = out.get(id);
@@ -176,17 +202,22 @@ function dailyByAccount(transactions, income, settings) {
   const run = (list, source) => list.forEach((e) => {
     const key = localDateKey(e.date);
     if (!key) return;
-    entryEffects(e, source, settings, ids).forEach(({ id, p }) => bump(id, key, p));
+    entryEffects(e, source, settings, ids).forEach(({ id, p }) => {
+      bump(id, key, p);
+      const a = anchors?.[id];
+      if (a?.openingDate && key < a.openingDate && loggedAt(e) > anchorMoment(a)) late.set(id, (late.get(id) ?? 0) + p);
+    });
   });
   run(transactions, 'transaction');
   run(income, 'income');
+  out.late = late;
   return out;
 }
 
 /* ── Starter balances (before set-up) ─────────────────────────── */
 
 /** Today's Home balance (this month + what carried in) — as netWorth does. */
-function homeBalance(transactions, income, settings, todayKey) {
+export function homeBalance(transactions, income, settings, todayKey) {
   const live = transactions.filter((t) => !t.isCarryForward);
   const liveIn = income.filter((i) => !i.isCarryForward);
   const monthKey = todayKey.slice(0, 7);
@@ -211,10 +242,16 @@ export function starterAnchors(transactions = [], income = [], settings = {}, to
   };
 }
 
+/** Starter anchors stamped with the moment they were set (what gets saved). */
+function stampedAnchors(transactions, income, settings, todayKey, at = Date.now()) {
+  const a = starterAnchors(transactions, income, settings, todayKey);
+  return Object.fromEntries(Object.entries(a).map(([k, v]) => [k, { ...v, anchoredAt: at }]));
+}
+
 /** The accounts to save the first time someone edits them. */
 export function materialise(transactions, income, settings, todayKey = toKey(new Date())) {
   if (accountsSetUp(settings)) return settings.accounts;
-  const a = starterAnchors(transactions, income, settings, todayKey);
+  const a = stampedAnchors(transactions, income, settings, todayKey);
   return listAccounts(settings).map(({ starter: _s, ...acc }) => ({ ...acc, ...a[acc.id] }));
 }
 
@@ -227,18 +264,18 @@ export function materialise(transactions, income, settings, todayKey = toKey(new
 export function accountBalances(transactions = [], income = [], settings = {}, todayKey = toKey(new Date())) {
   const setUp = accountsSetUp(settings);
   const anchors = setUp ? null : starterAnchors(transactions, income, settings, todayKey);
-  const daily = dailyByAccount(transactions, income, settings);
+  const daily = dailyByAccount(transactions, income, settings, setUp ? Object.fromEntries(settings.accounts.map((a) => [a.id, a])) : null);
   const month = todayKey.slice(0, 7);
   const accounts = listAccounts(settings).map((acc) => {
     const a = anchors?.[acc.id] ?? acc;
     const from = a.openingDate ?? '0000-00-00';
-    let p = paise(a.opening), mIn = 0, mOut = 0, count = 0;
+    let p = paise(a.opening) + (daily.late.get(acc.id) ?? 0), mIn = 0, mOut = 0, count = 0;
     (daily.get(acc.id) ?? new Map()).forEach((v, key) => {
       count += 1;
       if (key >= from && key <= todayKey) p += v;
       if (key.slice(0, 7) === month) { if (v > 0) mIn += v; else mOut -= v; }
     });
-    return { ...acc, opening: r2(paise(a.opening)), openingDate: a.openingDate ?? null, balance: r2(p), monthIn: r2(mIn), monthOut: r2(mOut), days: count };
+    return { ...acc, opening: r2(paise(a.opening)), openingDate: a.openingDate ?? null, balance: r2(p), late: r2(daily.late.get(acc.id) ?? 0), monthIn: r2(mIn), monthOut: r2(mOut), days: count };
   });
   const open = accounts.filter((a) => !a.archived || Math.abs(a.balance) >= 0.005);
   const sum = (f) => r2(open.filter(f).reduce((s, a) => s + paise(a.balance), 0));
@@ -260,9 +297,9 @@ export function cashInHand(transactions, income, settings, todayKey) {
  * The opening to store so the account shows `balance` today (what the
  * bank app says now). Today's entries already on it are kept out.
  */
-export function anchorFor(accountId, balance, transactions, income, settings, todayKey = toKey(new Date())) {
+export function anchorFor(accountId, balance, transactions, income, settings, todayKey = toKey(new Date()), at = Date.now()) {
   const today = dailyByAccount(transactions, income, settings).get(accountId)?.get(todayKey) ?? 0;
-  return { opening: r2(paise(balance) - today), openingDate: todayKey };
+  return { opening: r2(paise(balance) - today), openingDate: todayKey, anchoredAt: at };
 }
 
 /* ── History lines (Stats) ────────────────────────────────────── */

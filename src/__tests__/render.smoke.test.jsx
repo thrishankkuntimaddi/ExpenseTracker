@@ -34,6 +34,7 @@ const { default: BudgetPage } = await import('../features/budget/BudgetPage');
 const { default: PlannerPage } = await import('../features/planner/PlannerPage');
 const { default: AdminCard } = await import('../features/admin/AdminCard');
 const { default: SavingsPage } = await import('../features/savings/SavingsPage');
+const { default: GoalsPage } = await import('../features/goals/GoalsPage');
 const { default: EditTransactionModal } = await import('../components/EditTransactionModal');
 const { default: RecurringRuleModal } = await import('../features/plan/RecurringRuleModal');
 const { default: BudgetEditorModal } = await import('../features/plan/BudgetEditorModal');
@@ -292,6 +293,9 @@ describe('screens render with planning features', () => {
     expect(html).not.toContain('b@x.in');                      // quiet 40 days → Inactive
     for (const t of ['active', 'inactive', 'deleted', 'all']) expect(html).toContain(`id="admin-tab-${t}"`);
     expect(html).not.toContain('Opens, adds nothing');         // the chip wall is gone
+    expect(html).toContain('id="admin-stats"');                // 4.6: numbers as tiles
+    for (const v of ['people', 'inbox', 'insights', 'health', 'control', 'team']) expect(html).toContain(`id="admin-view-${v}"`);
+    expect(render(<AdminCard users={users} readOnly />)).not.toContain('id="admin-view-control"');   // trustees can't steer
     const closed = render(<AdminCard users={users} admin={{ u2: { state: 'deleted', deletedAt: t - 864e5, purgeAfter: t + 89 * 864e5 } }} />);
     expect(closed).not.toContain('b@x.in');
     const plain = render(<ProfilePage {...common} user={{ uid: 'x', email: 'someone@x.in', emailVerified: true }} />);
@@ -310,12 +314,30 @@ describe('screens render with planning features', () => {
     expect(render(<PlannerPage {...common} />)).toContain('You’ll need at 60');
   });
 
-  it('Savings page shows rate, where it goes and goals', () => {
+  it('Savings page shows rate, where it goes and a link to Goals', () => {
     const html = render(<SavingsPage {...common} />);
     expect(html).toContain('Saved in October');
     expect(html).toContain('Where it goes');
     expect(html).toContain('SIP');
-    expect(html).toContain('Emergency fund');
+    expect(html).toContain('id="savings-goals"');
+    expect(render(<GoalsPage {...common} />)).toContain('Emergency fund');
+  });
+
+  it('Goals: a plan to buy — estimate vs actual, bought, left, to expenses', () => {
+    const goals = [{ id: 'p1', name: 'Bike', linked: true, status: 'active', items: [
+      { id: 'a', name: 'Helmet', est: 3000, actual: 3400, done: true },
+      { id: 'b', name: 'Fog lights', est: 2500, actual: null, done: false },
+      { id: 'c', name: 'Top box', est: 4000, actual: null, done: true, txnId: 't1' },
+    ] }];
+    const html = render(<GoalsPage {...common} settings={{ ...settings, goals }} />);
+    expect(html).toContain('id="plan-p1"');
+    expect(html).toContain('2 of 3 bought');
+    expect(html).toContain('₹9,500.00');     // estimate
+    expect(html).toContain('₹7,400.00');     // spent: 3,400 + 4,000
+    expect(html).toContain('₹2,500.00');     // left to buy
+    expect(html).toContain('+₹400.00 over');
+    expect(html).toContain('id="plan-log-p1"');   // the helmet isn't in expenses yet
+    expect(html).not.toMatch(/NaN|undefined/);
   });
 
   it('Debts: money paid back as income counts; gifts are left out', () => {
@@ -336,7 +358,7 @@ describe('screens render with planning features', () => {
       { id: 'g4', name: 'Trip', target: 5000, linked: true, status: 'used', endedOn: '2026-09-20', endNote: 'Hospital' },
     ];
     const tx = [...transactions, { id: 'gs', type: 'savings', goalId: 'g3', amount: 1000, date: iso(1) }];
-    const html = render(<SavingsPage {...common} transactions={tx} settings={{ ...settings, goals }} />);
+    const html = render(<GoalsPage {...common} transactions={tx} settings={{ ...settings, goals }} />);
     expect(html).toContain('Kept with <strong');
     expect(html).toContain('Pritam');
     expect(html).toContain('₹20,000.00 still to put aside this month');

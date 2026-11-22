@@ -11,6 +11,7 @@ import { generateId } from "../utils/storage";
 import { background } from "../services/sync";
 import { findSettlementMatches } from "../utils/finance";
 import { dateInputToISO, isoToMonth } from "../utils/dateHelpers";
+import { accountFields } from "../utils/accounts";
 
 const DEBOUNCE_MS = 600;
 
@@ -145,7 +146,7 @@ export function useExternalTransactions(uid, reportError) {
   const closeSession = useCallback(
     async (
       sessionId,
-      { netBalance, items, received, total_received, total_spent, sessionDate, sessionName },
+      { netBalance, items, received, total_received, total_spent, sessionDate, sessionName, accountId = null, settings = null },
       { onAddIncome, onUpdateIncome, onDeleteIncome, onAddTransaction, onUpdateTransaction, onDeleteTransaction, transactions = [], income = [] }
     ) => {
       if (!uidRef.current) return;
@@ -177,6 +178,8 @@ export function useExternalTransactions(uid, reportError) {
 
       let settlementId = session?.settlementId || primaryIncome?.id || primaryTxn?.id || generateId();
       let settlementType = null;
+      // Which account the money lands on / leaves (bank, cash …) — utils/accounts
+      const acct = accountId ? accountFields(accountId, settings) : {};
 
       if (netBalance > 0) {
         // PROFIT → Income tab
@@ -190,6 +193,9 @@ export function useExternalTransactions(uid, reportError) {
           date: dateForEntry,
           month,
           externalSessionId: sessionId,
+          ...acct,
+          // An update replaces the entry: keep when it was first logged (accounts count by it)
+          ...(primaryIncome?.createdAt ? { createdAt: primaryIncome.createdAt } : {}),
         };
 
         if (primaryIncome) {
@@ -221,6 +227,8 @@ export function useExternalTransactions(uid, reportError) {
           date: dateForEntry,
           month,
           externalSessionId: sessionId,
+          ...acct,
+          ...(primaryTxn?.createdAt ? { createdAt: primaryTxn.createdAt } : {}),
         };
 
         if (primaryTxn) {
@@ -258,6 +266,7 @@ export function useExternalTransactions(uid, reportError) {
         net_balance: netBalance,
         settlementId,
         settlementType,
+        ...(accountId ? { accountId } : {}),
         closedAt: new Date().toISOString(),
       };
 

@@ -22,6 +22,8 @@ import ProfileButton from '../../components/ProfileButton';
 import HelpButton from '../../tour/HelpButton';
 import { useShell } from '../../app/shellContext';
 import { PAGE_META, EXPLORE_ORDER } from '../../app/pages';
+import { isGoalOpen } from '../../utils/goals';
+import { isPlan, planTotals } from '../../utils/goalPlans';
 import { normaliseUi } from '../../utils/uiPrefs';
 import { useViewMonth, monthName } from '../../app/month';
 import { debtLedger, debtTotals } from '../../utils/debts';
@@ -38,6 +40,8 @@ import CapturedPaymentsCard from '../capture/CapturedPaymentsCard';
 import { useUnslop } from '../../utils/unslop';
 import LooksIntro from '../../components/LooksIntro';
 import WipeNote from '../../components/WipeNote';
+import { LiveBanners } from '../../components/LiveLayer';
+import { isDemoUser } from '../../demo/demo';
 import { wipeNoteDue } from '../../utils/wipeNote';
 
 import { t as tr } from '../../i18n';
@@ -134,13 +138,18 @@ export default function TodayTab(props) {
   // Borrowed money the app is asking about (unused, or paid back unexplained)
   const borrowed = borrowAlerts(transactions, income, todayKey);
   const patchBorrow = (a, patch) => (a.source === 'income' ? onUpdateIncome : onUpdateTransaction)?.({ ...a.entry, ...patch });
+  // Goals: what's left to buy across plans, else how many goals are open
+  const openGoals = (settings?.goals ?? []).filter(isGoalOpen);
+  const leftToBuy = openGoals.filter(isPlan).reduce((t, g) => t + planTotals(g).left, 0);
+  const goalLine = leftToBuy > 0 ? `${rupees(leftToBuy)} ${t('left to buy')}` : openGoals.length ? `${openGoals.length} ${t('in progress')}` : t('Things to buy, money goals');
   const exploreLine = {
     responsibilities: resp.count ? (resp.dueThisMonth > 0 ? `${rupees(resp.dueThisMonth)} due this month` : `${rupees(resp.remaining)} left to clear`) : 'Family loans, promises',
     history: `${monthTxns.length} entr${monthTxns.length === 1 ? 'y' : 'ies'} this month`,
     bills: rules.length ? (lateCount ? `${lateCount} late` : soon.length ? `${soon.length} due this week` : 'Nothing due this week') : 'Add rent, EMIs, SIPs',
     stats: `Calendar & report · ${monthAbbr}`,
     budget: safeToday ? (safeToday.remaining < 0 ? t('Over budget') : `${rupees(safeToday.remaining)} left`) : budgetStatus.hasBudget ? t('Category limits set') : t('Set a monthly budget'),
-    savings: savedThisMonth ? `${rupees(savedThisMonth)} in ${monthAbbr}` : 'SIPs, funds, goals',
+    savings: savedThisMonth ? `${rupees(savedThisMonth)} in ${monthAbbr}` : 'SIPs, funds, deposits',
+    goals: goalLine,
     income: monthIncome ? `${rupees(monthIncome)} in ${monthAbbr}` : 'Nothing yet this month',
     people: debts.owedToYou ? `${rupees(debts.owedToYou)} owed to you` : debts.youOwe ? `You owe ${rupees(debts.youOwe)}` : 'Lent, borrowed, paid back',
     trips: t('Split shared costs'),
@@ -468,6 +477,7 @@ export default function TodayTab(props) {
       </div>
 
       <div className={`home-body${shell?.desktop ? ' home-fit' : ''}`} style={{ flex: 1, overflow: 'auto', padding: '14px 16px 20px' }}>
+        <LiveBanners enabled={!!props.user && !isDemoUser(props.user)} />
         <WipeNote settings={settings} entryCount={transactions.length + income.length} onPatchSettings={props.onPatchSettings} />
         {!(shell?.settingsLoaded && wipeNoteDue(settings, transactions.length + income.length, todayKey)) && <LooksIntro user={props.user} settings={settings} onPatchSettings={props.onPatchSettings} />}
         <CapturedPaymentsCard capture={capture} rules={categoryRules} />

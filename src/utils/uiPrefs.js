@@ -9,7 +9,7 @@
 /* Every phone page. Home ('today') is always the first bar item; the bar's
    other slots take any of SLOT_KEYS. */
 import { translatable } from '../i18n';
-export const PAGE_KEYS = ['today', 'history', 'bills', 'stats', 'budget', 'savings', 'income', 'people', 'trips', 'external', 'responsibilities', 'planner', 'accounts'];
+export const PAGE_KEYS = ['today', 'history', 'bills', 'stats', 'budget', 'savings', 'income', 'people', 'trips', 'external', 'responsibilities', 'planner', 'accounts', 'goals'];
 export const SLOT_KEYS = PAGE_KEYS.filter((k) => k !== 'today');
 export const BAR_SLOTS = 3;
 export const DEFAULT_TABS = ['bills', 'stats', 'history'];   // History sits at the far right

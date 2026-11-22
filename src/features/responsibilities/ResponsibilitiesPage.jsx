@@ -17,6 +17,9 @@ import { toKey } from '../../utils/recurring';
 import { ordinal } from '../../utils/report';
 import { RESP_PLANS, isRespOpen, sortResponsibilities, renumber, respProgress, respSummary } from '../../utils/responsibilities';
 import { SAVINGS_CHOICES } from '../../utils/typeConfig';
+import AccountPicker from '../../components/AccountPicker';
+import { useAccountChoice, rememberAccount } from '../../components/accountChoice';
+import { accountFields } from '../../utils/accounts';
 
 import { t as tr } from '../../i18n';
 const TONE = 'given';
@@ -35,14 +38,14 @@ export default function ResponsibilitiesPage({ transactions = [], settings, onPa
   const [showDone, setShowDone] = useState(false);
   const goals = (settings?.goals ?? []).filter((g) => !g.status || g.status === 'active');
 
-  const write = (next) => onPatchSettings?.({ responsibilities: renumber(sortResponsibilities(next)) });
+  // Function patches: built from the settings as they are when written (see patchSettings)
+  const write = (fn) => onPatchSettings?.((cur) => ({ responsibilities: renumber(sortResponsibilities(fn(cur?.responsibilities ?? []))) }));
   function save(r) {
-    const all = settings?.responsibilities ?? [];
-    if (r.id) write(all.map((x) => (x.id === r.id ? { ...x, ...r } : x)));
-    else write([...all, { ...r, id: generateId(), createdAt: new Date().toISOString(), status: 'active', priority: open.length + 1 }]);
+    if (r.id) write((all) => all.map((x) => (x.id === r.id ? { ...x, ...r } : x)));
+    else { const fresh = { ...r, id: generateId(), createdAt: new Date().toISOString(), status: 'active', priority: open.length + 1 }; write((all) => [...all, fresh]); }
   }
-  const update = (r) => write((settings?.responsibilities ?? []).map((x) => (x.id === r.id ? r : x)));
-  const remove = (id) => write((settings?.responsibilities ?? []).filter((x) => x.id !== id));
+  const update = (r) => write((all) => all.map((x) => (x.id === r.id ? r : x)));
+  const remove = (id) => write((all) => all.filter((x) => x.id !== id));
   function move(r, dir) {
     const order = [...open];
     const i = order.findIndex((x) => x.id === r.id);
@@ -50,17 +53,18 @@ export default function ResponsibilitiesPage({ transactions = [], settings, onPa
     if (j < 0 || j >= order.length) return;
     [order[i], order[j]] = [order[j], order[i]];
     const prio = Object.fromEntries(order.map((x, k) => [x.id, k + 1]));
-    write((settings?.responsibilities ?? []).map((x) => (prio[x.id] ? { ...x, priority: prio[x.id] } : x)));
+    write((all) => all.map((x) => (prio[x.id] ? { ...x, priority: prio[x.id] } : x)));
   }
-  function addPayment(resp, { amount, dateInput, from, source, note }) {
+  function addPayment(resp, { amount, dateInput, from, source, note, account }) {
     const iso = dateInputToISO(dateInput || todayInputValue());
     const entry = {
       id: generateId(), type: 'expense', category: 'responsibility', responsibilityId: resp.id,
       name: resp.owedTo ? `${resp.title} → ${resp.owedTo}` : resp.title,
       amount: Number(amount), date: iso, month: isoToMonth(iso),
-      ...(from === 'savings' ? { paidFrom: 'savings', ...(source ? { savingsSource: source } : {}) } : {}),
+      ...(from === 'savings' ? { paidFrom: 'savings', ...(source ? { savingsSource: source } : {}) } : accountFields(account, settings)),
       ...(note?.trim() ? { note: note.trim() } : {}),
     };
+    if (from !== 'savings' && account) rememberAccount('expense', account);
     onAddTransaction?.(entry);
     const left = respProgress(resp, [...transactions, entry], todayKey).remaining;
     if (left <= 0) update({ ...resp, status: 'cleared', endedOn: todayKey });
@@ -146,12 +150,12 @@ export default function ResponsibilitiesPage({ transactions = [], settings, onPa
         )}
 
         {/* The other half: the future you're planning for */}
-        <button id="resp-goals-link" className="card" onClick={() => shell?.goTo('savings')}
+        <button id="resp-goals-link" className="card" onClick={() => shell?.goTo('goals')}
           style={{ width: '100%', marginTop: 18, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', border: 'none', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
           <span style={{ width: 36, height: 36, borderRadius: 12, background: 'var(--savings-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Flag size={16} style={{ color: 'var(--savings)' }} /></span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{tr("Planning ahead?")} {goals.length ? `${goals.length} goal${goals.length === 1 ? '' : 's'}` : tr("Set a goal")}</span>
-            <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{tr("A bike, a business, a house, gold — save towards it in Savings & goals")}</span>
+            <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{tr("A bike, a business, a house, gold — plan it in Goals")}</span>
           </span>
           <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
         </button>
@@ -339,9 +343,10 @@ function PayModal({ resp, progress, onPay, onClose }) {
   const [from, setFrom] = useState('salary');
   const [source, setSource] = useState('');
   const [note, setNote] = useState('');
+  const [account, setAccount] = useAccountChoice('expense');
   const a = Number(amount);
   const can = a > 0;
-  const save = () => { if (!can) return; onPay({ amount: a, dateInput, from, source: source.trim(), note }); onClose(); };
+  const save = () => { if (!can) return; onPay({ amount: a, dateInput, from, source: source.trim(), note, account }); onClose(); };
 
   return (
     <ModalShell title={`Pay · ${resp.title}`} subtitle={`${formatAmount(progress.remaining)} left${resp.owedTo ? ` to ${resp.owedTo}` : ''}`} onClose={onClose}
@@ -363,6 +368,7 @@ function PayModal({ resp, progress, onPay, onClose }) {
           <button type="button" id="resp-from-savings" onClick={() => setFrom('savings')} style={{ ...chip(from === 'savings'), display: 'inline-flex', alignItems: 'center', gap: 5 }}><PiggyBank size={12} /> {tr("My savings")}</button>
         </div>
       </Field>
+      {from !== 'savings' && <AccountPicker id="resp-acct" label="From account" value={account} onChange={setAccount} />}
       {from === 'savings' && (
         <Field label={tr("Which savings")} hint={tr("It doesn’t come off this month’s balance — it comes out of what you saved.")}>
           <input id="resp-savings-source" type="text" list="resp-savings-kinds" value={source} onChange={(e) => setSource(e.target.value)} placeholder={tr("Broke an FD, sold gold…")} style={fieldStyle} />

@@ -31,6 +31,8 @@ import { FREQUENCIES } from '../../services/drive';
 import { timeAgo } from '../../services/sync';
 import HelpCenter from './HelpCenter';
 import CarryForwardGroup from '../settings/CarryForwardGroup';
+import MoneyPrefsCard from '../settings/MoneyPrefsCard';
+import { defaultAccountId, listAccounts, accountLabel } from '../../utils/accounts';
 import { checkTrustee } from '../../services/adminTeam';
 import { isAdmin } from '../../config/admin';
 import { t, LANGS, getLang, setLang } from '../../i18n';
@@ -195,6 +197,14 @@ export default function ProfilePage(props) {
                 </Group>
                 <Group id="currency" title={tr("Currency")} Icon={Coins} color="var(--income)" summary={`${currency} · ${CURRENCY_NAMES[currency]}`}>
                   <CurrencyCard bare settings={settings} transactions={transactions} income={income} onPatchSettings={onPatchSettings} />
+                </Group>
+              </Section>
+
+              {/* ── Money: where entries go, what a tap does, carry forward ── */}
+              <Section title={tr("Money")}>
+                <Group id="money-prefs" title={tr("Accounts & entries")} Icon={Landmark} color="var(--savings)"
+                  summary={`${tr('New entries →')} ${accountLabel(listAccounts(settings).find((a) => a.id === defaultAccountId(settings)))} · ${settings?.historyTap === 'edit' ? tr('tap opens') : tr('tap = wasted')}`}>
+                  <MoneyPrefsCard settings={settings} onPatchSettings={onPatchSettings} transactions={transactions} income={income} />
                 </Group>
                 <CarryForwardGroup settings={settings} onPatchSettings={onPatchSettings} />
               </Section>

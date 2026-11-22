@@ -26,7 +26,7 @@ import { incomeKindFlags } from '../utils/finance';
 import { inferCategory, categoryMeta, EMPTY_RULES } from '../utils/categories';
 import { parseQuickEntry, parseQuickEntries } from '../utils/smartInput';
 import { SAVINGS_CHOICES, getSavingsType } from '../utils/typeConfig';
-import { accountBalances, accountFields, cashAccountId, listAccounts } from '../utils/accounts';
+import { accountBalances, accountFields, cashAccountId, listAccounts, defaultAccountId, openAccounts } from '../utils/accounts';
 import AccountPicker from './AccountPicker';
 import { useAccountChoice, rememberAccount } from './accountChoice';
 import { DEBT_MOVES, DEBT_MOVE_KEYS, debtEntryFields, debtLedger } from '../utils/debts';
@@ -437,6 +437,7 @@ function IncomeForm({ income = [], settings, onAddIncome, onSaved, startDate }) 
     return [...mine, ...INCOME_SOURCES.filter((s) => !mine.some((m) => m.toLowerCase() === s.toLowerCase()))].slice(0, 7);
   }, [income]);
   const can = !!name.trim() && amountOk(amount);
+  const onScan = (r) => { if (r.name) setName(r.name); if (r.amount) setAmount(String(r.amount)); if (r.date) setDateInput(r.date); };
 
   function save() {
     if (!can) return;
@@ -448,6 +449,7 @@ function IncomeForm({ income = [], settings, onAddIncome, onSaved, startDate }) 
 
   return (
     <div className="add-form add-form-income">
+      <ScanButton onResult={onScan} />
       <TextField id="income-name" first value={name} onChange={setName} onEnter={() => document.getElementById('add-amount')?.focus()} placeholder={tr("From — Salary, Parents, Freelance…")} />
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '-2px 0 12px' }}>
         {sources.map((s) => (
@@ -484,6 +486,24 @@ function DebtForm({ transactions = [], income = [], settings, onAdd, onAddIncome
   const [acctOut, setAcctOut] = useAccountChoice('debt-out');
   const [acctIn, setAcctIn] = useAccountChoice('debt-in');
   const acct = moneyIn ? acctIn : acctOut;
+  const setAcct = moneyIn ? setAcctIn : setAcctOut;
+  // How the money moved: UPI, a bank transfer or cash in hand (cash picks your cash account)
+  const cashId = cashAccountId(settings);
+  const isCash = listAccounts(settings).find((a) => a.id === acct)?.kind === 'cash';
+  const [via, setVia] = useState(isCash ? 'cash' : 'upi');
+  function chooseVia(v) {
+    setVia(v);
+    if (v === 'cash' && cashId) setAcct(cashId);
+    if (v !== 'cash' && isCash) {
+      const bank = openAccounts(settings).find((a) => a.kind === 'bank');
+      setAcct(bank?.id ?? defaultAccountId(settings));
+    }
+  }
+  function pickAcct(id) {
+    setAcct(id);
+    const kind = listAccounts(settings).find((a) => a.id === id)?.kind;
+    if (kind === 'cash') setVia('cash'); else if (via === 'cash') setVia('upi');
+  }
   const ledger = useMemo(() => debtLedger(transactions, income), [transactions, income]);
   // Who this move is likely about: people who owe you (got back), people you owe (paid back)
   const open = move === 'got_back' ? ledger.filter((p) => p.net > 0) : move === 'paid_back' ? ledger.filter((p) => p.net < 0) : ledger.filter((p) => !p.settled).concat(ledger.filter((p) => p.settled)).slice(0, 8);
@@ -502,7 +522,7 @@ function DebtForm({ transactions = [], income = [], settings, onAdd, onAddIncome
     if (!can) return;
     const { store, fields } = debtEntryFields(move);
     const check = move !== 'borrowed' ? {} : { checkOn: checkOn === 'date' && checkDate ? checkDate : checkOn === 'month_end' ? 'month_end' : 'week' };
-    const entry = { id: generateId(), name: name.trim(), amount: Number(amount), currency, ...fields, ...accountFields(acct, settings), ...(note.trim() ? { note: note.trim() } : {}), ...check, ...stamp(dateInput) };
+    const entry = { id: generateId(), name: name.trim(), amount: Number(amount), currency, ...fields, ...accountFields(acct, settings), via, ...(note.trim() ? { note: note.trim() } : {}), ...check, ...stamp(dateInput) };
     rememberAccount(moneyIn ? 'debt-in' : 'debt-out', acct);
     if (store === 'income') onAddIncome(entry); else onAdd(entry);
     onSaved(entry);
@@ -527,7 +547,15 @@ function DebtForm({ transactions = [], income = [], settings, onAdd, onAddIncome
         </div>
       )}
       <AmountField value={amount} onChange={setAmount} tone={meta.tone} onEnter={save} />
-      <AccountPicker id="debt-acct" label={moneyIn ? 'Received in' : 'Paid from'} value={acct} onChange={moneyIn ? setAcctIn : setAcctOut} settings={settings} />
+      <div id="debt-via" role="radiogroup" aria-label={tr('How')} style={{ display: 'flex', gap: 6, margin: '-2px 0 10px' }}>
+        {[['upi', 'UPI'], ['bank', 'Bank transfer'], ['cash', 'Cash']].map(([k, l]) => (
+          <button key={k} type="button" id={`debt-via-${k}`} role="radio" aria-checked={via === k} onClick={() => chooseVia(k)} className="add-choice"
+            style={{ flex: 1, padding: '7px 8px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1.5px solid ${via === k ? `var(--${meta.tone})` : 'var(--border)'}`, background: via === k ? `var(--${meta.tone}-bg)` : 'var(--surface2)', color: via === k ? `var(--${meta.tone})` : 'var(--text-secondary)' }}>
+            {tr(l)}
+          </button>
+        ))}
+      </div>
+      <AccountPicker id="debt-acct" label={moneyIn ? 'Received in' : 'Paid from'} value={acct} onChange={pickAcct} settings={settings} />
       <TextField id="debt-note" Icon={StickyNote} value={note} onChange={setNote} onEnter={save} placeholder={move === 'borrowed' ? tr("What’s it for? — e.g. bike repair") : tr("Note (optional) — e.g. for the bike repair")} />
       {move === 'borrowed' && (
         <div id="debt-check" style={{ margin: '-2px 0 12px' }}>

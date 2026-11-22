@@ -18,6 +18,7 @@ import { formatAmount, isoToDateInput, dateInputToISO, isoToMonth, todayInputVal
 import { currencySymbol, getDisplayCurrency } from '../../utils/money';
 import UpiSheet from '../../components/UpiSheet';
 import EntryAmount from '../../components/EntryAmount';
+import { openAccounts, accountLabel, accountFields, defaultAccountId } from '../../utils/accounts';
 
 import { t as tr } from '../../i18n';
 const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -109,6 +110,8 @@ const draftRow = (list = []) => ({ id: generateId(), name: '', move: list[list.l
 const readyRow = (r) => r.name.trim() && DEBT_MOVES[r.move] && Number(r.amount) > 0;
 
 function QuickDebts({ ledger, onAddTransaction, onAddIncome, toast }) {
+  const settings = useShell()?.settings;
+  const accts = openAccounts(settings);
   const [rows, setRows] = useState([]);
   const ready = rows.filter(readyRow);
   const sum = ready.reduce((t, r) => t + Number(r.amount), 0);
@@ -117,7 +120,9 @@ function QuickDebts({ ledger, onAddTransaction, onAddIncome, toast }) {
       const { store, fields } = debtEntryFields(r.move);
       const iso = dateInputToISO(r.date || todayInputValue());
       const name = r.name.trim();
-      const entry = { id: generateId(), name: name.charAt(0).toUpperCase() + name.slice(1), amount: Number(r.amount), ...fields, ...(r.note.trim() ? { note: r.note.trim() } : {}), date: iso, month: isoToMonth(iso) };
+      // The account column takes a name ("Cash", "SBI") or is left empty: the default account
+      const acc = accts.find((a) => a.id === r.acct || accountLabel(a).toLowerCase() === String(r.acct ?? '').trim().toLowerCase());
+      const entry = { id: generateId(), name: name.charAt(0).toUpperCase() + name.slice(1), amount: Number(r.amount), ...fields, ...accountFields(acc?.id ?? defaultAccountId(settings), settings), ...(r.note.trim() ? { note: r.note.trim() } : {}), date: iso, month: isoToMonth(iso) };
       if (store === 'income') onAddIncome?.(entry); else onAddTransaction?.(entry);
     });
     setRows(rows.filter((r) => !readyRow(r)));
@@ -131,6 +136,7 @@ function QuickDebts({ ledger, onAddTransaction, onAddIncome, toast }) {
           { key: 'name', label: tr("Person"), type: 'pick', width: 'minmax(84px, 1.1fr)', placeholder: tr("Who?"), options: ledger.map((p) => ({ value: p.name, label: p.name })), onCreate: (n) => n },
           { key: 'move', label: tr("Type"), type: 'pick', width: 'minmax(84px, 0.9fr)', placeholder: tr("Lent"), options: DEBT_MOVE_KEYS.map((k) => ({ value: k, label: DEBT_MOVES[k].label })) },
           { key: 'amount', label: `Amount ${currencySymbol()}`, type: 'amount', width: '84px', placeholder: '0' },
+          ...(accts.length > 1 ? [{ key: 'acct', label: tr("Account"), type: 'pick', width: 'minmax(84px, 0.9fr)', placeholder: accountLabel(accts.find((a) => a.id === defaultAccountId(settings))), options: accts.map((a) => ({ value: a.id, label: accountLabel(a) })), line: 2 }] : []),
           { key: 'note', label: tr("Note"), type: 'text', width: 'minmax(80px, 1fr)', placeholder: 'optional', line: 2 },
           { key: 'date', label: tr("Date"), type: 'date', width: '132px', line: 2 },
         ]}

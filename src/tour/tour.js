@@ -111,8 +111,8 @@ const PAGE_GUIDES = {
     { target: ['#budget-categories'], optional: true, title: 'Categories', text: 'Limits per category. A category over its limit turns red.' },
   ],
   savings: () => [
-    { target: HEADER, title: 'Savings & goals', text: 'SIPs, funds and deposits. Cash taken out to spend isn’t saving — that’s Expense → Withdrew cash.' },
-    { target: ['#savings-goals'], optional: true, title: 'Goals', text: 'Save towards something, and note who holds the money — a bank, cash, a friend.' },
+    { target: HEADER, title: 'Savings', text: 'SIPs, funds and deposits. Cash taken out to spend isn’t saving — that’s Expense → Withdrew cash.' },
+    { target: ['#savings-goals'], optional: true, title: 'Goals', text: 'Goals have their own page now — things to buy with an estimate for each, and money goals.' },
     { target: ['#savings-add', '#savings-empty-add'], optional: true, title: 'Add savings', text: 'Record money saved, optionally for a goal.' },
   ],
   stats: () => [

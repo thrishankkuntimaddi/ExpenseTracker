@@ -399,13 +399,29 @@ const KEEP_DAYS = 90;
 const OWNER_EMAILS = ['thrishankkuntimaddi@gmail.com'];   // keep in step with src/config/admin.js
 const DAY_MS = 86400e3;
 
-/** Copy every document under `src` (and the doc itself) to the same paths under `dst`. */
+/** Run `fn` over `list`, at most `n` at a time. */
+async function pool(list, n, fn) {
+  let i = 0;
+  const workers = Array.from({ length: Math.min(n, list.length) }, async () => { while (i < list.length) { const k = i++; await fn(list[k], k); } });
+  await Promise.all(workers);
+}
+
+/** Copy every document under `src` (and the doc itself) to the same paths under `dst`.
+    One query per collection and the documents' own sub-collections looked up
+    40 at a time — copying one document after another took longer than the
+    whole job may run for an account with a few thousand entries (4.6.0). */
 async function copyTree(src, dst, writer) {
   let n = 0;
   const snap = await src.get();
   if (snap.exists) { writer.set(dst, snap.data()); n += 1; }
   for (const col of await src.listCollections()) {
-    for (const d of (await col.get()).docs) n += await copyTree(d.ref, dst.collection(col.id).doc(d.id), writer);
+    const docs = (await col.get()).docs;
+    docs.forEach((d) => { writer.set(dst.collection(col.id).doc(d.id), d.data()); });
+    n += docs.length;
+    await pool(docs, 40, async (d) => {
+      // Rare (entries have no sub-collections): copy the document's own tree; it was counted above
+      if ((await d.ref.listCollections()).length) n += await copyTree(d.ref, dst.collection(col.id).doc(d.id), writer) - 1;
+    });
   }
   return n;
 }
@@ -455,6 +471,8 @@ async function accounts() {
         if (user?.email && OWNER_EMAILS.includes(user.email.toLowerCase())) { await report({ state: 'refused', error: 'This is the owner’s account.' }); continue; }
         if (!r.force && now - seen < INACTIVE_DAYS * DAY_MS) { await report({ state: 'refused', error: `Used ${Math.floor((now - seen) / DAY_MS)} days ago — only accounts quiet for ${INACTIVE_DAYS}+ days can be closed.` }); continue; }
         if (DRY) { console.log('would close', uid); continue; }
+        console.log('closing', uid);
+        await d.ref.set({ startedAt: Date.now() }, { merge: true });
         const w = db.bulkWriter();
         const copied = await copyTree(live, archive, w);
         await w.close();
@@ -479,6 +497,8 @@ async function accounts() {
         // Only a closed account: sign-in off, or data waiting in the archive
         if (!(user?.disabled || await hasData(archive))) { await report({ state: 'refused', error: 'Not closed — nothing to restore.' }); continue; }
         if (DRY) { console.log('would restore', uid); continue; }
+        console.log('restoring', uid);
+        await d.ref.set({ startedAt: Date.now() }, { merge: true });
         const w = db.bulkWriter();
         const copied = await copyTree(archive, live, w);
         await w.close();
@@ -572,8 +592,9 @@ const METRICS = { reads: 'document/read_count', writes: 'document/write_count', 
 
 async function usage() {
   const ref = db.collection('system_health').doc('usage');
-  const last = (await ref.get()).data()?.at ?? 0;
-  if (now - last < USAGE_EVERY) return;
+  const prev = (await ref.get()).data() ?? {};
+  // Hourly — but after an error (the role was just added) try again on every run
+  if (now - (prev.at ?? 0) < USAGE_EVERY && !prev.error) return;
   const { access_token: token } = await cert(JSON.parse(sa)).getAccessToken();
   // Days in Pacific time — that's when Firebase's free daily quota resets
   const end = new Date(now), start = new Date(now - 7 * 86400e3);
@@ -600,21 +621,32 @@ async function usage() {
   stats.usage = error ? 'unavailable' : Object.keys(days).length;
 }
 
-// Each part on its own: a failure in one (e.g. a quota error) must not stop the other
+// Each part on its own: a failure in one (e.g. a quota error) must not stop
+// the others, and none may run past its share of the job's time — a hang
+// used to eat the whole run, so nothing was recorded and Admin sees kept
+// saying "waiting for the server" (4.6.0). Every job logs when it starts.
+const LIMITS = { reminders: 60e3, alerts: 90e3, invites: 60e3, roster: 90e3, accounts: 6 * 60e3, feedback: 60e3, usage: 45e3 };
+const within = (name, p) => new Promise((resolve, reject) => {
+  const t = setTimeout(() => reject(new Error(`timed out after ${Math.round(LIMITS[name] / 1000)} s`)), LIMITS[name]);
+  p.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
+});
+const healthRef = db.collection('system_health').doc('notifier');
+if (!DRY) await healthRef.set({ running: { at: now, by: process.env.GITHUB_EVENT_NAME || 'local', runId: process.env.GITHUB_RUN_ID || null } }, { merge: true }).catch(() => {});
 let failed = false;
 const jobs = {};
 for (const [name, run] of [['reminders', reminders], ['alerts', alerts], ['invites', invites], ['roster', roster], ['accounts', accounts], ['feedback', feedbackAlerts], ['usage', usage]]) {
   const t0 = Date.now();
-  try { await run(); jobs[name] = { ok: true, ms: Date.now() - t0 }; }
-  catch (err) { failed = name !== 'usage' || failed; jobs[name] = { ok: false, ms: Date.now() - t0, error: String(err?.message ?? err).slice(0, 300) }; console.error(`${name} failed:`, err); }
+  console.log(`▶ ${name}`);
+  try { await within(name, run()); jobs[name] = { ok: true, ms: Date.now() - t0 }; console.log(`✓ ${name} ${Date.now() - t0} ms`); }
+  catch (err) { failed = name !== 'usage' || failed; jobs[name] = { ok: false, ms: Date.now() - t0, error: String(err?.message ?? err).slice(0, 300) }; console.error(`✗ ${name} failed:`, err); }
 }
 console.log('done', JSON.stringify(stats));
 if (!DRY) {
   try {
-    const ref = db.collection('system_health').doc('notifier');
-    const prev = (await ref.get()).data()?.history ?? [];
-    const run = { at: now, ok: !failed, ms: Date.now() - now, errors: Object.entries(jobs).filter(([, j]) => !j.ok).map(([n]) => n) };
-    await ref.set({ ...run, jobs, stats, history: [run, ...prev].slice(0, 48) });
+    const prev = (await healthRef.get()).data()?.history ?? [];
+    const run = { at: now, ok: !failed, ms: Date.now() - now, errors: Object.entries(jobs).filter(([, j]) => !j.ok).map(([n]) => n), by: process.env.GITHUB_EVENT_NAME || 'local' };
+    await healthRef.set({ ...run, jobs, stats, running: null, history: [run, ...prev].slice(0, 48) });
   } catch (err) { console.warn('health record failed:', err.message); }
 }
-if (failed) process.exit(1);
+// Leave now: an open connection (mail, gRPC) must not keep the job alive until GitHub cancels it
+process.exit(failed ? 1 : 0);

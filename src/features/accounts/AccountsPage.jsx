@@ -10,7 +10,7 @@ import { PageHeader, HeaderAction, SummaryCard, SectionHeading, PrimaryPill } fr
 import { useShell } from '../../app/shellContext';
 import {
   accountBalances, accountEntries, accountLabel, colorOf, defaultAccountId, legacyAccountId, cashAccountId,
-  materialise, anchorFor, nextColor, ACCOUNT_KINDS, MAIN,
+  materialise, anchorFor, nextColor, homeBalance, ACCOUNT_KINDS, MAIN,
 } from '../../utils/accounts';
 import { KIND_ICON } from '../../components/accountChoice';
 import { generateId } from '../../utils/storage';
@@ -35,6 +35,29 @@ export default function AccountsPage({ transactions = [], income = [], settings,
   const [open, setOpen] = useState(null);           // account id: its entries
   const [showClosed, setShowClosed] = useState(false);
   const defaultId = defaultAccountId(settings);
+  // Home's balance and the accounts' total should agree; when they don't
+  // (an entry back-dated before an account was set up, before 4.6.0 counted
+  // those), offer to put the difference on the default account.
+  const gap = useMemo(() => {
+    if (!b.setUp) return 0;
+    const home = homeBalance(transactions, income, settings, todayKey);
+    return Math.round((home - b.total) * 100) / 100;
+  }, [b, transactions, income, settings, todayKey]);
+  const [gapHidden, setGapHidden] = useState(() => { try { return localStorage.getItem('et_acct_gap_hidden'); } catch { return null; } });
+  const showGap = b.setUp && Math.abs(gap) >= 0.01 && gapHidden !== String(gap);
+  function closeGap() {
+    const acc = b.accounts.find((a) => a.id === defaultId);
+    if (!acc) return;
+    onPatchSettings((prev) => {
+      const list = materialise(transactions, income, prev, todayKey).map((a) => (a.id === defaultId ? { ...a, opening: Math.round(((Number(a.opening) || 0) + gap) * 100) / 100 } : a));
+      return { accounts: list };
+    });
+    shell?.toast?.({ text: `${gap > 0 ? '+' : '−'}${formatAmount(Math.abs(gap))} → ${accountLabel(acc)}`, sign: 'check' });
+  }
+  function hideGap() {
+    try { localStorage.setItem('et_acct_gap_hidden', String(gap)); } catch { /* storage unavailable */ }
+    setGapHidden(String(gap));
+  }
 
   /* Save an account. The first save writes the starter accounts for real. */
   function save(id, fields, balanceNow, makeDefault) {
@@ -92,6 +115,21 @@ export default function AccountsPage({ transactions = [], income = [], settings,
             ))}
           </div>
         </SummaryCard>
+
+        {showGap && (
+          <div id="accounts-gap" className="card" style={{ padding: '12px 14px', display: 'grid', gap: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 750, color: 'var(--text)' }}>
+              {tr('Home says')} {formatAmount(b.total + gap)} · {tr('your accounts add up to')} {formatAmount(b.total)}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              {formatAmount(Math.abs(gap))} {tr('apart — usually an entry dated before you set an account up (a billing closed later, a back-dated expense). From now on those count by themselves.')}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <PrimaryPill id="accounts-gap-fix" onClick={closeGap}>{gap > 0 ? `${tr('Add')} ${formatAmount(gap)} ${tr('to')}` : `${tr('Take')} ${formatAmount(-gap)} ${tr('off')}`} {accountLabel(b.accounts.find((a) => a.id === defaultId))}</PrimaryPill>
+              <button type="button" className="add-paid-opt" style={{ padding: '10px 14px' }} onClick={hideGap}>{tr('Leave it')}</button>
+            </div>
+          </div>
+        )}
 
         {!b.setUp && (
           <div id="accounts-starter" className="card" style={{ padding: '14px 16px', display: 'grid', gap: 10 }}>

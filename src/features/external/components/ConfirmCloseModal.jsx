@@ -2,10 +2,11 @@ import { CheckCircle2, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import { formatAmount } from '../../../utils/dateHelpers';
 import Portal from '../../../components/Portal';
 import { useEscape } from '../../../hooks/useEscape';
+import AccountPicker from '../../../components/AccountPicker';
 
 import { t as tr } from '../../../i18n';
 /* ─── Confirmation Modal for Closing ─── */
-export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalance, sessionName, persons, paidByMe, onConfirm, onCancel, loading }) {
+export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalance, sessionName, persons, paidByMe, account, onAccountChange, settings, reclosing, onConfirm, onCancel, loading }) {
   useEscape(onCancel);
   const isProfit = netBalance > 0;
   const isLoss   = netBalance < 0;
@@ -35,7 +36,7 @@ export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalanc
                 : <CheckCircle2 size={20} style={{ color: 'var(--accent)' }} />}
             </div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr("Close Billing Session?")}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{reclosing ? tr("Update this billing?") : tr("Close Billing Session?")}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{sessionName}</div>
             </div>
           </div>
@@ -70,11 +71,19 @@ export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalanc
             color: isProfit ? 'var(--income)' : isLoss ? 'var(--expense)' : 'var(--accent)',
             fontWeight: 600,
           }}>
-            {isProfit && `✓ ${formatAmount(netBalance)} will be added to Income (from ${persons})`}
+            {reclosing && !isEven && `${tr('Its entry is updated to match')} — `}
+            {isProfit && totalSpent <= 0 && `✓ ${formatAmount(netBalance)} ${tr('is added to Money in, from')} ${persons}`}
+            {isProfit && totalSpent > 0 && `✓ ${formatAmount(netBalance)} ${tr('left over is added to Money in (from')} ${persons})`}
             {isLoss && paidByMe && `✓ Nobody gave money for this — the full ${formatAmount(Math.abs(netBalance))} is added to your expenses as “${sessionName}”`}
             {isLoss && !paidByMe && `✓ ${formatAmount(Math.abs(netBalance))} will be added to Expenses (External – ${persons})`}
             {isEven   && `✓ Perfectly settled. No income or expense entry will be created.`}
           </div>
+
+          {!isEven && onAccountChange && (
+            <div style={{ margin: '-8px 0 16px' }}>
+              <AccountPicker id="bill-acct" label={isProfit ? 'Received in' : 'Paid from'} value={account} onChange={onAccountChange} settings={settings} />
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={onCancel} disabled={loading} style={{
@@ -91,7 +100,7 @@ export default function ConfirmCloseModal({ totalReceived, totalSpent, netBalanc
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}>
               {loading ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={14} />}
-              {tr("Confirm & Close")}
+              {reclosing ? tr("Update") : tr("Confirm & Close")}
             </button>
           </div>
         </div>

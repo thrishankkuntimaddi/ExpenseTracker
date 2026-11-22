@@ -8,31 +8,33 @@
 //             crashes and deletions the app reports by itself.
 //   Insights — which features people use, which app versions are out there,
 //             whose settings look wiped, and who hit problems this week.
-//   Health  — the server job's last runs, Firestore reads / writes / deletes
-//             against the free daily quota, and live checks from here.
+//   Health  — the server job: run it now, its runs (cancel a stuck one),
+//             Firestore reads / writes / deletes against the free daily
+//             quota, and live checks from here.
+//   Control — (owner) banners on everyone's Home, maintenance, the minimum
+//             app version (AdminControl.jsx, app_config/live).
 //   Team    — (owner) trustees: people who may see all this, read only.
 // Closing / restoring is only asked for here (account_admin/{uid}); the
 // notifier carries it out with server rights and reports back.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Search, Lock, Mail, UserX, RotateCcw, Trash2, X, ExternalLink, ChevronDown, Users, Inbox, Activity, ShieldCheck, Check, CircleAlert, CircleCheck, Plus, BarChart2 } from 'lucide-react';
+import { RefreshCw, Search, Lock, Mail, UserX, RotateCcw, Trash2, X, ChevronDown, Users, Inbox, Activity, ShieldCheck, Check, CircleAlert, CircleCheck, Plus, BarChart2, SlidersHorizontal, Server, Database, Radio } from 'lucide-react';
 import { listActivity, listAccountAdmin, askAccount } from '../../services/activity';
 import { listFeedback, markFeedback, removeFeedback, FEEDBACK_KINDS } from '../../services/feedback';
 import { getTeam, saveTeam, getHealth, liveChecks } from '../../services/adminTeam';
-import { TABS, SORTS, STATUS, INACTIVE_DAYS, KEEP_DAYS, RUN_NOW_URL, statusOf, viewUsers, summarise, agoLabel, adminStateOf, daysQuiet, insights } from '../../utils/adminUsers';
+import { TABS, SORTS, STATUS, INACTIVE_DAYS, KEEP_DAYS, statusOf, viewUsers, summarise, agoLabel, adminStateOf, daysQuiet, insights } from '../../utils/adminUsers';
 import { fieldStyle } from '../../components/formTokens';
+import { Panel, ControlView, ServerJobRuns, RunNowButton, MonitoringHelp } from './AdminControl';
+import { muted, btn, useServerJob } from './adminUi';
 
-const muted = { fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.5 };
-const btn = (tone = 'text-secondary', filled = false) => ({
-  display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 11px', borderRadius: 10, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', flexShrink: 0,
-  border: filled ? 'none' : '1px solid var(--border)', background: filled ? `var(--${tone})` : 'transparent', color: filled ? '#fff' : `var(--${tone})`,
-});
 const VIEWS = [
   { key: 'people', label: 'People', Icon: Users },
   { key: 'inbox', label: 'Inbox', Icon: Inbox },
   { key: 'insights', label: 'Insights', Icon: BarChart2 },
   { key: 'health', label: 'Health', Icon: Activity },
+  { key: 'control', label: 'Control', Icon: SlidersHorizontal, owner: true },
   { key: 'team', label: 'Team', Icon: ShieldCheck, owner: true },
 ];
+const PROJECT = import.meta.env?.VITE_FIREBASE_PROJECT_ID || 'expensetracker-385b0';
 
 export default function AdminCard({ users: given, admin: givenAdmin, me, user, readOnly = false, initialView = 'people' }) {
   const [view, setView] = useState(initialView);
@@ -55,26 +57,36 @@ export default function AdminCard({ users: given, admin: givenAdmin, me, user, r
 
   const sum = useMemo(() => summarise(users ?? [], now, admin), [users, now, admin]);
   const fresh = (inbox ?? []).filter((f) => f.status === 'new').length;
+  // The server job (owner): one place for the token and its runs, used by People and Health
+  const job = useServerJob(!readOnly && !given);
 
   return (
-    <div id="admin-sees" style={{ padding: '12px 16px 16px' }}>
+    <div id="admin-sees" className="admin-sees" style={{ padding: '12px 16px 16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, ...muted }}>
         <Lock size={13} style={{ flexShrink: 0 }} />
-        <span style={{ flex: 1 }}>
-          {readOnly ? 'You can see this as a trustee — read only. ' : ''}When and how people use the app — never what they spend.
-          {users ? ` ${sum.total} accounts · ${sum.today} today · ${sum.week} this week · ${sum.newWeek} new.` : ''}
-        </span>
+        <span style={{ flex: 1 }}>{readOnly ? 'You see this as a trustee — read only. ' : ''}When and how people use the app — never what they spend.</span>
         <button id="admin-refresh" aria-label="Refresh" onClick={load} disabled={loading} style={{ width: 32, height: 32, borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
           <RefreshCw size={14} className={loading ? 'spin' : undefined} />
         </button>
       </div>
 
-      <div role="tablist" aria-label="Admin views" className="segmented" style={{ display: 'flex', gap: 2, padding: 3, marginTop: 12, background: 'var(--surface2)', borderRadius: 12 }}>
+      {users && (
+        <div id="admin-stats" className="admin-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6, marginTop: 10 }}>
+          {[['Accounts', sum.total], ['Today', sum.today], ['This week', sum.week], ['New · 7 d', sum.newWeek]].map(([l, v]) => (
+            <div key={l} style={{ padding: '8px 10px', borderRadius: 12, background: 'var(--surface2)', minWidth: 0 }}>
+              <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{v}</div>
+              <div style={{ fontSize: 10.5, fontWeight: 650, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div role="tablist" aria-label="Admin views" className="admin-views" style={{ display: 'flex', gap: 6, marginTop: 12, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
         {VIEWS.filter((v) => !v.owner || !readOnly).map(({ key, label, Icon }) => {
           const on = view === key;
           return (
             <button key={key} id={`admin-view-${key}`} role="tab" aria-selected={on} onClick={() => setView(key)}
-              style={{ flex: 1, minWidth: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '8px 6px', borderRadius: 9, border: 'none', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-secondary)', boxShadow: on ? 'var(--shadow-sm)' : 'none' }}>
+              style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 99, border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border)'}`, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', background: on ? 'var(--accent-bg)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text-secondary)' }}>
               <Icon size={13} /> {label}
               {key === 'inbox' && fresh > 0 && <span style={{ minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8, background: 'var(--expense)', color: '#fff', fontSize: 10, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{fresh}</span>}
             </button>
@@ -85,17 +97,18 @@ export default function AdminCard({ users: given, admin: givenAdmin, me, user, r
       {error && <div style={{ marginTop: 10, fontSize: 12, fontWeight: 600, color: 'var(--expense)' }}>{error}</div>}
       {!users && loading && <div style={{ marginTop: 12, ...muted }}>Loading…</div>}
 
-      {view === 'people' && users && <People users={users} admin={admin} setAdmin={setAdmin} now={now} me={me} readOnly={readOnly} setError={setError} />}
+      {view === 'people' && users && <People users={users} admin={admin} setAdmin={setAdmin} now={now} me={me} readOnly={readOnly} setError={setError} job={job} onRefresh={load} />}
       {view === 'inbox' && <InboxView items={inbox} setItems={setInbox} now={now} readOnly={readOnly} />}
       {view === 'insights' && users && <InsightsView users={users} now={now} inbox={inbox} />}
-      {view === 'health' && <Health user={user} readOnly={readOnly} />}
+      {view === 'health' && <Health user={user} readOnly={readOnly} job={job} />}
+      {view === 'control' && !readOnly && <ControlView />}
       {view === 'team' && !readOnly && <Team />}
     </div>
   );
 }
 
 /* ═════ People ═════ */
-function People({ users, admin, setAdmin, now, me, readOnly, setError }) {
+function People({ users, admin, setAdmin, now, me, readOnly, setError, job, onRefresh }) {
   const [tab, setTab] = useState('active');
   const [sort, setSort] = useState('opened');
   const [search, setSearch] = useState('');
@@ -133,8 +146,14 @@ function People({ users, admin, setAdmin, now, me, readOnly, setError }) {
       {current?.hint && <div style={{ ...muted, marginTop: 6 }}>{current.hint}</div>}
       {pending && (
         <div id="admin-pending" style={{ marginTop: 8, padding: '8px 10px', borderRadius: 10, background: 'var(--surface2)', ...muted, color: 'var(--text-secondary)' }}>
-          Requests run with the next server sync (about every 10 minutes).{' '}
-          {!readOnly && <><a href={RUN_NOW_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 700 }}>Run it now <ExternalLink size={11} style={{ verticalAlign: '-1px' }} /></a> → Run workflow, then refresh.</>}
+          <div>Requests are carried out by the server job — on its schedule, or now:</div>
+          {!readOnly && job && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+              <RunNowButton job={job} label="Run the server job now" />
+              <button type="button" onClick={onRefresh} style={btn()}><RefreshCw size={12} /> Refresh list</button>
+            </div>
+          )}
+          {job?.runs?.[0] && <div style={{ marginTop: 4 }}>Last run: {job.runs[0].status !== 'completed' ? 'running now' : job.runs[0].conclusion} · {agoLabel(Date.parse(job.runs[0].created_at), now)}</div>}
         </div>
       )}
 
@@ -346,7 +365,7 @@ function InboxView({ items, setItems, now, readOnly }) {
 }
 
 /* ═════ Health ═════ */
-function Health({ user, readOnly }) {
+function Health({ user, readOnly, job }) {
   const [h, setH] = useState(null);
   const [checks, setChecks] = useState(null);
   const [busy, setBusy] = useState(true);
@@ -355,39 +374,41 @@ function Health({ user, readOnly }) {
   const load = useCallback(() => Promise.all([getHealth().catch(() => ({})), user ? liveChecks(user, !readOnly) : Promise.resolve([])])
     .then(([health, live]) => { setH(health); setChecks(live); setNow(Date.now()); setBusy(false); }), [user, readOnly]);
   useEffect(() => { load(); }, [load]);
+  // A run that finishes refreshes what it wrote
+  const lastRun = job?.runs?.[0];
+  const doneKey = lastRun?.status === 'completed' ? lastRun.id : null;
+  useEffect(() => { if (doneKey) load(); }, [doneKey, load]);
   const run = () => { setBusy(true); load(); };
   const n = h?.notifier;
   const late = n && now - n.at > 45 * 60e3;
+  const running = n?.running && now - n.running.at < 15 * 60e3 ? n.running : null;
   const days = Object.entries(h?.usage?.days ?? {}).sort(([a], [b]) => b.localeCompare(a)).slice(0, 7);
   const quota = h?.usage?.quota ?? { reads: 50000, writes: 20000, deletes: 20000 };
   const today = days[0]?.[1];
 
   return (
     <div id="admin-health" style={{ marginTop: 12, display: 'grid', gap: 12 }}>
-      <Panel title="Live checks from this device" action={<button type="button" onClick={run} disabled={busy} style={btn()}><RefreshCw size={12} className={busy ? 'spin' : undefined} /> Run again</button>}>
-        {!checks && <div style={muted}>Checking…</div>}
-        {checks?.map((c) => <Light key={c.name} ok={c.ok} label={c.name} value={c.ok ? `${c.ms} ms · ${c.note}` : c.note} />)}
-      </Panel>
-
-      <Panel title="Server job (notifier)" action={!readOnly && <a href={RUN_NOW_URL} target="_blank" rel="noreferrer" style={{ ...btn(), textDecoration: 'none' }}>Runs <ExternalLink size={11} /></a>}>
-        {!n && <div style={muted}>No run recorded yet — it records itself from this version on.</div>}
+      <Panel title="Server job (notifier)" Icon={Server}>
+        {running && <Light ok label="Running now" value={`started ${agoLabel(running.at, now)}`} />}
+        {!n && !running && <div style={muted}>No run recorded yet.</div>}
         {n && (
           <>
-            <Light ok={n.ok && !late} label={late ? 'Late — GitHub may have paused the schedule' : n.ok ? 'Running fine' : `Last run had errors: ${(n.errors ?? []).join(', ')}`} value={`last ${agoLabel(n.at, now)} · ${Math.round((n.ms ?? 0) / 1000)} s`} />
+            <Light ok={n.ok && !late} label={late ? 'Late — GitHub hasn’t started it for a while' : n.ok ? 'Last run fine' : `Last run had errors: ${(n.errors ?? []).join(', ')}`} value={`${agoLabel(n.at, now)} · ${Math.round((n.ms ?? 0) / 1000)} s`} />
             {Object.entries(n.jobs ?? {}).map(([k, j]) => <Light key={k} small ok={j.ok} label={k} value={j.ok ? `${j.ms} ms` : j.error} />)}
             {n.history?.length > 1 && (
               <div aria-label="Last runs" style={{ display: 'flex', gap: 2, marginTop: 8 }}>
                 {[...n.history].reverse().map((r) => <span key={r.at} title={`${new Date(r.at).toLocaleString('en-IN')} · ${r.ok ? 'ok' : r.errors?.join(', ')}`} style={{ flex: 1, height: 16, borderRadius: 3, background: r.ok ? 'var(--income)' : 'var(--expense)', opacity: r.ok ? 0.55 : 1 }} />)}
               </div>
             )}
-            <div style={{ ...muted, marginTop: 6 }}>{[n.stats?.accounts != null && `${n.stats.accounts} sign-in accounts`, n.stats?.alerts && `${n.stats.alerts} alerts`, n.stats?.emails && `${n.stats.emails} emails`, n.stats?.feedback && `${n.stats.feedback} reports forwarded`].filter(Boolean).join(' · ')}</div>
+            <div style={{ ...muted, marginTop: 6 }}>{[n.stats?.accounts != null && `${n.stats.accounts} sign-in accounts`, n.stats?.closed && `${n.stats.closed} closed`, n.stats?.alerts && `${n.stats.alerts} alerts`, n.stats?.emails && `${n.stats.emails} emails`, n.stats?.feedback && `${n.stats.feedback} reports forwarded`].filter(Boolean).join(' · ')}</div>
           </>
         )}
+        {!readOnly && job && <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}><ServerJobRuns job={job} now={now} /></div>}
       </Panel>
 
-      <Panel title="Firestore usage (free daily quota)">
-        {h?.usage?.error && <div style={{ ...muted, color: 'var(--lent)' }}>{h.usage.error}</div>}
-        {!h?.usage && <div style={muted}>Not measured yet — the server job adds it within the hour.</div>}
+      <Panel title="Firestore usage (free daily quota)" Icon={Database}>
+        {h?.usage?.error && (/Monitoring Viewer/.test(h.usage.error) ? <MonitoringHelp project={PROJECT} /> : <div style={{ ...muted, color: 'var(--lent)' }}>{h.usage.error}</div>)}
+        {!h?.usage && <div style={muted}>Not measured yet — the server job adds it on its next run.</div>}
         {today && (
           <>
             <Meter label="Reads today" value={today.reads} max={quota.reads} />
@@ -397,9 +418,14 @@ function Health({ user, readOnly }) {
               <thead><tr style={{ color: 'var(--text-muted)', textAlign: 'right' }}><th style={{ textAlign: 'left', fontWeight: 600 }}>Day (Pacific)</th><th style={{ fontWeight: 600 }}>Reads</th><th style={{ fontWeight: 600 }}>Writes</th><th style={{ fontWeight: 600 }}>Deletes</th></tr></thead>
               <tbody>{days.map(([d, v]) => <tr key={d} style={{ textAlign: 'right', color: 'var(--text)' }}><td style={{ textAlign: 'left', padding: '3px 0' }}>{d}</td><td>{v.reads.toLocaleString('en-IN')}</td><td>{v.writes.toLocaleString('en-IN')}</td><td>{v.deletes.toLocaleString('en-IN')}</td></tr>)}</tbody>
             </table>
-            <div style={{ ...muted, marginTop: 6 }}>Measured {agoLabel(h.usage.at, now)}. The quota resets at midnight Pacific time.</div>
+            <div style={{ ...muted, marginTop: 6 }}>Measured {agoLabel(h.usage.at, now)}. The quota resets at midnight Pacific time (1:30 pm in India).</div>
           </>
         )}
+      </Panel>
+
+      <Panel title="Live checks from this device" Icon={Radio} action={<button type="button" onClick={run} disabled={busy} style={btn()}><RefreshCw size={12} className={busy ? 'spin' : undefined} /> Run again</button>}>
+        {!checks && <div style={muted}>Checking…</div>}
+        {checks?.map((c) => <Light key={c.name} ok={c.ok} label={c.name} value={c.ok ? `${c.ms} ms · ${c.note}` : c.note} />)}
       </Panel>
     </div>
   );
@@ -463,17 +489,6 @@ function Bar({ label, count, of }) {
   );
 }
 
-function Panel({ title, action, children }) {
-  return (
-    <section style={{ padding: 12, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--surface)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <span style={{ flex: 1, fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>{title}</span>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
 function Light({ ok, label, value, small }) {
   const Icon = ok ? CircleCheck : CircleAlert;
   return (

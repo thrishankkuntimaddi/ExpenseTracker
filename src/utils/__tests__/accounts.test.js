@@ -178,3 +178,31 @@ describe('accounts — matching by last 4 digits', async () => {
     expect(entry.accountId).toBe('ib');
   });
 });
+
+describe('accounts — entries logged after the balance was set (4.6.0)', () => {
+  const anchoredAt = new Date(2026, 10, 10, 9).getTime();
+  const S = { accounts: [{ id: 'ib', name: 'Indian Bank', kind: 'bank', color: 1, opening: 361.74, openingDate: '2026-11-10', anchoredAt }], accountsLegacy: 'ib' };
+
+  it('a billing dated before the opening but closed after it still lands on the account', () => {
+    const settle = { id: 's', name: 'Uncle', amount: 2, type: 'income', tag: 'External Settlement', accountId: 'ib', date: d(8), createdAt: anchoredAt + 3600e3 };
+    expect(accountBalances([], [settle], S, TODAY).accounts[0].balance).toBe(363.74);
+  });
+
+  it('an entry that existed when the balance was set is not counted twice', () => {
+    const old = { id: 'o', name: 'Old', amount: 50, type: 'expense', accountId: 'ib', date: d(5), createdAt: anchoredAt - 86400e3 };
+    const noStamp = { id: 'n', name: 'Older', amount: 70, type: 'expense', accountId: 'ib', date: d(4) };
+    expect(accountBalances([old, noStamp], [], S, TODAY).accounts[0].balance).toBe(361.74);
+  });
+
+  it('accounts set before 4.6.0 (no anchoredAt) count what was logged after their opening day', () => {
+    const legacy = { ...S, accounts: [{ ...S.accounts[0], anchoredAt: undefined }] };
+    const late = { id: 'l', name: 'Late', amount: 10, type: 'expense', accountId: 'ib', date: d(2), createdAt: new Date(2026, 10, 11, 8).getTime() };
+    const sameDay = { id: 'm', name: 'Same day', amount: 10, type: 'expense', accountId: 'ib', date: d(2), createdAt: new Date(2026, 10, 10, 8).getTime() };
+    expect(accountBalances([late, sameDay], [], legacy, TODAY).accounts[0].balance).toBe(351.74);
+  });
+
+  it('anchorFor and the first save stamp when the balance was set', () => {
+    expect(anchorFor('hdfc', 8000, [], [], SET, TODAY, 123).anchoredAt).toBe(123);
+    expect(materialise([], [], {}, TODAY).every((a) => typeof a.anchoredAt === 'number')).toBe(true);
+  });
+});

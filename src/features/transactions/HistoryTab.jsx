@@ -8,7 +8,9 @@
 // person's balance is back to zero, then Settled; everything else is Done.
 // Tap a row (or ✎) to edit it.
 import { accountsSetUp, listAccounts, accountOf, accountLabel, colorOf } from '../../utils/accounts';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
+import ModalShell, { Field, PrimaryButton, GhostButton } from '../../components/ModalShell';
+import { fieldStyle } from '../../components/formTokens';
 import { LayoutList, Flame, Trash2, ChevronDown, ChevronUp, Pencil, Search, X, ChevronsDownUp, ChevronsUpDown, CheckCircle2, Clock3, Banknote, Wallet, ArrowDownLeft, ArrowUpRight, Undo2, Receipt, Gift, PiggyBank, FileUp } from 'lucide-react';
 import { formatAmount } from '../../utils/dateHelpers';
 import MonthSwitcher from '../../components/MonthSwitcher';
@@ -45,7 +47,36 @@ export default function HistoryTab({
   onUpdateTransaction, onDeleteTransaction, onUpdateIncome, onDeleteIncome,
   settings, onLearnCategory, onAddTransaction, onAddIncome,
 }) {
-  const phone = !useShell()?.desktop;
+  const shell = useShell();
+  const phone = !shell?.desktop;
+  const [wasteFor, setWasteFor] = useState(null);      // a row: how much of it was wasted
+  const [tipHidden, setTipHidden] = useState(() => { try { return localStorage.getItem('et_hist_tip') === '1'; } catch { return true; } });
+  const hideTip = () => { try { localStorage.setItem('et_hist_tip', '1'); } catch { /* storage unavailable */ } setTipHidden(true); };
+  /* Wasted: on the entry itself (wasteAmount), counted in Stats */
+  const plain = (row) => Object.fromEntries(Object.entries(row).filter(([k]) => !k.startsWith('_')));
+  function setWaste(row, amount, quiet = false) {
+    const prev = row.wasteAmount;
+    const v = Math.round(Math.min(Number(row.amount) || 0, Math.max(0, Number(amount) || 0)) * 100) / 100;
+    onUpdateTransaction?.({ ...plain(row), wasteAmount: v > 0 ? v : undefined });
+    if (!quiet) shell?.toast?.({
+      text: v > 0 ? `${formatAmount(v)} ${tr('of')} ${row.name} ${tr('marked wasted')}` : `${row.name} — ${tr('not wasted')}`,
+      sign: 'check',
+      action: { label: tr('Undo'), onClick: () => onUpdateTransaction?.({ ...plain(row), wasteAmount: prev > 0 ? prev : undefined }) },
+    });
+  }
+  // One tap: all of it wasted (again: not wasted). Two taps: how much.
+  const tapTimer = useRef(null);
+  function tapRow(row) {
+    if (row._kind !== 'expense' || settings?.historyTap === 'edit') { setEditing(row); return; }
+    if (tapTimer.current && tapTimer.current.id === row.id) {
+      clearTimeout(tapTimer.current.t); tapTimer.current = null;
+      setWasteFor(row);
+      return;
+    }
+    if (tapTimer.current) clearTimeout(tapTimer.current.t);
+    const t = setTimeout(() => { tapTimer.current = null; setWaste(row, row.wasteAmount > 0 ? 0 : row.amount); }, 280);
+    tapTimer.current = { id: row.id, t };
+  }
   const [importing, setImporting] = useState(false);
   const { period: monthPeriod, month: viewMonth } = useViewMonth(selectedPeriod);
   const [allMonths, setAllMonths] = useState(false);   // search every month, not just the one on screen
@@ -118,6 +149,7 @@ export default function HistoryTab({
         <EditTransactionModal txn={editing} onSave={onUpdateTransaction} onDelete={onDeleteTransaction}
           onClose={() => setEditing(null)} categoryRules={categoryRules} onLearnCategory={onLearnCategory} />
       )}
+      {wasteFor && <WasteModal row={wasteFor} onSave={(v) => setWaste(wasteFor, v)} onClose={() => setWasteFor(null)} />}
       {editing && editing._src === 'income' && (
         <EditIncomeModal entry={editing} onSave={onUpdateIncome} onDelete={onDeleteIncome} onClose={() => setEditing(null)} />
       )}
@@ -223,6 +255,13 @@ export default function HistoryTab({
             </div>
           </div>
         )}
+        {!tipHidden && grouped.length > 0 && settings?.historyTap !== 'edit' && (
+          <div id="history-tip" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 10px', padding: '8px 12px', borderRadius: 12, background: 'var(--surface2)', fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+            <Flame size={13} style={{ color: 'var(--expense)', flexShrink: 0 }} />
+            <span style={{ flex: 1 }}>{tr('Tap an expense: all of it wasted · double-tap: how much · swipe right: edit · swipe left: delete')}</span>
+            <button type="button" aria-label={tr('Got it')} onClick={hideTip} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', padding: 2, display: 'flex' }}><X size={14} /></button>
+          </div>
+        )}
         {grouped.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12 }}>
             <LayoutList size={32} style={{ color: 'var(--text-muted)' }} />
@@ -253,7 +292,7 @@ export default function HistoryTab({
                     <SwipeRow key={`${row._src}-${row.id}`} label={row.name} onEdit={() => setEditing(row)} onDelete={() => setDeleting(row)}>
                       <HistoryRow row={row} theme={theme} rules={categoryRules} settings={settings}
                         settled={settledByName.get(norm(row.name))}
-                        onEdit={() => setEditing(row)} onDelete={() => setDeleting(row)} />
+                        onTap={() => tapRow(row)} onEdit={() => setEditing(row)} onDelete={() => setDeleting(row)} />
                     </SwipeRow>
                   ))}
                 </div>
@@ -270,7 +309,7 @@ export default function HistoryTab({
    kind and category; on the right the signed amount, its status, edit and delete. */
 const KIND_ICON = { income: Wallet, borrowed: ArrowDownLeft, got_back: Undo2, billing: Receipt, given: Gift, lent: ArrowUpRight, paid_back: Undo2, savings: PiggyBank, withdrawal: Banknote };
 
-function HistoryRow({ row, theme, rules, settings, settled, onEdit, onDelete }) {
+function HistoryRow({ row, theme, rules, settings, settled, onTap, onEdit, onDelete }) {
   // Which account — once there's more than the starter Bank + Cash
   const acc = accountsSetUp(settings) && row.type !== 'cash' && !(row.type === 'expense' && row.paidFrom === 'savings')
     ? listAccounts(settings).find((a) => a.id === accountOf(row, settings)) : null;
@@ -299,7 +338,8 @@ function HistoryRow({ row, theme, rules, settings, settled, onEdit, onDelete }) 
   // with its status, edit and delete
   const edge = cat ? catColor : `var(--${k.tone})`;
   return (
-    <div className="hist-row" role="button" tabIndex={0} onClick={onEdit} style={{ '--edge': edge }}
+    <div className="hist-row" role="button" tabIndex={0} onClick={onTap ?? onEdit} style={{ '--edge': edge }}
+      title={row._kind === 'expense' && settings?.historyTap !== 'edit' ? tr('Tap: wasted · double-tap: how much · swipe right: edit') : undefined}
       onKeyDown={(e) => { if (e.key === 'Enter') onEdit(); }}>
       <span className="hist-tile" aria-hidden
         style={cat ? { color: catColor, background: `${catColor}1f` } : { color: `var(--${k.tone})`, background: `var(--${k.tone}-bg)` }}>
@@ -330,6 +370,35 @@ function HistoryRow({ row, theme, rules, settings, settled, onEdit, onDelete }) 
         </span>
       </span>
     </div>
+  );
+}
+
+/* How much of an expense was wasted: all, a part, or none */
+function WasteModal({ row, onSave, onClose }) {
+  const total = Number(row.amount) || 0;
+  const [v, setV] = useState(String(row.wasteAmount > 0 ? row.wasteAmount : total));
+  const n = Number(v);
+  const ok = v !== '' && n >= 0 && n <= total;
+  const save = () => { if (!ok) return; onSave(n); onClose(); };
+  const chip = (on) => ({ padding: '6px 11px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1.5px solid ${on ? 'var(--expense)' : 'var(--border)'}`, background: on ? 'var(--expense-bg)' : 'var(--surface2)', color: on ? 'var(--expense)' : 'var(--text-secondary)', borderRadius: 99 });
+  return (
+    <ModalShell title={tr('How much was wasted?')} subtitle={`${row.name} · ${formatAmount(total)}`} onClose={onClose}
+      footer={<>
+        <GhostButton onClick={onClose}>{tr('Cancel')}</GhostButton>
+        <PrimaryButton onClick={save} disabled={!ok} color="var(--expense)"><Flame size={14} /> {n > 0 ? `${tr('Wasted')} ${formatAmount(n)}` : tr('Not wasted')}</PrimaryButton>
+      </>}>
+      <Field label={tr('Wasted')}>
+        <input id="waste-amount" type="text" inputMode="decimal" value={v} autoFocus
+          onChange={(e) => { const x = e.target.value; if (x === '' || /^\d*\.?\d*$/.test(x)) setV(x); }}
+          onKeyDown={(e) => e.key === 'Enter' && save()} style={{ ...fieldStyle, fontSize: 18, fontWeight: 800 }} />
+      </Field>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {[[1, tr('All of it')], [0.75, '¾'], [0.5, '½'], [0.25, '¼'], [0, tr('None')]].map(([f, l]) => {
+          const amt = Math.round(total * f * 100) / 100;
+          return <button key={l} type="button" onClick={() => setV(String(amt))} style={chip(n === amt)}>{l}{f > 0 && f < 1 ? ` · ${formatAmount(amt)}` : ''}</button>;
+        })}
+      </div>
+    </ModalShell>
   );
 }
 

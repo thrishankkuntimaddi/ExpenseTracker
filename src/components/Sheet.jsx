@@ -8,8 +8,9 @@
 //   • amount cells take sums: "120+80" becomes 200
 //   • paste a block copied from Excel / Google Sheets and it fills rows
 //   • × removes a row at once, with Undo
+//   • reorderable: drag a row by its number to move it (Alt+↑/↓ on a keyboard)
 //
-// Columns: { key, label, type: 'text' | 'amount' | 'pick' | 'date', width,
+// Columns: { key, label, type: 'text' | 'amount' | 'pick' | 'date' | 'check', width,
 //   placeholder, options: [{ value, label }] (pick), onCreate(label) → value
 //   (pick, optional: accept new values), choices (pick, optional: the subset
 //   that may be picked — the rest still display), align, line: 2 }
@@ -18,7 +19,7 @@
 // line under the row, and the main ones share the width.
 // canEditRow(row) → false locks one row (shared trips: other people's rows).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { evalAmount, parseDateText } from '../utils/sheetValues';
 
 import { t as tr } from '../i18n';
@@ -31,7 +32,7 @@ const completeOption = (options, text) => {
     .sort((a, b) => a.label.length - b.label.length || a.label.localeCompare(b.label))[0] ?? null;
 };
 
-export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly = false, canEditRow, tone = 'accent', footer, rowLabel = (r) => r.name ?? r.title ?? r.person ?? 'row' }) {
+export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly = false, canEditRow, tone = 'accent', footer, reorderable = false, rowClass, rowLabel = (r) => r.name ?? r.title ?? r.person ?? 'row' }) {
   const [ghost, setGhost] = useState(() => makeRow(rows));
   const [removed, setRemoved] = useState(null);   // { row, index } — for Undo
   const all = readOnly ? rows : [...rows, ghost];
@@ -81,6 +82,34 @@ export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly =
     if (key === 'next') return c + 1 < columns.length ? focusCell(r, c + 1) : focusCell(r + 1, 0);
     if (key === 'down' && r + 1 < all.length + (readOnly ? 0 : 1)) return focusCell(r + 1, c);
     if (key === 'up' && r > 0) return focusCell(r - 1, c);
+  }
+
+  /* Reordering: drag the row number; the row follows the finger and drops where it's let go */
+  const [drag, setDrag] = useState(null);   // { from, to, dy }
+  function moveRow(from, to) {
+    if (from === to || to < 0 || to >= rows.length) return;
+    const next = rows.slice();
+    const [row] = next.splice(from, 1);
+    next.splice(to, 0, row);
+    onChange(next); setRemoved(null);
+  }
+  function startDrag(e, r) {
+    if (!reorderable || readOnly || r >= rows.length) return;
+    e.preventDefault();
+    const els = [...(rootRef.current?.querySelectorAll(':scope > .sheet-row') ?? [])].slice(0, rows.length);
+    const mids = els.map((el) => { const b = el.getBoundingClientRect(); return b.top + b.height / 2; });
+    const y0 = e.clientY;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    // New place = how many of the other rows have their middle above the finger
+    const target = (y) => mids.filter((m, i) => i !== r && m < y).length;
+    setDrag({ from: r, to: r, dy: 0 });
+    const onMove = (ev) => setDrag({ from: r, to: target(ev.clientY), dy: ev.clientY - y0 });
+    const onUp = (ev) => {
+      window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onUp);
+      setDrag(null);
+      if (ev.type === 'pointerup') moveRow(r, target(ev.clientY));
+    };
+    window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp); window.addEventListener('pointercancel', onUp);
   }
 
   function remove(r) {
@@ -133,8 +162,11 @@ export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly =
         const isGhost = !readOnly && r === rows.length;
         const locked = readOnly || (!isGhost && canEditRow && !canEditRow(row));
         return (
-          <div key={row.id} className={`sheet-row${isGhost ? ' sheet-ghost' : ''}${locked && !readOnly ? ' sheet-locked' : ''}`} style={line}>
-            <span className="sheet-num">{isGhost ? '+' : r + 1}</span>
+          <div key={row.id} className={`sheet-row${isGhost ? ' sheet-ghost' : ''}${locked && !readOnly ? ' sheet-locked' : ''}${drag?.from === r ? ' sheet-dragging' : ''}${drag && drag.from !== r && drag.to === r ? ' sheet-drop' : ''}${!isGhost && rowClass ? ` ${rowClass(row)}` : ''}`}
+            style={drag?.from === r ? { ...line, transform: `translateY(${drag.dy}px)`, position: 'relative', zIndex: 3 } : line}>
+            {reorderable && !isGhost && !readOnly
+              ? <span className="sheet-num sheet-handle" role="button" tabIndex={-1} aria-label={`${tr('Move row')} ${r + 1}`} title={tr('Drag to move')} onPointerDown={(e) => startDrag(e, r)}>{r + 1}</span>
+              : <span className="sheet-num">{isGhost ? '+' : r + 1}</span>}
             {(() => { const renderCell = (col) => {
               const c = columns.indexOf(col);
               const cell = { 'data-sheet': id, 'data-r': r, 'data-c': c, className: 'sheet-cell', 'aria-label': `${col.label}, row ${r + 1}`, disabled: locked,
@@ -144,9 +176,19 @@ export default function Sheet({ id, columns, rows, onChange, makeRow, readOnly =
                 else if (e.key === 'ArrowDown' && col.type !== 'date') { e.preventDefault(); e.currentTarget.blur(); move(r, c, 'down'); }
                 else if (e.key === 'ArrowUp' && col.type !== 'date') { e.preventDefault(); e.currentTarget.blur(); move(r, c, 'up'); }
                 else if (e.key === 'Escape') e.currentTarget.blur();
+                if (reorderable && e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && !isGhost) {
+                  const to = r + (e.key === 'ArrowUp' ? -1 : 1);
+                  if (to >= 0 && to < rows.length) { moveRow(r, to); focusCell(to, c); }
+                }
               };
               if (col.type === 'pick') return <PickCell key={col.key} cell={cell} col={col} value={row[col.key] ?? ''} onCommit={(v) => { if (v !== (row[col.key] ?? '')) setCells(r, { [col.key]: v }); }} onKeyDown={nav} />;
               if (col.type === 'amount') return <AmountCell key={col.key} cell={cell} value={row[col.key] ?? ''} onCommit={(v) => { if (v !== String(row[col.key] ?? '')) setCells(r, { [col.key]: v }); }} onKeyDown={nav} />;
+              if (col.type === 'check') return (
+                <button key={col.key} type="button" data-sheet={id} data-r={r} data-c={c} className={`sheet-cell sheet-check${row[col.key] ? ' on' : ''}`} role="checkbox" aria-checked={!!row[col.key]}
+                  aria-label={`${col.label}, row ${r + 1}`} disabled={locked || isGhost} onClick={() => setCells(r, col.onToggle ? col.onToggle(row) : { [col.key]: !row[col.key] })} onKeyDown={nav}>
+                  {row[col.key] ? <Check size={14} /> : null}
+                </button>
+              );
               if (col.type === 'date') return <input key={col.key} {...cell} type="date" value={row[col.key] ?? ''} onChange={(e) => e.target.value && setCells(r, { [col.key]: e.target.value })} onKeyDown={nav} />;
               return <input key={col.key} {...cell} type="text" value={row[col.key] ?? ''} autoComplete="off" onChange={(e) => setCells(r, { [col.key]: e.target.value })} onKeyDown={nav} />;
             };

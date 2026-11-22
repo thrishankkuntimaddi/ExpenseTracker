@@ -1,7 +1,7 @@
 // ─── SwipeRow: swipe actions on a list entry (phones) ────────────
-//   swipe left a little  → Edit and Delete slide out (tap one)
-//   swipe left all the way → Delete
-//   swipe right           → Edit
+//   swipe left             → Delete (a little: the button stays out; all the way: deletes)
+//   swipe right            → Edit
+// One gesture per action — no second Edit hidden under the left swipe.
 // The row follows the finger and springs back; vertical scrolling is left
 // alone (touch-action: pan-y), and the page-swipe navigation ignores it
 // (data-no-swipe). Only one row is open at a time. Mouse / keyboard users
@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { t as tr } from '../i18n';
 
-const ACTIONS_W = 136;      // two 68px buttons
+const ACTIONS_W = 80;       // the Delete button
 const OPEN_AT = 48;         // past this, let go → actions stay open
 const EDIT_AT = 76;         // swipe right past this → edit
 const FULL_AT = 0.62;       // of the row's width → delete
@@ -72,11 +72,6 @@ export default function SwipeRow({ children, onEdit, onDelete, label = '' }) {
       )}
       {x < 0 && (
         <div className={`swipe-under swipe-under-right${deleting ? ' full' : ''}`} style={{ width: Math.max(-x, ACTIONS_W) }}>
-          {!deleting && onEdit && (
-            <button type="button" className="swipe-action swipe-edit" tabIndex={-1} aria-label={`${tr('Edit')} ${label}`} onClick={() => { setX(0); onEdit?.(); }}>
-              <Pencil size={16} /><span>{tr('Edit')}</span>
-            </button>
-          )}
           <button type="button" className="swipe-action swipe-delete" tabIndex={-1} aria-label={`${tr('Delete')} ${label}`} onClick={() => { setX(0); onDelete?.(); }}>
             <Trash2 size={16} /><span>{tr('Delete')}</span>
           </button>

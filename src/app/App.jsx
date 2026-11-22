@@ -58,6 +58,7 @@ const DebtsPage        = lazyPage(() => import('../features/debts/DebtsPage'));
 const ResponsibilitiesPage = lazyPage(() => import('../features/responsibilities/ResponsibilitiesPage'));
 const PlannerPage      = lazyPage(() => import('../features/planner/PlannerPage'));
 const AccountsPage     = lazyPage(() => import('../features/accounts/AccountsPage'));
+const GoalsPage        = lazyPage(() => import('../features/goals/GoalsPage'));
 import UpdateBanner from '../components/UpdateBanner';
 import { ShellContext } from './shellContext';
 import { markAppReady } from './ready';
@@ -77,6 +78,8 @@ import { useSecurityEvents } from '../security/events';
 import { pendingInvite } from '../features/trips/invite';
 import { markQuickBoot } from './quickBoot';
 import TourHost from '../tour/TourHost';
+import { LiveGate } from '../components/LiveLayer';
+import { isAdmin } from '../config/admin';
 import { startTour, tourSeen, markTourSeen } from '../tour/tour';
 
 import { t as tr } from '../i18n';
@@ -299,7 +302,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finish
   // Short confirmation pill above the bar ("Added Chai · ₹20")
   useEffect(() => {
     if (!toastMsg) return undefined;
-    const t = setTimeout(() => setToastMsg(null), 2600);
+    const t = setTimeout(() => setToastMsg(null), toastMsg.action ? 4500 : 2600);
     return () => clearTimeout(t);
   }, [toastMsg]);
   // Android: status bar follows the theme (and the Unslop look); hardware back
@@ -329,7 +332,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finish
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [uid, devices.thisId]);
   useEffect(() => {
-    onReminderTap((route) => { if (['today', 'plan', 'bills', 'budget', 'stats', 'history', 'savings', 'responsibilities', 'people', 'planner', 'accounts'].includes(route)) goTo(route === 'plan' ? 'bills' : route); });
+    onReminderTap((route) => { if (['today', 'plan', 'bills', 'budget', 'stats', 'history', 'savings', 'responsibilities', 'people', 'planner', 'accounts', 'goals'].includes(route)) goTo(route === 'plan' ? 'bills' : route); });
   }, [goTo]);
   useEffect(() => {
     if (!loaded) return undefined;
@@ -483,6 +486,7 @@ function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finish
     {activeTab === 'budget' && <BudgetPage {...commonProps} />}
     {activeTab === 'savings' && <SavingsPage {...commonProps} />}
     {activeTab === 'accounts' && <AccountsPage {...commonProps} onAddTransaction={addTransaction} />}
+    {activeTab === 'goals' && <GoalsPage {...commonProps} onAddTransaction={addTransaction} />}
     {activeTab === 'stats' && <StatsTab {...commonProps} />}
     {activeTab === 'responsibilities' && <ResponsibilitiesPage {...commonProps} onAddTransaction={addTransaction} onDeleteTransaction={deleteTransaction} />}
     {activeTab === 'planner' && <PlannerPage {...commonProps} />}
@@ -509,6 +513,8 @@ function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finish
     <>
       {errorBanner}
       {!isDemo && <SecurityBanners uid={user.uid} devices={devices} events={securityEvents} />}
+      {/* Maintenance / minimum version, from Admin sees → Control (the owner is never locked out) */}
+      {!isDemo && <LiveGate admin={isAdmin(user)} />}
       {isDemo && <DemoBanner />}
 
       {addKind && (
@@ -534,7 +540,14 @@ function AuthenticatedApp({ user, signOut, deleteAccount, reauthenticate, finish
           fontSize: 13, fontWeight: 600, color: 'var(--toast-text, #fff)', background: 'var(--toast-bg, rgba(28,28,32,.92))',
           boxShadow: '0 10px 30px -10px rgba(0,0,0,.45)', animation: 'toastIn .22s cubic-bezier(0.16,1,0.3,1)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        }}>{toastMsg.sign && <Sign kind={toastMsg.sign} size={18} />}{toastMsg.text ?? toastMsg}</div>
+        }}>{toastMsg.sign && <Sign kind={toastMsg.sign} size={18} />}{toastMsg.text ?? toastMsg}
+          {toastMsg.action && (
+            <button type="button" id="toast-action" onClick={() => { toastMsg.action.onClick(); setToastMsg(null); }}
+              style={{ marginLeft: 6, padding: '4px 10px', borderRadius: 99, border: '1px solid currentColor', background: 'transparent', color: 'inherit', fontSize: 12, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}>
+              {toastMsg.action.label}
+            </button>
+          )}
+        </div>
       )}
     </>
   );

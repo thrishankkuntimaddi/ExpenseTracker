@@ -289,7 +289,7 @@ export default function StatsTab({ transactions, income, selectedPeriod, theme, 
                 <BigRow Icon={PiggyBank} tone="savings" label={tr("Savings")} value={big.saved} sub="everything saved, minus what you used" onClick={() => shell?.goTo('savings')} />
                 {big.goalCount > 0 && (
                   <BigRow Icon={Flag} tone="income" label={`Goals · ${big.goalCount}`} value={big.goalSaved}
-                    sub={`of ${rupees(big.goalTarget)} · ${big.goalTarget ? Math.round((big.goalSaved / big.goalTarget) * 100) : 0}% there`} onClick={() => shell?.goTo('savings')}
+                    sub={`of ${rupees(big.goalTarget)} · ${big.goalTarget ? Math.round((big.goalSaved / big.goalTarget) * 100) : 0}% there`} onClick={() => shell?.goTo('goals')}
                     bar={big.goalTarget ? big.goalSaved / big.goalTarget : 0} />
                 )}
                 <BigRow Icon={HeartHandshake} tone="given" label={tr("Responsibilities left")} value={big.resp.remaining}
