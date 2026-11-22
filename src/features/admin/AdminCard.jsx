@@ -407,14 +407,21 @@ function Health({ user, readOnly, job }) {
       </Panel>
 
       <Panel title="Firestore usage (free daily quota)" Icon={Database}>
-        {h?.usage?.error && (/Monitoring Viewer/.test(h.usage.error) ? <MonitoringHelp project={PROJECT} />
+        {h?.usage?.error && (/billing/i.test(h.usage.error) ? (
+            <div id="admin-usage-billing" style={{ ...muted, color: 'var(--text-secondary)' }}>
+              <div style={{ fontWeight: 700, color: 'var(--text)' }}>Not available on the free plan</div>
+              Google only gives read / write counts to programs on projects with a billing account (Blaze). The app doesn’t need one — see today’s numbers in the{' '}
+              <a href={`https://console.firebase.google.com/project/${PROJECT}/firestore/databases/-default-/usage`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 700 }}>Firebase console → Firestore → Usage</a>.
+              {' '}The Monitoring Viewer role you added is right; if you ever move to Blaze, the meters fill in here by themselves.
+            </div>
+          ) : /Monitoring Viewer/.test(h.usage.error) ? <MonitoringHelp project={PROJECT} />
           : /switched off/.test(h.usage.error) ? (
             <div style={{ ...muted, color: 'var(--text-secondary)' }}>
               <div style={{ fontWeight: 700, color: 'var(--lent)' }}>{h.usage.error}</div>
               <a href={`https://console.cloud.google.com/apis/library/monitoring.googleapis.com?project=${PROJECT}`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontWeight: 700 }}>Turn on Cloud Monitoring API</a> (Enable), then Run now — it can take a few minutes to apply.
             </div>
           ) : <div style={{ ...muted, color: 'var(--lent)' }}>{h.usage.error}</div>)}
-        {h?.usage?.detail && <div id="admin-usage-detail" style={{ ...muted, fontSize: 10.5, marginTop: 6, overflowWrap: 'anywhere' }}>Google said: {h.usage.detail}</div>}
+        {h?.usage?.detail && !/billing/i.test(h.usage.error ?? '') && <div id="admin-usage-detail" style={{ ...muted, fontSize: 10.5, marginTop: 6, overflowWrap: 'anywhere' }}>Google said: {h.usage.detail}</div>}
         {!h?.usage && <div style={muted}>Not measured yet — the server job adds it on its next run.</div>}
         {today && (
           <>

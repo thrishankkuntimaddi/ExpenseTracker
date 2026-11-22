@@ -594,7 +594,9 @@ async function usage() {
   const ref = db.collection('system_health').doc('usage');
   const prev = (await ref.get()).data() ?? {};
   // Hourly — but after an error (the role was just added) try again on every run
-  if (now - (prev.at ?? 0) < USAGE_EVERY && !prev.error) return;
+  // (No billing account: asking again won't change the answer — once a day)
+  const every = /billing/i.test(prev.error ?? '') ? 24 * USAGE_EVERY : USAGE_EVERY;
+  if (now - (prev.at ?? 0) < every && (!prev.error || /billing/i.test(prev.error))) return;
   const { access_token: token } = await cert(JSON.parse(sa)).getAccessToken();
   // Days in Pacific time — that's when Firebase's free daily quota resets
   const end = new Date(now), start = new Date(now - 7 * 86400e3);
@@ -611,7 +613,9 @@ async function usage() {
       // Say exactly what Google said: a missing role and a switched-off API both answer 403
       const why = await res.json().then((b) => b?.error?.message ?? '', () => '');
       const off = /has not been used|is disabled|SERVICE_DISABLED|Enable it by visiting/i.test(why);
-      error = off ? 'The Cloud Monitoring API is switched off for this project.'
+      const billing = /requires billing/i.test(why);
+      error = billing ? 'Usage counts need a billing account (Blaze plan) — the free Spark plan doesn’t give them to programs.'
+        : off ? 'The Cloud Monitoring API is switched off for this project.'
         : res.status === 403 ? 'Give the service account the “Monitoring Viewer” role to see reads and writes.' : `Cloud Monitoring said ${res.status}`;
       console.warn('usage:', res.status, why.slice(0, 300));
       detail = `${res.status} · ${why.slice(0, 280)} · as ${JSON.parse(sa).client_email}`;
